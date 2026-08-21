@@ -1,0 +1,32 @@
+{
+  "project_artifact": "../test-method/project-active.json",
+  "challenge_artifact": "../test-method/challenge-defined.json",
+  "failure_ctq_artifact": "../test-method/failure-ctq-defined.json",
+  "test_method_artifact": "../test-method/valid-artifact.synthetic.json",
+  "design_space": {
+    "design_space_id": "DS-001",
+    "scope": "Synthetic bounded variables linked to CTQ-001 only.",
+    "variables": [
+      {
+        "variable_id": "FORMULATION_VARIABLE_A",
+        "variable_type": "FORMULATION_VARIABLE",
+        "lower_bound": {"value": 0, "unit": "normalized level", "source": "Synthetic fixture formulation-variable boundary", "method_version": "boundary-v1", "material_batch": "not_applicable", "formula_version": "not_applicable"},
+        "upper_bound": {"value": 1, "unit": "normalized level", "source": "Synthetic fixture formulation-variable boundary", "method_version": "boundary-v1", "material_batch": "not_applicable", "formula_version": "not_applicable"},
+        "constraint_rationale": "Synthetic fixture boundary supplied for later testing."
+      },
+      {
+        "variable_id": "BLEND_TEMPERATURE",
+        "variable_type": "PROCESS_VARIABLE",
+        "lower_bound": {"value": 40, "unit": "degC", "source": "Synthetic fixture process boundary", "method_version": "boundary-v1", "material_batch": "not_applicable", "formula_version": "not_applicable"},
+        "upper_bound": {"value": 60, "unit": "degC", "source": "Synthetic fixture process boundary", "method_version": "boundary-v1", "material_batch": "not_applicable", "formula_version": "not_applicable"},
+        "constraint_rationale": "Synthetic fixture boundary supplied for later testing."
+      }
+    ],
+    "ctq_references": ["CTQ-001"],
+    "qualified_test_method_references": ["TM-001"],
+    "constraints": ["Use only the supplied variable bounds."],
+    "evidence": [
+      {"evidence_id": "E-DS-001", "statement": "Synthetic fixture only: boundary provenance is supplied but not independently verified.", "source": "Synthetic fixture design-space record", "status": "ASSUMED"}
+    ]
+  }
+}

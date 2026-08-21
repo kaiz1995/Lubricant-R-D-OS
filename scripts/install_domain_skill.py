@@ -16,6 +16,7 @@ SKILLS = {
     "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json"),
     "failure-ctq-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json"),
     "test-method-qualification": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json"),
+    "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json"),
 }
 ROAMING_APP_DATA = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
 DEFAULT_TARGET = ROAMING_APP_DATA / "com.ai4s.workbench" / "runtime" / "xdg-config" / "opencode" / "skills" / "user"
