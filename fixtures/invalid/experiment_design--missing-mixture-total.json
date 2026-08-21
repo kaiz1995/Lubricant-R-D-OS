@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED",
+  "decision_question": "What mixture design request should be handed to the deterministic engine?", "hypothesis": "A constrained-mixture design request can reduce the stated decision uncertainty.", "uncertainty": "No DOE points have been generated.",
+  "evidence": [{ "evidence_id": "E-ED-002", "statement": "Synthetic fixture only.", "source": "synthetic fixture only", "status": "ASSUMED" }],
+  "decision_rule": "Hand off only a complete mixture-design request.", "result": "Synthetic invalid mixture-design request.", "decision": "HOLD", "next_action": "Declare the mixture total.",
+  "experiment_design_id": "ED-002", "design_space_reference": "DS-001", "test_method_references": ["TM-001"], "factor_references": ["V-001", "V-002"],
+  "design": { "family": "CONSTRAINED_MIXTURE", "rationale": "The factors are constrained mixture proportions.", "effects_to_estimate": ["mixture contribution"] },
+  "run_plan": { "target_count": 12, "replicate_count": 2, "center_point_count": 2, "randomized": true, "point_generation": "PHASE4_DETERMINISTIC_ENGINE" },
+  "responses": [{ "ctq_reference": "CTQ-001", "test_method_reference": "TM-001", "role": "OPTIMIZATION_RESPONSE" }],
+  "guardrails": ["Remain within DS-001 constraints."],
+  "expected_information_value": { "classification": "RECOMMENDED", "decision_relevance": "Synthetic only.", "expected_information_gain": "Synthetic only.", "cost": "Synthetic only.", "duration": "Synthetic only.", "redundancy": "Synthetic only." }
+}

@@ -6,6 +6,7 @@
   "experiment_design_id": "ED-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"], "factor_references": ["V-001"],
   "design": { "family": "CONSTRAINED_MIXTURE", "rationale": "The factor is constrained.", "effects_to_estimate": ["mixture contribution"] },
   "run_plan": { "target_count": 12, "replicate_count": 2, "center_point_count": 2, "randomized": true },
+  "mixture_total": { "value": 1, "unit": "normalized fraction", "source": "approved synthetic design constraint", "method_version": "design-contract-v1", "material_batch": "not_applicable", "formula_version": "not_applicable" },
   "responses": [{ "ctq_reference": "CTQ-001", "test_method_reference": "TM-001", "role": "OPTIMIZATION_RESPONSE" }],
   "guardrails": ["Remain within DS-001 constraints."],
   "expected_information_value": { "classification": "RECOMMENDED", "decision_relevance": "Synthetic only.", "expected_information_gain": "Synthetic only.", "cost": "Synthetic only.", "duration": "Synthetic only.", "redundancy": "Synthetic only." }

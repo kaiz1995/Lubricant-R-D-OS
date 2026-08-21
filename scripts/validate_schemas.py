@@ -22,6 +22,7 @@ EXPECTED_ERRORS = {
     "experiment--designed-stage.json": "'EXPERIMENT_RUNNING' was expected",
     "experiment--missing-material-batch.json": "'material_batch' is a required property",
     "experiment_design--missing-point-generation.json": "'point_generation' is a required property",
+    "experiment_design--missing-mixture-total.json": "'mixture_total' is a required property",
     "gate--illegal-status.json": "'APPROVED' is not one of",
 }
 
