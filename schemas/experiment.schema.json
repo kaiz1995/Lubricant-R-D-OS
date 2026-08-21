@@ -1,12 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/experiment.schema.json",
-  "title": "Experiment card",
+  "title": "Observed experiment record",
   "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
   "type": "object",
   "properties": {
     "artifact_type": { "const": "experiment" },
+    "stage": { "const": "EXPERIMENT_RUNNING" },
     "experiment_id": { "type": "string", "minLength": 1 },
+    "experiment_design_reference": { "type": "string", "minLength": 1 },
     "design_space_reference": { "type": "string", "minLength": 1 },
     "test_method_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "runs": {
@@ -31,6 +33,6 @@
       }
     }
   },
-  "required": ["artifact_type", "experiment_id", "design_space_reference", "test_method_references", "runs"],
+  "required": ["artifact_type", "experiment_id", "experiment_design_reference", "design_space_reference", "test_method_references", "runs"],
   "unevaluatedProperties": false
 }

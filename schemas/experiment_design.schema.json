@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/experiment_design.schema.json",
+  "title": "Experiment design request",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "experiment_design" },
+    "stage": { "const": "EXPERIMENT_DESIGNED" },
+    "experiment_design_id": { "type": "string", "minLength": 1 },
+    "design_space_reference": { "type": "string", "minLength": 1 },
+    "test_method_references": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "factor_references": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "design": {
+      "type": "object",
+      "properties": {
+        "family": { "enum": ["FEASIBILITY_SCREENING", "SCREENING", "FRACTIONAL_FACTORIAL", "MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "RSM", "D_OPTIMAL", "ROBUST", "BAYESIAN_SEQUENTIAL"] },
+        "rationale": { "type": "string", "minLength": 1 },
+        "effects_to_estimate": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      },
+      "required": ["family", "rationale", "effects_to_estimate"],
+      "additionalProperties": false
+    },
+    "run_plan": {
+      "type": "object",
+      "properties": {
+        "target_count": { "type": "integer", "minimum": 1 },
+        "replicate_count": { "type": "integer", "minimum": 0 },
+        "center_point_count": { "type": "integer", "minimum": 0 },
+        "randomized": { "type": "boolean" },
+        "point_generation": { "const": "PHASE4_DETERMINISTIC_ENGINE" }
+      },
+      "required": ["target_count", "replicate_count", "center_point_count", "randomized", "point_generation"],
+      "additionalProperties": false
+    },
+    "responses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "ctq_reference": { "type": "string", "minLength": 1 },
+          "test_method_reference": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["OPTIMIZATION_RESPONSE", "GUARDRAIL", "DIAGNOSTIC_RESPONSE"] }
+        },
+        "required": ["ctq_reference", "test_method_reference", "role"],
+        "additionalProperties": false
+      }
+    },
+    "guardrails": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "expected_information_value": {
+      "type": "object",
+      "properties": {
+        "classification": { "enum": ["RECOMMENDED", "OPTIONAL", "LOW_VALUE"] },
+        "decision_relevance": { "type": "string", "minLength": 1 },
+        "expected_information_gain": { "type": "string", "minLength": 1 },
+        "cost": { "type": "string", "minLength": 1 },
+        "duration": { "type": "string", "minLength": 1 },
+        "redundancy": { "type": "string", "minLength": 1 }
+      },
+      "required": ["classification", "decision_relevance", "expected_information_gain", "cost", "duration", "redundancy"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["artifact_type", "stage", "experiment_design_id", "design_space_reference", "test_method_references", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value"],
+  "unevaluatedProperties": false
+}

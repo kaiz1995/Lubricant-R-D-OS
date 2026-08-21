@@ -19,7 +19,9 @@ EXPECTED_ERRORS = {
     "failure_ctq--missing-unit.json": "'unit' is a required property",
     "test_method--missing-source.json": "'source' is a required property",
     "design_space--missing-method-version.json": "'method_version' is a required property",
+    "experiment--designed-stage.json": "'EXPERIMENT_RUNNING' was expected",
     "experiment--missing-material-batch.json": "'material_batch' is a required property",
+    "experiment_design--missing-point-generation.json": "'point_generation' is a required property",
     "gate--illegal-status.json": "'APPROVED' is not one of",
 }
 

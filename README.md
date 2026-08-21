@@ -22,9 +22,9 @@ python scripts/validate_schemas.py
 python scripts/validate_state_machine.py
 ```
 
-This validates seven artifact types only: project, duty-derived challenge,
-failure/CTQ, test-method qualification, constrained design space, experiment,
-and Gate review. The state-machine validator checks Gate/lifecycle transitions,
+This validates eight artifact types only: project, duty-derived challenge,
+failure/CTQ, test-method qualification, constrained design space, experiment
+design request, observed experiment record, and Gate review. The state-machine validator checks Gate/lifecycle transitions,
 evidence retention, rollback, Pivot, Kill, and Freeze boundaries. Neither
 validator generates formulations or claims product performance.
 
