@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/gate.schema.json",
+  "title": "Gate review",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "gate" },
+    "gate_id": { "type": "string", "minLength": 1 },
+    "experiment_reference": { "type": "string", "minLength": 1 },
+    "scope": { "type": "string", "minLength": 1 },
+    "gate_status": { "enum": ["GO", "HOLD", "PIVOT", "KILL", "FREEZE"] },
+    "satisfied_conditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "unsatisfied_conditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "risks": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "required": ["artifact_type", "gate_id", "experiment_reference", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks"],
+  "unevaluatedProperties": false
+}

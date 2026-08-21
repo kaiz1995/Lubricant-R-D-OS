@@ -5,6 +5,25 @@ V0 is a minimal, independently installable proof that an external Lubricant R&D 
 ## Contents
 
 - `skills/hello-lubricant/SKILL.md` — a load-and-invoke smoke skill only.
+- `schemas/` — Draft 2020-12 contracts for Decision-Driven R&D artifacts.
+- `fixtures/` — Schema fixtures plus state-machine transition fixtures.
+- `scripts/validate_schemas.py` — repeatable JSON Schema validation entry point.
+- `contracts/state-machine.json` and `scripts/validate_state_machine.py` — lifecycle/Gate contract and stdlib verifier.
+
+## Schema validation
+
+Run from the pack root:
+
+```powershell
+python scripts/validate_schemas.py
+python scripts/validate_state_machine.py
+```
+
+This validates seven artifact types only: project, duty-derived challenge,
+failure/CTQ, test-method qualification, constrained design space, experiment,
+and Gate review. The state-machine validator checks Gate/lifecycle transitions,
+evidence retention, rollback, Pivot, Kill, and Freeze boundaries. Neither
+validator generates formulations or claims product performance.
 
 ## Install
 
@@ -16,4 +35,4 @@ The runtime skill catalog must show `hello-lubricant`, its description, and a us
 
 ## Non-goals
 
-This V0 pack does not generate formulations, perform lubricant research, make R&D conclusions, define schemas, provide a database, MCP server, UI, or deterministic calculation engine.
+This V0 pack does not generate formulations, perform lubricant research, make R&D conclusions, provide a database, MCP server, UI, or deterministic calculation engine.

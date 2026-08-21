@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "challenge", "project_id": "WGO-001", "stage": "CHALLENGES_DEFINED",
+  "decision_question": "Which duty-derived challenge needs analysis first?", "hypothesis": "Water contamination can affect the lubrication system risk.", "uncertainty": "Field exposure frequency is incomplete.",
+  "evidence": [{ "evidence_id": "E-C-001", "statement": "Duty profile records potential water ingress.", "source": "duty profile DP-001", "status": "OBSERVED" }],
+  "decision_rule": "Prioritize high severity and exposure challenges.", "result": "Water contamination is recorded as a challenge, not a formulation cause.", "decision": "GO", "next_action": "Analyze failure mechanisms.",
+  "duty_reference": "DP-001", "challenge_id": "CH-001", "category": "WATER_CONTAMINATION", "description": "Potential water ingress during service.", "severity": "HIGH", "exposure": "MEDIUM", "lubricant_sensitivity": "HIGH", "evidence_gap": "No quantified field water history.", "priority": "HIGH"
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/common.schema.json",
+  "title": "Lubricant R&D common contract",
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": "0.1.0" },
+        "project_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "stage": {
+          "enum": [
+            "DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED",
+            "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
+            "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED",
+            "VERIFIED", "FROZEN", "CLOSED"
+          ]
+        },
+        "decision_question": { "type": "string", "minLength": 1 },
+        "hypothesis": { "type": "string", "minLength": 1 },
+        "uncertainty": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence_item" }
+        },
+        "decision_rule": { "type": "string", "minLength": 1 },
+        "result": { "type": "string", "minLength": 1 },
+        "decision": { "enum": ["UNDECIDED", "GO", "HOLD", "PIVOT", "KILL", "FREEZE"] },
+        "next_action": { "type": "string", "minLength": 1 }
+      },
+      "required": [
+        "schema_version", "project_id", "stage", "decision_question", "hypothesis",
+        "uncertainty", "evidence", "decision_rule", "result", "decision", "next_action"
+      ]
+    },
+    "evidence_item": {
+      "type": "object",
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+      },
+      "required": ["evidence_id", "statement", "source", "status"],
+      "additionalProperties": false
+    },
+    "measurement": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "method_version": { "type": "string", "minLength": 1 },
+        "material_batch": { "type": "string", "minLength": 1 },
+        "formula_version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["value", "unit", "source", "method_version", "material_batch", "formula_version"],
+      "additionalProperties": false
+    }
+  }
+}

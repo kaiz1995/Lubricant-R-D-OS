@@ -1,0 +1,4 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "gate", "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "decision_question": "May work proceed?", "hypothesis": "Evidence is sufficient.", "uncertainty": "Risk remains.", "evidence": [{ "evidence_id": "E-1", "statement": "Qualification record exists.", "source": "TM-001", "status": "OBSERVED" }], "decision_rule": "Advance only if conditions pass.", "result": "Progress review only.", "decision": "GO", "next_action": "Define design space.",
+  "gate_id": "G-001", "experiment_reference": "EXP-001", "scope": "Method qualification", "gate_status": "APPROVED", "satisfied_conditions": ["method qualified"], "unsatisfied_conditions": [], "evidence_gaps": [], "risks": ["field relevance limited"]
+}

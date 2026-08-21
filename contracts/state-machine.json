@@ -1,0 +1,43 @@
+{
+  "contract_version": "0.1.0",
+  "gate_statuses": ["GO", "HOLD", "PIVOT", "KILL", "FREEZE"],
+  "project_statuses": ["DRAFT", "ACTIVE", "HOLD", "PIVOTED", "KILLED", "FROZEN", "CLOSED"],
+  "stages": [
+    "DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED",
+    "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
+    "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED",
+    "VERIFIED", "FROZEN", "CLOSED"
+  ],
+  "gate_to_project_status": {
+    "GO": "ACTIVE",
+    "HOLD": "HOLD",
+    "PIVOT": "PIVOTED",
+    "KILL": "KILLED",
+    "FREEZE": "FROZEN"
+  },
+  "terminal_project_statuses": ["PIVOTED", "KILLED", "CLOSED"],
+  "lifecycle_stage_sets": {
+    "DRAFT": ["DRAFT"],
+    "ACTIVE": ["PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED"],
+    "HOLD": ["PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED"],
+    "PIVOTED": ["PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED"],
+    "KILLED": ["PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED"],
+    "FROZEN": ["FROZEN"],
+    "CLOSED": ["CLOSED"]
+  },
+  "actions": {
+    "GO": { "gate_status": "GO", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "ACTIVE" },
+    "HOLD": { "gate_status": "HOLD", "before_statuses": ["ACTIVE"], "after_status": "HOLD" },
+    "PIVOT": { "gate_status": "PIVOT", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "ACTIVE", "preserved_status": "PIVOTED" },
+    "KILL": { "gate_status": "KILL", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "KILLED" },
+    "ROLLBACK": { "gate_status": "HOLD", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "HOLD" },
+    "FREEZE": { "gate_status": "FREEZE", "before_statuses": ["ACTIVE"], "after_status": "FROZEN" },
+    "CLOSE": { "gate_status": "GO", "before_statuses": ["FROZEN"], "after_status": "CLOSED" }
+  },
+  "required_state_fields": [
+    "project_id", "stage", "status", "version", "decision_question", "evidence"
+  ],
+  "revision_fields": ["reason", "operator", "impact"],
+  "freeze_record_fields": ["reason", "evidence_package"],
+  "termination_fields": ["reason", "evidence"]
+}

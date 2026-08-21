@@ -1,0 +1,4 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "decision_question": "Can the run reduce the gap?", "hypothesis": "The run measures the CTQ.", "uncertainty": "No performance conclusion.", "evidence": [{ "evidence_id": "E-1", "statement": "Method referenced.", "source": "TM-001", "status": "OBSERVED" }], "decision_rule": "Record response first.", "result": "Planned only.", "decision": "UNDECIDED", "next_action": "Execute test.",
+  "experiment_id": "EXP-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"], "runs": [{ "run_id": "RUN-001", "material_batch": "pilot-1", "formula_version": "trial-v1", "response_measurements": [{ "ctq_reference": "CTQ-001", "measurement": { "value": 0, "unit": "min", "source": "synthetic fixture", "method_version": "D1401-2024", "formula_version": "trial-v1" } }] }]
+}

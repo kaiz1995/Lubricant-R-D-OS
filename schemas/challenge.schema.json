@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/challenge.schema.json",
+  "title": "Duty-derived challenge",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "challenge" },
+    "duty_reference": { "type": "string", "minLength": 1 },
+    "challenge_id": { "type": "string", "minLength": 1 },
+    "category": { "enum": ["MECHANICAL_LOAD", "CONTACT", "HIGH_TEMPERATURE", "LOW_TEMPERATURE", "OXIDATION", "WATER_CONTAMINATION", "AIR_FOAM", "PARTICLE_CONTAMINATION", "MATERIAL_COMPATIBILITY", "LONG_TERM_STABILITY", "MIXING", "RAW_MATERIAL_VARIATION"] },
+    "description": { "type": "string", "minLength": 1 },
+    "severity": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "exposure": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "lubricant_sensitivity": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "evidence_gap": { "type": "string", "minLength": 1 },
+    "priority": { "enum": ["LOW", "MEDIUM", "HIGH"] }
+  },
+  "required": ["artifact_type", "duty_reference", "challenge_id", "category", "description", "severity", "exposure", "lubricant_sensitivity", "evidence_gap", "priority"],
+  "unevaluatedProperties": false
+}

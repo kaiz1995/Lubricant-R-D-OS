@@ -1,0 +1,138 @@
+[
+  {
+    "name": "go-cannot-skip-stage",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence": ["E-001"] },
+      "after": { "project_id": "WGO-001", "stage": "CHALLENGES_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence": ["E-001"] }
+    }
+  },
+  {
+    "name": "draft-cannot-pass-a-gate-transition",
+    "expected_reason": "DRAFT project cannot pass a Gate transition",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "DRAFT", "status": "DRAFT", "version": 1, "decision_question": "Can the project be defined?", "evidence": ["E-000"] },
+      "after": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project be defined?", "evidence": ["E-000"] }
+    }
+  },
+  {
+    "name": "frozen-stage-cannot-remain-active",
+    "expected_reason": "state status ACTIVE is not valid at stage FROZEN",
+    "event": {
+      "kind": "KILL", "gate_status": "KILL",
+      "before": { "project_id": "WGO-001", "stage": "FROZEN", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "KILLED", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "termination": { "reason": "Invalid attempt.", "evidence": ["E-701"] }
+    }
+  },
+  {
+    "name": "held-project-needs-new-evidence-before-go",
+    "expected_reason": "GO from HOLD requires newly added evidence",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 2, "decision_question": "Are methods qualified?", "evidence": ["E-201"] },
+      "after": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 2, "decision_question": "Are methods qualified?", "evidence": ["E-201"] }
+    }
+  },
+  {
+    "name": "killed-project-cannot-advance",
+    "expected_reason": "Terminal project status cannot advance",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "status": "KILLED", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence": ["E-501"] },
+      "after": { "project_id": "WGO-001", "stage": "EXPERIMENT_RUNNING", "status": "ACTIVE", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence": ["E-501"] }
+    }
+  },
+  {
+    "name": "pivoted-branch-cannot-advance",
+    "expected_reason": "Terminal project status cannot advance",
+    "event": {
+      "kind": "KILL", "gate_status": "KILL",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "PIVOTED", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence": ["E-301"] },
+      "after": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "KILLED", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence": ["E-301"] },
+      "termination": { "reason": "Unused old branch.", "evidence": ["E-301"] }
+    }
+  },
+  {
+    "name": "closed-project-cannot-advance",
+    "expected_reason": "Terminal project status cannot advance",
+    "event": {
+      "kind": "PIVOT", "gate_status": "PIVOT",
+      "before": { "project_id": "WGO-001", "stage": "CLOSED", "status": "CLOSED", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "after": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 6, "decision_question": "Can a new route be started?", "evidence": ["E-801"] },
+      "preserved_branch": { "project_id": "WGO-001", "stage": "CLOSED", "status": "PIVOTED", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] }
+    }
+  },
+  {
+    "name": "rollback-must-target-nearest-accepted-stage",
+    "expected_reason": "ROLLBACK must return to the nearest accepted stage",
+    "event": {
+      "kind": "ROLLBACK", "gate_status": "HOLD",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 4, "decision_question": "Is the design space ready for experiment design?", "evidence": ["E-601"] },
+      "after": { "project_id": "WGO-001", "stage": "DUTY_DEFINED", "status": "HOLD", "version": 5, "decision_question": "Is the design space ready for experiment design?", "evidence": ["E-601", "E-602"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED"],
+      "revision": { "reason": "Method qualification evidence was found incomplete.", "operator": "R&D owner", "impact": "Design-space conclusion requires revision." }
+    }
+  },
+  {
+    "name": "hold-cannot-change-version-or-evidence",
+    "expected_reason": "HOLD must preserve stage, version, decision question, and evidence",
+    "event": {
+      "kind": "HOLD", "gate_status": "HOLD",
+      "before": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 2, "decision_question": "Are methods qualified?", "evidence": ["E-201"] },
+      "after": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 3, "decision_question": "Are methods qualified?", "evidence": ["E-201", "E-202"] }
+    }
+  },
+  {
+    "name": "rollback-cannot-drop-audited-evidence",
+    "expected_reason": "ROLLBACK must retain prior evidence",
+    "event": {
+      "kind": "ROLLBACK", "gate_status": "HOLD",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 4, "decision_question": "Is the design space ready for experiment design?", "evidence": ["E-601"] },
+      "after": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 5, "decision_question": "Is the design space ready for experiment design?", "evidence": ["E-602"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED"],
+      "revision": { "reason": "Method qualification evidence was found incomplete.", "operator": "R&D owner", "impact": "Design-space conclusion requires revision." }
+    }
+  },
+  {
+    "name": "pivot-cannot-overwrite-old-branch",
+    "expected_reason": "PIVOT must preserve the prior branch as PIVOTED",
+    "event": {
+      "kind": "PIVOT", "gate_status": "PIVOT",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence": ["E-301"] },
+      "after": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 4, "decision_question": "Can an alternative base-oil route meet cost and risk limits?", "evidence": ["E-401"] },
+      "preserved_branch": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence": ["E-301"] }
+    }
+  },
+  {
+    "name": "kill-must-retain-reason-and-evidence",
+    "expected_reason": "KILL requires a retained reason and evidence",
+    "event": {
+      "kind": "KILL", "gate_status": "KILL",
+      "before": { "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "status": "ACTIVE", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence": ["E-501"] },
+      "after": { "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "status": "KILLED", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence": ["E-501"] },
+      "termination": { "reason": "Supply constraint makes the route infeasible.", "evidence": [] }
+    }
+  },
+  {
+    "name": "freeze-requires-verified-stage",
+    "expected_reason": "FREEZE requires VERIFIED to FROZEN",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "OPTIMIZED", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "frozen-project-cannot-be-modified-in-place",
+    "expected_reason": "FROZEN project can only be closed without modification",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence": ["E-701"] },
+      "after": { "project_id": "WGO-001", "stage": "CLOSED", "status": "CLOSED", "version": 6, "decision_question": "May the verified project be frozen?", "evidence": ["E-701", "E-702"] }
+    }
+  }
+]

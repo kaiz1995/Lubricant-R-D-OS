@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED",
+  "decision_question": "Can the planned run reduce the stated evidence gap?", "hypothesis": "The run can measure the CTQ within the defined design space.", "uncertainty": "The planned response is not a performance conclusion.",
+  "evidence": [{ "evidence_id": "E-X-001", "statement": "Design space and qualified test method are referenced.", "source": "DS-001 and TM-001", "status": "OBSERVED" }],
+  "decision_rule": "Record measured responses before any later decision.", "result": "Experiment card is planned; response data are placeholders for validation only.", "decision": "UNDECIDED", "next_action": "Execute the recorded test method.",
+  "experiment_id": "EXP-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"],
+  "runs": [{ "run_id": "RUN-001", "material_batch": "pilot-batch-1", "formula_version": "trial-v1", "response_measurements": [{ "ctq_reference": "CTQ-001", "measurement": { "value": 0, "unit": "min", "source": "synthetic fixture only", "method_version": "D1401-2024", "material_batch": "pilot-batch-1", "formula_version": "trial-v1" } }] }]
+}

@@ -1,0 +1,4 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "test_method", "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "decision_question": "Is the method qualified?", "hypothesis": "It distinguishes benchmarks.", "uncertainty": "Field relevance is limited.", "evidence": [{ "evidence_id": "E-1", "statement": "Benchmarks compared.", "source": "Q-001", "status": "OBSERVED" }], "decision_rule": "Require qualification.", "result": "No product conclusion.", "decision": "GO", "next_action": "Define design space.",
+  "method_id": "TM-001", "name": "Water separation screening", "standard": "ASTM D1401", "target_failure_reference": "FM-001", "role": ["C", "D"], "qualification_metrics": [{ "metric": "DISCRIMINATION", "measurement": { "value": 2, "unit": "rank positions", "method_version": "D1401-2024", "material_batch": "benchmark", "formula_version": "benchmark-v1" } }], "qualification_basis": ["benchmark ranking"], "qualification_status": "QUALIFIED"
+}
