@@ -7,6 +7,7 @@ V0 is a minimal, independently installable proof that an external Lubricant R&D 
 - `skills/hello-lubricant/SKILL.md` — a load-and-invoke smoke skill only.
 - `skills/project-definition/` — Stage 0 Project Charter creation with deployed preflight and schema validation.
 - `skills/duty-challenge-analysis/` — one evidence-bound Challenge Map member at `CHALLENGES_DEFINED`.
+- `skills/failure-ctq-analysis/` — one evidence-bound Failure/CTQ record at `FAILURE_CTQ_DEFINED`.
 - `schemas/` — Draft 2020-12 contracts for Decision-Driven R&D artifacts.
 - `fixtures/` — Schema fixtures plus state-machine transition fixtures.
 - `scripts/validate_schemas.py` — repeatable JSON Schema validation entry point.
@@ -29,7 +30,7 @@ validator generates formulations or claims product performance.
 
 ## Install
 
-Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition` or `python scripts/install_domain_skill.py duty-challenge-analysis`; it copies that Skill plus verified deployment copies of only its canonical schemas into the private OpenCode user-skill profile. Neither Skill belongs in bundled/core skill directories.
+Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition`, `python scripts/install_domain_skill.py duty-challenge-analysis`, or `python scripts/install_domain_skill.py failure-ctq-analysis`; it copies that Skill plus verified deployment copies of only its canonical schemas into the private OpenCode user-skill profile. Neither Skill belongs in bundled/core skill directories.
 
 ## Smoke acceptance
 

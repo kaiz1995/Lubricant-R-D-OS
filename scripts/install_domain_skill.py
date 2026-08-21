@@ -14,6 +14,7 @@ PACK_ROOT = Path(__file__).resolve().parents[1]
 SKILLS = {
     "project-definition": ("common.schema.json", "project.schema.json"),
     "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json"),
+    "failure-ctq-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json"),
 }
 ROAMING_APP_DATA = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
 DEFAULT_TARGET = ROAMING_APP_DATA / "com.ai4s.workbench" / "runtime" / "xdg-config" / "opencode" / "skills" / "user"
