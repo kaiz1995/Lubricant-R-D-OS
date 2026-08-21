@@ -1,0 +1,15 @@
+{
+  "project_id": "WGO-001",
+  "project_name": "Wind gear oil cost-down",
+  "project_type": "COST_DOWN",
+  "product_family": "ISO VG 320 wind gear oil",
+  "business_objective": "Reduce approved product cost.",
+  "technical_objective": "Maintain required CTQ and risk boundaries.",
+  "hard_constraints": ["Compatibility evidence is required."],
+  "target_cost": {"value": 9000, "unit": "CNY/t", "source": "approved cost baseline", "method_version": "cost-baseline-v1", "material_batch": "not_applicable", "formula_version": "baseline-v1"},
+  "benchmark_products": ["Mobilgear SHC Gear 320 WT"],
+  "success_criteria": ["Critical CTQs have evidence."],
+  "risk_class": "STRATEGIC",
+  "owner": "R&D owner",
+  "source_evidence": [{"evidence_id": "E-P-001", "statement": "Approved brief requests cost reduction with compatibility evidence.", "source": "approved project brief", "status": "OBSERVED"}]
+}

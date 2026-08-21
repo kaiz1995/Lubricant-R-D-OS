@@ -5,6 +5,7 @@ V0 is a minimal, independently installable proof that an external Lubricant R&D 
 ## Contents
 
 - `skills/hello-lubricant/SKILL.md` — a load-and-invoke smoke skill only.
+- `skills/project-definition/` — Stage 0 Project Charter creation with deployed preflight and schema validation.
 - `schemas/` — Draft 2020-12 contracts for Decision-Driven R&D artifacts.
 - `fixtures/` — Schema fixtures plus state-machine transition fixtures.
 - `scripts/validate_schemas.py` — repeatable JSON Schema validation entry point.
@@ -27,7 +28,7 @@ validator generates formulations or claims product performance.
 
 ## Install
 
-Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. The app installs it under its private OpenCode user-skill profile; it must not be copied into bundled/core skill directories.
+Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install Project Definition with `python scripts/install_project_definition_skill.py`; it copies the Skill plus verified deployment copies of its two canonical schemas into the private OpenCode user-skill profile. Neither Skill belongs in bundled/core skill directories.
 
 ## Smoke acceptance
 
