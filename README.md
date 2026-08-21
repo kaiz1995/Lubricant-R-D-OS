@@ -30,7 +30,7 @@ validator generates formulations or claims product performance.
 
 ## Install
 
-Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition`, `python scripts/install_domain_skill.py duty-challenge-analysis`, `python scripts/install_domain_skill.py failure-ctq-analysis`, `python scripts/install_domain_skill.py test-method-qualification`, or `python scripts/install_domain_skill.py formulation-design`; it copies that Skill plus verified deployment copies of only its canonical schemas into the private OpenCode user-skill profile. Neither Skill belongs in bundled/core skill directories.
+Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition --target <Open Science user-skill directory>` (substitute any other supported Skill name); it copies that Skill plus verified deployment copies of only its canonical schemas into the explicit target. `PASS` proves copying only, not catalog loading: reload/restart Open Science, then run the runtime E2E smoke check. Neither Skill belongs in bundled/core skill directories.
 
 ## Smoke acceptance
 
