@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/compute_envelope.schema.json",
+  "title": "Compute envelope",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "engine_name": {
+      "enum": [
+        "cost",
+        "doe",
+        "statistics",
+        "optimization"
+      ]
+    },
+    "engine_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "OK",
+        "REJECTED"
+      ]
+    },
+    "rejection_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "result": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "OBSERVED",
+              "ASSUMED",
+              "GAP"
+            ]
+          }
+        },
+        "required": [
+          "evidence_id",
+          "statement",
+          "source",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "engine_name",
+    "engine_version",
+    "method",
+    "parameters",
+    "input_digest",
+    "status",
+    "rejection_reasons",
+    "result",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "status": {
+        "const": "REJECTED"
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "rejection_reasons": {
+        "minItems": 1
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "rejection_reasons": {
+        "maxItems": 0
+      }
+    }
+  }
+}

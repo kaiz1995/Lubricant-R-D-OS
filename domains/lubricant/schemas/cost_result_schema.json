@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/cost_result_schema.json",
+  "title": "Cost result",
+  "allOf": [
+    {
+      "$ref": "compute_envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "engine_name": {
+      "const": "cost"
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "total_cost": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "component_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cost_contribution": {
+                "type": "number"
+              },
+              "cost_percentage": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "component_id",
+              "cost_contribution",
+              "cost_percentage"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "highest_cost_component": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "total_cost",
+        "currency",
+        "components",
+        "highest_cost_component"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "engine_name"
+  ],
+  "unevaluatedProperties": false
+}
