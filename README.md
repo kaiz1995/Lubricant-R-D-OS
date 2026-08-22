@@ -8,6 +8,7 @@ V0 is a minimal, independently installable proof that an external Lubricant R&D 
 - `skills/project-definition/` — Stage 0 Project Charter creation with deployed preflight and schema validation.
 - `skills/duty-challenge-analysis/` — one evidence-bound Challenge Map member at `CHALLENGES_DEFINED`.
 - `skills/failure-ctq-analysis/` — one evidence-bound Failure/CTQ record at `FAILURE_CTQ_DEFINED`.
+- `skills/doe-design/` — one evidence-bound constrained-mixture request at `EXPERIMENT_DESIGNED`; it does not generate DOE points.
 - `schemas/` — Draft 2020-12 contracts for Decision-Driven R&D artifacts.
 - `fixtures/` — Schema fixtures plus state-machine transition fixtures.
 - `scripts/validate_schemas.py` — repeatable JSON Schema validation entry point.
@@ -30,7 +31,7 @@ validator generates formulations or claims product performance.
 
 ## Install
 
-Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition --target <Open Science user-skill directory>` (substitute any other supported Skill name); it copies that Skill plus verified deployment copies of only its canonical schemas into the explicit target. `PASS` proves copying only, not catalog loading: reload/restart Open Science, then run the runtime E2E smoke check. Neither Skill belongs in bundled/core skill directories.
+Use Open Science's existing skill installation entry with the complete contents of `skills/hello-lubricant/SKILL.md`. Install a structured Skill with `python scripts/install_domain_skill.py project-definition --target <Open Science user-skill directory>` (substitute any other supported Skill name, including `doe-design`); it copies that Skill plus verified deployment copies of only its canonical schemas into the explicit target. `PASS` proves copying only, not catalog loading: reload/restart Open Science, then run the runtime E2E smoke check. Neither Skill belongs in bundled/core skill directories.
 
 ## Smoke acceptance
 
