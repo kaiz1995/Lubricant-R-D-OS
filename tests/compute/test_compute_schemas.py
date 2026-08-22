@@ -77,7 +77,7 @@ def main():
         head_hash = hashlib.sha256(proc.stdout).hexdigest()
         assert ws_hash == head_hash, f"{name} modified {ws_hash} != {head_hash}"
         print(f"PASS: {name} frozen ({ws_hash[:8]})")
-    # positive cost
+    # positive cost (1.1.0: sensitivity required)
     good_cost = {
         "schema_version": "0.1.0",
         "engine_name": "cost",
@@ -87,7 +87,7 @@ def main():
         "input_digest": "d"*64,
         "status": "OK",
         "rejection_reasons": [],
-        "result": {"total_cost": 100.0, "currency": "CNY", "components": [{"component_id": "PAO6", "cost_contribution": 60.0, "cost_percentage": 60.0}, {"component_id": "AN", "cost_contribution": 40.0, "cost_percentage": 40.0}], "highest_cost_component": "PAO6"},
+        "result": {"total_cost": 100.0, "currency": "CNY", "components": [{"component_id": "PAO6", "cost_contribution": 60.0, "cost_percentage": 60.0}, {"component_id": "AN", "cost_contribution": 40.0, "cost_percentage": 40.0}], "highest_cost_component": "PAO6", "sensitivity": {"ranking": [{"component_id": "PAO6", "contribution": 60.0, "percentage": 60.0}, {"component_id": "AN", "contribution": 40.0, "percentage": 40.0}], "method_note": "CONTRIBUTION_RATIO_V1"}},
         "evidence": [{"evidence_id": "E1", "statement": "price from supplier", "source": "supplier sheet", "status": "OBSERVED"}]
     }
     errs = validate("cost_result_schema.json", good_cost)

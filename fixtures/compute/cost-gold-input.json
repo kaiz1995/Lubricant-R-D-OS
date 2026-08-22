@@ -1,0 +1,65 @@
+{
+  "input_type": "COST_CALCULATION",
+  "formula": {
+    "formula_id": "GEAR-OIL-220",
+    "version": "1.0",
+    "components": [
+      {
+        "material_id": "PAO6",
+        "fraction": 0.3
+      },
+      {
+        "material_id": "AN",
+        "fraction": 0.4
+      },
+      {
+        "material_id": "Ester",
+        "fraction": 0.2
+      },
+      {
+        "material_id": "Additive",
+        "fraction": 0.1
+      }
+    ]
+  },
+  "materials": [
+    {
+      "material_id": "PAO6",
+      "name": "PAO 6 cSt",
+      "category": "BASE_OIL",
+      "supplier": "Supplier A",
+      "unit": "CNY_PER_KG",
+      "price": 38.5,
+      "currency": "CNY",
+      "effective_date": "2026-01-01"
+    },
+    {
+      "material_id": "AN",
+      "name": "Alkylated Naphthalene",
+      "category": "BASE_OIL",
+      "unit": "CNY_PER_KG",
+      "price": 45.0,
+      "currency": "CNY",
+      "effective_date": "2026-01-01"
+    },
+    {
+      "material_id": "Ester",
+      "name": "Polyol Ester",
+      "category": "BASE_OIL",
+      "unit": "CNY_PER_KG",
+      "price": 52.0,
+      "currency": "CNY",
+      "effective_date": "2026-01-01"
+    },
+    {
+      "material_id": "Additive",
+      "name": "Gear Additive Package",
+      "category": "ADDITIVE",
+      "unit": "CNY_PER_KG",
+      "price": 68.0,
+      "currency": "CNY",
+      "effective_date": "2026-01-01"
+    }
+  ],
+  "price_timestamp": "2026-01-15"
+}

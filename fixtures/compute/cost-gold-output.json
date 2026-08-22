@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "cost",
+  "engine_version": "0.1.0",
+  "method": "COST_SUM_V1",
+  "parameters": {
+    "sum_tolerance": 1e-09
+  },
+  "input_digest": "a191128ce52bbcd996b42175a3fc8e8d4d351f707a1890d7d41a1dd324009f22",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {
+    "total_cost": 46.75,
+    "currency": "CNY",
+    "components": [
+      {
+        "component_id": "AN",
+        "cost_contribution": 18.0,
+        "cost_percentage": 38.50267379679144
+      },
+      {
+        "component_id": "PAO6",
+        "cost_contribution": 11.549999999999999,
+        "cost_percentage": 24.705882352941174
+      },
+      {
+        "component_id": "Ester",
+        "cost_contribution": 10.4,
+        "cost_percentage": 22.245989304812834
+      },
+      {
+        "component_id": "Additive",
+        "cost_contribution": 6.800000000000001,
+        "cost_percentage": 14.545454545454547
+      }
+    ],
+    "highest_cost_component": "AN",
+    "sensitivity": {
+      "ranking": [
+        {
+          "component_id": "AN",
+          "contribution": 18.0,
+          "percentage": 38.50267379679144
+        },
+        {
+          "component_id": "PAO6",
+          "contribution": 11.549999999999999,
+          "percentage": 24.705882352941174
+        },
+        {
+          "component_id": "Ester",
+          "contribution": 10.4,
+          "percentage": 22.245989304812834
+        },
+        {
+          "component_id": "Additive",
+          "contribution": 6.800000000000001,
+          "percentage": 14.545454545454547
+        }
+      ],
+      "method_note": "CONTRIBUTION_RATIO_V1"
+    }
+  },
+  "evidence": [
+    {
+      "evidence_id": "cost-price-source",
+      "statement": "cost calculated from materials price table at price_timestamp 2026-01-15; price table is the single source of price truth",
+      "source": "materials table in cost_input",
+      "status": "OBSERVED"
+    }
+  ]
+}
