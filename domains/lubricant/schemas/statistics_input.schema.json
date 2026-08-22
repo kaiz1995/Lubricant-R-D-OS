@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/statistics_input.schema.json",
+  "title": "Statistics input",
+  "type": "object",
+  "properties": {
+    "input_type": {
+      "const": "STATISTICAL_ANALYSIS"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "component_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          }
+        },
+        "required": [
+          "component_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "model_order": {
+      "enum": [
+        "LINEAR",
+        "QUADRATIC"
+      ]
+    },
+    "response_ctq": {
+      "type": "string",
+      "minLength": 1
+    },
+    "design_points": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "run_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proportions": {
+            "type": "object",
+            "minProperties": 3,
+            "propertyNames": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+            },
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "required": [
+          "run_reference",
+          "proportions"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "run_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ctq_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "run_reference",
+          "ctq_reference",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "requested_analyses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "ANOVA",
+          "REGRESSION",
+          "RESIDUAL",
+          "LACK_OF_FIT"
+        ]
+      }
+    }
+  },
+  "required": [
+    "input_type",
+    "components",
+    "model_order",
+    "response_ctq",
+    "design_points",
+    "observations",
+    "requested_analyses"
+  ],
+  "additionalProperties": false
+}
