@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/optimization.schema.json",
+  "title": "Optimization request",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "optimization" },
+    "stage": { "const": "OPTIMIZED" },
+    "optimization_id": { "type": "string", "minLength": 1 },
+    "model_reference": { "type": "string", "minLength": 1 },
+    "objective_type": { "enum": ["CONSTRAINT_SATISFACTION", "MULTI_OBJECTIVE"] },
+    "objectives": { "type": "array", "minItems": 1, "items": { "type": "object", "properties": { "response_reference": { "type": "string", "minLength": 1 }, "direction": { "enum": ["MINIMIZE", "MAXIMIZE", "TARGET"] }, "criterion": { "type": "string", "minLength": 1 } }, "required": ["response_reference", "direction", "criterion"], "additionalProperties": false } },
+    "methods": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["PARETO", "DESIRABILITY", "NON_INFERIORITY"] } },
+    "engine_handoff": { "const": "PHASE4_DETERMINISTIC_ENGINE" }
+  },
+  "required": ["artifact_type", "stage", "optimization_id", "model_reference", "objective_type", "objectives", "methods", "engine_handoff"],
+  "unevaluatedProperties": false
+}
