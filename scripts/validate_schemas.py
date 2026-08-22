@@ -24,8 +24,8 @@ EXPECTED_ERRORS = {
     "experiment_design--missing-point-generation.json": "'point_generation' is a required property",
     "experiment_design--missing-mixture-total.json": "'mixture_total' is a required property",
     "gate--illegal-status.json": "'APPROVED' is not one of",
-    "model--missing-engine-handoff.json": "'schema_version' is a required property",
-    "optimization--missing-engine-handoff.json": "'schema_version' is a required property",
+    "model--missing-engine-handoff.json": "'engine_handoff' is a required property",
+    "optimization--missing-engine-handoff.json": "'engine_handoff' is a required property",
 }
 
 
