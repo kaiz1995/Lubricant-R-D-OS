@@ -1,0 +1,25 @@
+{
+  "input_type": "VALIDATION_REQUEST",
+  "artifact": {
+    "artifact_type": "cost_result",
+    "data": {
+      "schema_version": "0.1.0",
+      "engine_name": "cost",
+      "engine_version": "0.1.0",
+      "method": "COST_SUM_V1",
+      "parameters": {"sum_tolerance": 1e-09},
+      "input_digest": "a191128ce52bbcd996b42175a3fc8e8d4d351f707a1890d7d41a1dd324009f22",
+      "status": "OK",
+      "rejection_reasons": [],
+      "result": {
+        "total_cost": 10.0,
+        "currency": "CNY",
+        "components": [{"component_id": "A", "cost_contribution": 10.0, "cost_percentage": 100.0}],
+        "highest_cost_component": "A",
+        "sensitivity": {"ranking": [{"component_id": "A", "contribution": 10.0, "percentage": 100.0}], "method_note": "CONTRIBUTION_RATIO_V1"}
+      },
+      "evidence": [{"evidence_id": "cost-price-source", "statement": "gold cost artifact", "source": "validation fixture", "status": "OBSERVED"}]
+    }
+  },
+  "chain_context": []
+}

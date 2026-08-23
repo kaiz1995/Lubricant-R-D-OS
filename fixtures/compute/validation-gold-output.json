@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "cost",
+  "engine_version": "0.1.0",
+  "method": "VALIDATION_FRAMEWORK_V1",
+  "parameters": {
+    "artifact_digest_contract": "ARTIFACT_DIGEST_V1"
+  },
+  "input_digest": "2b83d2eb90aec794d5334a6dec7e7abd2520f6c03c14fa0af73cf55bb5cb9d62",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {
+    "overall_status": "VALID",
+    "artifact_type": "cost_result",
+    "artifact_digest": "40b2735a0b43deffc40d5e6394b47934a66cffd7c1d4f38c5e93aa2f832e990f",
+    "checks": [
+      {
+        "check_id": "contract.schema",
+        "layer": "CONTRACT",
+        "status": "PASS",
+        "severity": "INFO",
+        "message": "artifact matches frozen schema",
+        "evidence_reference": "cost_result_schema.json"
+      },
+      {
+        "check_id": "cost.contribution_sum",
+        "layer": "NUMERICAL",
+        "status": "PASS",
+        "severity": "INFO",
+        "message": "cost percentages must sum to 100",
+        "evidence_reference": ""
+      },
+      {
+        "check_id": "cost.sensitivity_ranking",
+        "layer": "NUMERICAL",
+        "status": "PASS",
+        "severity": "INFO",
+        "message": "sensitivity ranking must match components",
+        "evidence_reference": ""
+      },
+      {
+        "check_id": "cost.total_positive",
+        "layer": "NUMERICAL",
+        "status": "PASS",
+        "severity": "INFO",
+        "message": "total_cost must be positive",
+        "evidence_reference": ""
+      }
+    ],
+    "errors": [],
+    "warnings": [],
+    "upstream_consistency": {
+      "doe_to_statistics": "NOT_CHECKED",
+      "statistics_to_optimization": "NOT_CHECKED",
+      "cost_basis": "NOT_CHECKED",
+      "design_space_domain": "NOT_CHECKED"
+    },
+    "eligible_for_downstream": true
+  },
+  "evidence": [
+    {
+      "evidence_id": "validation-framework",
+      "statement": "four-layer deterministic validation completed",
+      "source": "VALIDATION_FRAMEWORK_V1",
+      "status": "OBSERVED"
+    }
+  ]
+}
