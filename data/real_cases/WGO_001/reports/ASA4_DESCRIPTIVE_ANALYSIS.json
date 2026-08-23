@@ -1,0 +1,251 @@
+{
+  "analysis_id": "WGO001_ASA4_DESCRIPTIVE_V1",
+  "evidence_strength": "DESCRIPTIVE",
+  "model_built_claim": false,
+  "input_dataset_sha256_source": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+  "n_records": 10,
+  "dose_bench_table": [
+    {
+      "dose_fraction": 0.005,
+      "n": 2,
+      "noise_db": {
+        "min": 62.0,
+        "max": 65.0,
+        "mean": 63.5
+      },
+      "duration_h": {
+        "min": 4.5,
+        "max": 10.0
+      },
+      "stop_status_counts": {
+        "FULL_10H_PASS": 1,
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-B",
+        "WGO001-ASA4-L"
+      ]
+    },
+    {
+      "dose_fraction": 0.01,
+      "n": 2,
+      "noise_db": {
+        "min": 56.5,
+        "max": 66.5,
+        "mean": 61.5
+      },
+      "duration_h": {
+        "min": 4.0,
+        "max": 10.0
+      },
+      "stop_status_counts": {
+        "FULL_10H_PASS": 1,
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-C",
+        "WGO001-ASA4-K"
+      ]
+    },
+    {
+      "dose_fraction": 0.02,
+      "n": 2,
+      "noise_db": {
+        "min": 64.0,
+        "max": 65.0,
+        "mean": 64.5
+      },
+      "duration_h": {
+        "min": 5.0,
+        "max": 9.0
+      },
+      "stop_status_counts": {
+        "AMBIGUOUS_STOP_BELOW_LIMIT(E-07/E-08)": 1,
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-F",
+        "WGO001-ASA4-I"
+      ]
+    },
+    {
+      "dose_fraction": 0.03,
+      "n": 1,
+      "noise_db": {
+        "min": 66.0,
+        "max": 66.0,
+        "mean": 66.0
+      },
+      "duration_h": {
+        "min": 3.0,
+        "max": 3.0
+      },
+      "stop_status_counts": {
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-J"
+      ]
+    },
+    {
+      "dose_fraction": 0.05,
+      "n": 1,
+      "noise_db": {
+        "min": 63.0,
+        "max": 63.0,
+        "mean": 63.0
+      },
+      "duration_h": {
+        "min": 1.0,
+        "max": 1.0
+      },
+      "stop_status_counts": {
+        "AMBIGUOUS_STOP_BELOW_LIMIT(E-07/E-08)": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-M"
+      ]
+    },
+    {
+      "dose_fraction": 0.08,
+      "n": 1,
+      "noise_db": {
+        "min": 65.0,
+        "max": 65.0,
+        "mean": 65.0
+      },
+      "duration_h": {
+        "min": 2.3,
+        "max": 2.3
+      },
+      "stop_status_counts": {
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-N"
+      ]
+    },
+    {
+      "dose_fraction": 0.1,
+      "n": 1,
+      "noise_db": {
+        "min": 65.0,
+        "max": 65.0,
+        "mean": 65.0
+      },
+      "duration_h": {
+        "min": 1.75,
+        "max": 1.75
+      },
+      "stop_status_counts": {
+        "EARLY_STOP_AT_THRESHOLD": 1
+      },
+      "run_references": [
+        "WGO001-ASA4-O"
+      ]
+    }
+  ],
+  "rank_correlations": {
+    "definition": "Spearman rho; effect summary only, no p-value (descriptive scope)",
+    "dose_vs_noise_all_n10": 0.214563,
+    "dose_vs_noise_full10h_only_n2": -1.0,
+    "dose_vs_duration_all_n10": -0.773021,
+    "interpretation_guard": "negative dose-vs-duration rho means higher dose reached the 65dB threshold sooner under this historical protocol"
+  },
+  "solubility_water_content": {
+    "groups": [
+      {
+        "prep_condition_group": "OPEN_DRY_60C_3D",
+        "points": [
+          {
+            "dose_fraction": 0.005,
+            "water_ppm": 257,
+            "cell": "ASA#4溶解!C6",
+            "sample_date_yymmdd": 251202
+          },
+          {
+            "dose_fraction": 0.01,
+            "water_ppm": 170,
+            "cell": "ASA#4溶解!D6",
+            "sample_date_yymmdd": 251202
+          },
+          {
+            "dose_fraction": 0.02,
+            "water_ppm": 81,
+            "cell": "ASA#4溶解!E6",
+            "sample_date_yymmdd": 251202
+          },
+          {
+            "dose_fraction": 0.03,
+            "water_ppm": 112,
+            "cell": "ASA#4溶解!F6",
+            "sample_date_yymmdd": 251202
+          }
+        ],
+        "note": "within-group prep identical; across-group comparison blocked"
+      },
+      {
+        "prep_condition_group": "CLOSED_THEN_OPEN_50C",
+        "points": [
+          {
+            "dose_fraction": 0.005,
+            "water_ppm": 320,
+            "cell": "ASA#4溶解!G6",
+            "sample_date_yymmdd": 251210
+          },
+          {
+            "dose_fraction": 0.01,
+            "water_ppm": 704,
+            "cell": "ASA#4溶解!H6",
+            "sample_date_yymmdd": 251210
+          }
+        ],
+        "note": "within-group prep identical; across-group comparison blocked"
+      },
+      {
+        "prep_condition_group": "OPEN_50C_STIR_4H",
+        "points": [
+          {
+            "dose_fraction": 0.05,
+            "water_ppm": 4645,
+            "cell": "ASA#4溶解!I6",
+            "sample_date_yymmdd": 251223
+          },
+          {
+            "dose_fraction": 0.08,
+            "water_ppm": 1693,
+            "cell": "ASA#4溶解!J6",
+            "sample_date_yymmdd": 251223
+          },
+          {
+            "dose_fraction": 0.1,
+            "water_ppm": 1731,
+            "cell": "ASA#4溶解!K6",
+            "sample_date_yymmdd": 251223
+          }
+        ],
+        "note": "within-group prep identical; across-group comparison blocked"
+      }
+    ],
+    "neat_asa4": {
+      "asa4_neat_water_ppm": 285960,
+      "cell": "ASA#4溶解!B6",
+      "drying_history_cells": [
+        "ASA#4溶解!B7",
+        "ASA#4溶解!B9"
+      ]
+    }
+  },
+  "quality_flags": [
+    "noise values compared across different durations conflate dose with stopping time",
+    "AMBIGUOUS_STOP records exist (stopped below 65dB before 10h); cause unknown (E-07/E-08)",
+    "no replicates (E-05): dispersion within dose is confounded with time/bench drift",
+    "bench method version change lacks formal record (E-04); new-standard subset only"
+  ],
+  "descriptive_findings": [
+    "2/10 runs completed 10h with noise <=65dB (WGO001-ASA4-B @0.005, WGO001-ASA4-C @0.01).",
+    "Early stops at/above 65dB occurred at doses [0.005, 0.01, 0.02, 0.03, 0.08, 0.1]; higher doses tend to hit the threshold earlier (see dose_vs_duration rho).",
+    "Ambiguous early stops below limit: ['WGO001-ASA4-F', 'WGO001-ASA4-M'] - HOLD from any performance conclusion.",
+    "Solubility (identical prep OPEN_DRY_60C_3D): water content [257, 170, 81, 112] ppm at doses [0.005, 0.01, 0.02, 0.03]; lowest water near 2% dose in this group."
+  ]
+}

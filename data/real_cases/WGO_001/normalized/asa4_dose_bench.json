@@ -1,0 +1,364 @@
+{
+  "dataset_id": "WGO001_ASA4_DOSE_BENCH_V1",
+  "response": {
+    "ctq": "EROSION_NOISE_DB",
+    "unit": "dB",
+    "direction": "LOWER_IS_BETTER",
+    "guardrail": "<=65 dB @10h (new standard)"
+  },
+  "design_type_tag": "HISTORICAL_OFAT",
+  "analysis_class": "DESCRIPTIVE_ONLY",
+  "evidence_strength": "DESCRIPTIVE",
+  "records": [
+    {
+      "run_reference": "WGO001-ASA4-B",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!B3",
+        "sample_id_cell": "ASA#4验证!B6",
+        "sample_date_cell": "ASA#4验证!B7",
+        "test_date_cell": "ASA#4验证!B8",
+        "bench_result_cell": "ASA#4验证!B9",
+        "note_cell": "ASA#4验证!B5",
+        "raw_bench_text": "10h=62dB/外较轻微内磨损",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251210,
+      "bench_test_date_yymmdd": 251211,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.005,
+      "mobil_fraction_raw": 0.995,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 62.0,
+      "bench_duration_h": 10.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-C",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!C3",
+        "sample_id_cell": "ASA#4验证!C6",
+        "sample_date_cell": "ASA#4验证!C7",
+        "test_date_cell": "ASA#4验证!C8",
+        "bench_result_cell": "ASA#4验证!C9",
+        "note_cell": "ASA#4验证!C5",
+        "raw_bench_text": "10h=56.5/外较轻微内磨损",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251210,
+      "bench_test_date_yymmdd": 251212,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.01,
+      "mobil_fraction_raw": 0.99,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 56.5,
+      "bench_duration_h": 10.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-F",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!F3",
+        "sample_id_cell": "ASA#4验证!F6",
+        "sample_date_cell": "ASA#4验证!F7",
+        "test_date_cell": "ASA#4验证!F8",
+        "bench_result_cell": "ASA#4验证!F9",
+        "note_cell": "ASA#4验证!F5",
+        "raw_bench_text": "9h=64dB/外圈电蚀内圈极轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251212,
+      "bench_test_date_yymmdd": 251218,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.02,
+      "mobil_fraction_raw": 0.98,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 64.0,
+      "bench_duration_h": 9.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-I",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!I3",
+        "sample_id_cell": "ASA#4验证!I6",
+        "sample_date_cell": "ASA#4验证!I7",
+        "test_date_cell": "ASA#4验证!I8",
+        "bench_result_cell": "ASA#4验证!I9",
+        "note_cell": "ASA#4验证!I5",
+        "raw_bench_text": "5h=65dB/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251202,
+      "bench_test_date_yymmdd": 251223,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.02,
+      "mobil_fraction_raw": 0.98,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 65.0,
+      "bench_duration_h": 5.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-J",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!J3",
+        "sample_id_cell": "ASA#4验证!J6",
+        "sample_date_cell": "ASA#4验证!J7",
+        "test_date_cell": "ASA#4验证!J8",
+        "bench_result_cell": "ASA#4验证!J9",
+        "note_cell": "ASA#4验证!J5",
+        "raw_bench_text": "3h=66dB/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251202,
+      "bench_test_date_yymmdd": 251224,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.03,
+      "mobil_fraction_raw": 0.97,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 66.0,
+      "bench_duration_h": 3.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-K",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!K3",
+        "sample_id_cell": "ASA#4验证!K6",
+        "sample_date_cell": "ASA#4验证!K7",
+        "test_date_cell": "ASA#4验证!K8",
+        "bench_result_cell": "ASA#4验证!K9",
+        "note_cell": "ASA#4验证!K5",
+        "raw_bench_text": "4h=66.5/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251202,
+      "bench_test_date_yymmdd": 251225,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.01,
+      "mobil_fraction_raw": 0.99,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 66.5,
+      "bench_duration_h": 4.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-L",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!L3",
+        "sample_id_cell": "ASA#4验证!L6",
+        "sample_date_cell": "ASA#4验证!L7",
+        "test_date_cell": "ASA#4验证!L8",
+        "bench_result_cell": "ASA#4验证!L9",
+        "note_cell": "ASA#4验证!L5",
+        "raw_bench_text": "4.5h=65dB/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251202,
+      "bench_test_date_yymmdd": 251226,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.005,
+      "mobil_fraction_raw": 0.995,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 65.0,
+      "bench_duration_h": 4.5,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-M",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!M3",
+        "sample_id_cell": "ASA#4验证!M6",
+        "sample_date_cell": "ASA#4验证!M7",
+        "test_date_cell": "ASA#4验证!M8",
+        "bench_result_cell": "ASA#4验证!M9",
+        "note_cell": "ASA#4验证!M5",
+        "raw_bench_text": "1h=63dB/外轻微内极轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251223,
+      "bench_test_date_yymmdd": 251230,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.05,
+      "mobil_fraction_raw": 0.95,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 63.0,
+      "bench_duration_h": 1.0,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-N",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!N3",
+        "sample_id_cell": "ASA#4验证!N6",
+        "sample_date_cell": "ASA#4验证!N7",
+        "test_date_cell": "ASA#4验证!N8",
+        "bench_result_cell": "ASA#4验证!N9",
+        "note_cell": "ASA#4验证!N5",
+        "raw_bench_text": "2.3h=65dB/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251223,
+      "bench_test_date_yymmdd": 251231,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.08,
+      "mobil_fraction_raw": 0.92,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 65.0,
+      "bench_duration_h": 2.3,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    },
+    {
+      "run_reference": "WGO001-ASA4-O",
+      "provenance": {
+        "source_file": "Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+        "source_file_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+        "sheet": "ASA#4验证",
+        "dose_cell": "ASA#4验证!O3",
+        "sample_id_cell": "ASA#4验证!O6",
+        "sample_date_cell": "ASA#4验证!O7",
+        "test_date_cell": "ASA#4验证!O8",
+        "bench_result_cell": "ASA#4验证!O9",
+        "note_cell": "ASA#4验证!O5",
+        "raw_bench_text": "1.75h=65dB/外电蚀内轻微",
+        "raw_note": ""
+      },
+      "sample_date_yymmdd": 251223,
+      "bench_test_date_yymmdd": 260105,
+      "base_oil": "MOBIL",
+      "asa4_dose_fraction": 0.1,
+      "mobil_fraction_raw": 0.9,
+      "fraction_sum": 1.0,
+      "normalization": {
+        "status": "IDENTITY",
+        "factor": 1.0,
+        "reason": "two-component dose series sums to exactly 1.0 by construction"
+      },
+      "bench_noise_db": 65.0,
+      "bench_duration_h": 1.75,
+      "bench_standard": ">65dB_new",
+      "quality_tags": {
+        "bench_method_version": "PARTIALLY_VERIFIED(new std, no formal change record E-04)",
+        "replicate": "NONE(E-05)",
+        "price_basis": "NOT_APPLICABLE(descriptive stats only)"
+      }
+    }
+  ]
+}
