@@ -4,6 +4,33 @@
   "model_built_claim": false,
   "input_dataset_sha256_source": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
   "n_records": 10,
+  "interpretation_boundaries": {
+    "gate_ruling": "Partial Replay Gate PASS/FREEZE",
+    "dose_vs_noise": "no clear monotonic dose-noise relationship observed in the current historical sample; this does NOT establish that dose has no effect",
+    "dose_vs_runtime": "EXPLORATORY_ASSOCIATION ONLY; recorded runtime embeds an unknown stopping mechanism (E-10 CRITICAL) and must not be read as time-to-failure or endurance life",
+    "full_run_ranking": "only 2 records completed 10h; ranking over n=2 is not statistical evidence",
+    "solubility_minimum": "DESCRIPTIVE_LOCAL_MINIMUM among tested doses; NOT an OPTIMUM",
+    "bench_boundary_65db": "TEMPORARY_INTERPRETATION_NOT_METHOD_VERIFIED; boundary_status=UNRESOLVED pending method document review (E-11)"
+  },
+  "e10_stop_reason_policy": {
+    "status": "CRITICAL",
+    "resolution": "OWNER_CONFIRMATION_REQUIRED",
+    "default_stop_reason": "UNKNOWN",
+    "target_classification": [
+      "COMPLETED",
+      "EVENT_OCCURRED",
+      "RIGHT_CENSORED",
+      "ADMINISTRATIVE_STOP",
+      "INVALID_RUN",
+      "UNKNOWN"
+    ],
+    "note": "affects 6/10 records stopped below 65 dB before 10h"
+  },
+  "e11_boundary_status": {
+    "boundary_status": "UNRESOLVED",
+    "temporary_interpretation": "65.0 dB counted as threshold hit",
+    "prohibition": "must not be written into any Test Method Contract until source method document confirms semantics of the guardrail notation"
+  },
   "dose_bench_table": [
     {
       "dose_fraction": 0.005,
@@ -150,7 +177,7 @@
     "dose_vs_noise_all_n10": 0.214563,
     "dose_vs_noise_full10h_only_n2": -1.0,
     "dose_vs_duration_all_n10": -0.773021,
-    "interpretation_guard": "negative dose-vs-duration rho means higher dose reached the 65dB threshold sooner under this historical protocol"
+    "interpretation_guard": "negative dose-vs-duration rho is an EXPLORATORY_ASSOCIATION between dose and RECORDED RUNTIME under unknown stopping rules; runtime != time-to-failure != verified endurance life (E-10)"
   },
   "solubility_water_content": {
     "groups": [
@@ -238,14 +265,16 @@
   },
   "quality_flags": [
     "noise values compared across different durations conflate dose with stopping time",
-    "AMBIGUOUS_STOP records exist (stopped below 65dB before 10h); cause unknown (E-07/E-08)",
+    "E-10 CRITICAL: 6/10 records stopped below 65dB before 10h with UNKNOWN reason; OWNER_CONFIRMATION_REQUIRED",
+    "E-07/E-08: bench operating parameters and retune semantics unresolved; confound interpretation",
     "no replicates (E-05): dispersion within dose is confounded with time/bench drift",
-    "bench method version change lacks formal record (E-04); new-standard subset only"
+    "bench method version change lacks formal record (E-04); new-standard subset only",
+    "65.0 dB counted as threshold hit is TEMPORARY_INTERPRETATION; method document must confirm boundary semantics (E-11)"
   ],
   "descriptive_findings": [
     "2/10 runs completed 10h with noise <=65dB (WGO001-ASA4-B @0.005, WGO001-ASA4-C @0.01).",
-    "Early stops at/above 65dB occurred at doses [0.005, 0.01, 0.02, 0.03, 0.08, 0.1]; higher doses tend to hit the threshold earlier (see dose_vs_duration rho).",
+    "Stops at/above 65dB (boundary reading is TEMPORARY_INTERPRETATION per E-11) occurred at doses [0.005, 0.01, 0.02, 0.03, 0.08, 0.1]. The dose-vs-runtime negative association is EXPLORATORY_ASSOCIATION only: recorded runtime embeds an unknown stopping mechanism (E-10), so no endurance conclusion is drawn.",
     "Ambiguous early stops below limit: ['WGO001-ASA4-F', 'WGO001-ASA4-M'] - HOLD from any performance conclusion.",
-    "Solubility (identical prep OPEN_DRY_60C_3D): water content [257, 170, 81, 112] ppm at doses [0.005, 0.01, 0.02, 0.03]; lowest water near 2% dose in this group."
+    "Solubility proxy (identical prep OPEN_DRY_60C_3D): water content [257, 170, 81, 112] ppm at doses [0.005, 0.01, 0.02, 0.03]; 2% shows the observed local minimum among tested doses (DESCRIPTIVE_LOCAL_MINIMUM, not OPTIMUM); 2%-vs-3% difference not verified against method repeatability."
   ]
 }

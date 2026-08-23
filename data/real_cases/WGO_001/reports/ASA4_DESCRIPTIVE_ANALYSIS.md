@@ -14,15 +14,17 @@
 
 ## Findings
 - 2/10 runs completed 10h with noise <=65dB (WGO001-ASA4-B @0.005, WGO001-ASA4-C @0.01).
-- Early stops at/above 65dB occurred at doses [0.005, 0.01, 0.02, 0.03, 0.08, 0.1]; higher doses tend to hit the threshold earlier (see dose_vs_duration rho).
+- Stops at/above 65dB (boundary reading is TEMPORARY_INTERPRETATION per E-11) occurred at doses [0.005, 0.01, 0.02, 0.03, 0.08, 0.1]. The dose-vs-runtime negative association is EXPLORATORY_ASSOCIATION only: recorded runtime embeds an unknown stopping mechanism (E-10), so no endurance conclusion is drawn.
 - Ambiguous early stops below limit: ['WGO001-ASA4-F', 'WGO001-ASA4-M'] - HOLD from any performance conclusion.
-- Solubility (identical prep OPEN_DRY_60C_3D): water content [257, 170, 81, 112] ppm at doses [0.005, 0.01, 0.02, 0.03]; lowest water near 2% dose in this group.
+- Solubility proxy (identical prep OPEN_DRY_60C_3D): water content [257, 170, 81, 112] ppm at doses [0.005, 0.01, 0.02, 0.03]; 2% shows the observed local minimum among tested doses (DESCRIPTIVE_LOCAL_MINIMUM, not OPTIMUM); 2%-vs-3% difference not verified against method repeatability.
 
 ## Quality flags
 - noise values compared across different durations conflate dose with stopping time
-- AMBIGUOUS_STOP records exist (stopped below 65dB before 10h); cause unknown (E-07/E-08)
+- E-10 CRITICAL: 6/10 records stopped below 65dB before 10h with UNKNOWN reason; OWNER_CONFIRMATION_REQUIRED
+- E-07/E-08: bench operating parameters and retune semantics unresolved; confound interpretation
 - no replicates (E-05): dispersion within dose is confounded with time/bench drift
 - bench method version change lacks formal record (E-04); new-standard subset only
+- 65.0 dB counted as threshold hit is TEMPORARY_INTERPRETATION; method document must confirm boundary semantics (E-11)
 
 ## Contract boundary
 - Frozen statistics engine not invoked: schema requires >=3 mixture components +
