@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/optimization_result_schema.json",
+  "version": "1.0.0",
+  "title": "Optimization result", "allOf": [{"$ref": "compute_envelope.schema.json"}], "type": "object",
+  "properties": {"engine_name": {"const": "optimization"}, "result": {"type": "object", "properties": {
+    "total_candidates_evaluated": {"type": "integer", "minimum": 0}, "hard_constraint_passed": {"type": "integer", "minimum": 0}, "guardrail_passed": {"type": "integer", "minimum": 0}, "pareto_front_size": {"type": "integer", "minimum": 0},
+    "recommended_candidates": {"type": "array", "items": {"type": "object", "properties": {
+      "rank": {"type": "integer", "minimum": 1}, "candidate_role": {"enum": ["PARETO_FRONT", "WEIGHTED_RANK_TOP", "MIN_COST_FEASIBLE"]},
+      "proportions": {"type": "object", "additionalProperties": {"type": "number"}}, "predicted_ctq": {"type": "object", "additionalProperties": {"type": "number"}}, "total_cost": {"type": "number"}, "currency": {"type": "string"}, "in_pareto_front": {"type": "boolean"}, "weighted_score": {"type": ["number", "null"]},
+      "margin_report": {"type": "array", "items": {"type": "object", "properties": {"guardrail_id": {"type": "string"}, "margin_value": {"type": "number"}, "passes": {"type": "boolean"}}, "required": ["guardrail_id", "margin_value", "passes"], "additionalProperties": false}},
+      "cost_evaluation": {"type": "object", "properties": {"engine_name": {"type": "string"}, "engine_version": {"type": "string"}, "input_digest": {"type": "string"}, "total_cost": {"type": "number"}}, "required": ["engine_name", "engine_version", "input_digest", "total_cost"], "additionalProperties": false}
+    }, "required": ["rank", "candidate_role", "proportions", "predicted_ctq", "total_cost", "currency", "in_pareto_front", "weighted_score", "margin_report", "cost_evaluation"], "additionalProperties": false}},
+    "method_summary": {"type": "object", "properties": {"ranking_method": {"type": "string"}, "grid_resolution": {"type": "integer"}, "effective_domain_note": {"type": "string"}, "normalization_method": {"type": ["string", "null"]}}, "required": ["ranking_method", "grid_resolution", "effective_domain_note", "normalization_method"], "additionalProperties": false}
+  }, "required": ["total_candidates_evaluated", "hard_constraint_passed", "guardrail_passed", "pareto_front_size", "recommended_candidates", "method_summary"], "additionalProperties": false}},
+  "required": ["engine_name"], "unevaluatedProperties": false
+}
