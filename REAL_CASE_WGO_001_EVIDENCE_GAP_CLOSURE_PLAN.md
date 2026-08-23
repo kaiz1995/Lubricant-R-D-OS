@@ -1,7 +1,12 @@
 # REAL_CASE_WGO_001 - Evidence-Gap Closure Plan
 
-> Status: DRAFT for Review. This plan answers "what evidence is missing for the
-WGO cost-down DECISION", not "what can we squeeze out of history".
+> Status: AMENDED per C-stage Gate CONDITIONAL PASS. This plan answers "what
+evidence is missing for the WGO cost-down DECISION", not "what can we squeeze
+out of history".
+>
+> Provenance correction: the delivery report for this plan said "three commits"
+> but listed two SHAs. Actual count was TWO commits (2b93dcf boundaries,
+> f34aee4 plan). Count corrected here.
 
 ## 0. Decision Question (anchor)
 
@@ -57,10 +62,13 @@ P-levels are engineering judgment, documented here, no pseudo-math.
 | G-E | material identity (1540A/B, PX3844/3846, supplier grades) | DOE reproducibility collapses if raw material identity drifts | material register with supplier/TDS/batch policy |
 | G-F | external benchmark grade (E-03) | non-inferiority needs a real comparator | confirm Mobil SHC/Shell Omala actual products used |
 
-### P2 — quality gates for winners
+### P2 — quality gates for finalists (VERIFY_ON_FINALISTS)
 
-verify-on-winner strategy: foam/demuls/rust/Cu/low-temp/conductivity ride along
-on candidate batches; no dedicated DOE axis spent on them.
+VERIFY_ON_FINALISTS strategy: foam/demuls/rust/Cu/low-temp/conductivity ride
+along on finalist batches; no dedicated DOE axis spent on them. Flow: S2 DOE ->
+statistics/validation -> feasible candidates -> Top 2-3 Finalists + Baseline ->
+expensive CTQ verification -> final engineering candidates. Never verify only
+the math rank #1 formula.
 
 ### P3 — deferred by cost/time
 
@@ -73,7 +81,10 @@ Strategy shape: one shared formulation matrix serving three questions.
 
 ### Stage S1 — bench stabilization pilot (P0, small)
 
-- purpose: prove the ruler before measuring anything else;
+- purpose: prove the ruler before measuring anything else. This is a formal
+  TEST METHOD QUALIFICATION GATE, not "three repeats and pass": acceptance
+  criteria, endpoint semantics, censoring rules and stop-reason discipline are
+  pre-registered in WGO_001_S1_BENCH_METHOD_QUALIFICATION_PLAN.md;
 - content: baseline oil + one known-good ASA#4 reference + one known-bad
   reference (high-S contaminated), each >=3 replicates, fixed protocol V2,
   blank/positive control every batch;
@@ -81,12 +92,27 @@ Strategy shape: one shared formulation matrix serving three questions.
   modeling the bench response;
 - this directly implements the project summary's own priority-one recommendation.
 
+### Stage S1.5 (conditional) — tribology screening
+
+FZG deferral to finalists is approved ONLY IF S2 does not directly change core
+EP/AW chemistry. If the additive-substitution axis touches EP agents, AW agents,
+sulfur-phosphorus load-bearing systems or package-level changes, a simplified
+tribology qualification MUST run before S2: additive screen -> simplified
+tribology check -> S2 DOE -> finalists FZG confirmation.
+
 ### Stage S2 — cost-down mixture DOE (the core)
 
-- variables: base-oil blend ratio (PAO/ester or alternative cheaper base),
-  ASA#4 dose restricted to 1-3% window (history shows 5-10% adds nothing but
-  risk; 0.5% marginal), additive package swap candidates (cheaper alternatives
-  for expensive components);
+- variables: base-oil blend ratio (admitted materials only, see Admission Rule),
+  ASA#4 dose with upper bound 3% = PROVISIONAL_ENGINEERING_BOUND; the lower
+  bound (0 / 0.5 / 1%) is NOT frozen and will be decided after S1 -- including
+  the possibility that S1 shows no stable ASA#4 benefit and the factor is
+  dropped from S2 entirely;
+- variable-type discipline: additive substitution is CATEGORICAL MATERIAL IDENTITY,
+  not a continuous dosage. Frozen Phase 4.2 is a pure mixture engine and supports
+  no Mixture x Categorical interaction. Correct handling: prescreen candidate A/B,
+  fix ONE chemistry, then enter mixture DOE -- or run separate campaigns per
+  chemistry. Do NOT stuff categorical choices into the mixture engine and do NOT
+  modify the frozen Phase 4.2 engine;
 - constraints: VI>=150, KV40 in VG320 band, PB/PD floors from baseline;
 - responses: cost (primary), bench endurance (guardrail), four-ball/PB (guardrail);
 - design engine: Phase 4.2 simplex-lattice/D-optimal over confirmed component list,
@@ -107,6 +133,8 @@ Strategy shape: one shared formulation matrix serving three questions.
 | CTQ roles assigned | YES (matrix section 1) |
 | test methods comparable + versioned | NO -> blocked by G-B/G-C completion |
 | variables + bounds confirmed | PARTIAL (needs owner confirm base-oil swap options) |
+| S1 Method Qualification Gate passed | NO -> blocked until S1 executed and accepted |
+| Material Admission Gate established | NO -> owner must issue BASE_OIL_ADMISSION_RULE |
 | material identities registered | NO -> blocked by G-E |
 | formula completeness policy | NO -> blocked by G-D |
 | price basis verified | NO -> blocked by G-A |
@@ -122,17 +150,35 @@ DOE invocation = HOLD until all rows YES.
 5. External benchmark product grades (E-03).
 6. Material identity register (1540A/B, PX series).
 7. Base-oil swap legal/supply scope for cost-down (which cheaper bases are allowed?).
+8. Issue BASE_OIL_ADMISSION_RULE (see below) -- Project Owner design input.
+
+## 5a. BASE_OIL_ADMISSION_RULE (owner-owned design input)
+
+First-round conservative admission:
+
+| material class | admission |
+|----------------|-----------|
+| currently qualified PAO/GTL/ester system | GO |
+| previously used, identity-confirmed AN | GO / CONDITIONAL |
+| new GTL/CTL/Group III+ cost-down base oils | CONDITIONAL (TDS + batch identity required) |
+| commodity Group II / Group I | NOT ADMITTED to first-round core DOE |
+| unclear identity/supplier/batch base oils | HOLD |
+
+First-round scope principle: existing qualified materials + AT MOST ONE new
+cost-down base-oil family. Adding every candidate family at once turns the DOE
+into an uncontrolled materials-screening program.
 
 ## 6. Next Gate Criteria
 
 EVIDENCE_GAP_CLOSURE_GATE passes when:
 
 1. G-A resolved: prices have owner-confirmed baseline date; PX3844 classified;
-2. G-B resolved: BENCH_PROTOCOL_V2 written + S1 pilot executed with repeatability
-   estimate accepted by method owner;
+2. G-B resolved: S1 TEST METHOD QUALIFICATION GATE passed per its pre-registered
+   acceptance criteria (not merely completed);
 3. G-D/G-E/G-F resolved;
-4. CTQ matrix reviewed and signed;
-5. THEN DOE eligibility checklist goes all-YES and Phase 4.2 may be invoked for S2.
+4. BASE_OIL_ADMISSION_RULE issued and admitted material set frozen;
+5. CTQ matrix reviewed and signed;
+6. THEN DOE eligibility checklist goes all-YES and Phase 4.2 may be invoked for S2.
 
 Until then: no DOE matrix generation, no statistics regression, no optimization.
 
