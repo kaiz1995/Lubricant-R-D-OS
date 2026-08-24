@@ -46,6 +46,12 @@
     "manual_timestamp_rule": null
   },
   "q2b": {"status": "UNRESOLVED_OWNER_INPUT_REQUIRED", "checkpoints_h": null},
+  "ten_hour_censoring_semantics": {
+    "status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+    "administrative_right_censor_h": null,
+    "no_event_within_window_interpretation": null,
+    "event_not_observed_recording_rule": null
+  },
   "protocol_version": null,
   "bench_and_equipment_identities": null,
   "blocking_and_execution_order_generation_rule": null,
@@ -77,6 +83,7 @@
     "BENCH_REFERENCE_BLANK identity",
     "physical Event Detection Rule V1",
     "Q2-B final checkpoints",
+    "ten-hour administrative right-censoring semantics",
     "protocol version",
     "bench and equipment identities",
     "blocking and execution-order generation rule",

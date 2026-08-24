@@ -29,6 +29,12 @@ def validate(candidate: dict, review: dict, request: dict) -> None:
     assert candidate["quarantined_synthetic_values"]["import_rule"].startswith("FORBIDDEN")
     assert candidate["physical_event_detection_rule"]["status"] == "UNRESOLVED_OWNER_INPUT_REQUIRED"
     assert candidate["q2b"] == {"status": "UNRESOLVED_OWNER_INPUT_REQUIRED", "checkpoints_h": None}
+    assert candidate["ten_hour_censoring_semantics"] == {
+        "status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+        "administrative_right_censor_h": None,
+        "no_event_within_window_interpretation": None,
+        "event_not_observed_recording_rule": None,
+    }
     assert all(value is None for key, value in candidate["physical_event_detection_rule"].items() if key != "status")
     assert candidate["protocol_version"] is None
     assert candidate["bench_and_equipment_identities"] is None
@@ -48,6 +54,7 @@ def validate(candidate: dict, review: dict, request: dict) -> None:
     required = {
         "GOOD_CHARACTERIZATION_CANDIDATE identity", "BAD_CHARACTERIZATION_CANDIDATE identity",
         "BENCH_REFERENCE_BLANK identity", "physical Event Detection Rule V1", "Q2-B final checkpoints",
+        "ten-hour administrative right-censoring semantics",
         "protocol version", "bench and equipment identities",
         "blocking and execution-order generation rule", "Owner parameter freeze confirmation",
     }
@@ -74,7 +81,7 @@ def validate(candidate: dict, review: dict, request: dict) -> None:
     assert set(request["inputs"]) == {
         "GOOD_CHARACTERIZATION_CANDIDATE", "BAD_CHARACTERIZATION_CANDIDATE",
         "BENCH_REFERENCE_BLANK", "PHYSICAL_EVENT_DETECTION_RULE_V1",
-        "Q2B_FINAL_CHECKPOINTS", "PROTOCOL_VERSION", "BENCH_AND_EQUIPMENT_IDENTITIES",
+        "Q2B_FINAL_CHECKPOINTS", "TEN_HOUR_CENSORING_SEMANTICS", "PROTOCOL_VERSION", "BENCH_AND_EQUIPMENT_IDENTITIES",
         "BLOCKING_AND_EXECUTION_ORDER_GENERATION_RULE", "OWNER_PARAMETER_FREEZE_CONFIRMATION",
     }
     assert request["prohibited_actions"] == [
@@ -100,6 +107,9 @@ def validate(candidate: dict, review: dict, request: dict) -> None:
     }
     assert set(request["inputs"]["PHYSICAL_EVENT_DETECTION_RULE_V1"]["fields"]) == set(candidate["physical_event_detection_rule"]) - {"status"}
     assert set(request["inputs"]["Q2B_FINAL_CHECKPOINTS"]["fields"]) == {"checkpoints_h"}
+    assert set(request["inputs"]["TEN_HOUR_CENSORING_SEMANTICS"]["fields"]) == {
+        "administrative_right_censor_h", "no_event_within_window_interpretation", "event_not_observed_recording_rule",
+    }
     assert set(request["inputs"]["PROTOCOL_VERSION"]["fields"]) == {"protocol_version", "protocol_artifact_reference"}
     assert set(request["inputs"]["BENCH_AND_EQUIPMENT_IDENTITIES"]["fields"]) == {
         "bench_id", "noise_instrument_id", "equipment_configuration_reference", "operator_qualification_reference",
@@ -173,10 +183,11 @@ def main() -> None:
     rejects_injection(candidate, review, request, ("inputs", "GOOD_CHARACTERIZATION_CANDIDATE", "fields", "sample_id", "response"), "WGO001-S1A-GCC-20260401")
     rejects_injection(candidate, review, request, ("inputs", "PHYSICAL_EVENT_DETECTION_RULE_V1", "fields", "threshold_db", "current_value"), 65)
     rejects_injection(candidate, review, request, ("inputs", "Q2B_FINAL_CHECKPOINTS", "fields", "checkpoints_h", "response"), [1, 2])
+    rejects_injection(candidate, review, request, ("inputs", "TEN_HOUR_CENSORING_SEMANTICS", "fields", "administrative_right_censor_h", "response"), 10)
     rejects_candidate_injection(candidate, review, request, "owner_authorization", {"owner": "demo"})
     rejects_candidate_injection(candidate, review, request, "execution_order", [{"planned_run_order": 1}])
     rejects_candidate_injection(candidate, review, request, "blocking_and_execution_order_provenance", {"source": "premature"})
-    print("PASS PHYSICAL_RELEASE_CANDIDATE=HOLD_NOT_READY OWNER_REQUEST=EMPTY SYNTHETIC_IMPORT=FORBIDDEN TRANSITION=false INJECTION_REJECTED=6/6")
+    print("PASS PHYSICAL_RELEASE_CANDIDATE=HOLD_NOT_READY OWNER_REQUEST=EMPTY SYNTHETIC_IMPORT=FORBIDDEN TRANSITION=false INJECTION_REJECTED=7/7")
 
 
 if __name__ == "__main__":

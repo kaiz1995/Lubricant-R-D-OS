@@ -1,0 +1,86 @@
+{
+  "accepted_example_schema_version": "V1_9_GROUPS_NOT_SUFFICIENT_FOR_PHYSICAL_ENTRY",
+  "artifact_id": "WGO_001_S1A_RELEASE_FINALIZATION_ENTRY_PREFLIGHT_V1",
+  "deferred_after_entry": [
+    "formal_execution_order",
+    "execution_order_provenance",
+    "execution_artifacts_updated",
+    "release_hashes",
+    "manifest_final_values",
+    "final_owner_authorization"
+  ],
+  "downstream_state": {
+    "PHASE_3_4": "NO_CHANGE",
+    "PHYSICAL_STAGE_A": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "STAGE_A2": "HOLD"
+  },
+  "entry_allowed": false,
+  "entry_blockers": [
+    "OWNER_INPUTS_UNRESOLVED",
+    "OWNER_PARAMETER_FREEZE_NOT_CONFIRMED",
+    "TEN_HOUR_CENSORING_SEMANTICS_UNRESOLVED",
+    "PHYSICAL_CONSISTENCY_NOT_PASSED_AND_OWNER_METHOD_AUTHORITY_NONE"
+  ],
+  "evaluation_mode": "CURRENT_STATE_BLOCKED_ASSERTION",
+  "execution_order": null,
+  "execution_order_provenance": null,
+  "final_owner_authorization": null,
+  "manifest_final_values": null,
+  "owner_resolution_coverage": {
+    "required_items": [
+      "GOOD_CHARACTERIZATION_CANDIDATE identity",
+      "BAD_CHARACTERIZATION_CANDIDATE identity",
+      "BENCH_REFERENCE_BLANK identity",
+      "physical Event Detection Rule V1",
+      "Q2-B final checkpoints",
+      "ten-hour administrative right-censoring semantics",
+      "protocol version",
+      "bench and equipment identities",
+      "blocking and execution-order generation rule",
+      "Owner parameter freeze confirmation"
+    ],
+    "resolved_items": 0,
+    "total_required": 10
+  },
+  "physical_execution_authorized": false,
+  "physical_method_authority": "NONE",
+  "prohibited_claims": [
+    "METHOD_QUALIFIED",
+    "PHYSICAL_RELEASE_APPROVED",
+    "STAGE_A2_STARTED",
+    "S1B_STARTED",
+    "S2_STARTED"
+  ],
+  "purpose": "REAL_RELEASE_FINALIZATION_ENTRY_CHECK_ONLY",
+  "release_finalization_started": false,
+  "release_hashes": null,
+  "source_artifacts": {
+    "consistency_review": "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/CONSISTENCY_REVIEW.json",
+    "owner_input_request": "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/OWNER_INPUT_REQUEST.json",
+    "physical_release_candidate": "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/PHYSICAL_RELEASE_CANDIDATE.json",
+    "release_manifest": "data/real_cases/WGO_001/s1a/physical/S1A_STAGE_A_RELEASE_MANIFEST.json",
+    "run_plan": "data/real_cases/WGO_001/s1a/physical/run_plan.json"
+  },
+  "source_states": {
+    "candidate": "HOLD_NOT_READY",
+    "consistency_review": "UNRESOLVED_INPUTS_REMAIN",
+    "manifest": "DRAFT_NOT_RELEASED",
+    "owner_input_request": "OPEN_UNRESOLVED",
+    "run_plan_release_gate": "DRAFT_NOT_RELEASED"
+  },
+  "state_transition_allowed": false,
+  "status": "BLOCKED_AS_DESIGNED",
+  "strict_order_after_entry": [
+    "A_OWNER_FREEZES_REQUIRED_PARAMETERS",
+    "B_FINAL_EXECUTION_ORDER_GENERATED",
+    "C_EXECUTION_ARTIFACTS_UPDATED",
+    "D_JSON_AND_SEMANTIC_VALIDATION_COMPLETED",
+    "E_SHA256_CALCULATED",
+    "F_RELEASE_MANIFEST_POPULATED",
+    "G_HASHES_VERIFIED",
+    "H_OWNER_FINAL_AUTHORIZATION_RECORDED",
+    "I_RELEASE_STATUS_SET_TO_RELEASED_FOR_EXECUTION"
+  ]
+}

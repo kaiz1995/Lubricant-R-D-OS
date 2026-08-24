@@ -87,6 +87,16 @@
       "response": null,
       "fields": {"checkpoints_h": {"current_value": null, "response": null}}
     },
+    "TEN_HOUR_CENSORING_SEMANTICS": {
+      "candidate_resolution_key": "ten-hour administrative right-censoring semantics",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "administrative_right_censor_h": {"current_value": null, "response": null},
+        "no_event_within_window_interpretation": {"current_value": null, "response": null},
+        "event_not_observed_recording_rule": {"current_value": null, "response": null}
+      }
+    },
     "PROTOCOL_VERSION": {
       "candidate_resolution_key": "protocol version",
       "current_value": null,

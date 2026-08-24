@@ -12,6 +12,7 @@
     {"check": "bench_blank_identity_is_resolved", "status": "HOLD"},
     {"check": "physical_event_rule_is_owner_frozen", "status": "HOLD"},
     {"check": "q2b_is_owner_frozen", "status": "HOLD"},
+    {"check": "ten_hour_censoring_semantics_is_owner_frozen", "status": "HOLD"},
     {"check": "protocol_version_is_owner_frozen", "status": "HOLD"},
     {"check": "bench_and_equipment_identities_are_frozen", "status": "HOLD"},
     {"check": "blocking_and_execution_order_generation_rule_is_frozen", "status": "HOLD"},
