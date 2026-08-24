@@ -1,0 +1,92 @@
+{
+  "artifact_id": "WGO_001_S1A_EXPERIMENT_RECORD_TEMPLATE_V1",
+  "overall_status": "DRAFT_NOT_RELEASED",
+  "contract_rules": {
+    "checkpoint_structure": "Generic; actual checkpoints come only from an owner-frozen run plan.",
+    "raw_signal_evidence": "When equipment can export a complete time series, preserve an immutable raw trace. Q2-B checkpoints are preregistered derived metrics, not substitutes for raw evidence; post-hoc point selection is prohibited.",
+    "unknown_stop_reason_forbidden": true,
+    "other_documented_requires_nonempty_specific_detail": true,
+    "unclassifiable_stop": "run_status=INVALID_RUN; deviation required; exclude from Q1/Q2.",
+    "no_event_within_10h": "Administrative right-censor at 10 h; never business PASS."
+  },
+  "required_fields": {
+    "run_id": null,
+    "stage_arm": null,
+    "sample_id": null,
+    "formula_id": null,
+    "reference_role": null,
+    "material_identity": null,
+    "material_batch": null,
+    "preparation_sop": null,
+    "protocol_version": null,
+    "run_status": "PLANNED",
+    "start_time": null,
+    "end_time": null,
+    "event_definition": "FIRST_REACH_65_DB",
+    "event_occurred": null,
+    "event_time_h": null,
+    "raw_signal_reference": null,
+    "raw_signal_sha256": null,
+    "censoring_type": null,
+    "censor_time_h": null,
+    "method_outcome": null,
+    "business_pass_label": null,
+    "noise_measurements": [{"time_h": null, "noise_db": null}],
+    "stop_reason_version": "STOP_REASON_V1",
+    "stop_reason": null,
+    "stop_reason_detail": null,
+    "operator": null,
+    "equipment_id": null,
+    "bench_parameters": {
+      "current_a": null,
+      "bearing_lot": null,
+      "load": null,
+      "temperature_c": null,
+      "run_in_period_h": null,
+      "noise_sampling_rate": null,
+      "microphone_position": null
+    },
+    "environment_conditions": {},
+    "deviation": [],
+    "notes": null,
+    "legacy_provenance": {
+      "legacy_stop_reason": null,
+      "legacy_source": null,
+      "mapping_status": "NOT_APPLICABLE_NEW_RUN",
+      "mapped_stop_reason_v1": null
+    },
+    "reviewer": null
+  },
+  "stop_reason_v1_allowed": [
+    "EVENT_REACHED",
+    "ADMINISTRATIVE_10H_END",
+    "EQUIPMENT_FAULT",
+    "POWER_INTERRUPTION",
+    "OPERATOR_ABORT",
+    "SAMPLE_ANOMALY",
+    "OTHER_DOCUMENTED"
+  ],
+  "run_status_allowed": [
+    "PLANNED",
+    "VALID_RUN",
+    "INVALID_RUN"
+  ],
+  "stop_reason_rules": {
+    "unknown_forbidden": true,
+    "other_documented_requires_nonempty_detail": true,
+    "unresolvable_stop_reason": "INVALID_RUN_WITH_DEVIATION_AND_EXCLUDE_FROM_Q1_Q2"
+  },
+  "legacy_stop_reason_allowed": [
+    "COMPLETED",
+    "EVENT_OCCURRED",
+    "RIGHT_CENSORED",
+    "ADMINISTRATIVE_STOP",
+    "INVALID_RUN"
+  ],
+  "legacy_mapping_rule": "Preserve the legacy value and source. Map only from event evidence, 10 h censoring evidence, and deviation evidence. Ambiguous cases must be NOT_AUTOMAPPABLE; do not infer from strings.",
+  "outcome_rules": {
+    "event_reached": "event_occurred=true; event_time_h=actual time; stop_reason=EVENT_REACHED.",
+    "no_event_within_10h": "event_occurred=false; event_time_h=null; censoring_type=ADMINISTRATIVE_RIGHT_CENSOR; censor_time_h=10; method_outcome=NO_EVENT_WITHIN_10H; business_pass_label=null; stop_reason=ADMINISTRATIVE_10H_END.",
+    "invalid": "run_status=INVALID_RUN; deviation required; exclude from Q1/Q2."
+  }
+}

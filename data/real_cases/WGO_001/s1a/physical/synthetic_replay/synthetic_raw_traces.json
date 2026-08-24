@@ -1,0 +1,21 @@
+{
+  "artifact_id": "WGO_001_S1A_SYNTHETIC_RAW_TRACES_V1",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": ["SYNTHETIC", "DEMO", "NOT_FOR_PHYSICAL_EXECUTION"],
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "physical_execution_authorized": false,
+  "notice": "NOT_FOR_PHYSICAL_EXECUTION",
+  "event_detection_rule": "FIRST_REACH_65_DB_WITH_5_SECONDS_PERSISTENCE",
+  "traces": {
+    "A1-GOOD-01": {"time_noise_db": [{"time_h": 0, "noise_db": 48}, {"time_h": 1, "noise_db": 50}, {"time_h": 2, "noise_db": 52}, {"time_h": 10, "noise_db": 60}]},
+    "A1-GOOD-02": {"time_noise_db": [{"time_h": 0, "noise_db": 48}, {"time_h": 1, "noise_db": 50}, {"time_h": 2, "noise_db": 52}, {"time_h": 10, "noise_db": 61}]},
+    "A1-GOOD-03": {"time_noise_db": [{"time_h": 0, "noise_db": 49}, {"time_h": 1, "noise_db": 51}, {"time_h": 2, "noise_db": 53}, {"time_h": 10, "noise_db": 62}]},
+    "A1-BAD-01": {"time_noise_db": [{"time_h": 0, "noise_db": 50}, {"time_h": 1, "noise_db": 56}, {"time_h": 2, "noise_db": 62}, {"time_h": 3.0, "noise_db": 65}], "persistence_seconds": 5},
+    "A1-BAD-02": {"time_noise_db": [{"time_h": 0, "noise_db": 50}, {"time_h": 1, "noise_db": 55}, {"time_h": 2, "noise_db": 61}, {"time_h": 3.1, "noise_db": 65}], "persistence_seconds": 5},
+    "A1-BAD-03": {"time_noise_db": [{"time_h": 0, "noise_db": 50}, {"time_h": 1, "noise_db": 56}, {"time_h": 2, "noise_db": 62}, {"time_h": 2.9, "noise_db": 65}], "persistence_seconds": 5},
+    "A1-BLANK-01": {"time_noise_db": [{"time_h": 0, "noise_db": 49}, {"time_h": 1, "noise_db": 52}, {"time_h": 2, "noise_db": 55}, {"time_h": 6.0, "noise_db": 65}], "persistence_seconds": 5},
+    "A1-BLANK-02": {"time_noise_db": [{"time_h": 0, "noise_db": 49}, {"time_h": 1, "noise_db": 52}, {"time_h": 2, "noise_db": 55}, {"time_h": 6.1, "noise_db": 65}], "persistence_seconds": 5},
+    "A1-BLANK-03": {"time_noise_db": [{"time_h": 0, "noise_db": 50}, {"time_h": 1, "noise_db": 53}, {"time_h": 2, "noise_db": 56}, {"time_h": 5.9, "noise_db": 65}], "persistence_seconds": 5}
+  }
+}

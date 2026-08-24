@@ -1,0 +1,192 @@
+{
+  "artifact_id": "WGO_001_S1A_PHYSICAL_RUN_PLAN_V1",
+  "overall_status": "DRAFT_NOT_RELEASED",
+  "authoring_decision": "PASS_FREEZE",
+  "draft_gate": "PASS_FREEZE",
+  "release_readiness_demo": "PASS_FREEZE",
+  "physical_run_release": "HOLD",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": ["SYNTHETIC", "DEMO", "NOT_FOR_PHYSICAL_EXECUTION"],
+  "physical_execution_authorized": false,
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "synthetic_demo_inputs": {
+    "owner": "张凯",
+    "recorded_at": "2026-05-06",
+    "GOOD_CHARACTERIZATION_CANDIDATE": {"sample_id": "WGO001-S1A-GCC-20260401", "formula": "1540_ESTER_98_WT_PERCENT_PLUS_ASA4_ACTIVE_2_WT_PERCENT", "water": "1_WT_PERCENT", "preparation": "60_C_60_MIN_60_RPM_OIL_THEN_ADDITIVE_NO_REST"},
+    "BAD_CHARACTERIZATION_CANDIDATE": {"sample_id": "WGO001-S1A-BCC-DEMO-001", "formula": "1540_97_8_WT_PERCENT_PLUS_ASA4_2_0_WT_PERCENT_PLUS_DEMO_HIGH_S_CONTAMINANT_0_2_WT_PERCENT", "contaminant_id": "DEMO-HS-001", "preparation": "60_C_60_MIN_60_RPM_OIL_THEN_ASA4_THEN_CONTAMINANT", "assumption": "SYNTHETIC_DEMO_ONLY"},
+    "BENCH_REFERENCE_BLANK": {"sample_id": "WGO001-S1A-BRB-20260506", "material": "MOBIL_SHC_320_WT", "condition": "NEW_NO_ADDITIVE_NO_INTENTIONAL_CONTAMINATION", "container_id": "WGO001-MOBILBLANK-20260506-01"}
+  },
+  "purpose": "S1a method-characterization evidence only; no acceptance or business PASS decision.",
+  "protocol": {
+    "candidate_version": "BENCH_PROTOCOL_V2",
+    "freeze_status": "FROZEN_FOR_SYNTHETIC_DEMO"
+  },
+  "endpoint": {
+    "noise_threshold_db": 65,
+    "event_rule": "FIRST_REACH",
+    "administrative_right_censor_h": 10,
+    "no_event_within_10h_interpretation": "RIGHT_CENSORED_NOT_PASS"
+  },
+  "event_detection": {
+    "threshold_db": 65.0,
+    "comparator": "GREATER_THAN_OR_EQUAL",
+    "signal_source": "SELF_BUILT_ANALOG_POINTER_DISPLAY",
+    "sampling_interval": "CONTINUOUS_VISUAL_OBSERVATION",
+    "instrument_resolution": "1_DB",
+    "weighting_rule": "NONE",
+    "rounding_rule": "POINTER_SCALE_NO_ADDITIONAL_ROUNDING",
+    "filtering_rule": "NONE",
+    "persistence_rule": "CONTINUOUS_GREATER_THAN_OR_EQUAL_65_DB_FOR_5_SECONDS",
+    "missing_sample_rule": "MISSING_OBSERVATION_AROUND_CROSSING_EVENT_TIME_NOT_ESTIMABLE_AND_INVALID_RUN",
+    "manual_timestamp_rule": "NEAREST_MINUTE",
+    "raw_trace_available": false,
+    "freeze_status": "FROZEN_FOR_SYNTHETIC_DEMO",
+    "release_requirement": "ALL_FIELDS_FROZEN_BEFORE_RELEASE"
+  },
+  "arms": {
+    "A1": {
+      "status": "PLANNED_NOT_RELEASED",
+      "rows": 9,
+      "blocks": 3,
+      "block_composition": "EACH_BLOCK_EXACTLY_ONE_GOOD_ONE_BAD_ONE_BENCH_REFERENCE_BLANK",
+      "role_grouped_execution_forbidden": true,
+      "execution_order_status": "FROZEN_FOR_SYNTHETIC_DEMO",
+      "materials": [
+        "GOOD_CHARACTERIZATION_CANDIDATE",
+        "BAD_CHARACTERIZATION_CANDIDATE",
+        "BENCH_REFERENCE_BLANK"
+      ],
+      "replicates_per_material": 3
+    },
+    "A2": {
+      "status": "PLANNED_NOT_RELEASED",
+      "rows": 3,
+      "material": "PROJECT_BASELINE_WGO",
+      "replicates": 3,
+      "activation_rule": "A1_PROMISING_AND_OWNER_APPROVAL"
+    }
+  },
+  "reference_separation": {
+    "BENCH_REFERENCE_BLANK": "Mobil method/Q6 reference; not the project baseline.",
+    "PROJECT_BASELINE_WGO": "Project/S2 baseline; reserved A2 material only."
+  },
+  "stop_reason_contract": {
+    "version": "STOP_REASON_V1",
+    "status": "FROZEN_FOR_NEW_PHYSICAL_RUNS",
+    "allowed_values": [
+      "EVENT_REACHED",
+      "ADMINISTRATIVE_10H_END",
+      "EQUIPMENT_FAULT",
+      "POWER_INTERRUPTION",
+      "OPERATOR_ABORT",
+      "SAMPLE_ANOMALY",
+      "OTHER_DOCUMENTED"
+    ],
+    "unknown_forbidden": true,
+    "other_documented_requires_nonempty_specific_detail": true,
+    "unclassifiable_prospective_run": "SET_RUN_STATUS_INVALID_RUN_LOG_DEVIATION_EXCLUDE_Q1_Q2"
+  },
+  "legacy_stop_reason_mapping": [
+    {
+      "legacy_value": "COMPLETED",
+      "mapping": "CONTEXT_REQUIRED",
+      "rule": "Use event and censoring evidence to select EVENT_REACHED or ADMINISTRATIVE_10H_END; otherwise NOT_AUTOMAPPABLE."
+    },
+    {
+      "legacy_value": "EVENT_OCCURRED",
+      "mapping": "EVENT_REACHED",
+      "rule": "Only when FIRST_REACH_65_DB evidence is present."
+    },
+    {
+      "legacy_value": "RIGHT_CENSORED",
+      "mapping": "ADMINISTRATIVE_10H_END",
+      "rule": "Only when administrative right-censoring at 10 h is documented."
+    },
+    {
+      "legacy_value": "ADMINISTRATIVE_STOP",
+      "mapping": "CONTEXT_REQUIRED",
+      "rule": "Use documented cause to select the canonical value; otherwise NOT_AUTOMAPPABLE."
+    },
+    {
+      "legacy_value": "INVALID_RUN",
+      "mapping": "NOT_A_STOP_REASON",
+      "rule": "Preserve run_status=INVALID_RUN and legacy provenance; derive a canonical reason only from documented evidence."
+    }
+  ],
+  "q2b": {
+    "q2b_checkpoint_candidates_h": [1, 2],
+    "checkpoint_status": "FROZEN_FOR_SYNTHETIC_DEMO",
+    "observation_method": "MANUAL_POINTER_1_DB",
+    "post_hoc_selection": "PROHIBITED"
+  },
+  "raw_signal_policy": {
+    "preserve_complete_trace_when_exportable": true,
+    "required_record_fields": ["raw_signal_reference", "raw_signal_sha256"],
+    "q2b_checkpoint_role": "PREREGISTERED_DERIVED_METRIC_NOT_RAW_EVIDENCE_REPLACEMENT",
+    "post_hoc_checkpoint_selection_forbidden": true
+  },
+  "stage_a1_characterization_gate": {
+    "allowed_decisions": ["PROMISING", "REVISE", "FAIL"],
+    "forbidden_decision": "METHOD_QUALIFIED",
+    "review_questions": [
+      "GROSS_DISCRIMINATION_BY_REFERENCE_ROLE",
+      "REPLICATE_EVENT_CENSORING_CONCORDANCE",
+      "INVALID_RUN_IMPACT",
+      "BENCH_DRIFT",
+      "FIRST_REACH_65_DB_EXECUTABILITY",
+      "Q2B_ESTIMABLE_CONTINUOUS_RESPONSE",
+      "CANDIDATE_REFERENCE_RETENTION"
+    ]
+  },
+  "q6_control_band": {
+    "CONTROL_BAND_V0": ["PROVISIONAL", "CONFOUNDED", "INFORMATIONAL_REFERENCE_ONLY"],
+    "forbidden_uses": ["FORMAL_PASS_FAIL", "PROCESS_CAPABILITY", "FINAL_CONTROL_LIMIT"],
+    "blank_anomaly": "DRIFT_SIGNAL_INVESTIGATE",
+    "engineering_review_routes": ["PROMISING", "REVISE"],
+    "stage_b_output": "CONTROL_BAND_V1_CANDIDATE"
+  },
+  "release_gate": {
+    "current_state": "DRAFT_NOT_RELEASED",
+    "draft_gate": "PASS_FREEZE",
+    "conditions": [
+      {"condition": "GOOD_CHARACTERIZATION_CANDIDATE_IDENTITY_FROZEN", "status": "HOLD"},
+      {"condition": "BAD_CHARACTERIZATION_CANDIDATE_IDENTITY_FROZEN", "status": "HOLD"},
+      {"condition": "BENCH_REFERENCE_BLANK_IDENTITY_FROZEN", "status": "HOLD"},
+      {"condition": "STOP_REASON_V1_FROZEN", "status": "MET"},
+      {"condition": "Q2B_CHECKPOINTS_OWNER_APPROVED", "status": "HOLD"},
+      {"condition": "PROTOCOL_VERSION_FROZEN", "status": "HOLD"},
+      {"condition": "FIRST_REACH_65_DB_FROZEN", "status": "HOLD"},
+      {"condition": "TEN_HOUR_CENSORING_SEMANTICS_FROZEN", "status": "HOLD"},
+      {"condition": "OPERATOR_EQUIPMENT_FIELDS_READY", "status": "MET"},
+      {"condition": "OWNER_SIGN_OFF_COMPLETE", "status": "HOLD"},
+      {"condition": "BLOCKING_AND_EXECUTION_ORDER_FROZEN_WITH_PROVENANCE", "status": "HOLD"},
+      {"condition": "EVENT_DETECTION_METHOD_FIELDS_FROZEN", "status": "HOLD"},
+      {"condition": "RELEASE_MANIFEST_GENERATED_AND_HASHES_VERIFIED", "status": "HOLD"}
+    ],
+    "release_rule": "ALL_13_CONDITIONS_SIMULTANEOUSLY_PASS_PLUS_OWNER_AUTHORIZATION",
+    "prohibited_paths": ["AGENT_WAIVER", "PARTIAL_RELEASE", "SILENT_EXCEPTION"],
+    "deviation_rule": "OWNER_APPROVED_RELEASE_DEVIATION_ONLY_NO_ADDITIONAL_CONDITION"
+  },
+  "release_finalization": {
+    "status": "NOT_STARTED",
+    "strict_order": [
+      "A_OWNER_FREEZES_REQUIRED_PARAMETERS",
+      "B_FINAL_EXECUTION_ORDER_GENERATED",
+      "C_EXECUTION_ARTIFACTS_UPDATED",
+      "D_JSON_AND_SEMANTIC_VALIDATION_COMPLETED",
+      "E_SHA256_CALCULATED",
+      "F_RELEASE_MANIFEST_POPULATED",
+      "G_HASHES_VERIFIED",
+      "H_OWNER_FINAL_AUTHORIZATION_RECORDED",
+      "I_RELEASE_STATUS_SET_TO_RELEASED_FOR_EXECUTION"
+    ],
+    "formal_execution_order": null,
+    "no_waiver_rule": "ALL_13_CONDITIONS_MUST_SIMULTANEOUSLY_PASS; AGENT_WAIVER_PARTIAL_RELEASE_SILENT_EXCEPTION_PROHIBITED; OWNER_APPROVED_RELEASE_DEVIATION_ONLY"
+  },
+  "release_constraints": [
+    "No physical run may start while physical_run_release is HOLD.",
+    "A2 may not be released unless A1 is PROMISING and owner approval is documented.",
+    "NO_EVENT_WITHIN_10H must not be converted to PASS."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "artifact_id": "WGO_001_S1A_STAGE_A_RUN_MATRIX_V1",
+  "overall_status": "DRAFT_NOT_RELEASED",
+  "authoring_decision": "PASS_FREEZE",
+  "physical_run_release": "HOLD",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "physical_execution_authorized": false,
+  "allocation_rule": "A1 has exactly three blocks, each with one GOOD, one BAD, and one BENCH_REFERENCE_BLANK; role-grouped 3+3+3 execution is forbidden. This matrix is not a release authorization.",
+  "execution_order_status": "FROZEN_FOR_SYNTHETIC_DEMO",
+  "within_block_order_generation": {
+    "method": "DETERMINISTIC_BALANCED_ORDER_V1",
+    "randomization_seed": "NOT_APPLICABLE",
+    "generated_at": "2026-08-24",
+    "frozen_by": "张凯",
+    "release_requirement": "Record a balanced/randomized method and freeze all planned_run_order values before release."
+  },
+  "runs": [
+    {"run_id": "A1-GOOD-01", "arm": "A1", "block_id": "A1-BLOCK-01", "material_role": "GOOD_CHARACTERIZATION_CANDIDATE", "replicate": 1, "planned_run_order": 2, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BAD-01", "arm": "A1", "block_id": "A1-BLOCK-01", "material_role": "BAD_CHARACTERIZATION_CANDIDATE", "replicate": 1, "planned_run_order": 3, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BLANK-01", "arm": "A1", "block_id": "A1-BLOCK-01", "material_role": "BENCH_REFERENCE_BLANK", "reference_scope": "Mobil method/Q6", "replicate": 1, "planned_run_order": 1, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-GOOD-02", "arm": "A1", "block_id": "A1-BLOCK-02", "material_role": "GOOD_CHARACTERIZATION_CANDIDATE", "replicate": 2, "planned_run_order": 6, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BAD-02", "arm": "A1", "block_id": "A1-BLOCK-02", "material_role": "BAD_CHARACTERIZATION_CANDIDATE", "replicate": 2, "planned_run_order": 4, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BLANK-02", "arm": "A1", "block_id": "A1-BLOCK-02", "material_role": "BENCH_REFERENCE_BLANK", "reference_scope": "Mobil method/Q6", "replicate": 2, "planned_run_order": 5, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-GOOD-03", "arm": "A1", "block_id": "A1-BLOCK-03", "material_role": "GOOD_CHARACTERIZATION_CANDIDATE", "replicate": 3, "planned_run_order": 7, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BAD-03", "arm": "A1", "block_id": "A1-BLOCK-03", "material_role": "BAD_CHARACTERIZATION_CANDIDATE", "replicate": 3, "planned_run_order": 8, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A1-BLANK-03", "arm": "A1", "block_id": "A1-BLOCK-03", "material_role": "BENCH_REFERENCE_BLANK", "reference_scope": "Mobil method/Q6", "replicate": 3, "planned_run_order": 9, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "HOLD"},
+    {"run_id": "A2-BASELINE-01", "arm": "A2", "block_id": null, "material_role": "PROJECT_BASELINE_WGO", "reference_scope": "Project/S2", "replicate": 1, "planned_run_order": null, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "PLANNED_NOT_RELEASED"},
+    {"run_id": "A2-BASELINE-02", "arm": "A2", "block_id": null, "material_role": "PROJECT_BASELINE_WGO", "reference_scope": "Project/S2", "replicate": 2, "planned_run_order": null, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "PLANNED_NOT_RELEASED"},
+    {"run_id": "A2-BASELINE-03", "arm": "A2", "block_id": null, "material_role": "PROJECT_BASELINE_WGO", "reference_scope": "Project/S2", "replicate": 3, "planned_run_order": null, "actual_run_order": null, "execution_order_deviation": null, "deviation_reason": null, "release_status": "PLANNED_NOT_RELEASED"}
+  ],
+  "a2_activation": {
+    "required_a1_status": "PROMISING",
+    "required_decision": "OWNER_APPROVAL_REQUIRED",
+    "current_status": "NOT_ELIGIBLE_NOT_RELEASED"
+  }
+}
