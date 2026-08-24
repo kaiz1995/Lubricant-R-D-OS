@@ -48,7 +48,14 @@
   "q2b": {"status": "UNRESOLVED_OWNER_INPUT_REQUIRED", "checkpoints_h": null},
   "protocol_version": null,
   "bench_and_equipment_identities": null,
+  "blocking_and_execution_order_generation_rule": null,
   "blocking_and_execution_order_provenance": null,
+  "owner_parameter_freeze_confirmation": {
+    "status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+    "owner": null,
+    "confirmed_at": null,
+    "approval_reference": null
+  },
   "owner_authorization": null,
   "execution_order": null,
   "quarantined_synthetic_values": {
@@ -72,8 +79,8 @@
     "Q2-B final checkpoints",
     "protocol version",
     "bench and equipment identities",
-    "blocking conditions and execution-order provenance",
-    "Owner physical release sign-off"
+    "blocking and execution-order generation rule",
+    "Owner parameter freeze confirmation"
   ],
   "downstream_state": {
     "PHYSICAL_STAGE_A": "HOLD",
