@@ -1,0 +1,86 @@
+{
+  "artifact_id": "WGO_001_S1A_PHYSICAL_RELEASE_CANDIDATE_V1",
+  "purpose": "REAL_OWNER_INPUT_RESOLUTION_ONLY",
+  "status": "HOLD_NOT_READY",
+  "physical_execution_authorized": false,
+  "state_transition_allowed": false,
+  "scope": "PHYSICAL_RELEASE_CANDIDATE",
+  "source_isolation": "INDEPENDENT_OF_SYNTHETIC_REPLAY_FIXTURES",
+  "owner_input_status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+  "owner_record": {"owner": null, "recorded_at": null, "physical_release_signoff": "NOT_SATISFIED"},
+  "reference_identities": {
+    "GOOD_CHARACTERIZATION_CANDIDATE": {
+      "identity_status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+      "sample_id": null,
+      "material_identity": null,
+      "batch_or_container_id": null,
+      "preparation": null
+    },
+    "BAD_CHARACTERIZATION_CANDIDATE": {
+      "identity_status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+      "sample_id": null,
+      "material_identity": null,
+      "batch_or_container_id": null,
+      "preparation": null
+    },
+    "BENCH_REFERENCE_BLANK": {
+      "identity_status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+      "sample_id": null,
+      "material_identity": null,
+      "batch_or_container_id": null,
+      "preparation": null
+    }
+  },
+  "physical_event_detection_rule": {
+    "status": "UNRESOLVED_OWNER_INPUT_REQUIRED",
+    "threshold_db": null,
+    "comparator": null,
+    "signal_source": null,
+    "sampling_interval": null,
+    "instrument_resolution": null,
+    "weighting_rule": null,
+    "rounding_rule": null,
+    "filtering_rule": null,
+    "persistence_rule": null,
+    "missing_sample_rule": null,
+    "manual_timestamp_rule": null
+  },
+  "q2b": {"status": "UNRESOLVED_OWNER_INPUT_REQUIRED", "checkpoints_h": null},
+  "protocol_version": null,
+  "bench_and_equipment_identities": null,
+  "blocking_and_execution_order_provenance": null,
+  "owner_authorization": null,
+  "execution_order": null,
+  "quarantined_synthetic_values": {
+    "source_artifacts": [
+      "data/real_cases/WGO_001/s1a/physical/synthetic_replay/frozen_demo_inputs.json",
+      "data/real_cases/WGO_001/s1a/physical/synthetic_replay/clean_9_run_records.json",
+      "data/real_cases/WGO_001/s1a/physical/synthetic_replay/synthetic_raw_traces.json"
+    ],
+    "import_rule": "FORBIDDEN: no value from SYNTHETIC_DEMO_ONLY artifacts may populate this physical candidate."
+  },
+  "release_manifest": {
+    "release_status": "DRAFT_NOT_RELEASED",
+    "final_values": null,
+    "artifact_hashes": null
+  },
+  "required_resolution_before_consistency_pass": [
+    "GOOD_CHARACTERIZATION_CANDIDATE identity",
+    "BAD_CHARACTERIZATION_CANDIDATE identity",
+    "BENCH_REFERENCE_BLANK identity",
+    "physical Event Detection Rule V1",
+    "Q2-B final checkpoints",
+    "protocol version",
+    "bench and equipment identities",
+    "blocking conditions and execution-order provenance",
+    "Owner physical release sign-off"
+  ],
+  "downstream_state": {
+    "PHYSICAL_STAGE_A": "HOLD",
+    "STAGE_A2": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "PHASE_3_4": "NO_CHANGE"
+  },
+  "prohibited_claims": ["METHOD_QUALIFIED", "KNOWN_GOOD", "KNOWN_BAD", "PHYSICAL_RELEASE_APPROVED"]
+}
