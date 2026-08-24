@@ -43,6 +43,14 @@ DOWNSTREAM_STATE = {
     "S2": "HOLD",
     "PHASE_3_4": "NO_CHANGE",
 }
+COMPLETION_REQUIREMENTS = {
+    "schema_accepted": True,
+    "mapping_9_of_9": True,
+    "source_hash_locked": True,
+    "isolation_upheld": True,
+    "physical_consistency_not_evaluated": True,
+    "downstream_transition_prohibited": True,
+}
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -91,6 +99,11 @@ def derived_artifact(source: dict, source_sha256: str) -> dict:
     normalized_inputs = {name: unwrap(source["proposed_inputs"][name]) for name in sorted(REQUIRED_GROUPS)}
     return {
         "artifact_id": "WGO_001_S1A_OWNER_INPUT_RESOLUTION_EXAMPLE_REPLAY_V1",
+        "example_stage": "REAL_OWNER_INPUT_COLLECTION_EXAMPLE",
+        "example_stage_status": "COMPLETE",
+        "completion_gate": "PASS_EXAMPLE_ONLY",
+        "completion_requirements": COMPLETION_REQUIREMENTS,
+        "remaining_real_blocker": "EXPLICIT_OWNER_REENTRY_REQUIRED",
         "status": "PASS_EXAMPLE_MAPPING_ONLY",
         "result": "EXAMPLE_SCHEMA_REPLAYED_NOT_RESOLVED",
         "workflow_result": "EXAMPLE_WORKFLOW_VALIDATED",
@@ -124,6 +137,11 @@ def derived_artifact(source: dict, source_sha256: str) -> dict:
 
 
 def validate_replay(replay: dict, source_sha256: str) -> None:
+    assert replay["example_stage"] == "REAL_OWNER_INPUT_COLLECTION_EXAMPLE"
+    assert replay["example_stage_status"] == "COMPLETE"
+    assert replay["completion_gate"] == "PASS_EXAMPLE_ONLY"
+    assert replay["completion_requirements"] == COMPLETION_REQUIREMENTS
+    assert replay["remaining_real_blocker"] == "EXPLICIT_OWNER_REENTRY_REQUIRED"
     assert replay["status"] == "PASS_EXAMPLE_MAPPING_ONLY"
     assert replay["result"] == "EXAMPLE_SCHEMA_REPLAYED_NOT_RESOLVED"
     assert replay["workflow_result"] == "EXAMPLE_WORKFLOW_VALIDATED"
@@ -175,7 +193,7 @@ def main() -> None:
     else:
         verify_artifact(REPLAY, replay)
     assert sha256(SOURCE) == source_before
-    print("PASS EXAMPLE_MAPPING_ONLY WORKFLOW=VALIDATED MAPPING=9/9 PHYSICAL_REVIEW=NOT_EVALUATED TRANSITION=false EXECUTION=false")
+    print("PASS EXAMPLE_STAGE=COMPLETE GATE=PASS_EXAMPLE_ONLY WORKFLOW=VALIDATED MAPPING=9/9 PHYSICAL_REVIEW=NOT_EVALUATED TRANSITION=false EXECUTION=false")
 
 
 if __name__ == "__main__":

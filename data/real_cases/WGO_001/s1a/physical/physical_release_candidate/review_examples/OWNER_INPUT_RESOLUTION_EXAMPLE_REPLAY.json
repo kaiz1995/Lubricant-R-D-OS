@@ -1,5 +1,14 @@
 {
   "artifact_id": "WGO_001_S1A_OWNER_INPUT_RESOLUTION_EXAMPLE_REPLAY_V1",
+  "completion_gate": "PASS_EXAMPLE_ONLY",
+  "completion_requirements": {
+    "downstream_transition_prohibited": true,
+    "isolation_upheld": true,
+    "mapping_9_of_9": true,
+    "physical_consistency_not_evaluated": true,
+    "schema_accepted": true,
+    "source_hash_locked": true
+  },
   "downstream_state": {
     "PHASE_3_4": "NO_CHANGE",
     "PHYSICAL_STAGE_A": "HOLD",
@@ -8,6 +17,8 @@
     "STAGE_A2": "HOLD"
   },
   "evidence_status": "ASSISTANT_PROPOSED_EXAMPLE_ASSUMPTION",
+  "example_stage": "REAL_OWNER_INPUT_COLLECTION_EXAMPLE",
+  "example_stage_status": "COMPLETE",
   "execution_order": null,
   "execution_order_provenance": null,
   "final_authorization": null,
@@ -119,6 +130,7 @@
     "final_authorization": null,
     "final_values": null
   },
+  "remaining_real_blocker": "EXPLICIT_OWNER_REENTRY_REQUIRED",
   "result": "EXAMPLE_SCHEMA_REPLAYED_NOT_RESOLVED",
   "scope": "DEMO_EXAMPLE_ONLY",
   "source": {
