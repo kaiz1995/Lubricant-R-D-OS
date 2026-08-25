@@ -6,12 +6,15 @@ V0 is a minimal, independently installable proof that an external Lubricant R&D 
 
 - `skills/hello-lubricant/SKILL.md` — a load-and-invoke smoke skill only.
 - `skills/project-definition/` — Stage 0 Project Charter creation with deployed preflight and schema validation.
+- `skills/duty-definition/` — Stage 1 duty conditions and operating envelope at `DUTY_DEFINED`.
 - `skills/duty-challenge-analysis/` — one evidence-bound Challenge Map member at `CHALLENGES_DEFINED`.
 - `skills/failure-ctq-analysis/` — one evidence-bound Failure/CTQ record at `FAILURE_CTQ_DEFINED`.
+- `skills/experiment-import/` — experiment records; physical provenance fields enforced only for `evidence_scope=PHYSICAL`.
 - `skills/doe-design/` — one evidence-bound constrained-mixture request at `EXPERIMENT_DESIGNED`; it does not generate DOE points.
 - `skills/statistical-analysis/` — one evidence-bound Phase 4 statistical-analysis request at `MODEL_BUILT`; it does not calculate a model.
 - `skills/optimization/` — one evidence-bound Phase 4 optimization request at `OPTIMIZED`; it does not calculate candidates or recommendations.
 - `skills/gate-review/` — one evidence-bound review Gate at `VERIFIED`; it does not Freeze or Close a project.
+- `skills/lubricant-rd-agent/` — meta-skill router: single-step ALLOW, cross-stage DENY, synthetic evidence lock, HOLD gap reporting.
 - `schemas/` — Draft 2020-12 contracts for Decision-Driven R&D artifacts.
 - `fixtures/` — Schema fixtures plus state-machine transition fixtures.
 - `scripts/validate_schemas.py` — repeatable JSON Schema validation entry point.
