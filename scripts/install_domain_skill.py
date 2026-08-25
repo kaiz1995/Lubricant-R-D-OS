@@ -27,6 +27,8 @@ SKILLS = {
     "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json"),
     "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json"),
 }
+ENGINE_ROOT = PACK_ROOT / "domains" / "lubricant"
+ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "optimization"}
 
 
 def main() -> int:
@@ -37,11 +39,14 @@ def main() -> int:
 
     source = PACK_ROOT / "skills" / args.skill
     try:
-        destination = install_skill(source, PACK_ROOT / "schemas", SKILLS[args.skill], args.target)
+        engine_root = ENGINE_ROOT if args.skill in ENGINE_SKILLS else None
+        destination = install_skill(source, PACK_ROOT / "schemas", SKILLS[args.skill], args.target, engine_root=engine_root)
     except (ValueError, OSError) as error:
         print(f"FAIL: {error}")
         return 1
     print(f"PASS: copied {args.skill} to {destination}")
+    if engine_root is not None:
+        print(f"PASS: bundled engine tree at {destination / 'engine' / engine_root.name}")
     print("RELOAD_REQUIRED: reload/restart Open Science before catalog acceptance")
     return 0
 

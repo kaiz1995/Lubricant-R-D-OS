@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from integrations.open_science import digest, install_skill
-from scripts.install_domain_skill import SKILLS
+from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS
 
 
 def cached(path: Path) -> bool:
@@ -25,7 +25,8 @@ def main() -> int:
         target.mkdir()
         for skill, schemas in SKILLS.items():
             source = ROOT / "skills" / skill
-            destination = install_skill(source, ROOT / "schemas", schemas, target)
+            engine_root = ENGINE_ROOT if skill in ENGINE_SKILLS else None
+            destination = install_skill(source, ROOT / "schemas", schemas, target, engine_root=engine_root)
             for file in source.rglob("*"):
                 relative = file.relative_to(source)
                 if file.is_file() and not cached(relative):
@@ -33,6 +34,13 @@ def main() -> int:
                     assert deployed.is_file() and digest(file) == digest(deployed), relative
             for schema in schemas:
                 assert digest(ROOT / "schemas" / schema) == digest(destination / "references" / schema), schema
+            if engine_root is not None:
+                deployed_engine = destination / "engine" / ENGINE_ROOT.name
+                for file in ENGINE_ROOT.rglob("*"):
+                    relative = file.relative_to(ENGINE_ROOT)
+                    if file.is_file() and not cached(relative):
+                        deployed = deployed_engine / relative
+                        assert deployed.is_file() and digest(file) == digest(deployed), relative
             assert not list(destination.rglob("__pycache__"))
             assert not list(destination.rglob("*.pyc"))
 

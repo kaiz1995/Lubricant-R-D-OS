@@ -28,6 +28,7 @@ def install_skill(
     schema_root: Path,
     schema_names: tuple[str, ...],
     target: Path,
+    engine_root: Path | None = None,
 ) -> Path:
     """Copy one skill and its canonical schemas into an explicit target."""
     if target.is_symlink() or not target.is_dir():
@@ -47,6 +48,12 @@ def install_skill(
             raise ValueError(f"canonical schema is missing: {schema_root / name}")
 
     expected = non_cached_files(source_skill) | {Path("references") / name for name in schema_names}
+    engine_target = None
+    if engine_root is not None:
+        if not engine_root.is_dir() or not (engine_root / "compute" / "__main__.py").is_file():
+            raise ValueError(f"engine root is missing the compute package: {engine_root}")
+        engine_target = destination / "engine" / engine_root.name
+        expected |= {Path("engine") / engine_root.name / relative for relative in non_cached_files(engine_root)}
     if destination.exists():
         stale = non_cached_files(destination) - expected
         if stale:
@@ -65,6 +72,17 @@ def install_skill(
         shutil.copy2(canonical, deployed)
         if digest(canonical) != digest(deployed):
             raise OSError(f"deployed schema hash mismatch: {name}")
+    if engine_target is not None and engine_root is not None:
+        shutil.copytree(
+            engine_root,
+            engine_target,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+        for relative in non_cached_files(engine_root):
+            source, deployed = engine_root / relative, engine_target / relative
+            if not deployed.is_file() or digest(source) != digest(deployed):
+                raise OSError(f"deployed engine hash mismatch: {relative}")
 
     if non_cached_files(destination) != expected:
         raise OSError("deployed non-cached file set does not match expected files")
