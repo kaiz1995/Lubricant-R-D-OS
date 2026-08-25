@@ -15,6 +15,8 @@ from qualification_policy import expected_decision_fields, go_qualification_erro
 
 def semantic_errors(artifact: dict) -> list[str]:
     errors = []
+    if artifact.get("evidence_scope") not in {"SYNTHETIC", "PHYSICAL"}:
+        errors.append("evidence_scope")
     for field in ("method_id", "name", "standard", "target_failure_reference"):
         if not has_text(artifact.get(field)):
             errors.append(field)

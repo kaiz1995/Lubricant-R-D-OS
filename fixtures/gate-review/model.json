@@ -3,13 +3,14 @@
   "artifact_type": "model",
   "project_id": "WGO-DOE-001",
   "stage": "MODEL_BUILT",
+  "evidence_scope": "SYNTHETIC",
   "decision_question": "Can supplied analysis request MODEL-001 be handed to the Phase 4 deterministic engine?",
   "hypothesis": "MODEL-001 records supplied analysis requests without calculating a statistical model.",
   "uncertainty": "No coefficients, fit statistics, residual diagnosis, lack-of-fit result, interval, sensitivity result, adequacy conclusion, formulation, performance conclusion, or optimization is established by this Phase 3 artifact.",
   "decision_rule": "Hand off only linked observed-experiment response CTQs with a qualified method and evidence without GAP.",
-  "result": "MODEL-001 records supplied requests for ANOVA, REGRESSION, RESIDUAL; no statistical calculation or model conclusion has been produced.",
-  "decision": "GO",
-  "next_action": "Hand MODEL-001 to the Phase 4 deterministic engine without adding model results.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition.",
   "evidence": [
     {
       "evidence_id": "E-M-001",

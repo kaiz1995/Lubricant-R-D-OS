@@ -39,9 +39,9 @@ def read_artifact(value: object, input_path: Path, schema_name: str, label: str)
     return errors, artifact if not errors else None
 
 
-def request_errors(request: object, project_id: str) -> list[str]:
+def request_errors(request: object, project_id: str, evidence_scope: str | None = None) -> list[str]:
     if not isinstance(request, dict) or set(request) != REQUEST_FIELDS: return ["optimization must contain only optimization_id, objective_type, objectives, methods, and evidence"]
-    candidate = {"schema_version": "0.1.0", "artifact_type": "optimization", "project_id": project_id or "input-project", "stage": "OPTIMIZED", "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input", "model_reference": "input-model", "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **request}
+    candidate = {"schema_version": "0.1.0", "artifact_type": "optimization", "project_id": project_id or "input-project", "stage": "OPTIMIZED", "evidence_scope": evidence_scope, "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input", "model_reference": "input-model", "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **request}
     schemas, registry = load_schemas()
     return [f"optimization: {error.message}" for error in Draft202012Validator(schemas["optimization.schema.json"], registry=registry).iter_errors(candidate)]
 
@@ -56,6 +56,9 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         if artifact and artifact.get("decision") != "GO": errors.append(f"{key} must have decision GO")
     project, challenge, failure, method, design_space, experiment_design, experiment, model = (artifacts[key] for key, _, _ in UPSTREAM)
     available = [value for value in (project, challenge, failure, method, design_space, experiment_design, experiment, model) if value]
+    scopes = {value.get("evidence_scope") for value in (method, experiment_design, experiment, model) if value is not None}
+    if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:
+        errors.append("test_method, experiment_design, experiment, and model evidence_scope values must exist and match")
     if project and project.get("status") != "ACTIVE": errors.append("project_artifact must have status ACTIVE")
     if len(available) == 8 and len({value.get("project_id") for value in available}) != 1: errors.append("all upstream artifact project_id values must match")
     if failure and challenge and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
@@ -67,7 +70,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if model and experiment and model.get("experiment_reference") != experiment.get("experiment_id"): errors.append("model_artifact experiment link is invalid")
     if model and design_space and model.get("design_space_reference") != design_space.get("design_space_id"): errors.append("model_artifact design-space link is invalid")
     if model and method and model.get("test_method_references") != [method.get("method_id")]: errors.append("model_artifact method link is invalid")
-    request = data.get("optimization"); errors.extend(request_errors(request, project.get("project_id", "") if project else ""))
+    request = data.get("optimization"); errors.extend(request_errors(request, project.get("project_id", "") if project else "", model.get("evidence_scope") if model else None))
     if not isinstance(request, dict): return errors
     if has_gap(request): errors.append("optimization.evidence contains GAP")
     if "BAYESIAN_OPTIMIZATION" in request.get("methods", []): errors.append("BAYESIAN_OPTIMIZATION is unsupported in Phase 3")

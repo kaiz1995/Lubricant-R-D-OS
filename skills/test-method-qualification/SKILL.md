@@ -11,10 +11,11 @@ Use `../../schemas/test_method.schema.json` as authority when available; install
 
 - Preflight requires schema-valid `project_artifact` (`PROJECT_DEFINED`/`ACTIVE`), `challenge_artifact` (`CHALLENGES_DEFINED`), and `failure_ctq_artifact` (`FAILURE_CTQ_DEFINED`).
 - All must share `project_id`; input `challenge_reference` and `target_failure_reference` must match their records.
+- `evidence_scope` is required as `SYNTHETIC` or `PHYSICAL` and is copied unchanged into the artifact. `PHYSICAL` declares source only; it is not owner approval, method qualification, or release approval.
 - `test_method` needs non-empty ID/name/standard/references, unique `C`/`D`/`P` roles, complete measurement metrics, basis/status, and source/qualification evidence IDs.
 - Evidence must be supplied and the method-source and qualification pointers must resolve to `OBSERVED` items; supplied provenance is not independently verified.
 - `D` requires `DISCRIMINATION`; `P` requires `MECHANISM_RELEVANCE` plus `FIELD_RELEVANCE` or `BENCHMARK_RANKING`; C-only remains compliance-only.
-- `QUALIFIED` needs role metrics, observed evidence, and basis. `PENDING`/`NOT_QUALIFIED` receive `HOLD`; `MONITOR` is wording only.
+- `QUALIFIED` needs role metrics, observed evidence, basis, and `PHYSICAL` evidence scope. `SYNTHETIC` may record only `PENDING`/`NOT_QUALIFIED` with `HOLD`; it must not create a promotable qualification. `MONITOR` is wording only.
 
 Run `python scripts/preflight_test_method.py <input.json>` first. On error report `HOLD`, write nothing, and do not infer method provenance, metrics, or results.
 

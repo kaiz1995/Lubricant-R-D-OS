@@ -8,6 +8,7 @@
       "properties": {
         "schema_version": { "const": "0.1.0" },
         "project_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "evidence_scope": { "$ref": "#/$defs/evidence_scope" },
         "stage": {
           "enum": [
             "DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED",
@@ -44,6 +45,10 @@
       },
       "required": ["evidence_id", "statement", "source", "status"],
       "additionalProperties": false
+    },
+    "evidence_scope": {
+      "description": "Evidence source declaration only; PHYSICAL does not mean owner-approved, method-qualified, or release-approved.",
+      "enum": ["SYNTHETIC", "PHYSICAL"]
     },
     "measurement": {
       "type": "object",

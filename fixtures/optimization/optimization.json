@@ -3,13 +3,14 @@
   "artifact_type": "optimization",
   "project_id": "WGO-DOE-001",
   "stage": "OPTIMIZED",
+  "evidence_scope": "SYNTHETIC",
   "decision_question": "Can supplied optimization request OPT-001 be handed to the Phase 4 deterministic engine?",
   "hypothesis": "OPT-001 records supplied objectives and methods without calculating an optimum.",
   "uncertainty": "No candidate, Pareto front, desirability, non-inferiority result, constraint evaluation, trade-off, formulation recommendation, performance conclusion, or verification result is established by this Phase 3 artifact.",
   "decision_rule": "Hand off only a linked MODEL_BUILT request with supplied objectives, supported Phase 3 methods, and evidence without GAP.",
-  "result": "OPT-001 records supplied methods DESIRABILITY; no optimization calculation or recommendation has been produced.",
-  "decision": "GO",
-  "next_action": "Hand OPT-001 to the Phase 4 deterministic engine without adding candidates or recommendations.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition.",
   "evidence": [
     {
       "evidence_id": "E-O-001",

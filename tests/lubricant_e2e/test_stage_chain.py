@@ -110,7 +110,14 @@ def main() -> int:
             "project_artifact": str(project_path),
             "challenge_artifact": str(challenge_path),
             "failure_ctq_artifact": str(failure_path),
+            "evidence_scope": "PHYSICAL",
         })
+        method_input["test_method"]["qualification_status"] = "QUALIFIED"
+        for evidence in method_input["evidence"]:
+            evidence["statement"] = "Simulated physical contract test only; not a lab record or release evidence."
+            evidence["source"] = "Simulated physical contract test only"
+        method_input["test_method"]["qualification_basis"] = ["simulated physical contract test only"]
+        method_input["test_method"]["qualification_metrics"][0]["measurement"]["source"] = "Simulated physical contract test only"
         method_input_path, method_path = inputs / "method-input.json", artifacts / "test-method.json"
         write_json(method_input_path, method_input)
         run(ROOT / "skills/test-method-qualification/scripts/preflight_test_method.py", method_input_path)
@@ -118,6 +125,8 @@ def main() -> int:
         run(ROOT / "skills/test-method-qualification/scripts/validate_test_method_artifact.py", method_path)
         method = assert_artifact(method_path, "test_method", "TEST_METHODS_QUALIFIED")
         assert method["target_failure_reference"] == failure["failure_id"]
+        assert method["evidence_scope"] == "PHYSICAL"
+        assert method["decision"] == "GO"
 
         design_input = read_json(FIXTURES / "formulation-design" / "valid-input.synthetic.json")
         design_input.update({

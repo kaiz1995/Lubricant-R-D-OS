@@ -18,7 +18,7 @@ def main() -> int:
     errors = errors_for(data, input_path)
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
     project = json.loads((input_path.parent / data["project_artifact"]).read_text(encoding="utf-8")); model = json.loads((input_path.parent / data["model_artifact"]).read_text(encoding="utf-8")); request = data["optimization"]
-    artifact = {"schema_version": "0.1.0", "artifact_type": "optimization", "project_id": project["project_id"], "stage": "OPTIMIZED", **expected_decision_fields(request), "evidence": request["evidence"], "model_reference": model["model_id"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("optimization_id", "objective_type", "objectives", "methods")}}
+    artifact = {"schema_version": "0.1.0", "artifact_type": "optimization", "project_id": project["project_id"], "stage": "OPTIMIZED", "evidence_scope": model["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "model_reference": model["model_id"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("optimization_id", "objective_type", "objectives", "methods")}}
     output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}"); return 0
 

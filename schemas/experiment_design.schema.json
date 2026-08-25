@@ -79,6 +79,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["artifact_type", "stage", "experiment_design_id", "design_space_reference", "test_method_references", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value"],
+  "required": ["artifact_type", "stage", "evidence_scope", "experiment_design_id", "design_space_reference", "test_method_references", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value"],
   "unevaluatedProperties": false
 }

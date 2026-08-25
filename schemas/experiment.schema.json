@@ -33,6 +33,6 @@
       }
     }
   },
-  "required": ["artifact_type", "experiment_id", "experiment_design_reference", "design_space_reference", "test_method_references", "runs"],
+  "required": ["artifact_type", "evidence_scope", "experiment_id", "experiment_design_reference", "design_space_reference", "test_method_references", "runs"],
   "unevaluatedProperties": false
 }

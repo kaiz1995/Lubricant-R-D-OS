@@ -3,6 +3,7 @@
   "artifact_type": "model",
   "project_id": "WGO-DOE-001",
   "stage": "MODEL_BUILT",
+  "evidence_scope": "PHYSICAL",
   "decision_question": "Can supplied analysis request MODEL-001 be handed to the Phase 4 deterministic engine?",
   "hypothesis": "MODEL-001 records supplied analysis requests without calculating a statistical model.",
   "uncertainty": "No coefficients, fit statistics, residual diagnosis, lack-of-fit result, interval, sensitivity result, adequacy conclusion, formulation, performance conclusion, or optimization is established by this Phase 3 artifact.",
@@ -13,8 +14,8 @@
   "evidence": [
     {
       "evidence_id": "E-M-001",
-      "statement": "Analysis scope supplied for synthetic validation.",
-      "source": "synthetic",
+      "statement": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE analysis scope.",
+      "source": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
       "status": "ASSUMED"
     }
   ],

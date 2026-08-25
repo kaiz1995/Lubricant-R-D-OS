@@ -1,7 +1,7 @@
 {
-  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED",
+  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "evidence_scope": "PHYSICAL",
   "decision_question": "Does the observed record use the correct lifecycle stage?", "hypothesis": "This synthetic fixture evaluates no product hypothesis.", "uncertainty": "The record is intentionally assigned an invalid stage for schema validation.",
-  "evidence": [{ "evidence_id": "E-X-002", "statement": "Synthetic fixture only.", "source": "synthetic fixture only", "status": "ASSUMED" }],
+  "evidence": [{ "evidence_id": "E-X-002", "statement": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE.", "source": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE", "status": "ASSUMED" }],
   "decision_rule": "Reject an observed experiment record before EXPERIMENT_RUNNING.", "result": "Synthetic invalid observed record.", "decision": "UNDECIDED", "next_action": "Use EXPERIMENT_RUNNING for observed records.",
   "experiment_id": "EXP-002", "experiment_design_reference": "ED-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"],
   "runs": [{ "run_id": "RUN-002", "material_batch": "pilot-batch-2", "formula_version": "trial-v2", "response_measurements": [{ "ctq_reference": "CTQ-001", "measurement": { "value": 42.5, "unit": "min", "source": "synthetic observed measurement for schema validation only", "method_version": "D1401-2024", "material_batch": "pilot-batch-2", "formula_version": "trial-v2" } }] }]

@@ -32,7 +32,7 @@ def main() -> int:
     design_space = json.loads(resolved_path(data["design_space_artifact"], input_path).read_text(encoding="utf-8"))
     request = data["experiment_design"]
     artifact = {
-        "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project["project_id"], "stage": "EXPERIMENT_DESIGNED",
+        "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project["project_id"], "stage": "EXPERIMENT_DESIGNED", "evidence_scope": method["evidence_scope"],
         **expected_decision_fields(request), "evidence": request["evidence"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]],
         **{field: request[field] for field in REQUEST_FIELDS if field in request},
     }

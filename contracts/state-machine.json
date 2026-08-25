@@ -35,7 +35,7 @@
     "CLOSE": { "gate_status": "GO", "before_statuses": ["FROZEN"], "after_status": "CLOSED" }
   },
   "required_state_fields": [
-    "project_id", "stage", "status", "version", "decision_question", "evidence"
+    "project_id", "stage", "status", "version", "decision_question", "evidence", "evidence_scope"
   ],
   "revision_fields": ["reason", "operator", "impact"],
   "freeze_record_fields": ["reason", "evidence_package"],

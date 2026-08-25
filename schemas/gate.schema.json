@@ -15,6 +15,6 @@
     "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "risks": { "type": "array", "items": { "type": "string", "minLength": 1 } }
   },
-  "required": ["artifact_type", "gate_id", "experiment_reference", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks"],
+  "required": ["artifact_type", "evidence_scope", "gate_id", "experiment_reference", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks"],
   "unevaluatedProperties": false
 }

@@ -3,13 +3,14 @@
   "artifact_type": "gate",
   "project_id": "WGO-DOE-001",
   "stage": "VERIFIED",
+  "evidence_scope": "SYNTHETIC",
   "decision_question": "Does review Gate GATE-001 have sufficient supplied conditions and evidence?",
   "hypothesis": "GATE-001 records supplied review conditions without creating a Freeze or Close artifact.",
   "uncertainty": "This review records supplied conditions, gaps, risks, and disposition only; it does not create new experiment, model, optimization, Freeze, Close, or product-performance evidence.",
   "decision_rule": "GO requires no unsatisfied conditions, no evidence gaps, and no GAP evidence; PIVOT, KILL, and FREEZE require explicit reason and evidence; otherwise retain HOLD.",
-  "result": "GATE-001 has deterministic gate disposition GO from the supplied review conditions and evidence.",
-  "decision": "GO",
-  "next_action": "Advance only under the state-machine action authorized by this recorded Gate.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition.",
   "evidence": [
     {
       "evidence_id": "E-G-001",
@@ -29,5 +30,5 @@
   "risks": [
     "Synthetic fixtures do not establish product performance."
   ],
-  "gate_status": "GO"
+  "gate_status": "HOLD"
 }

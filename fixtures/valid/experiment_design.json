@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED",
+  "evidence_scope": "PHYSICAL",
   "decision_question": "What experiment design request should be handed to the deterministic engine?", "hypothesis": "A constrained-mixture design request can reduce the stated decision uncertainty.", "uncertainty": "No DOE points or product-performance result have been generated.",
   "evidence": [{ "evidence_id": "E-ED-001", "statement": "This synthetic fixture references a bounded design space and qualified method.", "source": "synthetic fixture only", "status": "ASSUMED" }],
   "decision_rule": "Hand off only the stated request to the Phase 4 deterministic engine.", "result": "Synthetic design request is sufficient for deterministic point generation; no points are present.", "decision": "GO", "next_action": "Run the Phase 4 deterministic engine.",

@@ -87,7 +87,7 @@ def observed_id_errors(value: object, label: str, evidence: dict[str, dict]) -> 
     return [f"{label}: {item} must reference OBSERVED evidence" for item in value if item not in evidence or evidence[item].get("status") != "OBSERVED"]
 
 
-def method_errors(value: object, challenge: dict | None, failure: dict | None, evidence: dict[str, dict]) -> list[str]:
+def method_errors(value: object, challenge: dict | None, failure: dict | None, evidence: dict[str, dict], evidence_scope: object) -> list[str]:
     if not isinstance(value, dict):
         return ["test_method"]
     errors = []
@@ -122,6 +122,8 @@ def method_errors(value: object, challenge: dict | None, failure: dict | None, e
         errors.append("test_method.qualification_basis")
     if value.get("qualification_status") not in QUALIFICATION_STATUSES:
         errors.append("test_method.qualification_status")
+    if evidence_scope == "SYNTHETIC" and value.get("qualification_status") == "QUALIFIED":
+        errors.append("SYNTHETIC evidence_scope cannot form qualification_status QUALIFIED")
     source_id = value.get("method_source_evidence_id")
     if not has_text(source_id) or source_id not in evidence or evidence[source_id].get("status") != "OBSERVED":
         errors.append("test_method.method_source_evidence_id must reference OBSERVED evidence")
@@ -134,6 +136,9 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors, artifacts = [], {}
+    evidence_scope = data.get("evidence_scope")
+    if evidence_scope not in {"SYNTHETIC", "PHYSICAL"}:
+        errors.append("evidence_scope must be SYNTHETIC or PHYSICAL")
     for key, schema, stage in (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED")):
         path = resolved_path(data.get(key), input_path)
         if path is None:
@@ -152,7 +157,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         errors.append("project, challenge, and failure_ctq project_id values must match")
     evidence_problems, evidence = evidence_errors(data.get("evidence"))
     errors.extend(evidence_problems)
-    errors.extend(method_errors(data.get("test_method"), challenge, failure, evidence))
+    errors.extend(method_errors(data.get("test_method"), challenge, failure, evidence, evidence_scope))
     return errors
 
 

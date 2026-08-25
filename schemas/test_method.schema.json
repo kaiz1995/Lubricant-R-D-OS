@@ -22,6 +22,6 @@
     "qualification_basis": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "qualification_status": { "enum": ["PENDING", "QUALIFIED", "NOT_QUALIFIED"] }
   },
-  "required": ["artifact_type", "method_id", "name", "standard", "target_failure_reference", "role", "qualification_metrics", "qualification_basis", "qualification_status"],
+  "required": ["artifact_type", "evidence_scope", "method_id", "name", "standard", "target_failure_reference", "role", "qualification_metrics", "qualification_basis", "qualification_status"],
   "unevaluatedProperties": false
 }

@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1.0", "artifact_type": "gate", "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "PHYSICAL",
   "decision_question": "May the project enter constrained design-space definition?", "hypothesis": "The current evidence is sufficient for the next bounded step.", "uncertainty": "Product risk remains open beyond this gate.",
   "evidence": [{ "evidence_id": "E-G-001", "statement": "The test method qualification record is present.", "source": "TM-001", "status": "OBSERVED" }],
   "decision_rule": "Advance only if the stated gate conditions are satisfied.", "result": "Gate concerns only progression, not product performance or freeze.", "decision": "GO", "next_action": "Create design-space artifact.",

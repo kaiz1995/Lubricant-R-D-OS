@@ -32,6 +32,8 @@ def go_qualification_errors(method: dict) -> list[str]:
     errors = role_metric_errors(method)
     if method.get("qualification_status") != "QUALIFIED":
         errors.append("qualification_status is not QUALIFIED")
+    if method.get("evidence_scope") != "PHYSICAL":
+        errors.append("qualification requires PHYSICAL evidence_scope; source declaration alone is not approval")
     if not isinstance(method.get("qualification_basis"), list) or not method["qualification_basis"]:
         errors.append("qualification_basis is empty")
     evidence = method.get("evidence")
@@ -48,7 +50,7 @@ def expected_decision_fields(method: dict) -> dict[str, str]:
         "decision_question": f"Is {method_id} ({name}) qualified to measure the target failure/CTQ?",
         "hypothesis": f"{method_id} can provide role-bound measurement evidence for the target failure/CTQ.",
         "uncertainty": "This qualification uses supplied standard/method provenance; its authenticity and validity are not independently verified, and it does not prove product risk, field prediction, or product performance.",
-        "decision_rule": f"Qualify only when {role_text} role metrics, OBSERVED evidence, and qualification basis are complete.",
+        "decision_rule": f"Qualify only when {role_text} role metrics, OBSERVED evidence, qualification basis, and PHYSICAL evidence scope are complete; PHYSICAL is a source declaration, not approval.",
         "result": f"{method_id} is {'qualified' if qualified else 'not qualified'} for its recorded roles to measure the target failure/CTQ from supplied provenance and evidence only.",
         "decision": "GO" if qualified else "HOLD",
         "next_action": f"Register {method_id} as an eligible response for later design and retain the Evidence Stack." if qualified else "Retain the Evidence Stack and close the recorded qualification gaps.",

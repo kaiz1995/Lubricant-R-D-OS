@@ -29,9 +29,9 @@ def main() -> int:
         return 1
     project_path = resolved_path(data["project_artifact"], input_path)
     project = json.loads(project_path.read_text(encoding="utf-8"))
-    method = {**data["test_method"], "evidence": data["evidence"]}
+    method = {**data["test_method"], "evidence": data["evidence"], "evidence_scope": data["evidence_scope"]}
     artifact = {
-        "schema_version": "0.1.0", "artifact_type": "test_method", "project_id": project["project_id"], "stage": "TEST_METHODS_QUALIFIED",
+        "schema_version": "0.1.0", "artifact_type": "test_method", "project_id": project["project_id"], "stage": "TEST_METHODS_QUALIFIED", "evidence_scope": data["evidence_scope"],
         **expected_decision_fields(method), "evidence": data["evidence"],
         **{field: method[field] for field in METHOD_FIELDS},
     }

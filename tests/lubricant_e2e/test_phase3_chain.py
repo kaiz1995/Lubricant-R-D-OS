@@ -69,6 +69,15 @@ def main() -> int:
             path = artifacts / artifact_name
             shutil.copyfile(source / fixture_name, path)
             assert_artifact(path, artifact_type, stage)
+            if artifact_type in {"test_method", "experiment_design", "experiment"}:
+                simulated = read_json(path)
+                simulated["evidence_scope"] = "PHYSICAL"
+                simulated["decision"] = "GO"
+                simulated["evidence"][0]["statement"] = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
+                simulated["evidence"][0]["source"] = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
+                if artifact_type == "test_method":
+                    simulated["qualification_status"] = "QUALIFIED"
+                write_json(path, simulated)
             upstream_paths[key] = path
 
         analysis_input = read_json(FIXTURES / "statistical-analysis" / "valid-input.synthetic.json")

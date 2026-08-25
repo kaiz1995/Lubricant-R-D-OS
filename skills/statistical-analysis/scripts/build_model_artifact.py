@@ -23,7 +23,7 @@ def main() -> int:
     def load(key: str) -> dict: return json.loads((input_path.parent / data[key]).read_text(encoding="utf-8"))
     project, method, design_space, experiment = (load(key) for key in ("project_artifact", "test_method_artifact", "design_space_artifact", "experiment_artifact"))
     request = data["analysis"]
-    artifact = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project["project_id"], "stage": "MODEL_BUILT", **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("model_id", "requested_analyses", "response_references")}}
+    artifact = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project["project_id"], "stage": "MODEL_BUILT", "evidence_scope": experiment["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("model_id", "requested_analyses", "response_references")}}
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}"); return 0

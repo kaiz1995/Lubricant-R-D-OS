@@ -3,13 +3,14 @@
   "artifact_type": "experiment_design",
   "project_id": "WGO-DOE-001",
   "stage": "EXPERIMENT_DESIGNED",
+  "evidence_scope": "SYNTHETIC",
   "decision_question": "Can supplied CONSTRAINED_MIXTURE request ED-DOE-001 be handed to the Phase 4 deterministic engine?",
   "hypothesis": "ED-DOE-001 records supplied constrained-mixture planning inputs for later deterministic point generation.",
   "uncertainty": "Supplied design family, factors, target count, replicates, center points, randomization, response roles, guardrails, total, and information-value statements are not independently verified; statistical sufficiency is not verified and no DOE point, formula, measurement, result, cost, performance, optimization, or downstream conclusion is established.",
   "decision_rule": "Hand off only a supplied CONSTRAINED_MIXTURE request with linked qualified D/P method, feasible same-unit formulation bounds and total, complete responses and guardrails, and evidence without GAP.",
-  "result": "ED-DOE-001 is eligible for Phase 4 deterministic point generation; family CONSTRAINED_MIXTURE and target count 12 are supplied planning inputs, not generated DOE points or a statistical-sufficiency conclusion.",
-  "decision": "GO",
-  "next_action": "Hand ED-DOE-001 to the Phase 4 deterministic engine without adding DOE points.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition.",
   "evidence": [
     {
       "evidence_id": "E-ED-001",

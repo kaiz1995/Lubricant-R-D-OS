@@ -68,11 +68,11 @@ def measurement_errors(value: object, label: str) -> list[str]:
     return errors
 
 
-def request_schema_errors(request: object, project_id: str) -> list[str]:
+def request_schema_errors(request: object, project_id: str, evidence_scope: str | None = None) -> list[str]:
     if not isinstance(request, dict) or set(request) != REQUEST_FIELDS:
         return ["experiment_design must contain only the required request fields"]
     candidate = {
-        "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project_id or "input-project", "stage": "EXPERIMENT_DESIGNED",
+        "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project_id or "input-project", "stage": "EXPERIMENT_DESIGNED", "evidence_scope": evidence_scope,
         "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input",
         "design_space_reference": "input-design-space", "test_method_references": ["input-method"], **request,
     }
@@ -84,7 +84,7 @@ def request_schema_errors(request: object, project_id: str) -> list[str]:
 
 
 def request_errors(request: object, design_space: dict | None, failure: dict | None, method: dict | None, project_id: str) -> list[str]:
-    errors = request_schema_errors(request, project_id)
+    errors = request_schema_errors(request, project_id, method.get("evidence_scope") if method else None)
     if not isinstance(request, dict):
         return errors
     design = request.get("design") if isinstance(request.get("design"), dict) else {}
@@ -170,6 +170,8 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append(f"{key} must have decision GO")
     project, challenge, failure, method, design_space = (artifacts[key] for key, _, _ in requirements)
     present = [item for item in (project, challenge, failure, method, design_space) if item is not None]
+    if method is not None and method.get("evidence_scope") not in {"SYNTHETIC", "PHYSICAL"}:
+        errors.append("test_method_artifact must declare evidence_scope")
     if project is not None and project.get("status") != "ACTIVE":
         errors.append("project_artifact must have status ACTIVE")
     if len(present) == 5 and len({item.get("project_id") for item in present}) != 1:

@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1.0", "artifact_type": "test_method", "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "PHYSICAL",
   "decision_question": "Is the water-separation method qualified for the stated decision?", "hypothesis": "The method can distinguish the known benchmark samples.", "uncertainty": "Field relevance is limited to available evidence.",
   "evidence": [{ "evidence_id": "E-T-001", "statement": "Known benchmark samples were compared.", "source": "qualification record Q-001", "status": "OBSERVED" }],
   "decision_rule": "Use in DOE only when qualification status is QUALIFIED.", "result": "Method qualification is recorded; it does not establish product performance.", "decision": "GO", "next_action": "Define the constrained design space.",

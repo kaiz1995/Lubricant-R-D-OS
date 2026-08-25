@@ -49,10 +49,10 @@ def load_artifact(path: Path | None, schema_name: str, label: str) -> tuple[list
     return errors, value if not errors else None
 
 
-def request_errors(request: object, project_id: str) -> list[str]:
+def request_errors(request: object, project_id: str, evidence_scope: str | None = None) -> list[str]:
     if not isinstance(request, dict) or set(request) != REQUEST_FIELDS:
         return ["analysis must contain only model_id, requested_analyses, response_references, and evidence"]
-    candidate = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project_id or "input-project", "stage": "MODEL_BUILT", "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input", "experiment_reference": "input-experiment", "design_space_reference": "input-design-space", "test_method_references": ["input-method"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **request}
+    candidate = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project_id or "input-project", "stage": "MODEL_BUILT", "evidence_scope": evidence_scope, "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input", "experiment_reference": "input-experiment", "design_space_reference": "input-design-space", "test_method_references": ["input-method"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **request}
     schemas, registry = loaded_schemas()
     return [f"analysis: {error.message}" for error in Draft202012Validator(schemas["model.schema.json"], registry=registry).iter_errors(candidate)]
 
@@ -73,6 +73,9 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append(f"{key} must have decision GO")
     project, challenge, failure, method, design_space, experiment_design, experiment = (artifacts[key] for key, _, _ in UPSTREAM)
     available = [item for item in (project, challenge, failure, method, design_space, experiment_design, experiment) if item]
+    scopes = {item.get("evidence_scope") for item in (method, experiment_design, experiment) if item is not None}
+    if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:
+        errors.append("test_method, experiment_design, and experiment evidence_scope values must exist and match")
     if project and project.get("status") != "ACTIVE": errors.append("project_artifact must have status ACTIVE")
     if len(available) == 7 and len({item.get("project_id") for item in available}) != 1: errors.append("all upstream artifact project_id values must match")
     if challenge and failure and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
@@ -85,7 +88,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if experiment and design_space and experiment.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_artifact design-space link is invalid")
     if experiment and method and experiment.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_artifact method link is invalid")
     request = data.get("analysis")
-    errors.extend(request_errors(request, project.get("project_id", "") if project else ""))
+    errors.extend(request_errors(request, project.get("project_id", "") if project else "", experiment.get("evidence_scope") if experiment else None))
     if not isinstance(request, dict): return errors
     if has_gap(request): errors.append("analysis.evidence contains GAP")
     ctqs = {item.get("ctq_id"): item for item in failure.get("ctqs", []) if isinstance(item, dict)} if failure else {}

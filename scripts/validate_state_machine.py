@@ -30,6 +30,8 @@ def validate_state(state: object) -> str | None:
         return "state has an unknown stage"
     if state["status"] not in CONTRACT["project_statuses"]:
         return "state has an unknown project status"
+    if state["evidence_scope"] not in {"SYNTHETIC", "PHYSICAL"}:
+        return "state has an unknown evidence scope"
     if state["stage"] not in CONTRACT["lifecycle_stage_sets"][state["status"]]:
         return f"state status {state['status']} is not valid at stage {state['stage']}"
     if not isinstance(state["version"], int) or state["version"] < 1:
@@ -85,6 +87,11 @@ def validate(event: object) -> str | None:
     kind, gate = event.get("kind"), event.get("gate_status")
     if gate not in CONTRACT["gate_statuses"]:
         return "gate status must be GO, HOLD, PIVOT, KILL, or FREEZE"
+    scopes = {before["evidence_scope"], after["evidence_scope"]}
+    if len(scopes) != 1:
+        return "state transition evidence_scope must be retained"
+    if before["evidence_scope"] == "SYNTHETIC" and kind != "HOLD":
+        return "SYNTHETIC state permits HOLD only"
     error = lifecycle_error(kind, gate, before, after)
     if error:
         return error
@@ -177,6 +184,13 @@ def main() -> int:
             failures.append(f"invalid {case['name']}: expected {expected!r}, got {reason!r}")
         else:
             print(f"invalid {case['name']}: REJECTED: {reason}")
+    synthetic = json.loads(json.dumps(valid_cases[0]["event"]))
+    synthetic["before"]["evidence_scope"] = synthetic["after"]["evidence_scope"] = "SYNTHETIC"
+    reason = validate(synthetic)
+    if reason != "SYNTHETIC state permits HOLD only":
+        failures.append(f"synthetic-go: expected synthetic rejection, got {reason!r}")
+    else:
+        print("invalid synthetic-go: REJECTED: SYNTHETIC state permits HOLD only")
     print(f"valid={len(valid_cases)} invalid={len(invalid_cases)} failures={len(failures)}")
     for failure in failures:
         print(failure)

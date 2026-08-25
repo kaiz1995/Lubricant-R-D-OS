@@ -39,9 +39,9 @@ def artifact(value: object, input_path: Path, schema_name: str, label: str) -> t
     return errors, item if not errors else None
 
 
-def gate_request_errors(request: object, project_id: str, experiment_id: str) -> list[str]:
+def gate_request_errors(request: object, project_id: str, experiment_id: str, evidence_scope: str | None = None) -> list[str]:
     if not isinstance(request, dict) or set(request) != REQUEST_FIELDS: return ["gate must contain only the required review fields"]
-    candidate = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project_id or "input-project", "stage": "VERIFIED", "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": request.get("gate_status"), "next_action": "input", "experiment_reference": experiment_id or "input-experiment", **{key: value for key, value in request.items() if key != "reason"}}
+    candidate = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project_id or "input-project", "stage": "VERIFIED", "evidence_scope": evidence_scope, "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": request.get("gate_status"), "next_action": "input", "experiment_reference": experiment_id or "input-experiment", **{key: value for key, value in request.items() if key != "reason"}}
     loaded, registry = schemas()
     return [f"gate: {error.message}" for error in Draft202012Validator(loaded["gate.schema.json"], registry=registry).iter_errors(candidate)]
 
@@ -56,6 +56,9 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         if value and value.get("decision") != "GO": errors.append(f"{key} must have decision GO")
     project, challenge, failure, method, design_space, experiment_design, experiment, model, optimization = (items[key] for key, _, _ in UPSTREAM)
     present = [value for value in (project, challenge, failure, method, design_space, experiment_design, experiment, model, optimization) if value]
+    scopes = {value.get("evidence_scope") for value in (method, experiment_design, experiment, model, optimization) if value is not None}
+    if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:
+        errors.append("test_method, experiment_design, experiment, model, and optimization evidence_scope values must exist and match")
     if project and project.get("status") != "ACTIVE": errors.append("project_artifact must have status ACTIVE")
     if len(present) == 9 and len({value.get("project_id") for value in present}) != 1: errors.append("all upstream artifact project_id values must match")
     if failure and challenge and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
@@ -65,9 +68,10 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if experiment and experiment_design and experiment.get("experiment_design_reference") != experiment_design.get("experiment_design_id"): errors.append("experiment_artifact design link is invalid")
     if model and experiment and model.get("experiment_reference") != experiment.get("experiment_id"): errors.append("model_artifact experiment link is invalid")
     if optimization and model and optimization.get("model_reference") != model.get("model_id"): errors.append("optimization_artifact model link is invalid")
-    request = data.get("gate"); errors.extend(gate_request_errors(request, project.get("project_id", "") if project else "", experiment.get("experiment_id", "") if experiment else ""))
+    request = data.get("gate"); errors.extend(gate_request_errors(request, project.get("project_id", "") if project else "", experiment.get("experiment_id", "") if experiment else "", optimization.get("evidence_scope") if optimization else None))
     if not isinstance(request, dict): return errors
     status = request.get("gate_status")
+    if scopes == {"SYNTHETIC"} and status != "HOLD": errors.append("SYNTHETIC evidence_scope permits Gate HOLD workflow validation only")
     if status == "GO" and has_gap(request): errors.append("GO cannot use GAP evidence")
     if status in {"PIVOT", "KILL", "FREEZE"} and (not isinstance(request.get("reason"), str) or not request["reason"].strip() or has_gap(request)): errors.append(f"{status} requires explicit reason and evidence without GAP")
     return errors
