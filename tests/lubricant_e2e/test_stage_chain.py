@@ -60,7 +60,7 @@ def main() -> int:
         write_json(project_input_path, project_input)
         run(ROOT / "skills/project-definition/scripts/preflight_project_definition.py", project_input_path)
 
-        # Stages 0-2 intentionally expose preflight/validation, not builders. Reuse their canonical valid artifacts.
+        # Stages 0 and 2 intentionally expose preflight/validation, not builders. Reuse their canonical valid artifacts.
         project_path = artifacts / "project.json"
         project = read_json(FIXTURES / "duty-challenge" / "project-active.json")
         project["business_objective"] = project_input["business_objective"]
@@ -73,8 +73,18 @@ def main() -> int:
         assert "10-20%" in project["business_objective"]
         assert any("10-20%" in constraint for constraint in project["hard_constraints"])
 
+        duty_definition_input = read_json(FIXTURES / "duty-definition" / "valid-input.json")
+        duty_definition_input["project_artifact"] = str(project_path)
+        duty_definition_input_path, duty_path = inputs / "duty-definition-input.json", artifacts / "duty.json"
+        write_json(duty_definition_input_path, duty_definition_input)
+        run(ROOT / "skills/duty-definition/scripts/preflight_duty_definition.py", duty_definition_input_path)
+        run(ROOT / "skills/duty-definition/scripts/build_duty_artifact.py", duty_definition_input_path, duty_path)
+        run(ROOT / "skills/duty-definition/scripts/validate_duty_artifact.py", duty_path)
+        duty = assert_artifact(duty_path, "duty", "DUTY_DEFINED")
+        assert duty["project_reference"] == project["project_id"]
+
         duty_input = read_json(FIXTURES / "duty-challenge" / "valid-input.json")
-        duty_input["project_artifact"] = str(project_path)
+        duty_input["duty_artifact"] = str(duty_path)
         duty_input_path = inputs / "duty-input.json"
         write_json(duty_input_path, duty_input)
         run(ROOT / "skills/duty-challenge-analysis/scripts/preflight_duty_challenge.py", duty_input_path)
@@ -127,7 +137,7 @@ def main() -> int:
 
         outputs = [read_json(path) for path in artifacts.glob("*.json")]
         assert {path.name for path in artifacts.glob("*.json")} == {
-            "project.json", "challenge.json", "failure-ctq.json", "test-method.json", "design-space.json",
+            "project.json", "duty.json", "challenge.json", "failure-ctq.json", "test-method.json", "design-space.json",
         }
         forbidden = {"doe", "experiment_design", "experiment", "statistical_analysis", "gate", "freeze"}
         assert not (forbidden & {item["artifact_type"] for item in outputs})

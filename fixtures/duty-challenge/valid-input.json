@@ -1,14 +1,5 @@
 {
-  "project_artifact": "project-active.json",
-  "duty": {
-    "equipment": {"value": "Wind turbine gearbox", "source": "duty record DP-001", "evidence_id": "E-D-001", "statement": "Duty record identifies a wind turbine gearbox.", "status": "OBSERVED"},
-    "operating_conditions": {"value": "Variable-speed service", "source": "duty record DP-001", "evidence_id": "E-D-002", "statement": "Duty record states variable-speed operation.", "status": "OBSERVED"},
-    "maintenance": {"value": "Condition-monitored maintenance", "source": "maintenance plan MP-001", "evidence_id": "E-D-003", "statement": "Maintenance plan states condition monitoring.", "status": "OBSERVED"},
-    "temperature": {"value": "-20 to 90 C", "source": "duty record DP-001", "evidence_id": "E-D-004", "statement": "Duty record states the recorded temperature range.", "status": "OBSERVED"},
-    "load": {"value": "Variable transmitted load", "source": "duty record DP-001", "evidence_id": "E-D-005", "statement": "Duty record states variable transmitted load.", "status": "OBSERVED"},
-    "contamination": {"value": "Potential water ingress", "source": "service history SH-001", "evidence_id": "E-D-006", "statement": "Service history records potential water ingress.", "status": "OBSERVED"},
-    "life": {"value": "Long drain interval target", "source": "project brief PB-001", "evidence_id": "E-D-007", "statement": "Project brief records a long drain interval target.", "status": "OBSERVED"}
-  },
+  "duty_artifact": "duty-active.json",
   "challenge": {
     "duty_reference": "DP-001",
     "challenge_id": "CH-001",
@@ -20,5 +11,5 @@
     "evidence_gap": "No quantified field water history.",
     "priority": "HIGH"
   },
-  "challenge_evidence": [{"evidence_id": "E-C-001", "statement": "The recorded duty profile identifies potential water ingress during service.", "source": "duty profile DP-001", "status": "OBSERVED"}]
+  "challenge_evidence": [{"evidence_id": "E-C-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: supplied duty profile identifies potential water ingress for contract testing only.", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "status": "OBSERVED"}]
 }

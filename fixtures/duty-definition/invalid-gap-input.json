@@ -1,0 +1,13 @@
+{
+  "project_artifact": "../duty-challenge/project-active.json",
+  "duty_id": "DP-GAP-001",
+  "duty": {
+    "equipment": {"value": "Wind turbine gearbox", "source": "synthetic negative fixture", "evidence_id": "E-D-001", "statement": "Synthetic negative fixture.", "status": "GAP"},
+    "operating_conditions": {"value": "Variable-speed service", "source": "synthetic negative fixture", "evidence_id": "E-D-002", "statement": "Synthetic negative fixture.", "status": "ASSUMED"},
+    "maintenance": {"value": "Condition-monitored maintenance", "source": "synthetic negative fixture", "evidence_id": "E-D-003", "statement": "Synthetic negative fixture.", "status": "ASSUMED"},
+    "temperature": {"value": "-20 to 90 C", "source": "synthetic negative fixture", "evidence_id": "E-D-004", "statement": "Synthetic negative fixture.", "status": "ASSUMED"},
+    "load": {"value": "Variable transmitted load", "source": "synthetic negative fixture", "evidence_id": "E-D-005", "statement": "Synthetic negative fixture.", "status": "ASSUMED"},
+    "contamination": {"value": "Potential water ingress", "source": "synthetic negative fixture", "evidence_id": "E-D-006", "statement": "Synthetic negative fixture.", "status": "ASSUMED"},
+    "life": {"value": "Long drain interval target", "source": "synthetic negative fixture", "evidence_id": "E-D-007", "statement": "Synthetic negative fixture.", "status": "ASSUMED"}
+  }
+}

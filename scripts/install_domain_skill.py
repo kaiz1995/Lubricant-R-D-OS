@@ -15,7 +15,8 @@ from integrations.open_science import install_skill
 
 SKILLS = {
     "project-definition": ("common.schema.json", "project.schema.json"),
-    "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json"),
+    "duty-definition": ("common.schema.json", "project.schema.json", "duty.schema.json"),
+    "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "duty.schema.json", "challenge.schema.json"),
     "failure-ctq-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json"),
     "test-method-qualification": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json"),
     "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json"),

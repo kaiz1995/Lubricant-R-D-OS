@@ -15,6 +15,7 @@ SCHEMAS = ROOT / "schemas"
 FIXTURES = ROOT / "fixtures"
 EXPECTED_ERRORS = {
     "project--missing-formula-version.json": "'formula_version' is a required property",
+    "duty--missing-source.json": "'source' is a required property",
     "challenge--missing-schema-version.json": "'schema_version' is a required property",
     "failure_ctq--missing-unit.json": "'unit' is a required property",
     "test_method--missing-source.json": "'source' is a required property",

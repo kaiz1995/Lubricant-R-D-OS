@@ -11,10 +11,6 @@ from referencing import Registry, Resource
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-DUTY_FIELDS = (
-    "equipment", "operating_conditions", "maintenance", "temperature",
-    "load", "contamination", "life",
-)
 CHALLENGE_FIELDS = (
     "duty_reference", "challenge_id", "category", "description", "severity",
     "exposure", "lubricant_sensitivity", "evidence_gap", "priority",
@@ -27,51 +23,31 @@ CHALLENGE_CATEGORIES = {
 LEVELS = {"LOW", "MEDIUM", "HIGH"}
 
 
-def has_value(value: object) -> bool:
-    if isinstance(value, str):
-        return bool(value.strip())
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
 def has_text(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
 def schema_dir() -> Path:
     canonical = SKILL_ROOT.parents[1] / "schemas"
-    if all((canonical / name).is_file() for name in ("common.schema.json", "project.schema.json")):
+    if all((canonical / name).is_file() for name in ("common.schema.json", "duty.schema.json")):
         return canonical
     return SKILL_ROOT / "references"
 
 
-def project_errors(path: Path) -> list[str]:
+def duty_errors(path: Path) -> tuple[list[str], dict | None]:
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"))
         schemas = schema_dir()
         common = json.loads((schemas / "common.schema.json").read_text(encoding="utf-8"))
-        project = json.loads((schemas / "project.schema.json").read_text(encoding="utf-8"))
+        duty = json.loads((schemas / "duty.schema.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        return [f"project_artifact cannot be read: {error}"]
+        return [f"duty_artifact cannot be read: {error}"], None
     registry = Registry().with_resource(common["$id"], Resource.from_contents(common))
-    registry = registry.with_resource(project["$id"], Resource.from_contents(project))
-    errors = [f"project_artifact: {error.message}" for error in Draft202012Validator(project, registry=registry).iter_errors(artifact)]
-    if not errors and (artifact.get("stage") != "PROJECT_DEFINED" or artifact.get("status") != "ACTIVE"):
-        errors.append("project_artifact must be stage PROJECT_DEFINED and status ACTIVE")
-    return errors
-
-
-def evidence_errors(value: object, label: str) -> list[str]:
-    if not isinstance(value, dict):
-        return [label]
-    errors = []
-    if not has_value(value.get("value")):
-        errors.append(f"{label}.value")
-    for field in ("source", "evidence_id", "statement"):
-        if not has_text(value.get(field)):
-            errors.append(f"{label}.{field}")
-    if value.get("status") != "OBSERVED":
-        errors.append(f"{label}.status must be OBSERVED")
-    return errors
+    registry = registry.with_resource(duty["$id"], Resource.from_contents(duty))
+    errors = [f"duty_artifact: {error.message}" for error in Draft202012Validator(duty, registry=registry).iter_errors(artifact)]
+    if not errors and (artifact.get("stage") != "DUTY_DEFINED" or artifact.get("decision") != "GO"):
+        errors.append("duty_artifact must be stage DUTY_DEFINED and decision GO")
+    return errors, artifact if not errors else None
 
 
 def evidence_list_errors(value: object, label: str) -> list[str]:
@@ -94,21 +70,16 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors: list[str] = []
-    project_path = data.get("project_artifact")
-    if not has_text(project_path):
-        errors.append("project_artifact")
+    duty_path = data.get("duty_artifact")
+    duty_artifact = None
+    if not has_text(duty_path):
+        errors.append("duty_artifact")
     else:
-        resolved = Path(project_path)
+        resolved = Path(duty_path)
         if not resolved.is_absolute():
             resolved = input_path.parent / resolved
-        errors.extend(project_errors(resolved))
-
-    duty = data.get("duty")
-    if not isinstance(duty, dict):
-        errors.append("duty")
-    else:
-        for field in DUTY_FIELDS:
-            errors.extend(evidence_errors(duty.get(field), f"duty.{field}"))
+        duty_errors_found, duty_artifact = duty_errors(resolved)
+        errors.extend(duty_errors_found)
 
     challenge = data.get("challenge")
     if not isinstance(challenge, dict):
@@ -117,6 +88,8 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         for field in CHALLENGE_FIELDS:
             if not has_text(challenge.get(field)):
                 errors.append(f"challenge.{field}")
+        if duty_artifact and challenge.get("duty_reference") != duty_artifact.get("duty_id"):
+            errors.append("challenge.duty_reference must equal duty_artifact.duty_id")
         if challenge.get("category") not in CHALLENGE_CATEGORIES:
             errors.append("challenge.category is invalid")
         for field in ("severity", "exposure", "lubricant_sensitivity", "priority"):

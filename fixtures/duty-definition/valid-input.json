@@ -1,0 +1,13 @@
+{
+  "project_artifact": "../duty-challenge/project-active.json",
+  "duty_id": "DP-001",
+  "duty": {
+    "equipment": {"value": "Wind turbine gearbox", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: equipment is supplied for contract testing only.", "status": "ASSUMED"},
+    "operating_conditions": {"value": "Variable-speed service", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-002", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: operating conditions are supplied for contract testing only.", "status": "ASSUMED"},
+    "maintenance": {"value": "Condition-monitored maintenance", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-003", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: maintenance is supplied for contract testing only.", "status": "ASSUMED"},
+    "temperature": {"value": "-20 to 90 C", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-004", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: temperature is supplied for contract testing only.", "status": "ASSUMED"},
+    "load": {"value": "Variable transmitted load", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-005", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: load is supplied for contract testing only.", "status": "ASSUMED"},
+    "contamination": {"value": "Potential water ingress", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-006", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: contamination is supplied for contract testing only.", "status": "ASSUMED"},
+    "life": {"value": "Long drain interval target", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-007", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: life target is supplied for contract testing only.", "status": "ASSUMED"}
+  }
+}

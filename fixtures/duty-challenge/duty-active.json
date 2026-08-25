@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "duty",
+  "project_id": "WGO-001",
+  "stage": "DUTY_DEFINED",
+  "decision_question": "Can supplied duty profile DP-001 be recorded?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: supplied duty conditions can define the project duty profile for contract testing only.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: declared assumptions remain assumed and no downstream conclusion is established.",
+  "evidence": [
+    {"evidence_id": "E-D-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: equipment is supplied for contract testing only.", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "status": "ASSUMED"}
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: preserve declared evidence statuses only.",
+  "result": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: duty profile is recorded for contract testing only.",
+  "decision": "GO",
+  "next_action": "Record a supplied duty-derived challenge.",
+  "duty_id": "DP-001",
+  "project_reference": "WGO-001",
+  "duty": {
+    "equipment": {"value": "Wind turbine gearbox", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: equipment.", "status": "ASSUMED"},
+    "operating_conditions": {"value": "Variable-speed service", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-002", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: operating conditions.", "status": "ASSUMED"},
+    "maintenance": {"value": "Condition-monitored maintenance", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-003", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: maintenance.", "status": "ASSUMED"},
+    "temperature": {"value": "-20 to 90 C", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-004", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: temperature.", "status": "ASSUMED"},
+    "load": {"value": "Variable transmitted load", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-005", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: load.", "status": "ASSUMED"},
+    "contamination": {"value": "Potential water ingress", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-006", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: contamination.", "status": "ASSUMED"},
+    "life": {"value": "Long drain interval target", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-D-007", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: life target.", "status": "ASSUMED"}
+  }
+}

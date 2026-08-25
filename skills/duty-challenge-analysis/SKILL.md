@@ -1,6 +1,6 @@
 ---
 name: duty-challenge-analysis
-description: Convert fully evidenced lubricant duty conditions into one traceable Challenge Map member at CHALLENGES_DEFINED; hold without writing when duty evidence or challenge judgments are incomplete.
+description: Convert one validated lubricant duty profile into one traceable Challenge Map member at CHALLENGES_DEFINED; hold without writing when the duty profile or challenge judgments are incomplete.
 ---
 
 # Duty Challenge Analysis
@@ -13,8 +13,7 @@ Use `../../schemas/challenge.schema.json` as source-pack authority when availabl
 
 Provide one JSON input with:
 
-- `project_artifact`: path to a schema-valid Project Charter with `stage: "PROJECT_DEFINED"` and `status: "ACTIVE"`.
-- `duty`: `equipment`, `operating_conditions`, `maintenance`, `temperature`, `load`, `contamination`, and `life`. Each item needs non-empty `value`, `source`, `evidence_id`, and `statement`, with `status: "OBSERVED"`.
+- `duty_artifact`: path to a schema-valid `duty` artifact with `stage: "DUTY_DEFINED"` and `decision: "GO"`.
 - `challenge`: non-empty `duty_reference`, `challenge_id`, `category`, `description`, `severity`, `exposure`, `lubricant_sensitivity`, `evidence_gap`, and `priority`. Use the canonical Challenge schema enum values.
 - Non-empty `challenge_evidence`; each item needs `evidence_id`, `statement`, `source`, and `status: "OBSERVED"`.
 
@@ -22,7 +21,7 @@ Run `python scripts/preflight_duty_challenge.py <input.json>` first. The input m
 
 ## HOLD rule
 
-If the Project Charter is invalid, not `PROJECT_DEFINED`/`ACTIVE`, any duty item or its source/evidence is incomplete, or any challenge judgment is absent/invalid, report `HOLD` and create no artifact. Do not write a partial map member or convert evidence gaps into conclusions.
+If the Duty artifact is invalid, not `DUTY_DEFINED`/`GO`, any challenge judgment is absent/invalid, or challenge evidence is incomplete, report `HOLD` and create no artifact. Do not write a partial map member or convert evidence gaps into conclusions.
 
 ## Artifact
 
@@ -32,7 +31,7 @@ The output uses only canonical schema keys:
 
 - `artifact_type: "challenge"`, `schema_version: "0.1.0"`, `project_id` from the validated Project Charter, and `stage: "CHALLENGES_DEFINED"`.
 - Challenge fields copied from `challenge` without regrading.
-- `evidence` is the supplied duty evidence and `challenge_evidence`, retained as evidence items only.
+- `evidence` retains the supplied duty evidence and `challenge_evidence` as evidence items only.
 - `decision_question`, `hypothesis`, `uncertainty`, `decision_rule`, `result`, `decision`, and `next_action`. Record only the supplied duty-to-challenge decision; `decision` is `"GO"`; `next_action` is `"Define failure and CTQ relationships."`.
 
 Write a temporary sibling JSON file. Run `python scripts/validate_duty_challenge_artifact.py <temporary-file>`; only on `PASS` atomically replace the target. If preflight or validation fails, leave the existing target unchanged and report the actual errors.
