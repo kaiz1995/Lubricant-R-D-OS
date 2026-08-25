@@ -42,4 +42,4 @@ The runtime skill catalog must show `hello-lubricant`, its description, and a us
 
 ## Non-goals
 
-This V0 pack does not generate formulations, perform lubricant research, make R&D conclusions, provide a database, MCP server, UI, or deterministic calculation engine.
+The Phase 3 Skills do not generate formulations or calculations. This repository also contains separate deterministic Phase 4 cost, DOE, statistics, and optimization engines; they are not yet exposed through the Open Science Runtime. This V0 pack does not perform lubricant research, make R&D conclusions, or provide a database, MCP server, or UI.
