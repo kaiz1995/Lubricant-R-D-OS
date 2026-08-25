@@ -2,7 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/experiment.schema.json",
   "title": "Observed experiment record",
-  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "if": { "properties": { "evidence_scope": { "const": "PHYSICAL" } }, "required": ["evidence_scope"] },
+      "then": {
+        "required": ["doe_output_reference"],
+        "properties": {
+          "runs": {
+            "items": {
+              "required": ["formula_reference", "doe_point_reference", "execution_provenance"],
+              "properties": {
+                "response_measurements": { "items": { "required": ["method_reference"] } }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "type": "object",
   "properties": {
     "artifact_type": { "const": "experiment" },
@@ -11,6 +29,17 @@
     "experiment_design_reference": { "type": "string", "minLength": 1 },
     "design_space_reference": { "type": "string", "minLength": 1 },
     "test_method_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "doe_output_reference": {
+      "type": "object",
+      "properties": {
+        "engine_name": { "const": "doe" },
+        "engine_version": { "type": "string", "minLength": 1 },
+        "input_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "output_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "required": ["engine_name", "engine_version", "input_digest", "output_digest"],
+      "additionalProperties": false
+    },
     "runs": {
       "type": "array", "minItems": 1,
       "items": {
@@ -18,12 +47,43 @@
         "properties": {
           "run_id": { "type": "string", "minLength": 1 },
           "material_batch": { "type": "string", "minLength": 1 },
+          "formula_reference": { "type": "string", "minLength": 1 },
           "formula_version": { "type": "string", "minLength": 1 },
+          "doe_point_reference": {
+            "type": "object",
+            "properties": { "run_index": { "type": "integer", "minimum": 1 } },
+            "required": ["run_index"],
+            "additionalProperties": false
+          },
+          "execution_provenance": {
+            "type": "object",
+            "properties": {
+              "executed_at": { "type": "string", "format": "date-time" },
+              "operator_reference": { "type": "string", "minLength": 1 },
+              "instrument_reference": { "type": "string", "minLength": 1 },
+              "calibration_reference": { "type": "string", "minLength": 1 },
+              "raw_record_reference": { "type": "string", "minLength": 1 }
+            },
+            "required": ["executed_at", "operator_reference", "instrument_reference", "calibration_reference", "raw_record_reference"],
+            "additionalProperties": false
+          },
           "response_measurements": {
             "type": "array", "minItems": 1,
             "items": {
               "type": "object",
-              "properties": { "ctq_reference": { "type": "string", "minLength": 1 }, "measurement": { "$ref": "common.schema.json#/$defs/measurement" } },
+              "properties": {
+                "ctq_reference": { "type": "string", "minLength": 1 },
+                "method_reference": {
+                  "type": "object",
+                  "properties": {
+                    "method_id": { "type": "string", "minLength": 1 },
+                    "qualification_reference": { "type": "string", "minLength": 1 }
+                  },
+                  "required": ["method_id", "qualification_reference"],
+                  "additionalProperties": false
+                },
+                "measurement": { "$ref": "common.schema.json#/$defs/measurement" }
+              },
               "required": ["ctq_reference", "measurement"], "additionalProperties": false
             }
           }

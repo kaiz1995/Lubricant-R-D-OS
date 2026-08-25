@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_RUNNING",
-  "evidence_scope": "PHYSICAL",
+  "evidence_scope": "SYNTHETIC",
   "decision_question": "Does the synthetic observed record contain the required CTQ measurement fields?", "hypothesis": "This synthetic fixture evaluates no product hypothesis.", "uncertainty": "The measurement exists only to validate the observed-record contract.",
   "evidence": [{ "evidence_id": "E-X-001", "statement": "This is a synthetic schema-validation fixture, not product evidence.", "source": "synthetic fixture only", "status": "ASSUMED" }],
   "decision_rule": "Validate the observed-record fields without inferring product performance.", "result": "Synthetic observed measurement accepted for schema validation only.", "decision": "UNDECIDED", "next_action": "Do not use this fixture for R&D decisions.",

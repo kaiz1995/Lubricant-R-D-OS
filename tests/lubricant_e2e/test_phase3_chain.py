@@ -77,6 +77,28 @@ def main() -> int:
                 simulated["evidence"][0]["source"] = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
                 if artifact_type == "test_method":
                     simulated["qualification_status"] = "QUALIFIED"
+                if artifact_type == "experiment":
+                    simulated["doe_output_reference"] = {
+                        "engine_name": "doe",
+                        "engine_version": "simulated-contract-v1",
+                        "input_digest": "a" * 64,
+                        "output_digest": "a" * 64,
+                    }
+                    for entry in simulated["runs"]:
+                        entry["formula_reference"] = "SIMULATED-FORMULA-001"
+                        entry["doe_point_reference"] = {"run_index": 1}
+                        entry["execution_provenance"] = {
+                            "executed_at": "2026-08-25T09:30:00+08:00",
+                            "operator_reference": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+                            "instrument_reference": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+                            "calibration_reference": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+                            "raw_record_reference": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+                        }
+                        for response in entry["response_measurements"]:
+                            response["method_reference"] = {
+                                "method_id": "TM-DOE-001",
+                                "qualification_reference": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+                            }
                 write_json(path, simulated)
             upstream_paths[key] = path
 
