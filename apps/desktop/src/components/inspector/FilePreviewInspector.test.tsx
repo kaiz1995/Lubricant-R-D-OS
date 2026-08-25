@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { FilePreviewInspector as FilePreviewInspectorT } from "@ai4s/shared";
@@ -173,7 +173,7 @@ describe("PreviewError", () => {
     render(
       <PreviewError error="file too large to preview" filename="x.bam" path="x.bam" onOpenExternally={() => {}} />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /Inspect without loading/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Inspect without loading/i }));
     expect(await screen.findByText(/no Python found/)).toBeInTheDocument();
   });
 
