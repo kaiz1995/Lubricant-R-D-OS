@@ -29,6 +29,10 @@ EXPECTED_ERRORS = {
     "optimization--missing-engine-handoff.json": "'engine_handoff' is a required property",
     "benchmark--formula-copy-source.json": "'COMPARISON_VALIDATION' was expected",
     "evidence_qualification--synthetic-qualified.json": "'PHYSICAL' was expected",
+    "design_freeze--unsatisfied-condition.json": "True was expected",
+    "design_freeze--synthetic.json": "'PHYSICAL' was expected",
+    "knowledge_asset--missing-model.json": "True was expected",
+    "knowledge_asset--synthetic-closed.json": "'DRAFT_KNOWLEDGE' was expected",
 }
 
 
@@ -55,7 +59,8 @@ def main() -> int:
     valid_count = invalid_count = 0
 
     for path in sorted((FIXTURES / "valid").glob("*.json")):
-        errors = errors_for(validator_for(path.stem, registry), read_json(path))
+        kind = path.stem.split("--", 1)[0]
+        errors = errors_for(validator_for(kind, registry), read_json(path))
         valid_count += 1
         if errors:
             failures.append(f"valid {path.name}: {errors[0]}")

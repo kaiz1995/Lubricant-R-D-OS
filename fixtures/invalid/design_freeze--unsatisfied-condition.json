@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "design_freeze",
+  "project_id": "WGO-001",
+  "stage": "VERIFIED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "May the verified formulation be frozen?",
+  "hypothesis": "One freeze condition is not satisfied.",
+  "uncertainty": "The failed condition blocks freeze.",
+  "evidence": [
+    {
+      "evidence_id": "E-DF-BAD-001",
+      "statement": "Not all freeze conditions are satisfied.",
+      "source": "verification record VER-001",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "Freeze only when all eight freeze conditions are satisfied.",
+  "result": "The compatibility condition is not satisfied.",
+  "decision": "HOLD",
+  "next_action": "Resolve the compatibility gap before re-freeze.",
+  "freeze_record": {
+    "reason": "Compatibility remains unresolved.",
+    "evidence_package": "EQ-DF-001",
+    "evidence_scope": "PHYSICAL",
+    "evidence_status": "OBSERVED",
+    "freeze_conditions": [
+      { "condition_id": "CRITICAL_CTQ_SATISFIED", "satisfied": true, "evidence_reference": "VR-CTQ-001" },
+      { "condition_id": "CRITICAL_RISK_EVIDENCE_SUFFICIENT", "satisfied": true, "evidence_reference": "VR-RISK-001" },
+      { "condition_id": "COST_TARGET_MET", "satisfied": true, "evidence_reference": "VR-COST-001" },
+      { "condition_id": "RAW_MATERIAL_SUPPLY_ACCEPTABLE", "satisfied": true, "evidence_reference": "VR-SUPPLY-001" },
+      { "condition_id": "MANUFACTURABILITY_ACCEPTABLE", "satisfied": true, "evidence_reference": "VR-MFG-001" },
+      { "condition_id": "CRITICAL_BENCHMARK_NO_DEGRADATION", "satisfied": true, "evidence_reference": "VR-BM-001" },
+      { "condition_id": "COMPATIBILITY_PASSED", "satisfied": false, "evidence_reference": "VR-COMPAT-GAP-001" },
+      { "condition_id": "RISK_REVIEW_PASSED", "satisfied": true, "evidence_reference": "VR-RR-001" }
+    ]
+  }
+}

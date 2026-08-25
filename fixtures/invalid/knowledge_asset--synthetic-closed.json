@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "knowledge_asset",
+  "project_id": "WGO-001",
+  "stage": "CLOSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can synthetic evidence close knowledge assets?",
+  "hypothesis": "Synthetic evidence cannot reach CLOSED_KNOWLEDGE.",
+  "uncertainty": "No physical evidence supports closure.",
+  "evidence": [
+    {
+      "evidence_id": "E-KA-SYN-001",
+      "statement": "This is a synthetic closure attempt.",
+      "source": "synthetic replay run SET-001",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "SYNTHETIC evidence caps at DRAFT_KNOWLEDGE.",
+  "result": "The record attempts CLOSED_KNOWLEDGE on synthetic evidence.",
+  "decision": "FREEZE",
+  "next_action": "Downgrade to DRAFT_KNOWLEDGE with the demo marker.",
+  "asset_status": "CLOSED_KNOWLEDGE",
+  "knowledge_assets": {
+    "recommended_formula": { "artifact_reference": "FORMULA-REC-001", "present": true },
+    "feasible_design_space": { "artifact_reference": "DS-FEASIBLE-001", "present": true },
+    "critical_failure_boundaries": { "artifact_reference": "CFB-001", "present": true },
+    "evidence_package": {
+      "artifact_reference": "EP-001",
+      "present": true,
+      "qualification_reference": "EQ-SYN-001",
+      "qualification": "QUALIFIED"
+    },
+    "material_knowledge": { "artifact_reference": "MAT-KNOW-001", "present": true },
+    "model": { "artifact_reference": "MODEL-SYN-001", "present": true }
+  }
+}

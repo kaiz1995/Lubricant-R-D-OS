@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "knowledge_asset",
+  "project_id": "WGO-001",
+  "stage": "CLOSED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Are the closure knowledge assets complete and qualified?",
+  "hypothesis": "A fully evidenced project can close its knowledge assets.",
+  "uncertainty": "None beyond the qualified evidence package.",
+  "evidence": [
+    {
+      "evidence_id": "E-KA-001",
+      "statement": "The closure evidence package is qualified.",
+      "source": "qualification record EQ-DF-001",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "CLOSED_KNOWLEDGE requires all six assets and a QUALIFIED evidence package.",
+  "result": "All six knowledge assets are present and the evidence package is QUALIFIED.",
+  "decision": "FREEZE",
+  "next_action": "Archive the knowledge assets for reuse.",
+  "asset_status": "CLOSED_KNOWLEDGE",
+  "knowledge_assets": {
+    "recommended_formula": { "artifact_reference": "FORMULA-REC-001", "present": true },
+    "feasible_design_space": { "artifact_reference": "DS-FEASIBLE-001", "present": true },
+    "critical_failure_boundaries": { "artifact_reference": "CFB-001", "present": true },
+    "evidence_package": {
+      "artifact_reference": "EP-CLOSED-001",
+      "present": true,
+      "qualification_reference": "EQ-DF-001",
+      "qualification": "QUALIFIED"
+    },
+    "material_knowledge": { "artifact_reference": "MAT-KNOW-001", "present": true },
+    "model": { "artifact_reference": "MODEL-001", "present": true }
+  }
+}

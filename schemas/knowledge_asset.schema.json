@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/knowledge_asset.schema.json",
+  "title": "Knowledge asset closure",
+  "description": "Stage 8 contract. Six knowledge assets. asset_status=CLOSED_KNOWLEDGE requires every asset present and the evidence_package qualification equal to QUALIFIED; otherwise the highest legal status is DRAFT_KNOWLEDGE. SYNTHETIC evidence caps at DRAFT_KNOWLEDGE with the demo marker.",
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "knowledge_asset" },
+    "asset_status": { "enum": ["DRAFT_KNOWLEDGE", "CLOSED_KNOWLEDGE"] },
+    "synthetic_marker": { "const": "SYNTHETIC_DEMO_ONLY" },
+    "knowledge_assets": {
+      "type": "object",
+      "properties": {
+        "recommended_formula": { "$ref": "#/$defs/asset_entry" },
+        "feasible_design_space": { "$ref": "#/$defs/asset_entry" },
+        "critical_failure_boundaries": { "$ref": "#/$defs/asset_entry" },
+        "evidence_package": { "$ref": "#/$defs/qualified_asset" },
+        "material_knowledge": { "$ref": "#/$defs/asset_entry" },
+        "model": { "$ref": "#/$defs/asset_entry" }
+      },
+      "required": [
+        "recommended_formula",
+        "feasible_design_space",
+        "critical_failure_boundaries",
+        "evidence_package",
+        "material_knowledge",
+        "model"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "asset_entry": {
+      "type": "object",
+      "properties": {
+        "artifact_reference": { "type": "string", "minLength": 1 },
+        "present": { "type": "boolean" }
+      },
+      "required": ["artifact_reference", "present"],
+      "additionalProperties": false
+    },
+    "qualified_asset": {
+      "type": "object",
+      "properties": {
+        "artifact_reference": { "type": "string", "minLength": 1 },
+        "present": { "type": "boolean" },
+        "qualification_reference": { "type": "string", "minLength": 1 },
+        "qualification": { "enum": ["QUALIFIED", "PROVISIONAL", "UNQUALIFIED"] }
+      },
+      "required": ["artifact_reference", "present"],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "CLOSED_KNOWLEDGE requires every asset present and a QUALIFIED evidence package.",
+      "if": {
+        "properties": { "asset_status": { "const": "CLOSED_KNOWLEDGE" } },
+        "required": ["asset_status"]
+      },
+      "then": {
+        "properties": {
+          "knowledge_assets": {
+            "properties": {
+              "recommended_formula": { "properties": { "present": { "const": true } } },
+              "feasible_design_space": { "properties": { "present": { "const": true } } },
+              "critical_failure_boundaries": { "properties": { "present": { "const": true } } },
+              "evidence_package": {
+                "properties": {
+                  "present": { "const": true },
+                  "qualification": { "const": "QUALIFIED" }
+                },
+                "required": ["qualification"]
+              },
+              "material_knowledge": { "properties": { "present": { "const": true } } },
+              "model": { "properties": { "present": { "const": true } } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "SYNTHETIC evidence caps at DRAFT_KNOWLEDGE and requires the demo marker.",
+      "if": {
+        "properties": { "evidence_scope": { "const": "SYNTHETIC" } },
+        "required": ["evidence_scope"]
+      },
+      "then": {
+        "properties": {
+          "asset_status": { "const": "DRAFT_KNOWLEDGE" },
+          "synthetic_marker": { "const": "SYNTHETIC_DEMO_ONLY" }
+        },
+        "required": ["asset_status", "synthetic_marker"]
+      }
+    }
+  ],
+  "required": ["artifact_type", "evidence_scope", "asset_status", "knowledge_assets"],
+  "unevaluatedProperties": false
+}

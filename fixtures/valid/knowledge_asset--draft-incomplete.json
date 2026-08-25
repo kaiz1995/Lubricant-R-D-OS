@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "knowledge_asset",
+  "project_id": "WGO-001",
+  "stage": "VERIFIED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Can the project record a draft knowledge package before closure?",
+  "hypothesis": "A draft knowledge package is legal while assets remain missing.",
+  "uncertainty": "The model asset is not yet available.",
+  "evidence": [
+    {
+      "evidence_id": "E-KA-002",
+      "statement": "Partial knowledge assets are recorded as draft.",
+      "source": "stage-8 draft ledger",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "Without a QUALIFIED evidence package the status caps at DRAFT_KNOWLEDGE.",
+  "result": "The evidence package is only PROVISIONAL so the package stays drafted.",
+  "decision": "HOLD",
+  "next_action": "Complete the model asset and qualify the evidence package.",
+  "asset_status": "DRAFT_KNOWLEDGE",
+  "knowledge_assets": {
+    "recommended_formula": { "artifact_reference": "FORMULA-REC-001", "present": true },
+    "feasible_design_space": { "artifact_reference": "DS-FEASIBLE-001", "present": true },
+    "critical_failure_boundaries": { "artifact_reference": "CFB-001", "present": true },
+    "evidence_package": {
+      "artifact_reference": "EP-DRAFT-001",
+      "present": true,
+      "qualification_reference": "EQ-DRAFT-001",
+      "qualification": "PROVISIONAL"
+    },
+    "material_knowledge": { "artifact_reference": "MAT-KNOW-001", "present": true },
+    "model": { "artifact_reference": "MODEL-PENDING", "present": false }
+  }
+}
