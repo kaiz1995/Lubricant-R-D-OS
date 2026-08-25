@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/benchmark.schema.json",
+  "title": "Benchmark reference record",
+  "description": "A benchmark product entry for comparison validation. Benchmark data is a validation baseline only; it may never be used as a formula copy source.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "benchmark" },
+    "product_id": { "type": "string", "minLength": 1 },
+    "product_type": { "enum": ["EXTERNAL_COMPETITOR", "INTERNAL_MATURE"] },
+    "source": { "type": "string", "minLength": 1 },
+    "batch_reference": { "type": "string", "minLength": 1 },
+    "test_data_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "applicable_scenarios": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "usage_role": { "const": "COMPARISON_VALIDATION" },
+    "evidence_status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+  },
+  "required": [
+    "artifact_type",
+    "evidence_scope",
+    "product_id",
+    "product_type",
+    "source",
+    "batch_reference",
+    "test_data_references",
+    "applicable_scenarios",
+    "usage_role",
+    "evidence_status"
+  ],
+  "unevaluatedProperties": false
+}

@@ -27,6 +27,8 @@ EXPECTED_ERRORS = {
     "gate--illegal-status.json": "'APPROVED' is not one of",
     "model--missing-engine-handoff.json": "'engine_handoff' is a required property",
     "optimization--missing-engine-handoff.json": "'engine_handoff' is a required property",
+    "benchmark--formula-copy-source.json": "'COMPARISON_VALIDATION' was expected",
+    "evidence_qualification--synthetic-qualified.json": "'PHYSICAL' was expected",
 }
 
 

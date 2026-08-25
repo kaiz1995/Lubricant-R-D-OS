@@ -24,8 +24,8 @@ SKILLS = {
     "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json"),
     "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json"),
     "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json"),
-    "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json"),
-    "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json"),
+    "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json"),
+    "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json"),
 }
 ENGINE_ROOT = PACK_ROOT / "domains" / "lubricant"
 ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "optimization"}

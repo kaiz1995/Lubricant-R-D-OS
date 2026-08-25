@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "evidence_qualification",
+  "project_id": "WGO-001",
+  "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Does the evidence chain qualify for gate use?",
+  "hypothesis": "Physical evidence supports a QUALIFIED judgment.",
+  "uncertainty": "None beyond the recorded chain.",
+  "evidence": [
+    {
+      "evidence_id": "E-Q-001",
+      "statement": "Physical test records support the judgment.",
+      "source": "qualification record Q-001",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "QUALIFIED requires physical evidence on the entire chain.",
+  "result": "The physical evidence chain qualifies.",
+  "decision": "GO",
+  "next_action": "Use the qualified evidence in the gate review.",
+  "qualification_id": "EQ-001",
+  "qualification": "QUALIFIED",
+  "evidence_chain": [
+    {
+      "artifact_reference": "TM-001",
+      "evidence_scope": "PHYSICAL",
+      "evidence_status": "OBSERVED"
+    }
+  ],
+  "rule_reference": "RULE-EVIDENCE-QUALIFICATION-V1",
+  "decided_by": "Owner",
+  "decided_on": "2026-05-06"
+}

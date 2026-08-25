@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "evidence_qualification",
+  "project_id": "WGO-DEMO-001",
+  "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Does the synthetic evidence chain qualify for gate use?",
+  "hypothesis": "Synthetic evidence can support a QUALIFIED judgment.",
+  "uncertainty": "Synthetic results are not physical.",
+  "evidence": [
+    {
+      "evidence_id": "E-Q-002",
+      "statement": "Synthetic demo records support the judgment.",
+      "source": "synthetic replay",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "QUALIFIED requires physical evidence on the entire chain.",
+  "result": "Synthetic evidence claimed as QUALIFIED.",
+  "decision": "GO",
+  "next_action": "Reject synthetic QUALIFIED judgment.",
+  "qualification_id": "EQ-002",
+  "qualification": "QUALIFIED",
+  "evidence_chain": [
+    {
+      "artifact_reference": "SYNTH-RUN-001",
+      "evidence_scope": "SYNTHETIC",
+      "evidence_status": "ASSUMED"
+    }
+  ],
+  "rule_reference": "RULE-EVIDENCE-QUALIFICATION-V1",
+  "decided_by": "Demo",
+  "decided_on": "2026-08-25"
+}

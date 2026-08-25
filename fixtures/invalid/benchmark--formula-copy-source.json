@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "benchmark",
+  "project_id": "WGO-001",
+  "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the benchmark entry usable as a comparison baseline?",
+  "hypothesis": "The benchmark product reflects a known mature reference.",
+  "uncertainty": "Benchmark data may not cover every field condition.",
+  "evidence": [
+    {
+      "evidence_id": "E-B-002",
+      "statement": "Benchmark source batch and test data are recorded.",
+      "source": "benchmark record BK-002",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Benchmark entries are comparison baselines only and never formula copy sources.",
+  "result": "FORMULA_COPY_SOURCE is not an allowed benchmark usage role.",
+  "decision": "HOLD",
+  "next_action": "Reject the benchmark as a formula copy source.",
+  "product_id": "BK-002",
+  "product_type": "EXTERNAL_COMPETITOR",
+  "source": "competitor formulation guess",
+  "batch_reference": "BATCH-BK-002",
+  "test_data_references": ["TD-003"],
+  "applicable_scenarios": ["reverse engineering"],
+  "usage_role": "FORMULA_COPY_SOURCE",
+  "evidence_status": "ASSUMED"
+}
