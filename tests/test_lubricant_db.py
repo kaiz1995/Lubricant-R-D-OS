@@ -61,11 +61,17 @@ def main() -> None:
         finally:
             conn2.close()
 
-        # snapshot covers all five tables
+        # artifact table roundtrip
+        artifact = {"id": "duty", "name": "duty", "evidence_scope": "synthetic", "payload": {"kind": "duty"}}
+        upsert(conn, "artifact", artifact)
+        assert get(conn, "artifact", "duty") == {**artifact, "version": 1}
+        assert [r["id"] for r in list_rows(conn, "artifact")] == ["duty"]
+
+        # snapshot covers all six tables
         snap_path = Path(tmp) / "snap.json"
         export_snapshot(conn, snap_path)
         snap = json.loads(snap_path.read_text(encoding="utf-8"))
-        assert set(snap.keys()) == {"material", "formula", "test_method", "experiment", "benchmark"}
+        assert set(snap.keys()) == {"material", "formula", "test_method", "experiment", "benchmark", "artifact"}
         assert snap["benchmark"] == []
         conn.close()
 

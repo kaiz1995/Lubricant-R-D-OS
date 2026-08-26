@@ -11,7 +11,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-TABLES = ("material", "formula", "test_method", "experiment", "benchmark")
+TABLES = ("material", "formula", "test_method", "experiment", "benchmark", "artifact")
 SCOPES = ("synthetic", "demo", "physical", "unknown")
 
 _SCHEMA = """
