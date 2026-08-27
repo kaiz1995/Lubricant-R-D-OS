@@ -14,6 +14,9 @@ sys.path.insert(0, str(ROOT / "domains"))
 from lubricant.db import connect, export_snapshot, list_rows, upsert  # noqa: E402
 
 
+REPLAY_RESULT_ARTIFACT_ID = "r5-replay-result"
+
+
 def load_replay(artifact_dir: Path, result_json: Path, db_path: Path, snapshot_path: Path) -> int:
     """Load one synthetic R5 replay and return the number of parsed artifacts."""
     result = json.loads(result_json.read_text(encoding="utf-8"))
@@ -39,6 +42,13 @@ def load_replay(artifact_dir: Path, result_json: Path, db_path: Path, snapshot_p
                 "payload": payload,
             })
             loaded += 1
+        upsert(conn, "artifact", {
+            "id": REPLAY_RESULT_ARTIFACT_ID,
+            "name": REPLAY_RESULT_ARTIFACT_ID,
+            "evidence_scope": "synthetic",
+            "data_classification": result.get("data_classification", "internal"),
+            "payload": result,
+        })
         export_snapshot(conn, snapshot_path)
         return loaded
     finally:

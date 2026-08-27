@@ -21,6 +21,21 @@ def cached(path: Path) -> bool:
     return "__pycache__" in path.parts or path.suffix == ".pyc"
 
 
+def create_junction(link: Path, target: Path) -> None:
+    created = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            f"New-Item -ItemType Junction -Path '{link}' -Target '{target}' | Out-Null",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert created.returncode == 0 and link.is_junction(), created.stderr or created.stdout
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
         workspace = Path(temporary) / "workspace"
@@ -107,27 +122,48 @@ def main() -> int:
             else:
                 raise AssertionError(f"protected target was accepted: {unsafe_target}")
 
-        symlink_real = Path(temporary) / "symlink-real"
-        symlink_target = symlink_real / ".opencode" / "skills"
-        symlink_target.mkdir(parents=True)
-        symlink_workspace = Path(temporary) / "symlink-workspace"
+        junction_real = Path(temporary) / "junction-real"
+        (junction_real / ".opencode" / "skills").mkdir(parents=True)
+        junction_workspace = Path(temporary) / "junction-workspace"
+        create_junction(junction_workspace, junction_real)
         try:
-            symlink_workspace.symlink_to(symlink_real, target_is_directory=True)
-        except OSError:
-            print("SKIP: symlink test requires Windows symlink permission")
-        else:
             try:
                 install_skill(
                     ROOT / "skills" / "project-definition",
                     ROOT / "schemas",
                     SKILLS["project-definition"],
-                    symlink_workspace / ".opencode" / "skills",
-                    workspace_root=symlink_workspace,
+                    junction_workspace / ".opencode" / "skills",
+                    workspace_root=junction_workspace,
                 )
             except ValueError as error:
                 assert "symlink" in str(error)
             else:
-                raise AssertionError("symlink target was accepted")
+                raise AssertionError("junction workspace was accepted")
+        finally:
+            if junction_workspace.exists():
+                junction_workspace.rmdir()
+
+        ancestor_real = Path(temporary) / "ancestor-real"
+        (ancestor_real / "workspace" / ".opencode" / "skills").mkdir(parents=True)
+        junction_ancestor = Path(temporary) / "junction-ancestor"
+        create_junction(junction_ancestor, ancestor_real)
+        try:
+            ancestor_workspace = junction_ancestor / "workspace"
+            try:
+                install_skill(
+                    ROOT / "skills" / "project-definition",
+                    ROOT / "schemas",
+                    SKILLS["project-definition"],
+                    ancestor_workspace / ".opencode" / "skills",
+                    workspace_root=ancestor_workspace,
+                )
+            except ValueError as error:
+                assert "symlink" in str(error)
+            else:
+                raise AssertionError("junction ancestor was accepted")
+        finally:
+            if junction_ancestor.exists():
+                junction_ancestor.rmdir()
 
         failure_workspace = Path(temporary) / "failure-workspace"
         failure_target = failure_workspace / ".opencode" / "skills"

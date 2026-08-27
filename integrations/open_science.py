@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import stat
 import tempfile
 from pathlib import Path
 
@@ -29,11 +30,20 @@ def non_cached_files(root: Path) -> set[Path]:
 
 
 def has_symlink(path: Path) -> bool:
-    return any(part.is_symlink() for part in (path, *path.parents))
+    return any(_is_link_or_reparse(part) for part in (path, *path.parents))
 
 
 def has_symlink_descendant(root: Path) -> bool:
-    return any(path.is_symlink() for path in root.rglob("*"))
+    return _is_link_or_reparse(root) or any(_is_link_or_reparse(path) for path in root.rglob("*"))
+
+
+def _is_link_or_reparse(path: Path) -> bool:
+    """Reject symlinks and Windows reparse points, including directory junctions."""
+    try:
+        attributes = path.lstat().st_file_attributes
+    except (AttributeError, OSError):
+        attributes = 0
+    return path.is_symlink() or path.is_junction() or bool(attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
 
 
 def is_protected_path(path: Path) -> bool:
@@ -139,7 +149,7 @@ def install_skill(
         raise ValueError(f"skill source is missing SKILL.md: {source_skill}")
 
     destination = target / source_skill.name
-    if destination.is_symlink() or destination.exists() and not destination.is_dir():
+    if _is_link_or_reparse(destination) or destination.exists() and not destination.is_dir():
         raise ValueError(f"destination must be a non-symlink directory: {destination}")
 
     for name in schema_names:
@@ -184,7 +194,7 @@ def rollback_skill(target: Path, skill: str, workspace_root: Path | None = None,
     """Atomically restore one verified replacement backup."""
     target = validate_install_target(target, workspace_root)
     destination = target / skill
-    if not destination.is_dir() or destination.is_symlink() or has_symlink_descendant(destination):
+    if not destination.is_dir() or _is_link_or_reparse(destination) or has_symlink_descendant(destination):
         raise ValueError(f"destination must be a non-symlink skill directory: {destination}")
     if backup is None:
         backups = sorted(target.glob(f".{skill}.backup*"), key=lambda path: path.stat().st_mtime, reverse=True)
@@ -192,7 +202,7 @@ def rollback_skill(target: Path, skill: str, workspace_root: Path | None = None,
             raise ValueError(f"no backup found for skill: {skill}")
         backup = backups[0]
     backup = Path(backup)
-    if backup.parent.resolve() != target or not backup.is_dir() or backup.is_symlink() or has_symlink_descendant(backup):
+    if backup.parent.resolve() != target or not backup.is_dir() or _is_link_or_reparse(backup) or has_symlink_descendant(backup):
         raise ValueError(f"backup must be a non-symlink sibling directory: {backup}")
     if not (backup / "SKILL.md").is_file():
         raise ValueError(f"backup is not a skill directory: {backup}")

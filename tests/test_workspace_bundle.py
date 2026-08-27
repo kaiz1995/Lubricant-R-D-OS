@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 
@@ -45,7 +46,7 @@ def main() -> None:
         root = Path(tmp)
         artifacts = root / "artifacts"
         artifacts.mkdir()
-        write_json(artifacts / "duty.json", {"artifact_type": "duty", "scope": "SYNTHETIC"})
+        write_json(artifacts / "duty.json", {"artifact_type": "duty", "scope": "SYNTHETIC", "data_classification": "public"})
         write_json(artifacts / "gate.json", {"artifact_type": "gate", "scope": "SYNTHETIC"})
         result_path = root / "r5-result.json"
         write_json(result_path, result())
@@ -57,10 +58,16 @@ def main() -> None:
         manifest = json.loads((output / "bundle-manifest.json").read_text(encoding="utf-8"))
         assert manifest["source_result_filename"] == "r5-result.json"
         assert manifest["scope"] == "SYNTHETIC_DEMO_ONLY"
-        assert manifest["table_row_counts"]["artifact"] == 2
+        assert manifest["generated_at"].endswith("Z")
+        datetime.fromisoformat(manifest["generated_at"].replace("Z", "+00:00"))
+        assert manifest["table_row_counts"]["artifact"] == 3
+        assert manifest["data_classifications"] == ["internal", "public"]
         assert {item["name"] for item in manifest["files"]} == expected - {"bundle-manifest.json"}
+        assert all((output / item["name"]).stat().st_size == item["bytes"] for item in manifest["files"])
         snapshot = json.loads((output / "snapshot.json").read_text(encoding="utf-8"))
-        assert len(snapshot["artifact"]) == 2
+        assert len(snapshot["artifact"]) == 3
+        replay = next(row for row in snapshot["artifact"] if row["id"] == "r5-replay-result")
+        assert replay["name"] == "r5-replay-result" and replay["payload"] == result()
         dashboard = (output / "dashboard.html").read_text(encoding="utf-8")
         assert "SYNTHETIC DEMO ONLY" in dashboard and "Stage Navigator" in dashboard and "Gate HOLD" in dashboard
 
@@ -77,6 +84,11 @@ def main() -> None:
         confidential.mkdir()
         write_json(confidential / "secret.json", {"data_classification": "confidential_formulation"})
         rejects(lambda: build_bundle(confidential, result_path, root / "confidential-bundle"), "encryption/ACL")
+
+        nested_physical = root / "nested-physical"
+        nested_physical.mkdir()
+        write_json(nested_physical / "record.json", {"metadata": {"evidence_scope": "PHYSICAL"}})
+        rejects(lambda: build_bundle(nested_physical, result_path, root / "nested-physical-bundle"), "physical record")
 
     print("test_workspace_bundle: ALL PASS")
 

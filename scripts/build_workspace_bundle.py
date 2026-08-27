@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from generate_dashboard import build_html
-from load_replay_to_db import load_replay
+from load_replay_to_db import REPLAY_RESULT_ARTIFACT_ID, load_replay
 
 
 SCOPE = "SYNTHETIC_DEMO_ONLY"
@@ -36,6 +36,15 @@ def _read_json(path: Path) -> dict:
     return payload
 
 
+def _replay_result_from_snapshot(snapshot: dict) -> dict:
+    for artifact in snapshot.get("artifact", []):
+        if artifact.get("id") == REPLAY_RESULT_ARTIFACT_ID:
+            result = artifact.get("payload")
+            if isinstance(result, dict):
+                return result
+    raise ValueError("snapshot is missing canonical R5 replay result artifact")
+
+
 def _assert_empty_output(output_dir: Path) -> None:
     if output_dir.exists() and (not output_dir.is_dir() or any(output_dir.iterdir())):
         raise ValueError(f"refusing nonempty output directory: {output_dir}")
@@ -43,10 +52,9 @@ def _assert_empty_output(output_dir: Path) -> None:
 
 def build_bundle(artifact_dir: Path, result_json: Path, output_dir: Path) -> Path:
     """Build and return ``output_dir`` without overwriting an existing bundle."""
-    result = json.loads(result_json.read_text(encoding="utf-8"))
-    if result.get("scope") != SCOPE:
+    result_scope = json.loads(result_json.read_text(encoding="utf-8")).get("scope")
+    if result_scope != SCOPE:
         raise ValueError("refusing bundle without SYNTHETIC_DEMO_ONLY scope")
-    _reject_sensitive_or_physical(result)
     _assert_empty_output(output_dir)
     for path in sorted(artifact_dir.glob("*.json")):
         _read_json(path)
@@ -57,6 +65,7 @@ def build_bundle(artifact_dir: Path, result_json: Path, output_dir: Path) -> Pat
     dashboard_path = output_dir / "dashboard.html"
     load_replay(artifact_dir, result_json, db_path, snapshot_path)
     snapshot = _read_json(snapshot_path)
+    result = _replay_result_from_snapshot(snapshot)
     dashboard_path.write_text(
         build_html(result, ["Physical Stage A", "Stage A2 / S1b / S2", "G6 真实数据 Gate", "G7 UI 验收"],
                    len(snapshot.get("artifact", []))),
@@ -73,6 +82,11 @@ def build_bundle(artifact_dir: Path, result_json: Path, output_dir: Path) -> Pat
             for path in (db_path, snapshot_path, dashboard_path)
         ],
         "table_row_counts": {table: len(rows) for table, rows in snapshot.items()},
+        "data_classifications": sorted({
+            row["data_classification"]
+            for rows in snapshot.values()
+            for row in rows
+        }),
     }
     manifest_path = output_dir / "bundle-manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
