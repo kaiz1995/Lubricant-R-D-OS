@@ -6,12 +6,14 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from integrations.open_science import digest, install_skill
+import integrations.open_science as open_science
+from integrations.open_science import digest, install_skill, rollback_skill
 from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS
 
 
@@ -21,12 +23,13 @@ def cached(path: Path) -> bool:
 
 def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
-        target = Path(temporary) / "explicit-target"
-        target.mkdir()
+        workspace = Path(temporary) / "workspace"
+        target = workspace / ".opencode" / "skills"
+        target.mkdir(parents=True)
         for skill, schemas in SKILLS.items():
             source = ROOT / "skills" / skill
             engine_root = ENGINE_ROOT if skill in ENGINE_SKILLS else None
-            destination = install_skill(source, ROOT / "schemas", schemas, target, engine_root=engine_root)
+            destination = install_skill(source, ROOT / "schemas", schemas, target, engine_root=engine_root, workspace_root=workspace)
             for file in source.rglob("*"):
                 relative = file.relative_to(source)
                 if file.is_file() and not cached(relative):
@@ -44,7 +47,7 @@ def main() -> int:
             assert not list(destination.rglob("__pycache__"))
             assert not list(destination.rglob("*.pyc"))
 
-        stale_target = Path(temporary) / "stale-target"
+        stale_target = Path(temporary) / "stale-workspace" / ".opencode" / "skills"
         stale_destination = stale_target / "project-definition"
         stale_destination.mkdir(parents=True)
         existing, stale = stale_destination / "SKILL.md", stale_destination / "stale.txt"
@@ -52,17 +55,27 @@ def main() -> int:
         stale.write_text("stale", encoding="utf-8")
         before = (digest(existing), digest(stale))
         try:
-            install_skill(ROOT / "skills" / "project-definition", ROOT / "schemas", SKILLS["project-definition"], stale_target)
+            install_skill(ROOT / "skills" / "project-definition", ROOT / "schemas", SKILLS["project-definition"], stale_target, workspace_root=stale_target.parents[1])
         except ValueError as error:
             assert "stale/unmanaged" in str(error)
         else:
             raise AssertionError("stale destination was accepted")
         assert before == (digest(existing), digest(stale))
 
-        cli_target = Path(temporary) / "cli-target"
-        cli_target.mkdir()
+        cli_workspace = Path(temporary) / "cli-workspace"
+        cli_target = cli_workspace / ".opencode" / "skills"
+        cli_target.mkdir(parents=True)
         installed = subprocess.run(
-            [sys.executable, "-B", "scripts/install_domain_skill.py", "project-definition", "--target", str(cli_target)],
+            [
+                sys.executable,
+                "-B",
+                "scripts/install_domain_skill.py",
+                "project-definition",
+                "--target",
+                str(cli_target),
+                "--workspace-root",
+                str(cli_workspace),
+            ],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -75,6 +88,83 @@ def main() -> int:
             text=True,
         )
         assert missing_target.returncode != 0 and "--target" in missing_target.stderr
+
+        protected_open_science = Path(temporary) / "open-science" / ".opencode" / "skills"
+        protected_open_science.mkdir(parents=True)
+        protected_core = Path(temporary) / "runtime" / "skills" / "core"
+        protected_core.mkdir(parents=True)
+        for unsafe_target in (protected_open_science, protected_core):
+            try:
+                install_skill(
+                    ROOT / "skills" / "project-definition",
+                    ROOT / "schemas",
+                    SKILLS["project-definition"],
+                    unsafe_target,
+                    workspace_root=unsafe_target.parents[2],
+                )
+            except ValueError as error:
+                assert "protected Core" in str(error)
+            else:
+                raise AssertionError(f"protected target was accepted: {unsafe_target}")
+
+        symlink_real = Path(temporary) / "symlink-real"
+        symlink_target = symlink_real / ".opencode" / "skills"
+        symlink_target.mkdir(parents=True)
+        symlink_workspace = Path(temporary) / "symlink-workspace"
+        try:
+            symlink_workspace.symlink_to(symlink_real, target_is_directory=True)
+        except OSError:
+            print("SKIP: symlink test requires Windows symlink permission")
+        else:
+            try:
+                install_skill(
+                    ROOT / "skills" / "project-definition",
+                    ROOT / "schemas",
+                    SKILLS["project-definition"],
+                    symlink_workspace / ".opencode" / "skills",
+                    workspace_root=symlink_workspace,
+                )
+            except ValueError as error:
+                assert "symlink" in str(error)
+            else:
+                raise AssertionError("symlink target was accepted")
+
+        failure_workspace = Path(temporary) / "failure-workspace"
+        failure_target = failure_workspace / ".opencode" / "skills"
+        failure_target.mkdir(parents=True)
+        with patch.object(open_science.shutil, "copytree", side_effect=OSError("simulated copy failure")):
+            try:
+                install_skill(
+                    ROOT / "skills" / "project-definition",
+                    ROOT / "schemas",
+                    SKILLS["project-definition"],
+                    failure_target,
+                    workspace_root=failure_workspace,
+                )
+            except OSError as error:
+                assert "simulated copy failure" in str(error)
+            else:
+                raise AssertionError("copy failure was accepted")
+        assert not list(failure_target.iterdir()), "copy failure left a partial install or staging directory"
+
+        rollback_workspace = Path(temporary) / "rollback-workspace"
+        rollback_target = rollback_workspace / ".opencode" / "skills"
+        rollback_target.mkdir(parents=True)
+        rollback_source = Path(temporary) / "rollback-skill"
+        rollback_source.mkdir()
+        (rollback_source / "SKILL.md").write_text("version one", encoding="utf-8")
+        rollback_schemas = Path(temporary) / "rollback-schemas"
+        rollback_schemas.mkdir()
+        (rollback_schemas / "schema.json").write_text("{}", encoding="utf-8")
+        install_skill(rollback_source, rollback_schemas, ("schema.json",), rollback_target, workspace_root=rollback_workspace)
+        install_skill(rollback_source, rollback_schemas, ("schema.json",), rollback_target, workspace_root=rollback_workspace)
+        assert not list(rollback_target.glob(".rollback-skill.backup*")), "identical install created a backup"
+        (rollback_source / "SKILL.md").write_text("version two", encoding="utf-8")
+        install_skill(rollback_source, rollback_schemas, ("schema.json",), rollback_target, workspace_root=rollback_workspace)
+        backup = rollback_target / ".rollback-skill.backup"
+        assert backup.is_dir() and (backup / "SKILL.md").read_text(encoding="utf-8") == "version one"
+        rollback_skill(rollback_target, "rollback-skill", workspace_root=rollback_workspace)
+        assert (rollback_target / "rollback-skill" / "SKILL.md").read_text(encoding="utf-8") == "version one"
     print(f"PASS: explicit-target install compatibility for {len(SKILLS)} skills")
     return 0
 

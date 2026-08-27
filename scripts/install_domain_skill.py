@@ -10,7 +10,7 @@ from pathlib import Path
 PACK_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACK_ROOT))
 
-from integrations.open_science import install_skill
+from integrations.open_science import install_skill, rollback_skill
 
 
 SKILLS = {
@@ -34,13 +34,29 @@ ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "op
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("skill", choices=sorted(SKILLS), help="supported Domain Pack skill")
-    parser.add_argument("--target", type=Path, required=True, help="existing Open Science user-skill directory")
+    parser.add_argument("--target", type=Path, required=True, help="OpenCode user skills or <workspace>/.opencode/skills")
+    parser.add_argument("--workspace-root", type=Path, help="required for an isolated workspace target")
+    parser.add_argument("--rollback", action="store_true", help="restore the latest replacement backup for this skill")
+    parser.add_argument("--backup", type=Path, help="specific backup directory, only with --rollback")
     args = parser.parse_args()
 
-    source = PACK_ROOT / "skills" / args.skill
     try:
+        if args.backup is not None and not args.rollback:
+            raise ValueError("--backup requires --rollback")
+        if args.rollback:
+            destination = rollback_skill(args.target, args.skill, workspace_root=args.workspace_root, backup=args.backup)
+            print(f"PASS: rolled back {args.skill} at {destination}")
+            return 0
+        source = PACK_ROOT / "skills" / args.skill
         engine_root = ENGINE_ROOT if args.skill in ENGINE_SKILLS else None
-        destination = install_skill(source, PACK_ROOT / "schemas", SKILLS[args.skill], args.target, engine_root=engine_root)
+        destination = install_skill(
+            source,
+            PACK_ROOT / "schemas",
+            SKILLS[args.skill],
+            args.target,
+            engine_root=engine_root,
+            workspace_root=args.workspace_root,
+        )
     except (ValueError, OSError) as error:
         print(f"FAIL: {error}")
         return 1
