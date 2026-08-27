@@ -62,6 +62,10 @@ def build_html(result: dict, gates_hold: list[str], artifact_count: int | None =
     gate_cards = "\n".join(
         f'<div class="gate"><b>{esc(g)}</b><span>HOLD</span></div>' for g in gates_hold
     )
+    stage_navigator = "\n".join(
+        f"<li>{esc(stage)}</li>"
+        for stage in dict.fromkeys(s.get("stage") or "—" for s in result["chain"])
+    )
     gaps = "\n".join(f"<li>{esc(g)}</li>" for g in result.get("gaps", []))
     artifact_section = (
         f'<h2 style="font-size:15px">Artifact 库</h2><p>已入库 Artifact：<b>{artifact_count}</b> 行</p>'
@@ -87,6 +91,9 @@ def build_html(result: dict, gates_hold: list[str], artifact_count: int | None =
     <tr><th>#</th><th>Skill</th><th>状态</th><th>Stage</th></tr>
 {chain_rows}
   </table>
+  <h2 style="font-size:15px">Stage Navigator</h2>
+  <ol>{stage_navigator}</ol>
+  <h2 style="font-size:15px">Gate HOLD</h2>
   <div class="gates">
 {gate_cards}
   </div>
