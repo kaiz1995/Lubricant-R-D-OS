@@ -218,6 +218,43 @@ def main() -> None:
         finally:
             formula_xlsx_target.close()
 
+        # xlsx with one valid + one bad row must be atomic
+        mixed_book = Workbook()
+        mixed_sheet = mixed_book.active
+        mixed_sheet.append(("id", "name", "version", "evidence_scope", "data_classification", "payload"))
+        mixed_sheet.append(("good", "good", 1, "synthetic", "internal", "{}"))
+        mixed_sheet.append(("bad", "bad", 1, "synthetic", "internal", "{broken"))
+        mixed_book.save(Path(tmp) / "mixed.xlsx")
+        mixed_book.close()
+        mixed_target = connect(Path(tmp) / "mixed.db")
+        try:
+            try:
+                import_xlsx(mixed_target, "material", Path(tmp) / "mixed.xlsx")
+                raise AssertionError("bad XLSX row accepted")
+            except ValueError:
+                pass
+            assert get(mixed_target, "material", "good") is None
+        finally:
+            mixed_target.close()
+
+        # row-limit enforcement
+        overflow_book = Workbook()
+        overflow_sheet = overflow_book.active
+        overflow_sheet.append(("id", "name", "version", "evidence_scope", "data_classification", "payload"))
+        for i in range(10_001):
+            overflow_sheet.append((f"row-{i}", "r", 1, "synthetic", "internal", "{}"))
+        overflow_book.save(Path(tmp) / "overflow.xlsx")
+        overflow_book.close()
+        overflow_target = connect(Path(tmp) / "overflow.db")
+        try:
+            try:
+                import_xlsx(overflow_target, "material", Path(tmp) / "overflow.xlsx")
+                raise AssertionError("row limit not enforced")
+            except ValueError as exc:
+                assert "row limit" in str(exc)
+        finally:
+            overflow_target.close()
+
     print("test_lubricant_db: ALL PASS")
 
 
