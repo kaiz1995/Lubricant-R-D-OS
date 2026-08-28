@@ -56,6 +56,8 @@ def build_bundle(artifact_dir: Path, result_json: Path, output_dir: Path) -> Pat
     if result_scope != SCOPE:
         raise ValueError("refusing bundle without SYNTHETIC_DEMO_ONLY scope")
     _assert_empty_output(output_dir)
+    # ponytail: raw text scan is intentionally strict; physical fixture reruns
+    # need pre-filtered artifacts, not relaxed checks.
     for path in sorted(artifact_dir.glob("*.json")):
         _read_json(path)
 

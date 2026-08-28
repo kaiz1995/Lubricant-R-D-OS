@@ -90,6 +90,17 @@ def main() -> None:
         write_json(nested_physical / "record.json", {"metadata": {"evidence_scope": "PHYSICAL"}})
         rejects(lambda: build_bundle(nested_physical, result_path, root / "nested-physical-bundle"), "physical record")
 
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        result_path = root / "r5-result.json"
+        write_json(result_path, result("PHYSICAL"))
+        try:
+            build_bundle(root, result_path, root / "bundle")
+            raise AssertionError("expected ValueError")
+        except ValueError as exc:
+            assert "SYNTHETIC_DEMO_ONLY" in str(exc), exc
+        assert not (root / "bundle").exists()
+
     print("test_workspace_bundle: ALL PASS")
 
 

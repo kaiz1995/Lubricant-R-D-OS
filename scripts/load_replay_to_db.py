@@ -21,7 +21,7 @@ def load_replay(artifact_dir: Path, result_json: Path, db_path: Path, snapshot_p
     """Load one synthetic R5 replay and return the number of parsed artifacts."""
     result = json.loads(result_json.read_text(encoding="utf-8"))
     if result.get("scope") != "SYNTHETIC_DEMO_ONLY":
-        raise SystemExit("refusing to load replay without SYNTHETIC_DEMO_ONLY scope")
+        raise ValueError("refusing to load replay without SYNTHETIC_DEMO_ONLY scope")
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
