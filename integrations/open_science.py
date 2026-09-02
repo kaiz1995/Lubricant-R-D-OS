@@ -11,6 +11,17 @@ from pathlib import Path
 
 
 USER_OPENCODE_SKILLS = Path.home() / ".config" / "opencode" / "skills"
+DESKTOP_USER_OPENCODE_SKILLS = (
+    Path.home()
+    / "AppData"
+    / "Roaming"
+    / "com.ai4s.workbench"
+    / "runtime"
+    / "xdg-config"
+    / "opencode"
+    / "skills"
+    / "user"
+)
 
 
 def digest(path: Path) -> str:
@@ -64,6 +75,8 @@ def validate_install_target(target: Path, workspace_root: Path | None = None) ->
 
     user_skills = USER_OPENCODE_SKILLS.resolve()
     if resolved == user_skills:
+        return resolved
+    if resolved == DESKTOP_USER_OPENCODE_SKILLS.resolve():
         return resolved
     if workspace_root is None:
         raise ValueError("target must be the user OpenCode skills directory or an explicit workspace .opencode/skills directory")

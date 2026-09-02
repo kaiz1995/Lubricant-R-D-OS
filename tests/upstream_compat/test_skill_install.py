@@ -215,6 +215,18 @@ def main() -> int:
         assert (legacy_skill / "SKILL.md").read_text(encoding="utf-8") == "version two"
         assert (legacy_skill / "references" / "schema.json").is_file()
         assert not (legacy_skill / "references" / "old.schema.json").exists()
+
+        # Desktop profile user-skills directory is an approved install target
+        desktop_profile = Path(temporary) / "desktop-profile"
+        desktop_user = desktop_profile / "runtime" / "xdg-config" / "opencode" / "skills" / "user"
+        desktop_user.mkdir(parents=True)
+        original_desktop = open_science.DESKTOP_USER_OPENCODE_SKILLS
+        open_science.DESKTOP_USER_OPENCODE_SKILLS = desktop_user
+        try:
+            approved = install_skill(rollback_source, rollback_schemas, ("schema.json",), desktop_user)
+        finally:
+            open_science.DESKTOP_USER_OPENCODE_SKILLS = original_desktop
+        assert approved.parent.resolve() == desktop_user.resolve()
     print(f"PASS: explicit-target install compatibility for {len(SKILLS)} skills")
     return 0
 
