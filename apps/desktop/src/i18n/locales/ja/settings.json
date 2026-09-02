@@ -10,7 +10,8 @@
     "privacy": "プライバシー",
     "browser": "ブラウザ",
     "remote": "リモートアクセス",
-    "memory": "メモリ"
+    "memory": "メモリ",
+    "desktopOnly": "このセクションはデスクトップアプリで利用できます。"
   },
   "appearance": {
     "title": "外観",
@@ -127,6 +128,8 @@
   "providers": {
     "title": "プロバイダー",
     "hint": "認証、カスタムエンドポイント、インポートした OpenCode ログイン",
+    "webHint": "接続済みのプロバイダー — ブラウザからは読み取り専用",
+    "webNote": "API キーとカスタムエンドポイントは、ワークベンチを動かしているマシン上で設定します。デスクトップアプリ、またはウィンドウなしで動かしている場合は `osd auth set` を使います。認証情報がゲートウェイを通ることはありません。",
     "connectPrompt": "プロバイダーを管理するにはランタイムに接続してください。",
     "manage": "管理",
     "collapse": "折りたたむ",
@@ -242,6 +245,7 @@
     "couldNotSetModel": "モデルを設定できませんでした",
     "defaultModelSet": "デフォルトモデルを {{model}} に設定しました",
     "defaultModelReset": "デフォルトモデル {{old}} は利用できなくなったため、{{model}} に切り替えました",
+    "configRebuilt": "エージェントランタイムの設定ファイルを読み取れなかったため、{{path}} に移動して再作成しました。プロバイダーと MCP サーバーは再度追加が必要な場合があります。",
     "couldNotSaveKey": "キーを保存できませんでした",
     "providerConnected": "{{providerID}} を接続しました",
     "couldNotStartLogin": "ログインを開始できませんでした",

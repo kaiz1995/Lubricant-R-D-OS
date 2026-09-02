@@ -10,7 +10,8 @@
     "privacy": "Privacy",
     "browser": "Browser",
     "remote": "Remote Access",
-    "memory": "Memory"
+    "memory": "Memory",
+    "desktopOnly": "This section is available in the desktop app."
   },
   "appearance": {
     "title": "Appearance",
@@ -127,6 +128,8 @@
   "providers": {
     "title": "Providers",
     "hint": "Authentication, custom endpoints, and imported OpenCode logins",
+    "webHint": "Connected providers — read-only from the browser",
+    "webNote": "API keys and custom endpoints are set on the machine running the workbench — in the desktop app, or with `osd auth set` when it runs headless. Credentials never cross the gateway.",
     "connectPrompt": "Connect the runtime to manage providers.",
     "manage": "Manage",
     "collapse": "Collapse",
@@ -243,6 +246,7 @@
     "couldNotSetModel": "Could not set the model",
     "defaultModelSet": "Default model set to {{model}}",
     "defaultModelReset": "Default model {{old}} is no longer available — switched to {{model}}",
+    "configRebuilt": "The agent runtime's settings file could not be read, so it was moved to {{path}} and rebuilt. Providers and MCP servers may need adding again.",
     "couldNotSaveKey": "Could not save the key",
     "providerConnected": "{{providerID}} connected",
     "couldNotStartLogin": "Could not start the login",

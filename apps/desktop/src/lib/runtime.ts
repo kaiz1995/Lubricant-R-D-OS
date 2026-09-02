@@ -48,6 +48,8 @@ import {
   setWorkspace,
   startRuntime,
   restartRuntime,
+  runtimeFailure,
+  takeConfigQuarantineNotice,
   runtimeStartedAt,
   workspacePath,
   workspaceSkillNames,
@@ -80,6 +82,7 @@ import {
   shouldAutoReview,
 } from "./autoReview";
 import { isGoalInjectedPrompt } from "./goalPrompts";
+import { findHistoryDefects, repairTarget } from "./malformedHistory";
 import { notifyPermissionRequest } from "./systemNotification";
 import { fallbackDefaultModel } from "@/components/settings/modelCatalog";
 import { listProvidersWithAvailability, ZEN_PROVIDER_ID } from "./zenModels";
@@ -283,6 +286,10 @@ interface RuntimeState {
   connect: () => Promise<void>;
   /** Resolves true once connected, false when the retry window is exhausted. */
   connectRetry: (tries?: number) => Promise<boolean>;
+  /** Tell the user, once, that an unreadable OpenCode config was moved aside
+   *  and rebuilt — otherwise settings they had (providers, MCP servers) are
+   *  simply gone with no explanation (#118). */
+  reportQuarantinedConfig: () => Promise<void>;
   bootstrap: () => Promise<void>;
   disconnect: () => void;
   refreshSessions: () => Promise<void>;
@@ -520,10 +527,34 @@ const STATUS_BLIP_GRACE_MS = 2000;
  *  of those. Beyond that the runtime is not coming back on its own — it is
  *  alive but no longer serving, which nothing else in the app can detect. */
 const RECONNECT_FORCE_RESTART_AFTER = 8;
+
+/** Sidecar exits, within one reconnect attempt, that mean the next spawn is
+ *  doomed too. Three: one death can be a crash worth respawning past (that is
+ *  what the loop is for), three in a row is the process refusing to run — a
+ *  config it will not start on, a missing binary, a denied permission. Without
+ *  this the loop spawns ~120 processes that each exit in milliseconds and then
+ *  reports nothing but a failed socket (#118). */
+const RECONNECT_GIVE_UP_AFTER_EXITS = 3;
 let statusBlipTimer: ReturnType<typeof setTimeout> | null = null;
 function clearStatusBlip() {
   if (statusBlipTimer !== null) clearTimeout(statusBlipTimer);
   statusBlipTimer = null;
+}
+/** connectRetry loops in flight. A failed ATTEMPT inside one is not news — it
+ *  is one step of a loop that is still trying — and painting it flips the whole
+ *  page (status badge, offline help card, error banner) once per attempt, 250ms
+ *  apart. Every launch does that: the sidecar is spawned and dialled before it
+ *  listens, so the first two or three attempts always fail (and on a fresh
+ *  install, blocked on the macOS TCC prompt, the loop can run for minutes).
+ *  While this is non-zero the UI is held at "connecting" and only the loop's
+ *  verdict is published. */
+let connectRetryDepth = 0;
+/** What the last connect() attempt failed with, masked or not — connectRetry
+ *  reports it if the whole window is exhausted. */
+let lastConnectError: string | null = null;
+/** The status the UI is allowed to see right now. */
+function visibleStatus(status: RuntimeStatus): RuntimeStatus {
+  return connectRetryDepth > 0 && status !== "ready" ? "connecting" : status;
 }
 /**
  * Drop the current connection. `keep` is the one runtime a reconnect intends to
@@ -876,6 +907,11 @@ export function redactForLog(message: string): string {
   return redacted.length > LOG_ERROR_MAX ? `${redacted.slice(0, LOG_ERROR_MAX)}…` : redacted;
 }
 
+/** The AI SDK's wording for a conversation it refused to send. One definition,
+ *  because two places act on it: the error text explains it, and the thread
+ *  follows it with a diagnosis of the stored history (#114). */
+const MALFORMED_HISTORY = /do(es)? not match the ModelMessage\[\] schema/i;
+
 /** How to name the provider an account-state failure belongs to. Zen is the
  *  built-in one and its id says nothing to the person who never chose it. */
 function providerLabel(provider: string | undefined): string {
@@ -922,16 +958,21 @@ export function explainRuntimeError(message: string, action?: RetryAction): stri
       `start a new session, or switch to another model or provider.`
     );
   }
-  // The AI SDK rejects the whole request when the conversation it was handed is
-  // not a well-formed message list — in practice a tool call left without its
-  // result, or messages out of chronological order, which compaction on a long
-  // session can leave behind (#114). Like the content-filter case above, the
-  // bad history is resent every turn, so retrying reproduces it exactly.
-  if (/do(es)? not match the ModelMessage\[\] schema/i.test(message)) {
+  // The AI SDK rejects the whole conversation before any request goes out when
+  // one stored part is missing a field the message format requires (#114). The
+  // damage is on disk, so every retry resends it and fails identically.
+  //
+  // This deliberately no longer guesses a cause. It used to say "usually a tool
+  // call left without its result", which we published and which is wrong: the
+  // runtime backfills an interrupted tool call with a synthetic result, and
+  // sessions carrying one keep working for hundreds of messages. The repair
+  // block appended alongside this line names the actual part, read from the
+  // stored history — a guess in the error text only sent people to delete
+  // history that was fine.
+  if (MALFORMED_HISTORY.test(message)) {
     return (
-      `${message} The stored history of this session is malformed — usually a tool call left without ` +
-      `its result — and every retry resends it, so this session will keep failing. Edit or delete the ` +
-      `last few messages to cut the damaged part out, or start a new session.`
+      `${message} One stored message in this session no longer has the shape the model requires, and ` +
+      `every retry resends it — so retrying cannot work.`
     );
   }
   // The same two causes with no action to go by — a reloaded history, or an
@@ -1689,6 +1730,57 @@ async function revertToMessage(
   return true;
 }
 
+/** The repair offer for a history the model refused (#114): the earliest part
+ *  that would fail validation, and the message to roll back to. A scan that
+ *  recognizes nothing still produces a block — saying "we could not identify
+ *  which message" is the honest answer, and silence would read as the app
+ *  having nothing to say. */
+function historyRepairBlock(messages: HistoryMessage[]): ThreadBlock {
+  const [defect] = findHistoryDefects(messages);
+  const target = defect ? repairTarget(messages, defect) : undefined;
+  return {
+    kind: "history-repair",
+    ...(defect ? { reason: defect.reason } : {}),
+    ...(defect?.tool ? { tool: defect.tool } : {}),
+    ...(target
+      ? { target: { messageID: target.messageID, text: target.text }, drops: target.drops }
+      : {}),
+  };
+}
+
+/** A live turn was rejected because the stored history is no longer a valid
+ *  message list. Read that history back and append the repair offer under the
+ *  error line already on screen — the diagnosis needs a round trip, and the
+ *  failure must be reported the instant it happens rather than when a fetch
+ *  finishes. (A reopened session takes the `historyToThread` path instead,
+ *  which already holds the messages.) */
+async function diagnoseMalformedHistory(set: StoreSet, sid: string): Promise<void> {
+  const c = client;
+  if (!c) return;
+  let messages: HistoryMessage[];
+  try {
+    messages = await c.getMessages(sid);
+  } catch {
+    // The runtime is unreachable; the error line already said what failed, and
+    // a second failure notice here would only add noise.
+    return;
+  }
+  const block = historyRepairBlock(messages);
+  set((s) => {
+    const cur = s.threads[sid];
+    if (!cur) return {};
+    // The turn may have been repaired, reverted or superseded while the history
+    // was in flight; only offer a repair on a thread that still ends in the
+    // failure this was called for.
+    const last = cur.blocks[cur.blocks.length - 1];
+    if (last?.kind !== "status-line" || last.tone !== "error") return {};
+    // Retrying fails identically, so a second failure must not stack a second
+    // card: drop any earlier offer and keep this one, beside the newest error.
+    const blocks = cur.blocks.filter((b) => b.kind !== "history-repair");
+    return { threads: { ...s.threads, [sid]: { ...cur, blocks: [...blocks, block] } } };
+  });
+}
+
 /** The live OpenCode client (Settings talks to the runtime's config API directly). */
 export function getClient(): OpenCodeClient | null {
   return opencodeClient;
@@ -1773,7 +1865,12 @@ export function contextLimitFor(state: RuntimeState, key: string): number {
 }
 
 export const useRuntimeStore = create<RuntimeState>((set, get) => ({
-  status: "offline",
+  // The shell dials the runtime the moment it mounts, so on a real launch
+  // "connecting" is already true at the first frame — starting at "offline"
+  // flashed the "no runtime, run opencode serve" card for as long as the
+  // sidecar took to spawn, every time the app was opened. Plain browser dev
+  // (no Tauri, no gateway) has nothing to dial and keeps that card.
+  status: isTauri || isGatewayWeb ? "connecting" : "offline",
   serverUrl: initialUrl(),
   // Reconciled with the saved selection on every connect; OpenCode until then,
   // which is what a first paint before any connection is actually driving.
@@ -2178,6 +2275,14 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   },
 
   connect: async () => {
+    // This attempt failed. Inside a retry loop that is a step, not an outcome:
+    // the message is kept for connectRetry to report if the window runs out,
+    // and the UI stays on "connecting" instead of blinking the offline card.
+    const failed = (msg: string) => {
+      lastConnectError = msg;
+      if (connectRetryDepth > 0) set({ status: "connecting" });
+      else set({ error: msg, status: "error" });
+    };
     // The runtime SELECTOR, decided before anything is torn down: a live ACP
     // agent for the SAME configured entry is reused across this reconnect
     // (see `acpRuntime`) — the workspace moves, the agent process does not.
@@ -2238,7 +2343,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       // ACP takes the workspace folder per session (`session/new`'s cwd) — so
       // without one there is nothing to create a session in.
       if (!directory) {
-        set({ error: "No workspace folder to run the ACP agent in.", status: "error" });
+        failed("No workspace folder to run the ACP agent in.");
         return;
       }
       let acp: AcpRuntime;
@@ -2264,7 +2369,8 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         void logDebug(`acp start FAILED (${acpAgent.command}): ${msg}`);
-        set({ error: msg, status: "error", runtimeKind: "acp", acpAgentName: acpAgent.name });
+        set({ runtimeKind: "acp", acpAgentName: acpAgent.name });
+        failed(msg);
         return;
       }
       // The app's own connectors are per-session in ACP, so the agent has to
@@ -2297,7 +2403,10 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       if (directory) removeStreamClient(directory);
     }
     clientStatusUnsub = c.onStatus((status) => {
-      void logDebug(`status → ${status}`);
+      const shown = visibleStatus(status);
+      // Log what the runtime said AND what the UI was given, so a report of
+      // "it flickered" can be read straight off the log.
+      void logDebug(`status → ${status}${shown === status ? "" : ` (held as ${shown})`}`);
       if (status === "connecting" && get().status === "ready") {
         // Hold the flip for STATUS_BLIP_GRACE_MS: if the SDK's own reconnect
         // lands first ("ready" clears the timer), the UI never sees the blip.
@@ -2309,7 +2418,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
         return;
       }
       clearStatusBlip();
-      set({ status });
+      set({ status: shown });
     });
     if (!sharedEventHandler)
       sharedEventHandler = (event) => {
@@ -2429,6 +2538,11 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
               },
             };
           });
+          // This one failure the user cannot act on without help: the bad
+          // message is indistinguishable by eye, and every retry resends it.
+          if (MALFORMED_HISTORY.test(event.message)) {
+            void diagnoseMalformedHistory(set, sid);
+          }
         } else {
           set({ error: message });
         }
@@ -2849,6 +2963,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       // Take the status from the runtime rather than waiting for a transition:
       // a REUSED ACP agent is already "ready", so its idempotent connect emits
       // nothing and the store would sit on the "connecting" this attempt set.
+      lastConnectError = null;
       set({ error: null, status: c.getStatus() });
       await get().refreshSessions();
       void get().refreshProjects();
@@ -2879,7 +2994,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       void logDebug(`connect FAILED: ${msg}`);
-      set({ error: msg, status: "error" });
+      failed(msg);
     }
   },
 
@@ -2887,10 +3002,13 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   // macOS TCC ("access Documents") blocks the sidecar until the user answers,
   // so the window must cover minutes, not seconds — giving up early strands
   // the user on an error screen that a single manual Connect would fix.
-  // Failed attempts are masked (status AND error): workspace switches
-  // reconnect the event stream on purpose, and flashing "could not open the
-  // event stream" at the user mid-switch reads as breakage. The last error is
-  // surfaced only if the whole retry window is exhausted.
+  // Failed attempts are masked (status AND error) for the WHOLE window, not
+  // just between attempts: a workspace switch reconnects the event stream on
+  // purpose, and flashing "could not open the event stream" at the user
+  // mid-switch reads as breakage — while on every launch the first attempts
+  // fail against a sidecar that is spawned but not yet listening, which used to
+  // strobe the page connecting→error→connecting four times a second. The last
+  // error is surfaced only if the whole retry window is exhausted.
   connectRetry: async (tries = 120) => {
     // Same hold the SDK's own reconnect gets: a deliberate reconnect that
     // succeeds immediately must not repaint every status consumer on the way
@@ -2908,48 +3026,85 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
     } else {
       set({ status: "connecting" });
     }
+    // A retry window starting means "trying again", so an error left over from
+    // the last one stops being the truth — on screen or as this loop's verdict.
+    if (get().error) set({ error: null });
+    lastConnectError = null;
     let lastError: string | null = null;
-    for (let i = 0; i < tries; i++) {
-      await get().connect();
-      if (get().status === "ready") {
-        set({ modelSwitchError: null });
-        return true;
-      }
-      lastError = get().error ?? lastError;
-      // The sidecar can die under us (it has crashed on its own — an Effect
-      // ServeError, exit 1). Retrying the socket alone then never recovers,
-      // because there is nothing listening and nothing puts it back: this
-      // loop used to hammer a dead port every second until the user restarted
-      // the whole app. startRuntime is the repair — it returns the existing
-      // URL when the runtime is alive, and respawns it when it is not, so the
-      // call is cheap on the common path and the fix on the broken one.
-      if (isTauri && !isGatewayWeb) {
-        try {
-          // A wedged runtime — alive, so nothing terminates and nothing clears
-          // the lifecycle, but no longer serving — is invisible to startRuntime,
-          // which hands back the same dead URL forever. Give plain retrying a
-          // fair chance first (a restart during normal boot would be pure
-          // thrash), then force a fresh process exactly once.
-          const url =
-            i === RECONNECT_FORCE_RESTART_AFTER
-              ? await restartRuntime()
-              : await startRuntime();
-          if (url && url !== get().serverUrl) set({ serverUrl: url });
-          if (i === RECONNECT_FORCE_RESTART_AFTER) {
-            set({ runtimeStartedAt: await runtimeStartedAt() });
-          }
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : String(err);
+    // Sidecar exits already counted before this loop began. Everything below
+    // compares against it, so a crash from an hour ago cannot make this attempt
+    // give up early.
+    const exitsBefore = (await runtimeFailure())?.exits ?? 0;
+    // Hold every attempt's failure back for as long as the loop runs. Only the
+    // verdicts below — published with a direct set() — reach the UI.
+    connectRetryDepth++;
+    try {
+      for (let i = 0; i < tries; i++) {
+        await get().connect();
+        if (get().status === "ready") {
+          set({ modelSwitchError: null });
+          void get().reportQuarantinedConfig();
+          return true;
         }
+        // Masked failures report through `lastConnectError`; anything that puts
+        // an error in the store directly still counts (the store's `error` was
+        // cleared above, so it can only be this loop's).
+        lastError = lastConnectError ?? get().error ?? lastError;
+        // A runtime that EXITS is not a runtime that is slow to listen, and only
+        // the Rust side can tell them apart. Three deaths in one attempt means
+        // the next hundred spawns die too — a config the runtime refuses to
+        // start on does exactly that (#118) — so stop, and say what it said
+        // instead of "could not open the event stream".
+        const failure = await runtimeFailure();
+        if (failure && failure.exits - exitsBefore >= RECONNECT_GIVE_UP_AFTER_EXITS) {
+          set({ status: "error", error: failure.message });
+          void logDebug(`connect: giving up after ${failure.exits - exitsBefore} runtime exits`);
+          void get().reportQuarantinedConfig();
+          return false;
+        }
+        // The sidecar can die under us (it has crashed on its own — an Effect
+        // ServeError, exit 1). Retrying the socket alone then never recovers,
+        // because there is nothing listening and nothing puts it back: this
+        // loop used to hammer a dead port every second until the user restarted
+        // the whole app. startRuntime is the repair — it returns the existing
+        // URL when the runtime is alive, and respawns it when it is not, so the
+        // call is cheap on the common path and the fix on the broken one.
+        if (isTauri && !isGatewayWeb) {
+          try {
+            // A wedged runtime — alive, so nothing terminates and nothing clears
+            // the lifecycle, but no longer serving — is invisible to startRuntime,
+            // which hands back the same dead URL forever. Give plain retrying a
+            // fair chance first (a restart during normal boot would be pure
+            // thrash), then force a fresh process exactly once.
+            const url =
+              i === RECONNECT_FORCE_RESTART_AFTER
+                ? await restartRuntime()
+                : await startRuntime();
+            if (url && url !== get().serverUrl) set({ serverUrl: url });
+            if (i === RECONNECT_FORCE_RESTART_AFTER) {
+              set({ runtimeStartedAt: await runtimeStartedAt() });
+            }
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : String(err);
+          }
+        }
+        // Quick retries first — the server is usually up within a second (a
+        // reconnect finds it already listening); back off to 1 s for the long
+        // tail (first boot blocked on macOS TCC can take minutes).
+        await sleep(i < 8 ? 250 : 1000);
       }
-      set({ status: "connecting", error: null });
-      // Quick retries first — the server is usually up within a second (a
-      // reconnect finds it already listening); back off to 1 s for the long
-      // tail (first boot blocked on macOS TCC can take minutes).
-      await sleep(i < 8 ? 250 : 1000);
+      set({ status: "error", error: lastError });
+      return false;
+    } finally {
+      connectRetryDepth--;
     }
-    set({ status: "error", error: lastError });
-    return false;
+  },
+
+  reportQuarantinedConfig: async () => {
+    const aside = await takeConfigQuarantineNotice().catch(() => null);
+    if (!aside) return;
+    void logDebug(`config: unreadable config was moved to ${aside} and rebuilt`);
+    toast.error(i18n.t("settings:toast.configRebuilt", { path: aside }));
   },
 
   bootstrap: () => {
@@ -2975,7 +3130,10 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         void logDebug(`bootstrap FAILED: ${msg}`);
-        set({ error: msg });
+        // The status has to move off the launch "connecting": nothing is being
+        // dialled any more, and leaving it there would keep telling the user
+        // the runtime is on its way while the reason it is not sits underneath.
+        set({ error: msg, status: "error" });
         return;
       }
       await get().connectRetry();
@@ -4129,7 +4287,15 @@ export function historyToThread(messages: HistoryMessage[], commands?: CommandIn
   // tool part on the next assistant message. Render it like the live path:
   // the "! cmd" echo and the output inline — never the synthetic marker text.
   let shellTurn = false;
-  for (const m of messages) {
+  // Once the history is malformed EVERY later turn fails the same way, so a
+  // session reopens with a run of identical errors — the reporter of #114 had
+  // three. One repair offer, on the last of them: the fix is the same for all,
+  // and a stack of identical cards reads as a stack of separate problems.
+  const lastMalformed = messages.reduce(
+    (at, m, index) => (m.error && MALFORMED_HISTORY.test(m.error) ? index : at),
+    -1,
+  );
+  for (const [messageIndex, m] of messages.entries()) {
     // Compaction is checked before the role split, because OpenCode stores the
     // marker on a message with role "user" (SessionCompaction.create opens one
     // solely to hang the part off). Reading it only on assistant messages made
@@ -4263,6 +4429,12 @@ export function historyToThread(messages: HistoryMessage[], commands?: CommandIn
         // Same explanation the live line got: a restart is exactly when the user
         // no longer has the context to work out what to do about it.
         blocks.push({ kind: "status-line", text: explainRuntimeError(m.error), tone: "error" });
+        // …and the same repair offer. The damage is on disk, so reopening the
+        // session shows the failure again; without this the way out would exist
+        // only in the tab that happened to be open when it first happened. The
+        // scan runs off `messages`, already in hand — no fetch, unlike the live
+        // path (#114).
+        if (messageIndex === lastMalformed) blocks.push(historyRepairBlock(messages));
       }
       shellTurn = false;
     }

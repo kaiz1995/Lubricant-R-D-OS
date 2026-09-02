@@ -10,7 +10,8 @@
     "privacy": "Privacidad",
     "browser": "Navegador",
     "remote": "Acceso remoto",
-    "memory": "Memoria"
+    "memory": "Memoria",
+    "desktopOnly": "Esta sección está disponible en la app de escritorio."
   },
   "appearance": {
     "title": "Apariencia",
@@ -127,6 +128,8 @@
   "providers": {
     "title": "Proveedores",
     "hint": "Autenticación, endpoints personalizados e inicios de sesión de OpenCode importados",
+    "webHint": "Proveedores conectados: solo lectura desde el navegador",
+    "webNote": "Las claves de API y los endpoints personalizados se configuran en la máquina que ejecuta el workbench: en la app de escritorio, o con `osd auth set` si funciona sin ventana. Las credenciales nunca pasan por el gateway.",
     "connectPrompt": "Conecta el runtime para gestionar proveedores.",
     "manage": "Administrar",
     "collapse": "Contraer",
@@ -243,6 +246,7 @@
     "couldNotSetModel": "No se pudo configurar el modelo",
     "defaultModelSet": "Modelo predeterminado establecido en {{model}}",
     "defaultModelReset": "El modelo predeterminado {{old}} ya no está disponible — se cambió a {{model}}",
+    "configRebuilt": "No se pudo leer el archivo de ajustes del entorno del agente, así que se movió a {{path}} y se reconstruyó. Puede que tengas que volver a añadir proveedores y servidores MCP.",
     "couldNotSaveKey": "No se pudo guardar la clave",
     "providerConnected": "{{providerID}} conectado",
     "couldNotStartLogin": "No se pudo iniciar el inicio de sesión",

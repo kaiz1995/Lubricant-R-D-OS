@@ -10,7 +10,8 @@
     "privacy": "隐私",
     "browser": "浏览器",
     "remote": "远程访问",
-    "memory": "记忆"
+    "memory": "记忆",
+    "desktopOnly": "该部分在桌面应用中可用。"
   },
   "appearance": {
     "title": "外观",
@@ -127,6 +128,8 @@
   "providers": {
     "title": "供应商",
     "hint": "登录认证、自定义端点和导入的 OpenCode 登录信息",
+    "webHint": "已连接的供应商 — 浏览器端只读",
+    "webNote": "API 密钥和自定义端点在运行 workbench 的那台机器上设置：桌面应用里，或者无窗口运行时用 `osd auth set`。凭据不会经过网关。",
     "connectPrompt": "连接运行时以管理提供商。",
     "manage": "管理",
     "collapse": "收起",
@@ -242,6 +245,7 @@
     "couldNotSetModel": "无法设置模型",
     "defaultModelSet": "默认模型已设置为 {{model}}",
     "defaultModelReset": "默认模型 {{old}} 已不可用——已切换为 {{model}}",
+    "configRebuilt": "无法读取代理运行时的设置文件，已将其移至 {{path}} 并重建。服务商与 MCP 服务器可能需要重新添加。",
     "couldNotSaveKey": "无法保存密钥",
     "providerConnected": "{{providerID}} 已连接",
     "couldNotStartLogin": "无法开始登录",
