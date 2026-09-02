@@ -201,6 +201,20 @@ def main() -> int:
         assert backup.is_dir() and (backup / "SKILL.md").read_text(encoding="utf-8") == "version one"
         rollback_skill(rollback_target, "rollback-skill", workspace_root=rollback_workspace)
         assert (rollback_target / "rollback-skill" / "SKILL.md").read_text(encoding="utf-8") == "version one"
+
+        # legacy references/ schemas from older installs must not block refresh
+        legacy_workspace = Path(temporary) / "legacy-workspace"
+        legacy_target = legacy_workspace / ".opencode" / "skills"
+        legacy_target.mkdir(parents=True)
+        legacy_skill = legacy_target / "rollback-skill"
+        legacy_skill.mkdir()
+        (legacy_skill / "SKILL.md").write_text("old", encoding="utf-8")
+        (legacy_skill / "references").mkdir()
+        (legacy_skill / "references" / "old.schema.json").write_text("{}", encoding="utf-8")
+        install_skill(rollback_source, rollback_schemas, ("schema.json",), legacy_target, workspace_root=legacy_workspace)
+        assert (legacy_skill / "SKILL.md").read_text(encoding="utf-8") == "version two"
+        assert (legacy_skill / "references" / "schema.json").is_file()
+        assert not (legacy_skill / "references" / "old.schema.json").exists()
     print(f"PASS: explicit-target install compatibility for {len(SKILLS)} skills")
     return 0
 

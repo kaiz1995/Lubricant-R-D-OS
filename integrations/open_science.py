@@ -166,6 +166,12 @@ def install_skill(
             shutil.rmtree(staging, ignore_errors=True)
             raise ValueError(f"destination contains a symlink: {destination}")
         stale = non_cached_files(destination) - expected
+        # ponytail: legacy references/ schemas predate per-skill schema lists;
+        # remove once every real deployment is refreshed (targeted 2026-08). 
+        stale = {
+            path for path in stale
+            if not (path.parts[0] == "references" and path.suffix == ".json")
+        }
         if stale:
             shutil.rmtree(staging, ignore_errors=True)
             raise ValueError(f"destination contains stale/unmanaged files: {', '.join(map(str, sorted(stale)))}")
