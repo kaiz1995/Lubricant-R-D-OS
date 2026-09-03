@@ -20,11 +20,19 @@
 2. **实验碎片化**：大量工作是"换一个添加剂"、"改一个比例"，实验之间缺少统一的设计空间和假设框架（OFAT 问题）。
 3. **没有终点**：项目没有明确的阶段退出机制，同一课题年复一年持续，无法积累可复用的研发知识。
 
+更关键的是，**实际工业场景存在 5 种性质完全不同的开发工作**，需要有差异化的研发流程与决策规则，绝不能用单一流程套用所有项目：
+
+1. **新产品正向开发 (New Product Development)**：从需求与设备工况出发，完整经历 7 项工况分析、失效/CTQ、测试方法鉴定、混料 DOE、建模优化与验证冻结。
+2. **已有产品性能优化 (Performance Improvement)**：现场失效与痛点驱动，基于成熟基线产品，重点诊断真实失效机理、验证评定方法的区分性与灵敏度、针对性优化瓶颈指标，无需全套重推设备工况。
+3. **降本替代 (Cost-down & Substitution)**：非劣效性驱动 (Non-inferiority)，基于现有成熟配方与成本基线，重点划定 CTQ 不劣化红线、原材料关键属性安全区域匹配与等效验证。
+4. **客户定制 (Customer Customization)**：客户技术协议与 OEM 专属工况驱动，直接对齐协议技术指标与客户指定的试验台架，快速匹配成熟技术平台并做针对性微调。
+5. **机理/平台型探索 (Mechanism & Platform Exploration)**：科学假设驱动，允许失败，重点考察添加剂响应规律、机理模型与通用评价方法，不以单一商业量产或 target_cost 为死限。
+
 Lubricant R&D OS 的目标是把"经验式研发"升级为：
 
 > **需求与工况驱动 → 失效风险驱动 → 证据驱动 → 实验设计驱动 → 商业决策驱动**
 
-的可复用研发体系（Decision-Driven R&D Framework）。
+的可复用研发体系（Decision-Driven R&D Framework），并在项目定义阶段主动识别并确认工作性质，调用相匹配的差异化研发流程。
 
 ## 它解决什么问题
 
@@ -41,20 +49,19 @@ Lubricant R&D OS 的目标是把"经验式研发"升级为：
 
 ## 它如何工作
 
-本领域包以 **Skills（技能）** 的形式扩展 Open Science，每个 Skill 对应研发流程中的一个阶段：
+### 1. 项目定义与性质确认（Stage 0）
 
-```
-Project Definition
-  → Duty Definition（工况/设备）
-    → Duty-Challenge Analysis（润滑挑战）
-      → Failure/CTQ Analysis（失效机制/关键质量特性）
-        → Test Method Qualification（测试方法鉴定）
-          → DOE Design（实验设计）
-            → Experiment Import（实验数据录入）
-              → Statistical Analysis（统计建模）
-                → Optimization（优化）
-                  → Gate Review（阶段评审）
-```
+进入系统后，AI **首先识别并确认**当前项目的开发性质（从 5 类中选择或根据输入预判由用户确认），随后**动态裁剪输入要求**，避免向用户机械索要千篇一律的表单。
+
+### 2. 差异化流程流转
+
+根据确认的工作性质，元路由器（`lubricant-rd-agent`）自动分流到匹配的阶段路径：
+
+- **新产品正向开发**：`Project → Duty(7项) → Challenge → Failure/CTQ → Method Qual → Design Space → DOE → Running → Model → Opt → Gate`
+- **已有产品性能优化**：`Project → Failure/CTQ(问题诊断) → Method Qual(灵敏度) → Design Space → DOE → Running → Model → Opt → Gate`
+- **降本替代**：`Project → Failure/CTQ(非劣效红线) → Design Space → DOE → Running → Opt → Gate`
+- **客户定制**：`Project → Failure/CTQ(协议对齐) → Method Qual(指定台架) → Design Space → DOE → Running → Gate`
+- **机理/平台型探索**：`Project → Design Space → DOE → Running → Model → Gate`
 
 每一步由 AI 引导用户提供真实数据，生成 **schema 验证的 JSON artifact**，写入 Open Science workspace，并记录 provenance（来源追踪）。**所有 artifact 都必须有证据来源，不允许 AI 编造数据。**
 
@@ -64,10 +71,10 @@ Project Definition
 
 | Skill | 阶段 | 输出状态 | 说明 |
 |---|---|---|---|
-| `project-definition` | Stage 0 | `PROJECT_DEFINED` | 项目章程，含商业目标、技术目标、风险等级 |
+| `project-definition` | Stage 0 | `PROJECT_DEFINED` | 项目章程，含性质确认、商业/技术目标、风险等级 |
 | `duty-definition` | Stage 1 | `DUTY_DEFINED` | 设备工况、温度、负荷、维护、污染、寿命 |
 | `duty-challenge-analysis` | Stage 1 | `CHALLENGES_DEFINED` | 润滑挑战 Map，severity/exposure/sensitivity 评级 |
-| `failure-ctq-analysis` | Stage 2 | `FAILURE_CTQ_DEFINED` | 失效机制与关键质量特性，链接 Challenge |
+| `failure-ctq-analysis` | Stage 2 | `FAILURE_CTQ_DEFINED` | 失效机制与关键质量特性，链接 Challenge / 协议指标 |
 | `test-method-qualification` | Stage 2 | `METHOD_QUALIFIED` | 测试方法鉴定，区分性与工况相关性验证 |
 | `formulation-design` | Stage 3 | `DESIGN_SPACE_DEFINED` | 配方设计空间定义（约束混料） |
 | `doe-design` | Stage 3 | `EXPERIMENT_DESIGNED` | DOE 请求，不生成实验点，只结构化请求 |
@@ -75,7 +82,7 @@ Project Definition
 | `statistical-analysis` | Stage 4 | `MODEL_BUILT` | 统计建模请求，不计算模型，结构化交付 |
 | `optimization` | Stage 4 | `OPTIMIZED` | 优化请求，不生成候选配方，结构化交付 |
 | `gate-review` | Gate | `VERIFIED` | 阶段评审，明确 GO/HOLD/KILL 结论 |
-| `lubricant-rd-agent` | 元路由 | — | 路由所有技能，执行阶段隔离和证据锁 |
+| `lubricant-rd-agent` | 元路由 | — | 路由所有技能，执行 5 类流程分支和证据锁 |
 
 ## 技术架构
 
