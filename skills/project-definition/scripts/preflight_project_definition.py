@@ -13,7 +13,7 @@ TEXT_FIELDS = (
     "technical_objective", "risk_class", "owner",
 )
 LIST_FIELDS = ("hard_constraints", "benchmark_products", "success_criteria")
-PROJECT_TYPES = {"NEW_PRODUCT", "COST_DOWN", "IMPROVEMENT", "CORRECTIVE_ACTION"}
+PROJECT_TYPES = {"NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "CORRECTIVE_ACTION"}
 RISK_CLASSES = {"LOW", "MEDIUM", "HIGH", "STRATEGIC"}
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
 EVIDENCE_FIELDS = ("evidence_id", "statement", "source", "status")

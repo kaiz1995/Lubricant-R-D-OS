@@ -7,6 +7,10 @@ description: Record one evidence-declared lubricant duty profile at DUTY_DEFINED
 
 Use `../../schemas/duty.schema.json` as authority when available; installed `references/` are deployment-only.
 
+## Prerequisites
+
+If no active Project Charter (`project.json`) exists in the workspace, do NOT demand duty inputs or assume a specific equipment type (e.g. wind turbine). Direct the user to run `project-definition` first to establish the project nature (`project_type`) among the 5 supported types (新产品正向开发 / 已有产品性能优化 / 降本替代 / 客户定制 / 机理平台探索).
+
 ## Required input
 
 - Supply `project_artifact`: a schema-valid Project Charter at `PROJECT_DEFINED` with `status: "ACTIVE"`.

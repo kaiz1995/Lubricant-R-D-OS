@@ -89,6 +89,17 @@ def main() -> int:
     returncode, stdout = run_cli({"project_state": physical_state("PROJECT_DEFINED"), "requested_stage": "DUTY_DEFINED"})
     assert returncode == 0 and "ALLOW" in stdout and "duty-definition" in stdout, (returncode, stdout)
 
+    # 9. Differentiated project_type workflows
+    # COST_DOWN routes PROJECT_DEFINED directly to FAILURE_CTQ_DEFINED
+    result = router.decide(physical_state("PROJECT_DEFINED", project_type="COST_DOWN"), "FAILURE_CTQ_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "failure-ctq-analysis", result
+    # EXPLORATION routes PROJECT_DEFINED directly to DESIGN_SPACE_DEFINED
+    result = router.decide(physical_state("PROJECT_DEFINED", project_type="EXPLORATION"), "DESIGN_SPACE_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "formulation-design", result
+    # IMPROVEMENT routes PROJECT_DEFINED directly to FAILURE_CTQ_DEFINED
+    result = router.decide(physical_state("PROJECT_DEFINED", project_type="IMPROVEMENT"), "FAILURE_CTQ_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "failure-ctq-analysis", result
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages)")
     return 0
 

@@ -33,6 +33,29 @@ NEXT_STAGE = dict(zip(STAGES, STAGES[1:]))
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 KNOWN_STAGES = (START_STAGE, *STAGES)
+# Differentiated workflows for 5 project types
+TYPE_ROUTES = {
+    "NEW_PRODUCT": STAGES,
+    "IMPROVEMENT": (
+        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
+        "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
+        "MODEL_BUILT", "OPTIMIZED", "VERIFIED"
+    ),
+    "COST_DOWN": (
+        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "DESIGN_SPACE_DEFINED",
+        "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED", "VERIFIED"
+    ),
+    "CUSTOMIZATION": (
+        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
+        "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
+        "VERIFIED"
+    ),
+    "EXPLORATION": (
+        "PROJECT_DEFINED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED",
+        "EXPERIMENT_RUNNING", "MODEL_BUILT", "VERIFIED"
+    ),
+}
+
 
 
 def decide(project_state: object, requested_stage: str) -> dict:
@@ -54,10 +77,20 @@ def decide(project_state: object, requested_stage: str) -> dict:
     if status in TERMINAL_STATUSES:
         return {"decision": "DENY", "reason": f"project status {status} is terminal and cannot advance", "skill": None}
 
+    ptype = project_state.get("project_type")
+    route = TYPE_ROUTES.get(ptype, STAGES)
+
     if current == START_STAGE:
         target_stage = "PROJECT_DEFINED"
+    elif current in route:
+        idx = route.index(current)
+        target_stage = route[idx + 1] if idx + 1 < len(route) else None
+    elif current in STAGES:
+        idx = STAGES.index(current)
+        target_stage = STAGES[idx + 1] if idx + 1 < len(STAGES) else None
     else:
-        target_stage = NEXT_STAGE.get(current)
+        target_stage = None
+
     if target_stage is None:
         return {"decision": "DENY", "reason": f"stage {current} is the final routed stage; no further step exists", "skill": None}
 

@@ -8,7 +8,7 @@
     "artifact_type": { "const": "project" },
     "status": { "enum": ["DRAFT", "ACTIVE", "HOLD", "PIVOTED", "KILLED", "FROZEN", "CLOSED"] },
     "project_name": { "type": "string", "minLength": 1 },
-    "project_type": { "enum": ["NEW_PRODUCT", "COST_DOWN", "IMPROVEMENT", "CORRECTIVE_ACTION"] },
+    "project_type": { "enum": ["NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "CORRECTIVE_ACTION"] },
     "product_family": { "type": "string", "minLength": 1 },
     "business_objective": { "type": "string", "minLength": 1 },
     "technical_objective": { "type": "string", "minLength": 1 },
