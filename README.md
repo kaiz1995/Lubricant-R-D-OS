@@ -166,7 +166,7 @@ python -B tests/test_release_preflight.py
 | **P4: 发布前置门禁** | ✅ PASS | Preflight 自动扫描全量 Schema、证书与测试套件。 |
 | **P5: 上游合并兼容** | ✅ PASS | Open Science v0.5.1 代码合入，1166 项核心测试全绿通过。 |
 | **P6: 桌面实机验收** | ✅ PASS | 真实 Desktop 会话调用成功，Provenance 链条闭环。 |
-| **G5: 真实数据补全** | ⏸ DEFERRED / HOLD | 随真实课题物理实验推进按需补齐，不阻塞软件发布。 |
+| **G5: 真实数据补全** | 🔄 IN PROGRESS | 依托 V600 风电齿轮油等真实课题实战推进中；PDS 基线与历史台架已录入，物理样品（B0）已调配，待实验室物理实测闭环。 |
 | **G6: 物理发布签字** | ⏸ HOLD | 待真实物理数据（WGO_001 等）注入并完成完整台架验证后签署。 |
 
 ---
