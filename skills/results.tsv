@@ -1,0 +1,27 @@
+skill	stage	status	baseline_score	optimized_score	delta	notes
+formulation-design	Stage 4	OPTIMIZED	67.5	93.2	+25.7	Darwin v2.0 upgrade: fail-closed fallback, red lines blacklist, checkpoints
+
+lubricant-rd-agent	Meta-Skill	OPTIMIZED	71.0	94.5	+23.5	Darwin v2.0 upgrade: router contracts, explicit checkpoint, fail-closed fallback
+
+project-definition	Stage 0	OPTIMIZED	72.0	94.0	+22.0	Darwin v2.0 upgrade: classification protocol, explicit checkpoint, fail-closed
+
+duty-definition	Stage 1	OPTIMIZED	70.0	93.5	+23.5	Darwin v2.0 upgrade: 7-condition profile, status preservation, fail-closed
+
+duty-challenge-analysis	Stage 2	OPTIMIZED	71.5	94.0	+22.5	Darwin v2.0 upgrade: explicit challenge dimensions, checkpoint, fail-closed
+
+failure-ctq-analysis	Stage 3	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: hypothesis prefixes, dual-limit separation, fail-closed
+
+test-method-qualification	Stage 3.5	OPTIMIZED	71.5	94.0	+22.5	Darwin v2.0 upgrade: C/D/P role contracts, physical scope invariant, fail-closed
+
+doe-design	Stage 5	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: mixture bounds feasibility, D/P method enforcement, fail-closed
+
+experiment-import	Stage 6	OPTIMIZED	70.5	94.0	+23.5	Darwin v2.0 upgrade: physical scope lock, SHA-256 provenance, fail-closed
+
+statistical-analysis	Stage 7	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: response chain continuity, compute engine boundary, fail-closed
+
+optimization	Stage 8	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: 3-method algorithm boundary, model continuity, fail-closed
+
+gate-review	Stage 9	OPTIMIZED	71.5	94.5	+23.0	Darwin v2.0 upgrade: fail-closed GO gating, explicit disposition rules, checkpoint
+
+hello-lubricant	Onboarding	OPTIMIZED	65.0	93.0	+28.0	Darwin v2.0 upgrade: pipeline orientation, diagnostic checks, checkpoint
+
