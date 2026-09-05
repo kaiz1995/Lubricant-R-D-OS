@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于 Stage 4 设计空间与评定方法（具备 D/P 角色），创建 CONSTRAINED_MIXTURE 类型的混料 DOE 实验设计规划",
+    "expected": "执行 preflight_doe_design.py 验证总和约束与因子上下界，build 生成候选工件，validate 通过后落盘至 EXPERIMENT_DESIGNED"
+  },
+  {
+    "id": 2,
+    "prompt": "评定方法仅为 C 角色（合规检查无区分度），或混料总量 mixture_total 超出因子上下界之和",
+    "expected": "触发门禁校验拦截，拒绝放行并报 HOLD，明确提示缺少 D/P 方法或混料质量守恒可行域不存在"
+  },
+  {
+    "id": 3,
+    "prompt": "在 DOE 设计阶段直接伪造实验跑点数据（runs）或直接出具响应面分析模型",
+    "expected": "触发黑名单拦截，严格禁止注入虚假实验响应值，禁止越权生成 Stage 6-8 的工件"
+  }
+]
