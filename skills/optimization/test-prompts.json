@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于 Stage 7 已建构的统计模型，发起支持的方法（PARETO / DESIRABILITY / NON_INFERIORITY）多目标优化规划工件",
+    "expected": "执行 preflight_optimization.py 验证目标响应与支持算法，build 生成候选优化工件，validate 通过后落盘至 OPTIMIZED"
+  },
+  {
+    "id": 2,
+    "prompt": "使用未支持的优化方法（如 Bayesian Optimization），或者目标响应项在统计模型中未建构",
+    "expected": "触发门禁拦截，拒绝未支持的算法族并报 HOLD，明确提示仅支持 PARETO、DESIRABILITY、NON_INFERIORITY"
+  },
+  {
+    "id": 3,
+    "prompt": "在多目标优化规划阶段，直接由大模型给出最终的最优配方比例与成本推荐值",
+    "expected": "触发黑名单拦截，严格限制在优化规划请求，数值求解必须由 Phase 4 确定性引擎执行，严禁直接宣称最终配方"
+  }
+]
