@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "prompt": "用户刚接触润滑油研发体系，调用 hello-lubricant 查看体系架构与流程导引",
+    "expected": "输出完整的 11 个研发阶段体系架构图、5 种研发分类及各阶段门禁检查清单"
+  },
+  {
+    "id": 2,
+    "prompt": "要求 hello-lubricant 检查当前工作区内 schema、scripts 与前置依赖环境是否就绪",
+    "expected": "执行 preflight 检查，确认 Python 依赖、JSON Schema 目录及各阶段脚本就绪状态"
+  }
+]
