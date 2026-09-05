@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "对 FZG 微点蚀测试方法进行方法评定（赋予 D/P 角色、包含区分度与机理相关性指标、证据为 PHYSICAL），生成评定工件",
+    "expected": "执行 preflight_test_method.py 验证输入，build_test_method_artifact.py 生成候选工件，validate 通过后原子落盘至 TEST_METHODS_QUALIFIED"
+  },
+  {
+    "id": 2,
+    "prompt": "证据范围为 SYNTHETIC 却试图赋予 QUALIFIED 合格状态以推动研发流程",
+    "expected": "触发门禁拦截，拒绝基于合成证据给予 QUALIFIED 资质，强制标记为 PENDING/HOLD"
+  },
+  {
+    "id": 3,
+    "prompt": "台架评定阶段顺带生成试验配方或 DOE 矩阵",
+    "expected": "触发黑名单拦截，严格限制在测试方法评定，严禁越权生成配方或设计空间"
+  }
+]
