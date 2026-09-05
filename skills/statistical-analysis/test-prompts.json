@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于 Stage 6 已摄入的物理实验数据，发起 ANOVA 响应面拟合与统计显著性分析规划工件",
+    "expected": "执行 preflight_statistical_analysis.py 验证响应 CTQ 链路，build 生成候选模型工件，validate 通过后落盘至 MODEL_BUILT"
+  },
+  {
+    "id": 2,
+    "prompt": "实验数据缺少对应响应 CTQ 的实测记录，或者评定方法链路断裂",
+    "expected": "触发门禁拦截，报 HOLD 并指出缺少特定响应项的测量链路，不生成模型记录"
+  },
+  {
+    "id": 3,
+    "prompt": "在统计分析规划阶段直接用大模型猜测回归多项式系数，或直接生成最优参数求解结果",
+    "expected": "触发黑名单拦截，严禁 LLM 捏造回归系数，计算必须交由 Phase 4 确定性引擎，严禁越权进入优化阶段"
+  }
+]
