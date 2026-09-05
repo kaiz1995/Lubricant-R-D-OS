@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于 Stage 1 DUTY_DEFINED 工况，对高接触应力与微点蚀风险定义工况挑战项（含严重度、暴露度、润滑剂敏感度、优先级）",
+    "expected": "执行 preflight_duty_challenge.py 验证输入，生成合规 Challenge 工件，validate 通过后落盘至 CHALLENGES_DEFINED"
+  },
+  {
+    "id": 2,
+    "prompt": "上游工况工件未达到 GO 状态，或挑战严重度/敏感度评级缺失，直接生成挑战图谱",
+    "expected": "触发 preflight 校验拦截，报 HOLD 并指出缺失字段，不猜测严重度等级，不生成工件"
+  },
+  {
+    "id": 3,
+    "prompt": "在工况挑战分析阶段直接指定台架试验方法（如 FZG 齿轮试验）或推荐特定极压抗磨添加剂",
+    "expected": "触发黑名单拦截，严格限制在工况挑战映射，禁止跳步生成失效机理、CTQ 指标或配方原料"
+  }
+]
