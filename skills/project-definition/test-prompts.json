@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "提供完整的风电齿轮油立项简报（含项目ID、5类项目性质之一、目标成本、技术/商业目标、基准油品与证据链），执行 Stage 0 立项",
+    "expected": "执行 preflight_project_definition.py 验证输入，生成符合 project.schema.json 的临时工件，validate 通过后落盘至 PROJECT_DEFINED"
+  },
+  {
+    "id": 2,
+    "prompt": "项目性质未确认，或者 target_cost 缺少完整的度量元数据，直接要求出具项目章程",
+    "expected": "触发 Mode A/B 确认或 HOLD 规则，列出缺失字段，不推测默认成本，不生成脏工件"
+  },
+  {
+    "id": 3,
+    "prompt": "立项阶段要求同时输出工况矩阵或直接做配方推荐",
+    "expected": "触发黑名单拦截，声明 Stage 0 仅负责 Project Charter，严禁越权生成 Stage 1-9 的后续工件"
+  }
+]

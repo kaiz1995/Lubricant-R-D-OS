@@ -1,57 +1,90 @@
 ---
 name: project-definition
-description: Turn a complete lubricant R&D project brief into a traceable Project Charter at PROJECT_DEFINED; hold without writing an artifact when required inputs are missing.
+description: Turn a complete lubricant R&D project brief into a traceable Project Charter at PROJECT_DEFINED; preflight verifies project classification, objectives, constraints, cost target, benchmarks, and evidence. Use when user mentions "project-definition", "项目立项", "立项章程", "Project Charter", "新项目启动", or starting Stage 0 in lubricant development.
 ---
 
-# Project Definition
+# Project Definition (Stage 0)
 
-Create only the Stage 0 Project Charter. This is a decision record, not a formulation, performance claim, Challenge Map, or downstream-stage artifact.
+Create only the Stage 0 Project Charter (`PROJECT_DEFINED`) for the Lubricant R&D Domain Pack.
+This is a scoping and governance decision record, NOT a formulation, performance claim, Challenge Map, or downstream artifact.
 
-Use `../../schemas/project.schema.json` as the source-pack authority when it is available. The installed deployment includes an identical `references/project.schema.json` and `references/common.schema.json` copy for validation; it is a deployment copy, not a second maintained schema.
+Authority schema: `../../schemas/project.schema.json` (or local `references/project.schema.json` in deployed bundle).
 
-## Interaction Protocol: Work Nature Classification & Confirmation
+---
 
-Before requesting detailed charter fields or assuming a standard new-product pipeline, the Agent MUST establish and confirm the `project_type` with the user.
+## 1. Project Type Classification & Interaction Protocol
 
-The 5 supported development project types:
-1. `NEW_PRODUCT` (新产品正向开发): 需求与工况驱动，经历 7 项完整工况分析、失效/CTQ、测试方法鉴定、混料DOE、优化与验证冻结。
-2. `IMPROVEMENT` (已有产品性能优化): 现场失效与痛点驱动，基于成熟基线产品，重点诊断失效模式、验证评定方法灵敏度、针对性优化瓶颈指标。
+Before requesting detailed charter fields or assuming a standard new-product pipeline, the Agent MUST establish and confirm `project_type` with the user.
+
+Supported Development Project Types:
+1. `NEW_PRODUCT` (新产品正向开发): 需求与工况驱动，经历 7 项完整工况分析、失效/CTQ、方法评定、混料DOE、优化与验证冻结。
+2. `IMPROVEMENT` (已有产品性能优化): 现场失效驱动，基于成熟基线产品，重点诊断失效模式、验证评定方法灵敏度、优化瓶颈指标。
 3. `COST_DOWN` (降本替代): 非劣效性驱动 (Non-inferiority)，基于现有配方与成本基线，重点划定 CTQ 不劣化红线、原材料属性匹配与等效验证。
 4. `CUSTOMIZATION` (客户定制): 客户技术协议与OEM专属工况驱动，对齐协议技术指标与指定台架，匹配现有成熟平台并微调。
 5. `EXPLORATION` (机理/平台型探索): 科学假设驱动，允许失败，重点考察变量影响规律与机理模型，不以单一商业量产目标为死限。
 
 ### Interaction Rule
-- **Mode A (自然语言预判与确认)**: If the user provides preliminary project description or files, the Agent analyzes the background, infers the most likely type, presents the rationale, and asks the user to confirm:
-  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（可选选项：1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索）"
-- **Mode B (主动提示用户选择)**: If the user asks to start a project without sufficient background, the Agent presents the 5 types and asks the user to choose before requesting structured inputs.
-- **Never dump all fields in one shot**: Do NOT dump a 10+ field form or ask for 7-item duty conditions simultaneously. Only prompt for the inputs relevant to the confirmed project type.
+- **Mode A (自然语言预判与确认)**: 若用户已有初步描述，分析背景后推荐最可能类型并请用户确认：
+  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索）"
+- **Mode B (主动提示用户选择)**: 若无足够背景，展示 5 种类型让用户选择后再索取输入。
+- **No Form Dumping**: 禁止一次性堆叠索取全部 10+ 字段或工况参数，仅按确认的项目类型逐步索取核心输入。
 
-## Required input
+---
 
-Require all of these before creating an artifact:
+## 2. Input Specification
 
-- `project_id` (letters, digits, `.`, `_`, `-` only), `project_name`, `project_type` (`NEW_PRODUCT`, `IMPROVEMENT`, `COST_DOWN`, `CUSTOMIZATION`, `EXPLORATION`, or `CORRECTIVE_ACTION`), and `product_family`.
+A valid input JSON requires:
+- `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the 5 valid types), `product_family`.
 - `business_objective`, `technical_objective`, non-empty `hard_constraints`, and non-empty `success_criteria`.
-- `target_cost` with `value`, `unit`, `source`, `method_version`, `material_batch`, and `formula_version`. (For `EXPLORATION`, value can be 0 or research budget with unit `CNY`, source `research_budget`, material_batch `not_applicable`, formula_version `not_applicable`).
-- Non-empty `benchmark_products` (for `EXPLORATION`, baseline chemistry reference), `risk_class` (`LOW`, `MEDIUM`, `HIGH`, or `STRATEGIC`), and `owner`.
-- Non-empty `source_evidence`; every item must include `evidence_id`, `statement`, `source`, and `status: OBSERVED`. The statement and source must identify the supplied requirement, brief, or record.
+- `target_cost` containing complete measurement metadata (`value`, `unit`, `source`, `method_version`, `material_batch`, `formula_version`).
+- Non-empty `benchmark_products`, `risk_class` (`LOW`, `MEDIUM`, `HIGH`, `STRATEGIC`), and `owner`.
+- Non-empty `source_evidence` with status `OBSERVED`.
 
-Run `python scripts/preflight_project_definition.py <input.json>` first. Do not treat a plausible product assumption as a supplied input.
+---
 
-## HOLD rule
+## 3. Deterministic Execution Workflow
 
-If any required input is absent, blank, invalid, or lacks source evidence, report `HOLD`, list each missing or invalid field, and state that no Project Charter was created. Do not write a partial artifact, infer a target cost, invent a benchmark, or turn a gap into a conclusion.
+All scripts reside in `skills/project-definition/scripts/` (or relative `scripts/` from the skill directory).
 
-## Artifact
+### Step 1: Preflight Verification
+```bash
+python skills/project-definition/scripts/preflight_project_definition.py <input.json>
+```
+- Expected output on success: `READY: input can form one PROJECT_DEFINED record only` (exit code 0).
+- On failure: Outputs missing/invalid fields and exits with code 1.
 
-For valid input, write valid UTF-8 JSON to the user-specified output path, or `project.json` in the current workspace when no path is specified. Before overwriting an existing file, read it: overwrite only if it is JSON with `artifact_type: "project"` and the same `project_id`; otherwise report the exact conflict and do not write.
+### Step 2: Build Project Charter Artifact
+Create temporary candidate JSON with `stage: "PROJECT_DEFINED"`, `status: "ACTIVE"`, and the 7 canonical decision fields (`decision_question`, `hypothesis`, `uncertainty`, `decision_rule`, `result`, `decision: "GO"`, `next_action`).
 
-Create one artifact that conforms to the project schema with:
+### Step 3: Validate Artifact
+```bash
+python skills/project-definition/scripts/validate_project_artifact.py <temporary-file.json>
+```
+- Expected output on success: `PASS: project artifact conforms to the Stage 0 contract` (exit code 0).
 
-- `artifact_type: "project"`, `schema_version: "0.1.0"`, `stage: "PROJECT_DEFINED"`, and `status: "ACTIVE"`.
-- The supplied project fields and `source_evidence` copied into `evidence` without invented evidence.
-- Public decision fields with these exact keys: `decision_question`, `hypothesis`, `uncertainty`, `decision_rule`, `result`, `decision`, and `next_action`. Do not use `gate_0_question`, `charter_scoping_hypothesis`, or `rule` as aliases or substitutes. The question concerns proceeding to downstream work; the hypothesis scopes the charter; uncertainty states downstream conditions/hypotheses are not yet defined; the rule requires recorded goals, constraints, and success criteria; the result only records the charter; `decision` is `"GO"`; `next_action` routes to the appropriate next stage for the confirmed `project_type`.
+### Step 4: Atomic Commit & Checkpoint
+Atomically copy/move `<temporary-file.json>` to `<output.json>` (defaults to `project.json`) only after Step 3 passes.
+```bash
+# 🔴 CHECKPOINT · STOP: Stage 0 stops here at PROJECT_DEFINED. Route to next stage according to project_type.
+```
 
-Write the candidate to a temporary sibling JSON file first. Run `python scripts/validate_project_artifact.py <temporary-file>`; only on `PASS` atomically replace the intended output. If preflight or validation fails, delete no existing output, report the actual errors, and do not claim completion.
+---
 
-Do not state that a formula or performance target has been achieved, and do not create any Challenge, CTQ, test, design-space, experiment, optimization, gate-review, or freeze artifact.
+## 4. Failure Modes & Fallback Recovery (Fail-Closed)
+
+| Failure Symptom | Root Cause | Fallback Recovery Action |
+|---|---|---|
+| `HOLD: missing required fields: project_type` | 未确认项目性质 | **STOP**。暂停并启动 Mode A/B 协议向用户确认项目分类。 |
+| `HOLD: missing measurement metadata for target_cost` | 目标成本缺乏量化依据/版本 | **STOP**。要求用户提供明确成本上限数值与货币单位，不推测默认值。 |
+| `HOLD: source_evidence contains GAP or missing` | 缺少输入证据或立项依据不足 | **STOP**。要求提供立项技术简报或客户协议编号，不伪造证据条目。 |
+| `FAIL: cannot read artifact or schemas` | JSON 损坏或 schema 路径错误 | 校验文件编码与 JSON 语法，修复后重新运行校验。 |
+
+---
+
+## 5. Strict Blacklist (Prohibitions)
+
+1. **NO Downstream Artifact Generation**: DO NOT create Duty, Challenge, Failure CTQ, Test Method, Formulation, DOE, or Optimization artifacts in Stage 0.
+2. **NO Synthetic Assumptions**: DO NOT invent benchmark products, performance values, target costs, or evidence sources.
+3. **NO Dirty Overwrites**: DO NOT overwrite existing non-project files or files with mismatched `project_id`.
+4. **NO Silent Advance**: DO NOT proceed to Stage 1 without user confirmation of the Project Charter.
+
