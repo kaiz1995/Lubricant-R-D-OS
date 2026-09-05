@@ -1,48 +1,45 @@
 ---
 name: lubricant-rd-agent
-description: Router-only Meta-Skill for the Lubricant R&D Domain Pack. Read the current project state first; ALLOW only the immediate next stage of the planned order according to project_type, DENY cross-stage jumps, HOLD any request while evidence gaps or gate conditions remain unresolved, and reject advancement on SYNTHETIC evidence. It never performs business calculation.
+description: Router-only Meta-Skill for the Lubricant R&D Domain Pack. Evaluates current project state and gate readiness; ALLOWs only the immediate next stage according to project_type, DENYs cross-stage jumps, and HOLDs requests while evidence gaps or gate conditions remain unresolved. Use when user mentions "lubricant-rd-agent", "路由检查", "阶段流转", "推进阶段", "route step", "研发流程门禁", or requesting stage advancement in lubricant development.
 ---
 
-# Lubricant R&D Agent (Meta-Skill)
+# Lubricant R&D Agent (Meta-Skill Router)
 
-This skill is the routing gate for the Domain Pack. It does not calculate, generate artifacts, or qualify methods. It decides one thing: may the project advance to the requested stage now?
+The central orchestrator and gatekeeper for the Lubricant R&D Domain Pack.
+This skill strictly evaluates stage advancement feasibility. It does not perform business calculation, generate data artifacts, or qualify methods.
 
-## Usage contract
+---
 
-1. Read the current project state first: `stage`, `status`, `evidence_scope`, `gate_status`, `evidence_gaps`, `unsatisfied_conditions`, and optional `project_type`.
-2. Route within the planned order according to the confirmed `project_type`:
+## 1. Routing Contracts by Project Type
 
-   - **NEW_PRODUCT** (新产品正向开发):
-     project-definition -> duty-definition -> duty-challenge-analysis -> failure-ctq-analysis -> test-method-qualification -> formulation-design -> doe-design -> experiment-import -> statistical-analysis -> optimization -> gate-review
+Advancement follows a deterministic, ordered stage chain configured by `project_type`:
 
-   - **IMPROVEMENT** (已有产品性能优化):
-     project-definition -> failure-ctq-analysis -> test-method-qualification -> formulation-design -> doe-design -> experiment-import -> statistical-analysis -> optimization -> gate-review
+- **NEW_PRODUCT** (新产品正向开发):
+  `project-definition` (PROJECT_DEFINED) -> `duty-definition` (DUTY_DEFINED) -> `duty-challenge-analysis` (CHALLENGES_DEFINED) -> `failure-ctq-analysis` (FAILURE_CTQ_DEFINED) -> `test-method-qualification` (TEST_METHODS_QUALIFIED) -> `formulation-design` (DESIGN_SPACE_DEFINED) -> `doe-design` (EXPERIMENT_DESIGNED) -> `experiment-import` (EXPERIMENT_RUNNING) -> `statistical-analysis` (MODEL_BUILT) -> `optimization` (OPTIMIZED) -> `gate-review` (VERIFIED)
 
-   - **COST_DOWN** (降本替代):
-     project-definition -> failure-ctq-analysis -> formulation-design -> doe-design -> experiment-import -> optimization -> gate-review
+- **IMPROVEMENT** (已有产品性能优化):
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `OPTIMIZED` -> `VERIFIED`
 
-   - **CUSTOMIZATION** (客户定制):
-     project-definition -> failure-ctq-analysis -> test-method-qualification -> formulation-design -> doe-design -> experiment-import -> gate-review
+- **COST_DOWN** (降本替代):
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `OPTIMIZED` -> `VERIFIED`
 
-   - **EXPLORATION** (机理/平台型探索):
-     project-definition -> formulation-design -> doe-design -> experiment-import -> statistical-analysis -> gate-review
+- **CUSTOMIZATION** (客户定制):
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `VERIFIED`
 
-3. Decide by rule:
-   - requested stage is the immediate next stage AND evidence is PHYSICAL AND the gate is GO with no unresolved gaps/conditions -> ALLOW and point to that skill.
-   - requested stage skips one or more stages in the active workflow -> DENY cross-stage jump.
-   - gate_status is not GO, or evidence_gaps/unsatisfied_conditions are non-empty -> HOLD and list what is missing.
-   - evidence_scope is SYNTHETIC -> DENY: synthetic evidence cannot authorize stage advancement.
-   - project status is terminal (FROZEN/CLOSED/KILLED/PIVOTED) -> DENY.
+- **EXPLORATION** (机理/平台型探索):
+  `PROJECT_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `VERIFIED`
 
-## Input
+---
 
-One JSON object with `project_state` and `requested_stage`. `project_state` carries the common artifact contract fields (see schemas/); this router reads only the routing-relevant subset:
+## 2. Input Specification
+
+A single JSON object providing `project_state` and `requested_stage`:
 
 ```json
 {
   "project_state": {
     "project_id": "WGO-DOE-001",
-    "project_type": "COST_DOWN",
+    "project_type": "NEW_PRODUCT",
     "stage": "PROJECT_DEFINED",
     "status": "ACTIVE",
     "evidence_scope": "PHYSICAL",
@@ -50,16 +47,57 @@ One JSON object with `project_state` and `requested_stage`. `project_state` carr
     "evidence_gaps": [],
     "unsatisfied_conditions": []
   },
-  "requested_stage": "FAILURE_CTQ_DEFINED"
+  "requested_stage": "DUTY_DEFINED"
 }
 ```
 
-Missing `evidence_scope` or a non-GO gate blocks advancement.
+---
 
-## Execution
+## 3. Deterministic Execution & Decision Rules
 
-Run `python scripts/route_step.py <input.json>`. Exit 0 prints ALLOW with the target skill; exit 1 prints DENY/HOLD with reasons. No artifact is written.
+Execute the standalone routing verification script:
 
-## Boundaries
+```bash
+python skills/lubricant-rd-agent/scripts/route_step.py <input.json>
+```
 
-The router never computes, never writes artifacts, and never upgrades SYNTHETIC evidence to method qualification or release approval. hello-lubricant is a load-and-invoke smoke skill and is not a routing target.
+### Decision Logic
+1. **ALLOW (Exit code 0)**:
+   - `requested_stage` is the immediate adjacent next stage in the active workflow.
+   - `evidence_scope == "PHYSICAL"`.
+   - `gate_status == "GO"` and both `evidence_gaps` and `unsatisfied_conditions` are empty.
+   - Status is `ACTIVE`.
+2. **DENY (Exit code 1)**:
+   - Cross-stage jump: requested stage skips one or more steps.
+   - Synthetic evidence: `evidence_scope == "SYNTHETIC"` cannot authorize stage advancement.
+   - Terminal status: project is in `FROZEN`, `CLOSED`, `KILLED`, or `PIVOTED`.
+   - Unknown stage or invalid input format.
+3. **HOLD (Exit code 1)**:
+   - Gate status is not `GO` (e.g. `HOLD`).
+   - `evidence_gaps` or `unsatisfied_conditions` contain unresolved items.
+   - Project is already at the requested stage.
+
+```bash
+# 🔴 CHECKPOINT · STOP: Halt execution upon DENY or HOLD. Report blocking criteria to user.
+```
+
+---
+
+## 4. Failure Modes & Fallback Actions (Fail-Closed)
+
+| Failure Symptom | Root Cause | Fallback Recovery Action |
+|---|---|---|
+| `DENY: cross-stage jump rejected` | 试图跳过前置阶段直接推进 | **STOP**。回退到当前阶段的合法紧邻下一阶段（按照 project_type 顺序流转）。 |
+| `DENY: SYNTHETIC evidence cannot authorize stage advancement` | 缺少真实物理台架/实验数据 | **STOP**。禁止放行。必须在对应技能中采集或导入 PHYSICAL 范围实验数据。 |
+| `HOLD: unresolved: evidence gap: ...` | 前置评估存在未解缺口 | **STOP**。输出缺口清单，调用前序技能补齐对应物性、文献或台架标定证据。 |
+| `DENY: project status is terminal` | 项目已处于终止或冻结状态 | **STOP**。不得推进，需项目主管发起再激活（RE-OPEN）流程。 |
+
+---
+
+## 5. Strict Blacklist (Prohibitions)
+
+1. **NO Business Calculations**: DO NOT calculate blend ratios, costs, regression formulas, or statistics.
+2. **NO Artifact Generation**: DO NOT write or modify any domain artifacts; this skill only emits routing decisions.
+3. **NO Synthetic Promotion**: DO NOT promote SYNTHETIC evidence to PHYSICAL or grant Stage Gate exceptions.
+4. **NO Silent Routing**: DO NOT proceed to run downstream skills when `route_step.py` exits with non-zero (DENY/HOLD).
+
