@@ -150,7 +150,15 @@ python scripts/install_domain_skill.py --all `
 
 安装完成后重启 Open Science 桌面端，在工作台「技能」面板中即可直接查看和使用。
 
-### 7.3 软件侧离线自动化验证
+### 7.3 新项目启动（活报告工作区）
+新课题按以下步骤初始化工作区，使项目自带"活报告"进度机制：
+
+1. 在 Open Science 中新建项目工作区；
+2. 复制 `templates/project-workspace/AGENTS.md` 到项目根目录，仅修改"角色与使命"中的一句话核心目标；
+3. 复制 `templates/project-workspace/docs/开发报告模板.md` 到项目 `docs/` 目录并按项目命名；
+4. 后续所有技能执行落盘后，副驾驶会按 AGENTS.md 中的"活报告维护"规则自动同步该报告；项目全门禁通过后，该报告即成为完整开发报告交付。
+
+### 7.4 软件侧离线自动化验证
 领域包自带完整的无外部依赖原生测试套件，无需启动桌面端即可完成端到端验证：
 
 ```powershell
