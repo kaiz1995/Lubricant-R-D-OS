@@ -247,6 +247,297 @@ class SocialScience(unittest.TestCase):
         self.assertNotIn("social · categorical", tags("m = df['income'].mean()\n"))
 
 
+class Bioprocess(unittest.TestCase):
+    def test_curve_fit_monod_no_bounds(self):
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "def monod(s, mu_max, ks):\n"
+            "    return mu_max * s / (ks + s)\n"
+            "popt, _ = curve_fit(monod, s_data, mu_data)\n"
+        )
+        self.assertIn("bioprocess · unconstrained-kinetics", tags(src))
+
+    def test_curve_fit_haldane_with_bounds_ok(self):
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "def haldane(s, mu_max, ks, ki):\n"
+            "    return mu_max * s / (ks + s + s**2 / ki)\n"
+            "popt, _ = curve_fit(haldane, s_data, mu_data, bounds=(0, np.inf))\n"
+        )
+        self.assertNotIn("bioprocess · unconstrained-kinetics", tags(src))
+
+    def test_luedeking_piret_alpha_beta_in_a_fermentation_file(self):
+        # alpha and beta ARE the Luedeking-Piret coefficients, and both are
+        # non-negative — flagged, because the file says what it is about.
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "# product titre from a fed-batch fermentation\n"
+            "def luedeking_piret(x, alpha, beta):\n"
+            "    return alpha * x + beta\n"
+            "popt, _ = curve_fit(luedeking_piret, x_data, p_data)\n"
+        )
+        self.assertIn("bioprocess · unconstrained-kinetics", tags(src))
+
+    def test_generic_alpha_beta_fit_ok(self):
+        # The same two parameter names on a plain power law. A power-law
+        # exponent is routinely negative, so bounding it at zero would break
+        # the fit; nothing here says fermentation, so the rule stays quiet.
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "def power_law(x, alpha, beta):\n"
+            "    return alpha * x ** beta\n"
+            "popt, _ = curve_fit(power_law, x_data, y_data)\n"
+        )
+        self.assertNotIn("bioprocess · unconstrained-kinetics", tags(src))
+
+    def test_curve_fit_non_kinetic_model_ok(self):
+        # Parameters unrelated to bioprocess kinetics -> not flagged.
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "def line(x, slope, intercept):\n"
+            "    return slope * x + intercept\n"
+            "popt, _ = curve_fit(line, x_data, y_data)\n"
+        )
+        self.assertNotIn("bioprocess · unconstrained-kinetics", tags(src))
+
+    def test_kla_log_raw_do(self):
+        src = (
+            "kla_slope, _ = np.polyfit(t, np.log(DO), 1)\n"
+            "kla = -kla_slope\n"
+        )
+        self.assertIn("bioprocess · kla-driving-force", tags(src))
+
+    def test_kla_held_in_a_named_variable(self):
+        # What the coefficient is actually called in real code. Requiring a
+        # bare `kla` disarmed the rule on the files that compute one.
+        src = "kla_slope, _ = np.polyfit(t, np.log(DO), 1)\n"
+        self.assertIn("bioprocess · kla-driving-force", tags(src))
+
+    def test_kla_log_driving_force_ok(self):
+        src = (
+            "kla_slope, _ = np.polyfit(t, np.log(c_star - DO), 1)\n"
+            "kla = -kla_slope\n"
+        )
+        self.assertNotIn("bioprocess · kla-driving-force", tags(src))
+
+    def test_log_do_without_kla_context_ok(self):
+        # Same log(DO) pattern, but the file never mentions kLa -> silent.
+        self.assertNotIn(
+            "bioprocess · kla-driving-force",
+            tags("y = np.log(DO)\n"),
+        )
+
+    def test_cfu_mean_raw(self):
+        self.assertIn("bioprocess · cfu-log-scale", tags("m = df['cfu'].mean()\n"))
+
+    def test_plate_count_variable_mean(self):
+        self.assertIn(
+            "bioprocess · cfu-log-scale", tags("m = plate_count.mean()\n")
+        )
+
+    def test_cfu_log_transformed_first_ok(self):
+        # Already reduced on the log-transformed series -> the mean IS of
+        # log10(CFU), which is the correct convention.
+        self.assertNotIn(
+            "bioprocess · cfu-log-scale",
+            tags("m = np.log10(df['cfu']).mean()\n"),
+        )
+
+    def test_cfu_named_variable_already_log_ok(self):
+        # Variable itself named as the log quantity -> not a raw count.
+        self.assertNotIn(
+            "bioprocess · cfu-log-scale", tags("m = log_cfu.mean()\n")
+        )
+
+    def test_unrelated_mean_ok(self):
+        self.assertNotIn(
+            "bioprocess · cfu-log-scale", tags("m = df['temperature'].mean()\n")
+        )
+
+    def test_anova_no_assumption_check(self):
+        src = (
+            "from scipy import stats\n"
+            "biomass = load_runs()\n"
+            "f, p = stats.f_oneway(a, b, c)\n"
+        )
+        self.assertIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_tukey_no_assumption_check(self):
+        src = (
+            "from statsmodels.stats.multicomp import pairwise_tukeyhsd\n"
+            "# titre by bioreactor feed strategy\n"
+            "res = pairwise_tukeyhsd(data, groups)\n"
+        )
+        self.assertIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_anova_outside_a_fermentation_file_ok(self):
+        # The statistics generalize, the tag does not: a three-arm survey must
+        # not be told about its bioreactor assumptions.
+        src = (
+            "from scipy import stats\n"
+            "f, p = stats.f_oneway(control, nudge, payment)\n"
+        )
+        self.assertNotIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_anova_with_shapiro_ok(self):
+        src = (
+            "from scipy import stats\n"
+            "biomass = load_runs()\n"
+            "f, p = stats.f_oneway(a, b, c)\n"
+            "w, pw = stats.shapiro(residuals)\n"
+        )
+        self.assertNotIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_anova_with_levene_ok(self):
+        src = (
+            "from scipy import stats\n"
+            "biomass = load_runs()\n"
+            "f, p = stats.f_oneway(a, b, c)\n"
+            "lw, lp = stats.levene(a, b, c)\n"
+        )
+        self.assertNotIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_ttest_alone_not_anova_ok(self):
+        # Not an ANOVA-family test -> this rule stays silent either way.
+        src = "from scipy import stats\nstats.ttest_ind(a, b)\n"
+        self.assertNotIn("bioprocess · anova-assumptions", tags(src))
+
+    def test_bbdesign_first_order_only(self):
+        src = (
+            "from pyDOE3 import bbdesign\n"
+            "from statsmodels.formula.api import ols\n"
+            "design = bbdesign(3)\n"
+            "model = ols('y ~ x1 + x2 + x3', data=df).fit()\n"
+        )
+        self.assertIn("bioprocess · rsm-first-order-fit", tags(src))
+
+    def test_bbdesign_quadratic_model_ok(self):
+        src = (
+            "from pyDOE3 import bbdesign\n"
+            "from statsmodels.formula.api import ols\n"
+            "design = bbdesign(3)\n"
+            "model = ols('y ~ x1 + x2 + I(x1**2) + I(x2**2) + x1:x2', data=df).fit()\n"
+        )
+        self.assertNotIn("bioprocess · rsm-first-order-fit", tags(src))
+
+    def test_first_order_ols_without_design_context_ok(self):
+        # Plain first-order regression, no Box-Behnken/CCD design in play.
+        src = (
+            "from statsmodels.formula.api import ols\n"
+            "model = ols('y ~ x1 + x2 + x3', data=df).fit()\n"
+        )
+        self.assertNotIn("bioprocess · rsm-first-order-fit", tags(src))
+
+    def test_cross_scale_fit_no_correction(self):
+        src = (
+            "from sklearn.ensemble import RandomForestRegressor\n"
+            "flask_titre = load_flask_runs()\n"
+            "model = RandomForestRegressor()\n"
+            "model.fit(flask_titre[['time', 'temp']], flask_titre['od600'])\n"
+            "bioreactor_pred = model.predict(bioreactor_features)\n"
+        )
+        self.assertIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_single_scale_fit_ok(self):
+        # Same file, but every reference is to the same scale (flask) -> the
+        # rule needs BOTH categories present, not just a model fit.
+        src = (
+            "from sklearn.ensemble import RandomForestRegressor\n"
+            "flask_titre = load_flask_runs()\n"
+            "model = RandomForestRegressor()\n"
+            "model.fit(flask_titre[['time', 'temp']], flask_titre['od600'])\n"
+            "pred = model.predict(other_flask_features)\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_both_scales_no_fit_call_ok(self):
+        # Both scale categories mentioned (e.g. a comparison plot), but no
+        # model is ever fit -> nothing to warn about transferring.
+        src = (
+            "import matplotlib.pyplot as plt\n"
+            "flask_od = [0.1, 0.5, 1.2]\n"
+            "bioreactor_od = [0.1, 0.6, 1.4]\n"
+            "plt.plot(flask_od, label='flask')\n"
+            "plt.plot(bioreactor_od, label='bioreactor')\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_cross_scale_fit_with_correction_term_ok(self):
+        # The correction is right there: asking anyway would teach the reader
+        # that this tag fires whatever they do, which is how a gate stops being
+        # read at all.
+        src = (
+            "from sklearn.linear_model import LinearRegression\n"
+            "# apply a scaling_factor calibration between flask and bioreactor\n"
+            "flask_data = load_flask()\n"
+            "model = LinearRegression()\n"
+            "model.fit(flask_data.X, flask_data.y)\n"
+            "pred = model.predict(bioreactor_data.X)\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_minibatch_is_not_a_process_scale(self):
+        # Every file this rule can reach imports an ML library, and those are
+        # exactly the files that say batch_size. One scale here, not two.
+        src = (
+            "from sklearn.ensemble import RandomForestRegressor\n"
+            "flask_screen = load('flask.csv')\n"
+            "model = RandomForestRegressor()\n"
+            "model.fit(flask_screen.X, flask_screen.y)\n"
+            "batch_size = 32\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_fed_batch_is_a_process_scale(self):
+        src = (
+            "from sklearn.linear_model import Ridge\n"
+            "# flask screen, then a fed-batch run\n"
+            "model = Ridge()\n"
+            "model.fit(flask.X, flask.y)\n"
+        )
+        self.assertIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_curve_fit_not_ml_library_ok(self):
+        # scipy.optimize.curve_fit mixes both scales, but it is not model
+        # training (no ML library imported, and it's never a `.fit()` method
+        # call) -> the guard this rule exists to enforce.
+        src = (
+            "from scipy.optimize import curve_fit\n"
+            "def model(x, a, b):\n"
+            "    return a * x + b\n"
+            "flask_x = [1, 2, 3]\n"
+            "bioreactor_y = [4, 5, 6]\n"
+            "popt, _ = curve_fit(model, flask_x, bioreactor_y)\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_random_forest_cross_scale_fit(self):
+        # RandomForestClassifier as its own dedicated case, distinct from the
+        # regressor above.
+        src = (
+            "from sklearn.ensemble import RandomForestClassifier\n"
+            "clf = RandomForestClassifier()\n"
+            "clf.fit(flask_X, flask_y)\n"
+            "pred = clf.predict(bioreactor_X)\n"
+        )
+        self.assertIn("bioprocess · cross-scale-fit", tags(src))
+
+    def test_flask_web_framework_not_lab_flask_ok(self):
+        # The Flask web framework shares its name with a lab flask. A script
+        # that happens to import Flask (for a dashboard, say) alongside an
+        # unrelated bioreactor mention and an ML fit must not be told its
+        # model crosses scales -- it never mentioned a lab flask at all.
+        src = (
+            "from flask import Flask\n"
+            "app = Flask(__name__)\n"
+            "bioreactor_status = get_status()\n"
+            "from sklearn.linear_model import LinearRegression\n"
+            "model = LinearRegression()\n"
+            "model.fit(X, y)\n"
+        )
+        self.assertNotIn("bioprocess · cross-scale-fit", tags(src))
+
+
 class Driver(unittest.TestCase):
     def test_run_emits_contract(self):
         # end-to-end: temp file -> run() -> review contract shape.

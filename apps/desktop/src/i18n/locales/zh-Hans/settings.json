@@ -166,11 +166,14 @@
     "hint": "为代理提供额外工具（Model Context Protocol）——例如 Jupyter 或浏览器 MCP",
     "connectPrompt": "连接运行时以配置 MCP 服务器。",
     "openSource": "开源",
+    "official": "官方",
     "enterKeyFirstTitle": "请先输入 API 密钥",
     "settingUp": "正在设置…",
     "enable": "启用",
     "freeKeySuffix": "（免费密钥）",
+    "requiredSuffix": "（必填）",
     "getFreeKey": "获取免费密钥",
+    "learnMore": "了解更多",
     "jupyterLabel": "Jupyter",
     "jupyterDescription": "让代理驱动真实的笔记本 · 独立环境，内置 numpy·pandas·matplotlib，首次运行约 500 MB · 设置完成后，应用内的“运行”按钮也会使用它，因此您和代理共用同一个 Python 环境",
     "setUpAndEnable": "设置并启用",
@@ -224,6 +227,26 @@
     "hint": "一个只读的审阅智能体，检查已完成的工作是否可溯源，以及统计、单位与产物出处是否站得住。",
     "autoTitle": "每次改动文件后自动审阅",
     "autoHint": "每次改动会在后台多调用一轮模型；当前对话仍可继续使用，只读回合会跳过。"
+  },
+  "sync": {
+    "title": "对话同步",
+    "hint": "让你的对话出现在自己的多台机器上。指向一个云盘会同步的文件夹，每个对话会以单独文件镜像到那里。未选择文件夹前不启用。",
+    "hintOn": "已开启。每个对话会以单独文件镜像到下面的文件夹；指向同一文件夹的其他机器会自动取回。密钥永不同步。",
+    "folderTitle": "同步文件夹",
+    "folderNone": "未设置 —— 对话只留在这台机器上。",
+    "choose": "选择文件夹",
+    "change": "更改",
+    "stop": "关闭",
+    "nowTitle": "立即同步",
+    "nowHint": "每轮对话结束后会自动运行；这里用于需要立刻同步时。",
+    "now": "立即同步",
+    "running": "同步中…",
+    "done": "已同步。收到 {{imported}} 个，发出 {{exported}} 个。",
+    "folderSet": "同步文件夹已设置。",
+    "stopped": "已关闭对话同步。",
+    "unusable": "该文件夹不可用",
+    "last": "上次同步 {{when}} —— 收到 {{imported}} 个，发出 {{exported}} 个。",
+    "lastFailed": "上次同步失败：{{error}}"
   },
   "python": {
     "title": "本地 Python 内核",
@@ -377,7 +400,12 @@
     "connectPrompt": "输入桌面应用中的访问令牌:设置 → 远程访问。",
     "acpTitle": "外部编辑器（ACP）",
     "acpHint": "从 Zed、JetBrains、Neovim 或任何支持 Agent Client Protocol 的编辑器驱动本工作区。把下面这段 agent 配置粘贴到编辑器设置里；它通过上面的网关连接，权限以令牌为准。",
-    "acpNodeHint": "编辑器会用 Node 18+ 启动这个脚本。令牌通过环境变量传入，不出现在命令行里。"
+    "acpNodeHint": "编辑器会用 Node 18+ 启动这个脚本。令牌通过环境变量传入，不出现在命令行里。",
+    "port": "网关端口",
+    "portHint": "网关监听的端口。默认为 4098；可设置自定义端口用于防火墙规则或多实例部署。",
+    "portInvalid": "请输入有效的端口号（1-65535）。",
+    "portApply": "应用",
+    "portReset": "恢复默认"
   },
   "cli": {
     "title": "终端命令（osd）",
@@ -432,5 +460,29 @@
     "reveal": "显示输入内容",
     "hide": "隐藏输入内容",
     "privacy": "只发送给本机的 ssh。不会被保存、记录日志，也不会写入溯源记录。"
+  },
+  "notify": {
+    "title": "通知",
+    "hint": "在你没有盯着屏幕时，用系统通知提醒你已完成的事情。",
+    "turnCompleteTitle": "回合结束时通知我",
+    "turnCompleteHint": "回合结束时（成功、失败或中断）发送一条系统通知，这样你无需一直盯着状态圆点。"
+  },
+  "stall": {
+    "channelA": "静默检测",
+    "channelB": "重复检测",
+    "custom": "自定义…",
+    "enableHint": "只提醒，由你决定。合法长任务（训练、轮询）永远不会被中断。",
+    "enableTitle": "监视疑似卡住的回合",
+    "hint": "当回合疑似卡住时提醒你——静默过久，或反复执行相同调用——并提供\"继续等待 / 停止回合\"。绝不会自动中断任何操作。",
+    "hoursUnit": "小时",
+    "repeatCustomHint": "次数（2–100）",
+    "repeatLabel": "相同调用重复几次后提醒",
+    "repeatUnit": "次",
+    "silenceCustomHint": "分钟（1–1440）",
+    "silenceHint": "适合你希望 AI 长时间没动静时被提醒的场景。如果你经常跑会静默超过一小时的任务，请调大此值，或保持此检测关闭。",
+    "silenceLabel": "静默多久后提醒",
+    "silenceUnit": "分钟",
+    "title": "防卡死监视",
+    "webNote": "在浏览器中，提醒只出现在对话内，不弹系统通知。"
   }
 }

@@ -712,6 +712,75 @@ describe("custom-model context limits (#52: never pin a guessed window)", () => 
     });
   });
 
+  it("carries a described model's own metadata into the runtime's record", async () => {
+    // A caller that knows more than an id (a probe that reported the window, a
+    // user who filled the form) must be able to say so: the alternative is the
+    // runtime guessing, which is what #52 was about. Ids alone still work.
+    const { fetchImpl, patches } = mockGlobalConfig();
+    const client = new OpenCodeClient({ baseUrl: "http://127.0.0.1:1", fetchImpl });
+
+    await client.addCustomProvider("selfhosted", {
+      name: "Self-hosted",
+      npm: "@ai-sdk/openai-compatible",
+      baseURL: "https://llm.example.internal/v1",
+      models: [
+        {
+          id: "big",
+          context: 200_000,
+          reasoning: true,
+          modalities: { input: ["text", "image"] },
+          variants: { fast: { thinking: { type: "disabled" } } },
+        },
+        "small",
+      ],
+    });
+
+    const models = patches[patches.length - 1].provider.selfhosted.models!;
+    expect(models.big).toMatchObject({
+      name: "big",
+      limit: { context: 200_000, output: 0 },
+      reasoning: true,
+      modalities: { input: ["text", "image"] },
+      variants: { fast: { thinking: { type: "disabled" } } },
+    });
+    // Nothing is invented for a model given as a bare id.
+    expect(models.small).toEqual({ name: "small" });
+    // And no cost is written for either: a rate nobody supplied would be a
+    // guess, and a wrong one shows up as wrong money in the usage readout.
+    expect(models.big).not.toHaveProperty("cost");
+    expect(models.small).not.toHaveProperty("cost");
+  });
+
+  it("keeps what is already configured for a model it is re-saving", async () => {
+    // Re-adding an endpoint used to rebuild each model from scratch, dropping
+    // everything the record held beyond its limit — a hand-set cost or set of
+    // modalities disappeared the next time the form was submitted.
+    const { fetchImpl, patches } = mockGlobalConfig({
+      selfhosted: {
+        models: {
+          big: {
+            name: "big",
+            limit: { context: 200_000, output: 0 },
+            cost: { input: 1, output: 2 },
+          },
+        },
+      },
+    });
+    const client = new OpenCodeClient({ baseUrl: "http://127.0.0.1:1", fetchImpl });
+
+    await client.addCustomProvider("selfhosted", {
+      name: "Self-hosted",
+      npm: "@ai-sdk/openai-compatible",
+      baseURL: "https://llm.example.internal/v1",
+      models: ["big"],
+    });
+
+    expect(patches[patches.length - 1].provider.selfhosted.models!.big).toMatchObject({
+      limit: { context: 200_000, output: 0 },
+      cost: { input: 1, output: 2 },
+    });
+  });
+
   it("keeps a hand-set limit when no window is provided", async () => {
     const { fetchImpl, patches } = mockGlobalConfig({
       custom: { name: "Custom", models: { sol: { name: "sol", limit: { context: 64_000, output: 0 } } } },
@@ -819,5 +888,64 @@ describe("image attachments (#88: a vision model must see the figure, not its na
     ]);
     expect(bodies[1].parts).toEqual([{ type: "text", text: "no attachment" }]);
     client.close();
+  });
+});
+
+describe("manual compaction (#75)", () => {
+  /** Records every request, answers the summarize POST and the global config
+   *  read the model fallback needs. */
+  function mockSummarize(defaultModel?: string) {
+    const calls: Array<{ url: string; body?: unknown }> = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, body });
+      if (url.endsWith("/global/config")) {
+        return new Response(JSON.stringify(defaultModel ? { model: defaultModel } : {}), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    return { fetchImpl, calls };
+  }
+
+  it("summarizes with the session's own model, on the V1 endpoint", async () => {
+    // V1 `/session/:id/summarize`, not the V2 `/api/session/:id/compact` RPC,
+    // which answers 503 "Session compact is not available yet" on the pinned
+    // build. Measured against the bundled server, not assumed.
+    const { fetchImpl, calls } = mockSummarize();
+    const client = new OpenCodeClient({ baseUrl: "http://127.0.0.1:1", fetchImpl });
+
+    await client.compactSession("ses_1", "anthropic", "claude-sonnet-5");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://127.0.0.1:1/session/ses_1/summarize");
+    expect(calls[0]!.body).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-5" });
+  });
+
+  it("falls back to the default model when the session has not bound one", async () => {
+    // The endpoint REQUIRES both keys: an empty body comes back 400 "Missing
+    // key at [providerID]", so there is no server-side default to lean on.
+    const { fetchImpl, calls } = mockSummarize("openrouter/qwen/qwen3-coder");
+    const client = new OpenCodeClient({ baseUrl: "http://127.0.0.1:1", fetchImpl });
+
+    await client.compactSession("ses_1");
+
+    // Split on the FIRST slash: a model id may contain more of them.
+    expect(calls[calls.length - 1]!.body).toEqual({
+      providerID: "openrouter",
+      modelID: "qwen/qwen3-coder",
+    });
+  });
+
+  it("says what is missing when there is no model at all", async () => {
+    const { fetchImpl, calls } = mockSummarize();
+    const client = new OpenCodeClient({ baseUrl: "http://127.0.0.1:1", fetchImpl });
+
+    await expect(client.compactSession("ses_1")).rejects.toThrow(/model/i);
+    // And never posts a body the server would only reject.
+    expect(calls.some((c) => c.url.endsWith("/summarize"))).toBe(false);
   });
 });

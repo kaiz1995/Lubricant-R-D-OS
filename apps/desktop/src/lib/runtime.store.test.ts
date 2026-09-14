@@ -1,10 +1,24 @@
 // Workspace-per-session behavior: a fresh draft's first message creates a new
 // dated folder by default; an explicit switcher choice pins the destination.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  newDatedWorkspace: vi.fn(async (name: string) => `/ws/${name}`),
-  setWorkspace: vi.fn(async (path: string) => path),
+  /** Desktop or plain-browser runtime (drives the isTauri gates). */
+  isTauri: true,
+  /** The host's active workspace folder, as `active-workspace.txt` holds it.
+   *  `setWorkspace`/`newDatedWorkspace` move it and `workspacePath` reads it
+   *  back, because that is the contract the Rust side keeps: creating a dated
+   *  folder MAKES it active, and the connect that follows scopes the runtime to
+   *  whatever this then answers. A stub that always answered the same folder
+   *  could not tell a reconnect that landed in the right one from a reconnect
+   *  that did not — which is exactly the state that files a conversation apart
+   *  from the files it creates. */
+  activeWorkspace: "/ws/base",
+  newDatedWorkspace: vi.fn(async (name: string) => (mocks.activeWorkspace = `/ws/${name}`)),
+  setWorkspace: vi.fn(async (path: string) => (mocks.activeWorkspace = path)),
+  /** Stamps a session's id into the ACTIVE folder — so it must not run when the
+   *  app failed to move into the session's own folder. */
+  markSession: vi.fn(async () => {}),
   commitWorkspaceSnapshot: vi.fn(async () => false),
   kernelReset: vi.fn(async () => {}),
   /** Number of connect() attempts that fail before one succeeds. */
@@ -75,6 +89,7 @@ const mocks = vi.hoisted(() => ({
     return "http://127.0.0.1:1";
   }),
   notifyPermissionRequest: vi.fn(async () => true),
+  notifyTurnComplete: vi.fn(async () => true),
   startRuntime: vi.fn(async () => "http://127.0.0.1:1"),
   restartRuntime: vi.fn(async () => "http://127.0.0.1:2"),
   /** What Rust reports about sidecars that EXITED (#118): null = none have. */
@@ -86,21 +101,26 @@ const mocks = vi.hoisted(() => ({
   adoptWorkspaceSkills: vi.fn(async (_known: string[]) => ["agent-skill"]),
   /** Constructor options every OpenCodeClient was created with. */
   clientOpts: [] as Record<string, unknown>[],
+  /** compactSession(sid, providerID, modelID) — resolves; set failCompact to reject. */
+  compactSessionSpy: vi.fn(),
+  failCompact: false,
   closedDirs: [] as string[],
 }));
 
 vi.mock("./tauri", () => ({
-  isTauri: true,
+  get isTauri() {
+    return mocks.isTauri;
+  },
   logDebug: async () => {},
   detectTools: async () => [],
   startRuntime: mocks.startRuntime,
   restartRuntime: mocks.restartRuntime,
   runtimeFailure: mocks.runtimeFailure,
   takeConfigQuarantineNotice: mocks.takeConfigQuarantineNotice,
-  workspacePath: async () => "/ws/base",
+  workspacePath: async () => mocks.activeWorkspace,
   setWorkspace: mocks.setWorkspace,
   newDatedWorkspace: mocks.newDatedWorkspace,
-  markSession: async () => {},
+  markSession: mocks.markSession,
   commitWorkspaceSnapshot: mocks.commitWorkspaceSnapshot,
   getApprovalMode: async () => mocks.approvalMode,
   setApprovalMode: mocks.setApprovalMode,
@@ -112,6 +132,7 @@ vi.mock("./tauri", () => ({
 vi.mock("./kernel", () => ({ kernelReset: mocks.kernelReset }));
 vi.mock("./systemNotification", () => ({
   notifyPermissionRequest: mocks.notifyPermissionRequest,
+  notifyTurnComplete: mocks.notifyTurnComplete,
 }));
 vi.mock("@ai4s/sdk", () => {
   class OpenCodeClient {
@@ -152,6 +173,10 @@ vi.mock("@ai4s/sdk", () => {
     }
     async listSessions() {
       return mocks.sessionList;
+    }
+    async compactSession(sid: string, providerID?: string, modelID?: string) {
+      mocks.compactSessionSpy(sid, providerID, modelID);
+      if (mocks.failCompact) throw new Error("compact rejected");
     }
     async renameSession(id: string, title: string) {
       mocks.renameSessionSpy(id, title);
@@ -286,7 +311,7 @@ vi.mock("@ai4s/sdk", () => {
   return { OpenCodeClient, isApiStatus, DEFAULT_OPENCODE_URL: "http://127.0.0.1:4096" };
 });
 
-import type { ArtifactBlock } from "@ai4s/shared";
+import type { ArtifactBlock, ThreadBlock } from "@ai4s/shared";
 import { DRAFT_KEY, adoptSourceFolder, rootSessionOf, useRuntimeStore } from "./runtime";
 import { useSshStore } from "./ssh";
 import { useToastStore } from "./toast";
@@ -294,6 +319,7 @@ import { leaves, makeLeaf, useLayoutStore } from "./layout";
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mocks.activeWorkspace = "/ws/base";
   mocks.failConnects = 0;
   mocks.failCreates = 0;
   mocks.failShell = false;
@@ -921,6 +947,48 @@ describe("per-session workspace folders", () => {
       kind: "status-line",
       tone: "error",
     });
+  });
+
+  it("refuses to create a session in a folder the runtime did not actually move to", async () => {
+    // The dated folder is created but does NOT become active — so the reconnect
+    // scopes the runtime to the old folder and `createSession` would file the
+    // conversation there while its notebooks and figures are written in the new
+    // one. A session on the reporter's machine is in exactly that state: its
+    // notebook is on disk, and the conversation that made it answers "file not
+    // found", because the two folders disagree and nothing said so.
+    mocks.newDatedWorkspace.mockImplementationOnce(async (name: string) => `/ws/${name}`);
+
+    const id = await useRuntimeStore.getState().sendPrompt("hi");
+
+    expect(id).toBe(null);
+    expect(mocks.createSessionSpy).not.toHaveBeenCalled();
+    const s = useRuntimeStore.getState();
+    expect(s.sending).toBe(false);
+    expect(s.threads[DRAFT_KEY].blocks.slice(-1)[0]).toMatchObject({
+      kind: "status-line",
+      tone: "error",
+    });
+  });
+
+  it("says so when it cannot follow a session into its own folder, and stamps nothing", async () => {
+    // The failure used to be swallowed: the app stayed on the previous folder,
+    // reconnected the stream to it, stamped THIS session's id into it, and then
+    // resolved every file the conversation names there — so the session's own
+    // notebook came back "file not found" while the UI showed it as open.
+    useRuntimeStore.setState({
+      workspace: "/ws/base",
+      sessions: [{ id: "ses_elsewhere", title: "t", updated: 1, directory: "/ws/gone" }],
+    });
+    mocks.setWorkspace.mockRejectedValueOnce(new Error("No such file or directory"));
+
+    await useRuntimeStore.getState().openSession("ses_elsewhere");
+
+    const error = useRuntimeStore.getState().error ?? "";
+    expect(error).toContain("/ws/gone");
+    expect(error).toContain("No such file or directory");
+    expect(mocks.markSession).not.toHaveBeenCalled();
+    // The folder never moved, so the app must still be on the one it was on.
+    expect(useRuntimeStore.getState().workspace).toBe("/ws/base");
   });
 
   it("marks a deliberate switch as `switching` for its whole duration", async () => {
@@ -2745,6 +2813,174 @@ describe("auto-review on turn completion", () => {
   });
 });
 
+describe("turn-completion notification", () => {
+  beforeEach(async () => {
+    useRuntimeStore.getState().disconnect();
+    await useRuntimeStore.getState().connect();
+    mocks.notifyTurnComplete.mockClear();
+    mocks.isTauri = true;
+  });
+
+  const withNotifyOn = (extra: Record<string, unknown> = {}) => {
+    mocks.messages = [
+      { role: "user", id: "msg_user", completed: 1, parts: [{ type: "text", text: "do it" }] },
+      {
+        role: "assistant",
+        id: "msg_checkpoint",
+        completed: 2,
+        parts: [{ type: "text", text: "done" }],
+      },
+    ];
+    // listSessions feeds refreshSessions, which sendPrompt triggers — set it so
+    // the session keeps its title instead of being wiped to an empty list.
+    mocks.sessionList = [{ id: "ses_new", title: "My session" }];
+    useRuntimeStore.setState({
+      turnNotify: true,
+      sessions: [{ id: "ses_new", title: "My session" }],
+      ...extra,
+    } as never);
+  };
+
+  it("notifies 'complete' when an ordinary turn goes idle", async () => {
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn complete", body: "My session" }),
+    );
+  });
+
+  it("notifies 'failed' when the turn ended in an error", async () => {
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "error", sessionId: "ses_new", message: "model unavailable" });
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn failed", body: "My session" }),
+    );
+  });
+
+  it("notifies 'interrupted' when the user stopped the turn", async () => {
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.abortTrailing = [{ type: "session.idle", sessionId: "ses_new" }];
+    await useRuntimeStore.getState().interrupt("ses_new");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn interrupted", body: "My session" }),
+    );
+  });
+
+  it("stays silent when the setting is off", async () => {
+    mocks.messages = [
+      { role: "user", id: "msg_user", completed: 1, parts: [{ type: "text", text: "do it" }] },
+    ];
+    useRuntimeStore.setState({
+      turnNotify: false,
+      sessions: [{ id: "ses_new", title: "My session" }],
+    } as never);
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    expect(mocks.notifyTurnComplete).not.toHaveBeenCalled();
+  });
+
+  it("stays silent outside the desktop app (gateway web / browser dev)", async () => {
+    // Desktop only: the Settings row is hidden when not in Tauri, and the
+    // notification plugin degrades to the browser Notification API there — so
+    // even a manually set localStorage flag must not fire browser notifications
+    // that the desktop-only contract never promised.
+    mocks.isTauri = false;
+    try {
+      withNotifyOn();
+      await useRuntimeStore.getState().sendPrompt("hi");
+      mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mocks.notifyTurnComplete).not.toHaveBeenCalled();
+    } finally {
+      mocks.isTauri = true;
+    }
+  });
+
+  it("still notifies when auto-review is on and the turn takes that path", async () => {
+    // Auto-review users hit an early return inside onTurnIdle; the notification
+    // must fire BEFORE that return (same rule as scheduleConversationSync).
+    withNotifyOn({
+      autoReview: true,
+      agents: [
+        { name: "build", description: "", mode: "primary" as const },
+        { name: "reviewer", description: "", mode: "all" as const },
+      ],
+    });
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({
+      type: "tool.updated",
+      sessionId: "ses_new",
+      callId: "c-ses_new",
+      tool: "write",
+      status: "success",
+      input: { filePath: "analysis.py" },
+    });
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn complete", body: "My session" }),
+    );
+  });
+
+  it("does not notify for a subagent's settlement", async () => {
+    withNotifyOn({ sessionParents: { ses_new: "ses_parent" } });
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    expect(mocks.notifyTurnComplete).not.toHaveBeenCalled();
+  });
+
+  it("notifies exactly once when an abort streams several trailing idles", async () => {
+    // A real user abort answers with its own SSE burst: an "aborted" error and
+    // MORE than one session.idle. Each trailing idle drives onTurnIdle, so the
+    // notification used to fire once per idle — several "Turn interrupted"
+    // notices for one stop.
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.abortTrailing = [
+      { type: "error", sessionId: "ses_new", message: "The message was aborted" },
+      { type: "session.idle", sessionId: "ses_new" },
+      { type: "session.idle", sessionId: "ses_new" },
+    ];
+    await useRuntimeStore.getState().interrupt("ses_new");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledTimes(1);
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn interrupted", body: "My session" }),
+    );
+  });
+
+  it("notifies exactly once when a session error is followed by its idle", async () => {
+    // A failed turn streams an error (which ends it and drives onTurnIdle)
+    // and THEN its session.idle — two onTurnIdle calls for one failure. Only
+    // the first may notify: one "Turn failed", not two.
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "error", sessionId: "ses_new", message: "model unavailable" });
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledTimes(1);
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Turn failed", body: "My session" }),
+    );
+  });
+
+  it("notifies again for the NEXT turn of the same session", async () => {
+    // The once-per-settle guard must clear when the next turn starts, or a
+    // session would go permanently silent after its first notification.
+    withNotifyOn();
+    await useRuntimeStore.getState().sendPrompt("hi");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    await useRuntimeStore.getState().sendPrompt("again");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.notifyTurnComplete).toHaveBeenCalledTimes(2);
+  });
+});
+
 // #96: an agent carrying its own configured model must actually get to use it.
 // The send used to pass an explicit per-turn model unconditionally, which
 // overrode exactly that setting — so the `build` row did nothing to the
@@ -2878,3 +3114,385 @@ describe("background pane streams", () => {
     expect(mocks.closedDirs).toContain("/ws/a");
   });
 });
+
+describe("manual context compaction", () => {
+  beforeEach(async () => {
+    mocks.compactSessionSpy.mockClear();
+    mocks.failCompact = false;
+    useRuntimeStore.getState().disconnect();
+    await useRuntimeStore.getState().connect();
+    useRuntimeStore.setState({
+      sessions: [
+        { id: "ses_1", title: "s", model: { providerID: "deepseek", id: "deepseek-v4-flash" } },
+      ],
+    } as never);
+  });
+
+  it("summarizes with the session's own provider/model via the V1 endpoint", async () => {
+    await useRuntimeStore.getState().compactContext("ses_1");
+    expect(mocks.compactSessionSpy).toHaveBeenCalledWith(
+      "ses_1",
+      "deepseek",
+      "deepseek-v4-flash",
+    );
+    // The spinner is up while the summary runs (cleared by the compacted seam).
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBe(true);
+  });
+
+  it("clears the spinner and reports failure when the endpoint rejects", async () => {
+    mocks.failCompact = true;
+    await useRuntimeStore.getState().compactContext("ses_1");
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBeUndefined();
+    expect(useRuntimeStore.getState().error).toContain("compact rejected");
+  });
+
+  it("refuses to compact while a turn is streaming", async () => {
+    useRuntimeStore.setState({ runningSessions: { ses_1: true } } as never);
+    await useRuntimeStore.getState().compactContext("ses_1");
+    expect(mocks.compactSessionSpy).not.toHaveBeenCalled();
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBeUndefined();
+  });
+
+  it("clears the flag on the compacted seam and on idle (safety net)", async () => {
+    await useRuntimeStore.getState().compactContext("ses_1");
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBe(true);
+    mocks.fireEvent({ type: "session.compacted", sessionId: "ses_1" });
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBeUndefined();
+
+    await useRuntimeStore.getState().compactContext("ses_1");
+    mocks.fireEvent({ type: "session.idle", sessionId: "ses_1" });
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBeUndefined();
+  });
+
+  it("compacts two sessions concurrently without cross-talk", async () => {
+    useRuntimeStore.setState({
+      sessions: [
+        { id: "ses_1", title: "a", model: { providerID: "deepseek", id: "deepseek-v4-flash" } },
+        { id: "ses_2", title: "b", model: { providerID: "anthropic", id: "claude-sonnet-4" } },
+      ],
+    } as never);
+    await Promise.all([
+      useRuntimeStore.getState().compactContext("ses_1"),
+      useRuntimeStore.getState().compactContext("ses_2"),
+    ]);
+    expect(mocks.compactSessionSpy).toHaveBeenCalledWith("ses_1", "deepseek", "deepseek-v4-flash");
+    expect(mocks.compactSessionSpy).toHaveBeenCalledWith("ses_2", "anthropic", "claude-sonnet-4");
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBe(true);
+    expect(useRuntimeStore.getState().compactingSessions["ses_2"]).toBe(true);
+    // One session's seam clears only its own flag.
+    mocks.fireEvent({ type: "session.compacted", sessionId: "ses_1" });
+    expect(useRuntimeStore.getState().compactingSessions["ses_1"]).toBeUndefined();
+    expect(useRuntimeStore.getState().compactingSessions["ses_2"]).toBe(true);
+  });
+});
+
+// ---- Stall guard (#121): the runtime integration — events in, warnings out.
+// The pure detection logic lives in stallGuard.test.ts; these pin the STORE
+// wiring: a tripped channel lands a status line in the session's thread (with
+// Keep waiting / Stop actions) and fires the desktop notification path, and a
+// settled turn clears it. The guard is off by default; each test opts in via
+// setStallGuard and ends its turn with session.idle so the module-level ledger
+// does not leak into the next test.
+describe("stall guard integration", () => {
+  const settledTool = (callId: string, command: string, output: string) =>
+    mocks.fireEvent({
+      type: "tool.updated",
+      sessionId: "ses_new",
+      callId,
+      tool: "bash",
+      input: { command },
+      output,
+      status: "success",
+    });
+
+  const endTurn = () => mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+
+  /** The warning line is appended on a microtask (after the triggering event's
+   *  own fold), so a synchronous read right after fireEvent misses it. */
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  // The stall guard keeps MODULE-LEVEL state (the ledger, warned keys, and —
+  // new with Channel A — a silence timer). A test that leaves the guard on,
+  // a turn running, or a fake-timer interval behind would bleed into the next
+  // one (observed: the Channel A timer test only passed in isolation). Every
+  // test cleans up here: guard off (which also stops the timer), any live turn
+  // settled, and real timers restored.
+  afterEach(async () => {
+    vi.useRealTimers();
+    useRuntimeStore.getState().setStallGuard({ enabled: false });
+    if (useRuntimeStore.getState().runningSessions["ses_new"]) endTurn();
+    await flush();
+  });
+
+  it("raises a Channel B warning after K identical calls and clears it on idle", async () => {
+    useRuntimeStore.getState().setStallGuard({ enabled: true, repeatThreshold: 3 });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    settledTool("c1", "grep x", "3");
+    settledTool("c2", "grep x", "3");
+    settledTool("c3", "grep x", "3");
+    await flush();
+    const s = useRuntimeStore.getState();
+    const last = s.threads["ses_new"].blocks.slice(-1)[0];
+    expect(last).toMatchObject({ kind: "status-line", stall: { key: expect.stringContaining("B:") } });
+    expect(mocks.notifyTurnComplete).toHaveBeenCalled();
+    // Idle ends the turn: the warning line is stale and goes away.
+    endTurn();
+    await flush();
+    const after = useRuntimeStore.getState().threads["ses_new"].blocks;
+    expect(after.some((b) => b.kind === "status-line" && b.stall)).toBe(false);
+  });
+
+  it("stays silent when the guard is off, even with 60 identical calls", async () => {
+    useRuntimeStore.getState().setStallGuard({ enabled: false, repeatThreshold: 3 });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    for (let i = 0; i < 60; i++) settledTool(`c${i}`, "grep x", "3");
+    await flush();
+    const s = useRuntimeStore.getState();
+    expect(s.threads["ses_new"].blocks.some((b) => b.kind === "status-line" && b.stall)).toBe(false);
+    endTurn();
+  });
+
+  it("does NOT warn when the model emitted text between identical calls", async () => {
+    useRuntimeStore.getState().setStallGuard({ enabled: true, repeatThreshold: 3 });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    settledTool("c1", "grep x", "3");
+    mocks.fireEvent({ type: "text.updated", sessionId: "ses_new", text: "Let me check again" });
+    settledTool("c2", "grep x", "3");
+    settledTool("c3", "grep x", "3");
+    await flush();
+    const s = useRuntimeStore.getState();
+    expect(s.threads["ses_new"].blocks.some((b) => b.kind === "status-line" && b.stall)).toBe(false);
+    endTurn();
+  });
+
+  it("only warns once per trip until the ledger moves on", async () => {
+    useRuntimeStore.getState().setStallGuard({ enabled: true, repeatThreshold: 3 });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    settledTool("c1", "grep x", "3");
+    settledTool("c2", "grep x", "3");
+    settledTool("c3", "grep x", "3"); // trip
+    await flush();
+    const before = useRuntimeStore.getState().threads["ses_new"].blocks.filter(
+      (b) => b.kind === "status-line" && b.stall,
+    ).length;
+    expect(before).toBe(1);
+    settledTool("c4", "grep x", "3"); // 4th identical — still one warning
+    await flush();
+    const after = useRuntimeStore.getState().threads["ses_new"].blocks.filter(
+      (b) => b.kind === "status-line" && b.stall,
+    ).length;
+    expect(after).toBe(1);
+    endTurn();
+  });
+
+  it("exposes the stall actions: stop interrupts, keep-waiting dismisses", async () => {
+    useRuntimeStore.getState().setStallGuard({ enabled: true, repeatThreshold: 3 });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    settledTool("c1", "grep x", "3");
+    settledTool("c2", "grep x", "3");
+    settledTool("c3", "grep x", "3");
+    await flush();
+    const s = useRuntimeStore.getState();
+    const stallBlock = s.threads["ses_new"].blocks.find(
+      (b): b is Extract<ThreadBlock, { kind: "status-line" }> =>
+        b.kind === "status-line" && "stall" in b && !!b.stall,
+    );
+    expect(stallBlock).toBeDefined();
+    const key = stallBlock!.stall!.key;
+    // Keep waiting removes the line and re-arms.
+    s.stallAction("ses_new", key, "keep-waiting");
+    await flush();
+    expect(
+      useRuntimeStore.getState().threads["ses_new"].blocks.some(
+        (b) => b.kind === "status-line" && b.stall?.key === key,
+      ),
+    ).toBe(false);
+    // Stop interrupts the session (the mock abort answers true).
+    s.stallAction("ses_new", key, "stop");
+    expect(mocks.abortSession).toHaveBeenCalled();
+  });
+
+  it("Channel A fires on the silence timer after N minutes with no events", async () => {
+    // Channel A is clock-driven (silence is the absence of events): a running
+    // turn that never emits again must still be noticed. Fake timers so the
+    // 30 s silence tick and the 10-minute threshold can be advanced without
+    // waiting. The timer is armed inside setStallGuard / sendPrompt, so both
+    // must run under fake time.
+    vi.useFakeTimers();
+    try {
+      useRuntimeStore.getState().setStallGuard({
+        enabled: true,
+        channelAEnabled: true,
+        channelBEnabled: false,
+        silenceMinutes: 10,
+      });
+      const p = useRuntimeStore.getState().sendPrompt("run it");
+      await vi.advanceTimersByTimeAsync(0); // let the send's microtasks settle
+      await p;
+      // Sanity: the turn IS running (else the timer never armed / has nothing
+      // to watch).
+      expect(useRuntimeStore.getState().runningSessions["ses_new"]).toBe(true);
+      // No events arrive — the turn is silent. Advance past the threshold plus
+      // one silence-timer tick (30 s cadence).
+      await vi.advanceTimersByTimeAsync(10 * 60_000 + 30_000);
+      const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+      const stall = blocks.find((b) => b.kind === "status-line" && "stall" in b);
+      expect(stall).toBeDefined();
+      expect(mocks.notifyTurnComplete).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      // Reset config so the next test starts clean (the master switch off).
+      useRuntimeStore.getState().setStallGuard({ enabled: false });
+      endTurn();
+    }
+  });
+
+  it("stops the silence timer when the turn ends and when the guard goes off", async () => {
+    // A 30 s interval in a desktop app that stays open for days is worth
+    // pinning: it must exist only while there is a running turn AND Channel A
+    // is on, and take itself down the moment either stops being true.
+    vi.useFakeTimers();
+    try {
+      expect(vi.getTimerCount()).toBe(0);
+      useRuntimeStore.getState().setStallGuard({
+        enabled: true,
+        channelAEnabled: true,
+        channelBEnabled: false,
+        silenceMinutes: 10,
+      });
+      const p = useRuntimeStore.getState().sendPrompt("run it");
+      await vi.advanceTimersByTimeAsync(0);
+      await p;
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      // The turn settles: nothing is left to watch.
+      endTurn();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(vi.getTimerCount()).toBe(0);
+
+      // And a turn running with the guard switched off mid-flight stops too.
+      const p2 = useRuntimeStore.getState().sendPrompt("again");
+      await vi.advanceTimersByTimeAsync(0);
+      await p2;
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      useRuntimeStore.getState().setStallGuard({ enabled: false });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+      useRuntimeStore.getState().setStallGuard({ enabled: false });
+      endTurn();
+    }
+  });
+
+  it("does NOT fire Channel A when only Channel B is enabled", async () => {
+    useRuntimeStore.getState().setStallGuard({
+      enabled: true,
+      channelAEnabled: false,
+      channelBEnabled: true,
+      repeatThreshold: 3,
+      silenceMinutes: 1,
+    });
+    await useRuntimeStore.getState().sendPrompt("run it");
+    // Identical calls trip B...
+    settledTool("c1", "grep x", "3");
+    settledTool("c2", "grep x", "3");
+    settledTool("c3", "grep x", "3");
+    await flush();
+    const s = useRuntimeStore.getState();
+    const stallB = s.threads["ses_new"].blocks.filter(
+      (b) => b.kind === "status-line" && "stall" in b,
+    );
+    // ...and B DID warn (only B is on), but the warning key is a B key.
+    expect(stallB).toHaveLength(1);
+    expect(stallB[0]).toMatchObject({ stall: { key: expect.stringContaining("B:") } });
+    endTurn();
+  });
+
+  it("clamps hostile thresholds so they cannot break the feature", () => {
+    const set = useRuntimeStore.getState().setStallGuard;
+    // A hostile/zero/negative/NaN/huge value must land inside the safe bounds,
+    // not disable the guard silently or make it fire on everything.
+    set({ silenceMinutes: 0 });
+    expect(useRuntimeStore.getState().stallGuard.silenceMinutes).toBe(1);
+    set({ silenceMinutes: -5 });
+    expect(useRuntimeStore.getState().stallGuard.silenceMinutes).toBe(1);
+    set({ silenceMinutes: 999_999 });
+    expect(useRuntimeStore.getState().stallGuard.silenceMinutes).toBe(1440);
+    set({ repeatThreshold: 1 });
+    expect(useRuntimeStore.getState().stallGuard.repeatThreshold).toBe(2);
+    set({ repeatThreshold: 10_000 });
+    expect(useRuntimeStore.getState().stallGuard.repeatThreshold).toBe(100);
+    // NaN/undefined patch fields are refused (keep the previous value).
+    const before = useRuntimeStore.getState().stallGuard.silenceMinutes;
+    set({ silenceMinutes: Number.NaN });
+    expect(useRuntimeStore.getState().stallGuard.silenceMinutes).toBe(before);
+    // Restore defaults for later tests.
+    set({ silenceMinutes: 10, repeatThreshold: 3 });
+  });
+
+  it("a custom silence threshold actually drives Channel A (not just the default)", async () => {
+    // Custom 1 minute: a turn silent for 2 minutes trips; the default 10 would
+    // not have. Proves the stored value is what the guard reads. The silence
+    // timer must be created under fake time so advance can drive it.
+    vi.useFakeTimers();
+    try {
+      useRuntimeStore.getState().setStallGuard({
+        enabled: true,
+        channelAEnabled: true,
+        channelBEnabled: false,
+        silenceMinutes: 1,
+      });
+      const p = useRuntimeStore.getState().sendPrompt("run it");
+      await vi.advanceTimersByTimeAsync(0);
+      await p;
+      expect(useRuntimeStore.getState().runningSessions["ses_new"]).toBe(true);
+      // 1-minute threshold: 1 min + one 30 s tick is enough.
+      await vi.advanceTimersByTimeAsync(60_000 + 30_000);
+      const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+      expect(blocks.some((b) => b.kind === "status-line" && "stall" in b)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keep-waiting restarts the clocks — no re-warning on the next tick/call", async () => {
+    vi.useFakeTimers();
+    try {
+      useRuntimeStore.getState().setStallGuard({
+        enabled: true,
+        channelAEnabled: true,
+        channelBEnabled: false,
+        silenceMinutes: 1,
+      });
+      const p = useRuntimeStore.getState().sendPrompt("run it");
+      await vi.advanceTimersByTimeAsync(0);
+      await p;
+      // First silence warning.
+      await vi.advanceTimersByTimeAsync(60_000 + 30_000);
+      const s0 = useRuntimeStore.getState();
+      const warn = s0.threads["ses_new"].blocks.find(
+        (b): b is Extract<ThreadBlock, { kind: "status-line" }> =>
+          b.kind === "status-line" && "stall" in b && !!b.stall,
+      );
+      expect(warn).toBeDefined();
+      const key = warn!.stall!.key;
+      // User clicks Keep waiting.
+      s0.stallAction("ses_new", key, "keep-waiting");
+      // The next silence tick must NOT immediately re-warn (clock restarted).
+      await vi.advanceTimersByTimeAsync(30_000);
+      const after = useRuntimeStore.getState().threads["ses_new"].blocks;
+      expect(after.some((b) => b.kind === "status-line" && "stall" in b)).toBe(false);
+      // A full fresh silence period after the click DOES warn again.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(
+        useRuntimeStore.getState().threads["ses_new"].blocks.some(
+          (b) => b.kind === "status-line" && "stall" in b,
+        ),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+

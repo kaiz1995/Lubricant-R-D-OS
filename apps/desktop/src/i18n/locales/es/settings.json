@@ -167,11 +167,14 @@
     "hint": "Herramientas adicionales para el agente (Model Context Protocol) — p. ej., un MCP de Jupyter o del navegador",
     "connectPrompt": "Conecta el entorno de ejecución para configurar servidores MCP.",
     "openSource": "código abierto",
+    "official": "oficial",
     "enterKeyFirstTitle": "Introduce primero la clave de API",
     "settingUp": "Configurando…",
     "enable": "Habilitar",
     "freeKeySuffix": "(clave gratuita)",
+    "requiredSuffix": "(obligatorio)",
     "getFreeKey": "Obtener una clave gratuita",
+    "learnMore": "Más información",
     "jupyterLabel": "Jupyter",
     "jupyterDescription": "permite que el agente controle cuadernos reales · entorno aislado con numpy·pandas·matplotlib, ~500 MB en la primera ejecución · una vez configurado, el botón Ejecutar de la app también lo usa, así que tú y el agente comparten un mismo Python",
     "setUpAndEnable": "Configurar y habilitar",
@@ -225,6 +228,26 @@
     "hint": "Un agente revisor de solo lectura que audita el trabajo terminado: trazabilidad, estadística, unidades y procedencia.",
     "autoTitle": "Revisar tras cada turno que cambie archivos",
     "autoHint": "Ejecuta un turno de modelo adicional en segundo plano por cambio. La conversación sigue disponible; se omiten los turnos de solo lectura."
+  },
+  "sync": {
+    "title": "Sincronización de conversaciones",
+    "hint": "Ten tus conversaciones en varias de tus propias máquinas. Apunta esto a una carpeta que sincronice tu servicio en la nube; cada conversación se refleja allí como un archivo propio. Desactivado hasta que elijas una carpeta.",
+    "hintOn": "Activado. Cada conversación se refleja en la carpeta de abajo como un archivo propio; otras máquinas que apunten a la misma carpeta las recogen. Los secretos nunca se sincronizan.",
+    "folderTitle": "Carpeta de sincronización",
+    "folderNone": "Sin definir: las conversaciones se quedan en esta máquina.",
+    "choose": "Elegir carpeta",
+    "change": "Cambiar",
+    "stop": "Desactivar",
+    "nowTitle": "Sincronizar ahora",
+    "nowHint": "Se ejecuta solo tras cada turno; esto es para cuando lo quieras de inmediato.",
+    "now": "Sincronizar",
+    "running": "Sincronizando…",
+    "done": "Sincronizado. {{imported}} recibidas, {{exported}} enviadas.",
+    "folderSet": "Carpeta de sincronización definida.",
+    "stopped": "Sincronización desactivada.",
+    "unusable": "Esa carpeta no se puede usar",
+    "last": "Última sincronización {{when}}: {{imported}} recibidas, {{exported}} enviadas.",
+    "lastFailed": "La última sincronización falló: {{error}}"
   },
   "python": {
     "title": "Kernel local de Python",
@@ -379,7 +402,12 @@
     "connectPrompt": "Introduce el token de acceso de la app de escritorio → Ajustes → Acceso remoto.",
     "acpTitle": "Editores externos (ACP)",
     "acpHint": "Controla este espacio de trabajo desde Zed, JetBrains, Neovim o cualquier editor que hable el Agent Client Protocol. Pega esta entrada de agente en la configuración del editor; se conecta por la pasarela de arriba, con el acceso que permita el token.",
-    "acpNodeHint": "El editor lanza este script con Node 18+. El token se pasa por el entorno, no en la línea de comandos."
+    "acpNodeHint": "El editor lanza este script con Node 18+. El token se pasa por el entorno, no en la línea de comandos.",
+    "port": "Puerto de la pasarela",
+    "portHint": "El puerto en el que escucha la pasarela. Por defecto es 4098; configure un puerto personalizado para reglas de firewall o configuraciones multi-instancia.",
+    "portInvalid": "Introduzca un número de puerto válido (1-65535).",
+    "portApply": "Aplicar",
+    "portReset": "Restablecer predeterminado"
   },
   "cli": {
     "title": "Comando de terminal (osd)",
@@ -434,5 +462,29 @@
     "reveal": "Mostrar lo escrito",
     "hide": "Ocultar lo escrito",
     "privacy": "Solo se envía al ssh de este equipo. Nunca se guarda, ni se registra, ni entra en la procedencia."
+  },
+  "notify": {
+    "title": "Notificaciones",
+    "hint": "Notificaciones nativas del sistema para cosas que terminan mientras no estás mirando.",
+    "turnCompleteTitle": "Notificar cuando termine un turno",
+    "turnCompleteHint": "Envía una notificación del sistema cuando un turno termina — completado, fallido o interrumpido — para que no tengas que vigilar el punto de estado."
+  },
+  "stall": {
+    "channelA": "Comprobación de silencio",
+    "channelB": "Comprobación de repetición",
+    "custom": "Personalizado…",
+    "enableHint": "Solo avisa — tú decides. Una tarea larga legítima (una sesión de entrenamiento, una consulta periódica) nunca se interrumpe.",
+    "enableTitle": "Vigilar turnos bloqueados",
+    "hint": "Detecta un turno que parece bloqueado — demasiado tiempo en silencio, o repitiendo la misma llamada una y otra vez — y ofrece \"Seguir esperando / Detener turno\". Nunca se interrumpe nada automáticamente.",
+    "hoursUnit": "h",
+    "repeatCustomHint": "Veces (2–100)",
+    "repeatLabel": "Avisar cuando la misma llamada se repita",
+    "repeatUnit": "veces",
+    "silenceCustomHint": "Minutos (1–1440)",
+    "silenceHint": "Para cuando quieras que te avise si el agente se queda en silencio. Si sueles ejecutar tareas que permanecen en silencio más de una hora, súbelo o deja esta comprobación desactivada.",
+    "silenceLabel": "Avisar tras silencio de",
+    "silenceUnit": "min",
+    "title": "Guardia anti-bloqueo",
+    "webNote": "En el navegador, el aviso aparece solo en la conversación — sin notificación del sistema."
   }
 }

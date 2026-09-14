@@ -3,13 +3,13 @@
 ```yaml
 upstream_repository: https://github.com/ai4s-research/open-science.git
 upstream_branch: master
-upstream_version: 0.5.0
-upstream_commit: a3a1a02e9a0bfc258f6f2671c22f823374c38173
-latest_fetched_upstream_commit: b51714d007834053c7d0c0dbd1794478ebde931e
+upstream_version: 0.5.2
+upstream_commit: cea3c3a504285810243e8bb54b9d5c41496a84eb
+latest_fetched_upstream_commit: cea3c3a504285810243e8bb54b9d5c41496a84eb
 baseline_ahead: 0
-baseline_behind: 2
-last_sync: 2026-08-20
-sync_status: UPDATE_AVAILABLE
+baseline_behind: 0
+last_sync: 2026-09-14
+sync_status: SYNCED
 
 downstream_repository: https://github.com/kaiz1995/Lubricant-R-D-OS.git
 downstream_branch: dev/lubricant-rd-v0
