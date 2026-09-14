@@ -129,6 +129,10 @@
       "scanning": "正在读取工作区…",
       "chipTitle": "这段会话会作为引用提供给智能体",
       "removeAria": "移除对「{{title}}」的引用"
+    },
+    "compact": {
+      "aria": "压缩上下文",
+      "title": "把较早的对话总结掉，让下一条回复在受控的上下文上运行"
     }
   },
   "localCommand": {
@@ -424,5 +428,13 @@
     "continueIn": "沿用 {{name}}",
     "newFolder": "新建文件夹",
     "chooseOther": "选择其他文件夹…"
+  },
+  "stall": {
+    "silentTitle": "回合可能已卡住",
+    "silentLine": "此回合已静默 {{minutes}} 分钟。仍在运行，还是卡住了？",
+    "repeatTitle": "回合可能在循环",
+    "repeatLine": "此回合已连续 {{count}} 次执行相同调用且结果相同。仍在工作，还是在循环？",
+    "keepWaiting": "继续等待",
+    "stopTurn": "停止回合"
   }
 }

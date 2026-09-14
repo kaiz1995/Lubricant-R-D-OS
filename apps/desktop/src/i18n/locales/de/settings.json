@@ -167,11 +167,14 @@
     "hint": "Zusätzliche Werkzeuge für den Agenten (Model Context Protocol) — z. B. ein Jupyter- oder Browser-MCP",
     "connectPrompt": "Verbinden Sie die Runtime, um MCP-Server zu konfigurieren.",
     "openSource": "Open Source",
+    "official": "offiziell",
     "enterKeyFirstTitle": "Zuerst den API-Schlüssel eingeben",
     "settingUp": "Wird eingerichtet…",
     "enable": "Aktivieren",
     "freeKeySuffix": "(kostenloser Schlüssel)",
+    "requiredSuffix": "(erforderlich)",
     "getFreeKey": "Kostenlosen Schlüssel anfordern",
+    "learnMore": "Mehr erfahren",
     "jupyterLabel": "Jupyter",
     "jupyterDescription": "ermöglicht dem Agenten die Steuerung echter Notebooks · isolierte Umgebung mit numpy·pandas·matplotlib, ~500 MB beim ersten Ausführen · nach der Einrichtung nutzt auch die „Ausführen“-Schaltfläche der App sie, sodass Sie und der Agent sich ein Python teilen",
     "setUpAndEnable": "Einrichten & aktivieren",
@@ -225,6 +228,26 @@
     "hint": "Ein rein lesender Prüfagent, der fertige Arbeit auf Nachvollziehbarkeit, Statistik, Einheiten und Herkunft prüft.",
     "autoTitle": "Nach jedem Zug prüfen, der Dateien ändert",
     "autoHint": "Führt pro Änderung einen zusätzlichen Modellzug im Hintergrund aus. Die Unterhaltung bleibt nutzbar; rein lesende Züge werden übersprungen."
+  },
+  "sync": {
+    "title": "Unterhaltungen synchronisieren",
+    "hint": "Halte deine Unterhaltungen auf mehreren eigenen Rechnern. Zeige hier auf einen Ordner, den dein Cloud-Dienst synchronisiert; jede Unterhaltung wird dort als eigene Datei gespiegelt. Aus, bis du einen Ordner wählst.",
+    "hintOn": "An. Jede Unterhaltung wird als eigene Datei in den Ordner unten gespiegelt; andere Rechner, die auf denselben Ordner zeigen, holen sie sich. Geheimnisse werden nie synchronisiert.",
+    "folderTitle": "Synchronisationsordner",
+    "folderNone": "Nicht gesetzt — Unterhaltungen bleiben auf diesem Rechner.",
+    "choose": "Ordner wählen",
+    "change": "Ändern",
+    "stop": "Ausschalten",
+    "nowTitle": "Jetzt synchronisieren",
+    "nowHint": "Läuft nach jedem Zug von selbst; dies ist für den Fall, dass es sofort sein soll.",
+    "now": "Jetzt synchronisieren",
+    "running": "Synchronisiere…",
+    "done": "Synchronisiert. {{imported}} empfangen, {{exported}} gesendet.",
+    "folderSet": "Synchronisationsordner gesetzt.",
+    "stopped": "Synchronisation ausgeschaltet.",
+    "unusable": "Dieser Ordner ist nicht verwendbar",
+    "last": "Letzte Synchronisation {{when}} — {{imported}} empfangen, {{exported}} gesendet.",
+    "lastFailed": "Letzte Synchronisation fehlgeschlagen: {{error}}"
   },
   "python": {
     "title": "Lokaler Python-Kernel",
@@ -379,7 +402,12 @@
     "connectPrompt": "Gib das Zugriffstoken aus der Desktop-App ein → Einstellungen → Fernzugriff.",
     "acpTitle": "Externe Editoren (ACP)",
     "acpHint": "Diesen Arbeitsbereich aus Zed, JetBrains, Neovim oder jedem Editor steuern, der das Agent Client Protocol spricht. Diesen Agenten-Eintrag in die Editor-Einstellungen einfügen; er verbindet sich über das obige Gateway, mit den Rechten des Tokens.",
-    "acpNodeHint": "Der Editor startet dieses Skript mit Node 18+. Das Token wird über die Umgebung übergeben, nicht auf der Kommandozeile."
+    "acpNodeHint": "Der Editor startet dieses Skript mit Node 18+. Das Token wird über die Umgebung übergeben, nicht auf der Kommandozeile.",
+    "port": "Gateway-Port",
+    "portHint": "Der Port, auf dem das Gateway lauscht. Standard ist 4098; setzen Sie einen benutzerdefinierten Port für Firewall-Regeln oder Multi-Instance-Setup.",
+    "portInvalid": "Geben Sie eine gültige Portnummer (1-65535) ein.",
+    "portApply": "Anwenden",
+    "portReset": "Auf Standard zurücksetzen"
   },
   "cli": {
     "title": "Terminal-Befehl (osd)",
@@ -434,5 +462,29 @@
     "reveal": "Eingabe anzeigen",
     "hide": "Eingabe verbergen",
     "privacy": "Geht nur an das ssh auf diesem Rechner. Wird nie gespeichert, protokolliert oder in die Provenienz geschrieben."
+  },
+  "notify": {
+    "title": "Benachrichtigungen",
+    "hint": "Native Systembenachrichtigungen für Dinge, die fertig werden, während du nicht hinschaust.",
+    "turnCompleteTitle": "Benachrichtigen, wenn ein Turn endet",
+    "turnCompleteHint": "Sendet eine Systembenachrichtigung, wenn ein Turn endet — fertig, fehlgeschlagen oder unterbrochen — damit du nicht auf den Statuspunkt achten musst."
+  },
+  "stall": {
+    "channelA": "Stille-Prüfung",
+    "channelB": "Wiederholungs-Prüfung",
+    "custom": "Benutzerdefiniert…",
+    "enableHint": "Warnt nur — du entscheidest. Ein legitimer langer Auftrag (Training, Polling) wird nie unterbrochen.",
+    "enableTitle": "Auf hängende Turns achten",
+    "hint": "Erkennt einen Turn, der festzuhängen scheint — zu lange still, oder derselbe Aufruf in Dauerschleife — und bietet \"Weiter warten / Turn stoppen\". Es wird nie automatisch etwas unterbrochen.",
+    "hoursUnit": "h",
+    "repeatCustomHint": "Mal (2–100)",
+    "repeatLabel": "Warnen, wenn sich derselbe Aufruf wiederholt",
+    "repeatUnit": "Mal",
+    "silenceCustomHint": "Minuten (1–1440)",
+    "silenceHint": "Für den Fall, dass du benachrichtigt werden willst, wenn der Agent still wird. Wenn du regelmäßig Aufgaben ausführst, die länger als eine Stunde still sind, erhöhe den Wert oder lasse diese Prüfung deaktiviert.",
+    "silenceLabel": "Nach Stille warnen von",
+    "silenceUnit": "Min.",
+    "title": "Stall-Schutz",
+    "webNote": "Im Browser erscheint die Warnung nur im Gespräch — keine Systembenachrichtigung."
   }
 }

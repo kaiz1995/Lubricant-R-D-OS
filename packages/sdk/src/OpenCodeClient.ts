@@ -3,6 +3,7 @@ import type {
   CommandInfo,
   HistoryMessage,
   McpConfig,
+  McpOAuthStart,
   McpServer,
   OAuthAuthorization,
   OpenCodeClientOptions,
@@ -26,6 +27,31 @@ import type { MessageUsage } from "@ai4s/shared";
 import { DEFAULT_OPENCODE_URL } from "./types";
 import type { AgentRuntime } from "./runtime";
 import { BaseAgentRuntime } from "./base-runtime";
+
+export type CustomProviderModality = "text" | "audio" | "image" | "video" | "pdf";
+
+/** A model on a custom endpoint. A caller that knows nothing but the id passes
+ *  the id; one that knows the window, the pricing or the modalities passes them
+ *  too, and they reach the runtime's own model record rather than being guessed
+ *  at. Nothing here is required, because nothing about a self-hosted endpoint
+ *  can be assumed. */
+export interface CustomProviderModel {
+  id: string;
+  name?: string;
+  context?: number;
+  cost?: {
+    input: number;
+    output: number;
+    cache_read?: number;
+    cache_write?: number;
+  };
+  modalities?: {
+    input?: CustomProviderModality[];
+    output?: CustomProviderModality[];
+  };
+  reasoning?: boolean;
+  variants?: Record<string, Record<string, unknown>>;
+}
 
 /**
  * An error from an OpenCode API call, carrying the HTTP status so a caller can
@@ -71,10 +97,21 @@ const ARTIFACT_PRESENTATION_SYSTEM = `Open Science Desktop can display workspace
 type CustomProviderConfig = Record<
   string,
   {
-    models?: Record<string, { name?: string; limit?: { context: number; output: number } }>;
+    models?: Record<string, CustomProviderModelConfig>;
     [key: string]: unknown;
   }
 >;
+
+type CustomProviderModelConfig = {
+  id?: string;
+  name?: string;
+  limit?: { context: number; output: number };
+  cost?: { input: number; output: number; cache_read?: number; cache_write?: number };
+  modalities?: { input?: string[]; output?: string[] };
+  reasoning?: boolean;
+  variants?: Record<string, Record<string, unknown>>;
+  [key: string]: unknown;
+};
 
 function mapToolStatus(status: string): ToolCallStatus {
   switch (status) {
@@ -520,6 +557,7 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
       parentID?: string | null;
       metadata?: Record<string, unknown>;
       time?: { created?: number; updated?: number };
+      model?: { id?: string; providerID?: string };
     }>;
     const sessions = arr.map((s) => {
       const mine = (s.metadata?.[META_NS] ?? {}) as { archived?: number };
@@ -531,6 +569,7 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
         parentId: s.parentID ?? undefined,
         created: s.time?.created,
         updated: s.time?.updated,
+        ...(s.model ? { model: s.model } : {}),
         ...(typeof mine.archived === "number" ? { archived: mine.archived } : {}),
         ...(s.metadata ? { metadata: s.metadata } : {}),
       } satisfies SessionMeta;
@@ -738,6 +777,50 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
     if (!res.ok) throw await this.apiError(res, "Failed to interrupt the session");
   }
 
+  /** Compact a session's conversation: OpenCode summarizes the older turns
+   *  with the session's own model and replaces them with a "Context compacted"
+   *  seam, so subsequent turns run on a bounded context (the fix for long
+   *  sessions that stall on giant prompts). Uses the supported V1
+   *  `/session/:id/summarize` endpoint with the session's provider/model — the
+   *  V2 `/api/session/:id/compact` RPC is a stub that returns
+   *  OperationUnavailable, and a global context-limit override would leak into
+   *  every other session on that model. `providerID`/`modelID` fall back to
+   *  the session's bound model (listSessions carries it); when the session
+   *  has none, the server uses its own default. */
+  async compactSession(
+    sessionId: string,
+    providerID?: string,
+    modelID?: string,
+  ): Promise<void> {
+    // The endpoint REQUIRES both keys: posting `{}` comes back 400 "Missing key
+    // at [providerID]", not a server-side default. A session that has not bound
+    // a model yet (none sent a turn) therefore falls back to the app's default,
+    // and only fails if there is no model at all — which is a state the composer
+    // could not have reached anyway.
+    let pid = providerID;
+    let mid = modelID;
+    if (!pid || !mid) {
+      const fallback = await this.getDefaultModel();
+      const slash = fallback ? fallback.indexOf("/") : -1;
+      if (slash > 0) {
+        pid = fallback!.slice(0, slash);
+        mid = fallback!.slice(slash + 1);
+      }
+    }
+    if (!pid || !mid) {
+      throw new Error("No model to compact with — pick one in the model picker first.");
+    }
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/session/${encodeURIComponent(sessionId)}/summarize`,
+      {
+        method: "POST",
+        headers: this.headers(true),
+        body: JSON.stringify({ providerID: pid, modelID: mid }),
+      },
+    );
+    if (!res.ok) throw await this.apiError(res, "Failed to compact the session");
+  }
+
   /** Every skill OpenCode has really loaded for this workspace: built-in,
    *  the app's bundled packs, `.opencode/skills/`, and the home-level
    *  `~/.claude/skills` + `~/.agents/skills` it auto-loads.
@@ -838,7 +921,7 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
       npm: string;
       baseURL: string;
       apiKey?: string;
-      models: string[];
+      models: ReadonlyArray<string | CustomProviderModel>;
       /** Context window per model id (e.g. probed from the endpoint). */
       contexts?: Record<string, number>;
     },
@@ -852,13 +935,34 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
     // high never helps a smaller one. Known values come from the probe
     // (Ollama/vLLM/LM Studio report their window) or the user; when both are
     // absent, leaving context 0 makes OpenCode skip the accounting entirely.
-    const existing = await this.customProviderModelLimits(id);
+    const existing = await this.customProviderModels(id);
     const models = Object.fromEntries(
-      opts.models.map((m) => {
-        const context = opts.contexts?.[m];
+      opts.models.map((input) => {
+        const model = typeof input === "string" ? { id: input } : input;
+        const previous = existing[model.id];
+        const context = opts.contexts?.[model.id] ?? model.context;
         const limit =
-          context && context > 0 ? { context, output: existing[m]?.output ?? 0 } : existing[m];
-        return [m, limit ? { name: m, limit } : { name: m }];
+          context && context > 0
+            ? { context, output: previous?.limit?.output ?? 0 }
+            : previous?.limit;
+        const metadata =
+          typeof input === "string"
+            ? {}
+            : {
+                ...(model.cost !== undefined ? { cost: model.cost } : {}),
+                ...(model.modalities !== undefined ? { modalities: model.modalities } : {}),
+                ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+                ...(model.variants !== undefined ? { variants: model.variants } : {}),
+              };
+        return [
+          model.id,
+          {
+            ...(previous ?? {}),
+            name: model.name ?? model.id,
+            ...(limit ? { limit } : {}),
+            ...metadata,
+          },
+        ];
       }),
     );
     const provider = {
@@ -879,15 +983,9 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
 
   /** Context limits already configured for a custom provider's models, keyed by
    *  model id. Best-effort: an unreadable config just means "no limits set". */
-  private async customProviderModelLimits(
-    id: string,
-  ): Promise<Record<string, { context: number; output: number }>> {
+  private async customProviderModels(id: string): Promise<Record<string, CustomProviderModelConfig>> {
     const cfg = await this.customProviderConfig();
-    const out: Record<string, { context: number; output: number }> = {};
-    for (const [model, m] of Object.entries(cfg[id]?.models ?? {})) {
-      if (m.limit && m.limit.context > 0) out[model] = m.limit;
-    }
-    return out;
+    return cfg[id]?.models ?? {};
   }
 
   private async customProviderConfig(): Promise<CustomProviderConfig> {
@@ -970,6 +1068,18 @@ export class OpenCodeClient extends BaseAgentRuntime implements AgentRuntime {
       body: JSON.stringify({ mcp: { [name]: config } }),
     });
     if (!res.ok) throw await this.apiError(res, "Failed to add the MCP server");
+  }
+
+  /** Start OAuth for an already-registered remote MCP server: open the
+   *  returned `authorizationUrl` in the user's browser, then poll
+   *  `listMcpServers` for `status === "connected"` — see `McpOAuthStart`. */
+  async startMcpOAuth(name: string): Promise<McpOAuthStart> {
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/mcp/${encodeURIComponent(name)}/auth`,
+      { method: "POST", headers: this.headers() },
+    );
+    if (!res.ok) throw await this.apiError(res, "Failed to start MCP sign-in");
+    return (await res.json()) as McpOAuthStart;
   }
 
   /** The full provider catalog (~150 entries) and which ids are connected. */

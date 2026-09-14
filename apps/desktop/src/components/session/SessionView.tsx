@@ -181,6 +181,8 @@ export function SessionView({
   // every catalog refresh, so selecting the resolved number keeps this pane out
   // of those repaints.
   const contextLimit = useRuntimeStore((s) => contextLimitFor(s, key));
+  const compacting = useRuntimeStore((s) => !!s.compactingSessions[key]);
+  const compactContext = useRuntimeStore((s) => s.compactContext);
   const step = useRuntimeStore((s) => (eid ? (s.stepCounts[eid] ?? 0) : 0));
   const retryNotice = useRuntimeStore((s) => (eid ? s.retryNotices[eid] : undefined));
   const serverUrl = useRuntimeStore((s) => s.serverUrl);
@@ -207,6 +209,7 @@ export function SessionView({
   const replyPermission = useRuntimeStore((s) => s.replyPermission);
   const interrupt = useRuntimeStore((s) => s.interrupt);
   const cancelAutoReview = useRuntimeStore((s) => s.cancelAutoReview);
+  const stallAction = useRuntimeStore((s) => s.stallAction);
   const editMessage = useRuntimeStore((s) => s.editMessage);
   const revertMessage = useRuntimeStore((s) => s.revertMessage);
   const setComposerDraft = useUiStore((s) => s.setComposerDraft);
@@ -305,6 +308,15 @@ export function SessionView({
         setShowAgents(true, sid ?? undefined);
         setSubagentFocus((prev) => ({ childSessionId, nonce: (prev?.nonce ?? 0) + 1 }));
       },
+      onStallAction: (stallKey, action) => {
+        if (!sid) return;
+        if (action === "stop") {
+          pinEphemeral();
+          void interrupt(sid);
+        } else {
+          stallAction(sid, stallKey, "keep-waiting");
+        }
+      },
     }),
     [
       openArtifact,
@@ -315,6 +327,8 @@ export function SessionView({
       sid,
       pinEphemeral,
       setShowAgents,
+      interrupt,
+      stallAction,
     ],
   );
   const onEvaluate = (expr: string) =>
@@ -1039,6 +1053,8 @@ export function SessionView({
                   : undefined
               }
               modelSessionId={key}
+              onCompactContext={connected && !webReadOnly && eid ? () => void compactContext(eid) : undefined}
+              compacting={compacting}
               // Only the pane the user is looking at may take a prepared draft.
               acceptsHandoff={focused}
               visible={laidOut}
