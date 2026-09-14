@@ -651,6 +651,12 @@ export function Sidebar({ project }: { project: Project }) {
             label={t("items.skills")}
             onClick={() => navigate("/skills")}
           />
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          <NavRow
+            icon={<FlaskConical size={16} className="text-amber-500" />}
+            label="润滑研发 Copilot"
+            onClick={() => navigate("/lubricant")}
+          />
         </nav>
 
         <div className="mt-4 flex-1 overflow-y-auto px-3 pb-2">

@@ -10,6 +10,7 @@ import { ProjectsPage } from "./routes/ProjectsPage";
 import { HistoryPage } from "./routes/HistoryPage";
 import { SettingsPage } from "./routes/SettingsPage";
 import { NotFound } from "./routes/NotFound";
+import { LubricantWorkbenchPage } from "./routes/LubricantWorkbenchPage";
 
 export const routes: RouteObject[] = [
   {
@@ -19,6 +20,8 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="/live" replace /> },
       { path: "live", element: <LiveSessionPage /> },
       { path: "live/:sessionId", element: <LiveSessionPage /> },
+      { path: "lubricant", element: <LubricantWorkbenchPage /> },
+      { path: "lubricant/:sessionId", element: <LubricantWorkbenchPage /> },
       { path: "example/:sessionId", element: <SessionPage /> },
       { path: "skills", element: <SkillsPage /> },
       { path: "notebooks", element: <NotebooksPage /> },
