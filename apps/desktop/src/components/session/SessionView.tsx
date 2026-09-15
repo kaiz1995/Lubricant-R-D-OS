@@ -394,11 +394,19 @@ export function SessionView({
   const setAcpConfigOption = useRuntimeStore((s) => s.setAcpConfigOption);
   const planAvailable = agents.some((a) => a.name === "plan");
   const agentMode = sessionAgents[key] ?? "build";
+  const [localLubricant, setLocalLubricant] = useState(() =>
+    typeof window !== "undefined" && window.location.pathname.includes("lubricant"),
+  );
   const activeArtifact = pane?.artifact ?? null;
   const showFiles = !activeArtifact && !!pane?.showFiles;
   const showRuns = !activeArtifact && !showFiles && !!pane?.showRuns;
   const showAgents = !activeArtifact && !showFiles && !showRuns && !!pane?.showAgents;
-  const showLubricant = !activeArtifact && !showFiles && !showRuns && !showAgents && !!pane?.showLubricant;
+  const showLubricant =
+    !activeArtifact &&
+    !showFiles &&
+    !showRuns &&
+    !showAgents &&
+    (localLubricant || !!pane?.showLubricant);
   const inspectorActive = !!activeArtifact || showFiles || showRuns || showAgents || showLubricant;
   const compactNotebooks = !solo || isMobile;
   // Header tool labels ("Files", "Runs", "Subagents") need real room. `solo`
@@ -541,9 +549,12 @@ export function SessionView({
     />
   ) : showLubricant ? (
     <LubricantStagePane
-      key={`lubricant:${eid}`}
-      sessionId={eid!}
-      onClose={() => setShowLubricant(false, sid ?? undefined)}
+      key={`lubricant:${eid ?? key}`}
+      sessionId={eid ?? undefined}
+      onClose={() => {
+        setLocalLubricant(false);
+        setShowLubricant(false, key);
+      }}
       controls={<MaximizePaneButton />}
     />
   ) : null;
@@ -650,7 +661,9 @@ export function SessionView({
           <button
             onClick={() => {
               pinEphemeral();
-              setShowLubricant(!showLubricant, sid ?? undefined);
+              const next = !showLubricant;
+              setLocalLubricant(next);
+              setShowLubricant(next, key);
             }}
             className={cn(
               "flex items-center gap-1 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-surface-2",
@@ -1106,11 +1119,14 @@ export function SessionView({
               ? () => closeArtifact(sid ?? undefined)
               : showRuns
                 ? () => setShowRuns(false, sid ?? undefined)
-                : showAgents
-                  ? () => setShowAgents(false, sid ?? undefined)
-                  : showFiles
-                    ? () => setShowFiles(false, sid ?? undefined)
-                    : () => setShowLubricant(false, sid ?? undefined)
+              : showAgents
+                ? () => setShowAgents(false, sid ?? undefined)
+                : showFiles
+                  ? () => setShowFiles(false, sid ?? undefined)
+                  : () => {
+                      setLocalLubricant(false);
+                      setShowLubricant(false, key);
+                    }
           }
         >
           {inspectorNode}
