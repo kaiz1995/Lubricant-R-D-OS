@@ -7,6 +7,7 @@ import {
   Bot,
   FlaskConical,
   FolderOpen,
+  Layers,
   Loader2,
   NotebookPen,
   PanelBottom,
@@ -49,6 +50,7 @@ import { InspectorShell } from "@/components/inspector/InspectorShell";
 import { MaximizePaneButton, RightPane } from "@/components/inspector/RightPane";
 import { SessionFilesPane } from "@/app/routes/FilesPage";
 import { RunsPane } from "@/app/routes/RunsPage";
+import { LubricantStagePane } from "@/components/lubricant/LubricantStagePane";
 import { cn } from "@/lib/cn";
 
 type ThreadBlocks = NonNullable<ReturnType<typeof useRuntimeStore.getState>["threads"][string]>["blocks"];
@@ -204,6 +206,7 @@ export function SessionView({
   const setShowFiles = useRuntimeStore((s) => s.setShowFiles);
   const setShowRuns = useRuntimeStore((s) => s.setShowRuns);
   const setShowAgents = useRuntimeStore((s) => s.setShowAgents);
+  const setShowLubricant = useRuntimeStore((s) => s.setShowLubricant);
   const answerQuestion = useRuntimeStore((s) => s.answerQuestion);
   const rejectQuestion = useRuntimeStore((s) => s.rejectQuestion);
   const replyPermission = useRuntimeStore((s) => s.replyPermission);
@@ -395,7 +398,8 @@ export function SessionView({
   const showFiles = !activeArtifact && !!pane?.showFiles;
   const showRuns = !activeArtifact && !showFiles && !!pane?.showRuns;
   const showAgents = !activeArtifact && !showFiles && !showRuns && !!pane?.showAgents;
-  const inspectorActive = !!activeArtifact || showFiles || showRuns || showAgents;
+  const showLubricant = !activeArtifact && !showFiles && !showRuns && !showAgents && !!pane?.showLubricant;
+  const inspectorActive = !!activeArtifact || showFiles || showRuns || showAgents || showLubricant;
   const compactNotebooks = !solo || isMobile;
   // Header tool labels ("Files", "Runs", "Subagents") need real room. `solo`
   // only says this is the single pane, which a narrow window makes irrelevant.
@@ -535,6 +539,13 @@ export function SessionView({
       onClose={() => setShowFiles(false, sid ?? undefined)}
       controls={<MaximizePaneButton />}
     />
+  ) : showLubricant ? (
+    <LubricantStagePane
+      key={`lubricant:${eid}`}
+      sessionId={eid!}
+      onClose={() => setShowLubricant(false, sid ?? undefined)}
+      controls={<MaximizePaneButton />}
+    />
   ) : null;
 
   return (
@@ -634,6 +645,23 @@ export function SessionView({
               {showToolLabels && <span>{t("live.runsToggle.label")}</span>}
             </button>
           )}
+          {/* Lubricant R&D Stage & Gate Inspector */}
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          <button
+            onClick={() => {
+              pinEphemeral();
+              setShowLubricant(!showLubricant, sid ?? undefined);
+            }}
+            className={cn(
+              "flex items-center gap-1 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-surface-2",
+              showLubricant ? "bg-surface-2 text-text font-medium" : "text-muted",
+            )}
+            title="研发阶段与门禁"
+            aria-pressed={showLubricant}
+          >
+            <Layers size={13} className="text-amber-500" />
+            {showToolLabels && <span>研发阶段</span>}
+          </button>
           {/* Subagents: only offered once this conversation has spawned one,
               so a plain single-agent chat keeps a clean header. */}
           {eid && hasSubagents && (
@@ -1080,7 +1108,9 @@ export function SessionView({
                 ? () => setShowRuns(false, sid ?? undefined)
                 : showAgents
                   ? () => setShowAgents(false, sid ?? undefined)
-                  : () => setShowFiles(false, sid ?? undefined)
+                  : showFiles
+                    ? () => setShowFiles(false, sid ?? undefined)
+                    : () => setShowLubricant(false, sid ?? undefined)
           }
         >
           {inspectorNode}

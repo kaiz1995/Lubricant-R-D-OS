@@ -234,6 +234,7 @@ export interface PaneState {
   showRuns: boolean;
   /** The subagent panel: what this conversation's subagents are doing (#63). */
   showAgents: boolean;
+  showLubricant?: boolean;
 }
 
 /** Which runtime the current connection drives: the bundled OpenCode sidecar, or
@@ -362,6 +363,7 @@ interface RuntimeState {
   setShowFiles: (show: boolean, sessionId?: string) => void;
   setShowRuns: (show: boolean, sessionId?: string) => void;
   setShowAgents: (show: boolean, sessionId?: string) => void;
+  setShowLubricant: (show: boolean, sessionId?: string) => void;
   answerQuestion: (requestId: string, answers: string[][]) => Promise<void>;
   rejectQuestion: (requestId: string) => Promise<void>;
   replyPermission: (requestId: string, reply: PermissionReply) => Promise<void>;
@@ -1468,7 +1470,7 @@ function clearLiveFolds(sessionId: string) {
 function showOnly(
   s: { panes: Record<string, PaneState>; currentId: string | null },
   sessionId: string | undefined,
-  view: "showFiles" | "showRuns" | "showAgents",
+  view: "showFiles" | "showRuns" | "showAgents" | "showLubricant",
   show: boolean,
 ): { panes: Record<string, PaneState> } {
   const key = sessionId ?? s.currentId ?? DRAFT_KEY;
@@ -1478,6 +1480,7 @@ function showOnly(
     showFiles: false,
     showRuns: false,
     showAgents: false,
+    showLubricant: false,
   };
   const next: PaneState = show
     ? { ...base, [view]: true }
@@ -1486,6 +1489,7 @@ function showOnly(
         showFiles: p?.showFiles ?? false,
         showRuns: p?.showRuns ?? false,
         showAgents: p?.showAgents ?? false,
+        showLubricant: p?.showLubricant ?? false,
         [view]: false,
       };
   return { panes: { ...s.panes, [key]: next } };
@@ -2523,6 +2527,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           showFiles: false,
           showRuns: false,
           showAgents: false,
+          showLubricant: false,
         },
       },
     })),
@@ -2538,6 +2543,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
             showFiles: p?.showFiles ?? false,
             showRuns: p?.showRuns ?? false,
             showAgents: p?.showAgents ?? false,
+            showLubricant: p?.showLubricant ?? false,
           },
         },
       };
@@ -2546,6 +2552,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   setShowFiles: (show, sessionId) => set((s) => showOnly(s, sessionId, "showFiles", show)),
   setShowRuns: (show, sessionId) => set((s) => showOnly(s, sessionId, "showRuns", show)),
   setShowAgents: (show, sessionId) => set((s) => showOnly(s, sessionId, "showAgents", show)),
+  setShowLubricant: (show, sessionId) => set((s) => showOnly(s, sessionId, "showLubricant", show)),
 
   answerQuestion: async (requestId, answers) => {
     const q = get().questions.find((x) => x.requestId === requestId);
