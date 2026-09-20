@@ -100,6 +100,20 @@ def main() -> int:
     result = router.decide(physical_state("PROJECT_DEFINED", project_type="IMPROVEMENT"), "FAILURE_CTQ_DEFINED")
     assert result["decision"] == "ALLOW" and result["skill"] == "failure-ctq-analysis", result
 
+    # 10. A DECLARED project_type with no routed chain is DENIED (fail-closed),
+    #     never silently handed the full NEW_PRODUCT chain. The pack documents
+    #     exactly five workflows (README §4, project-definition/SKILL.md) and
+    #     project.schema.json enumerates the same five, so anything else is a
+    #     contract violation. A missing project_type still runs the full chain
+    #     for pre-existing state.
+    result = router.decide(physical_state("PROJECT_DEFINED", project_type="CORRECTIVE_ACTION"), "DUTY_DEFINED")
+    assert result["decision"] == "DENY" and "no routed stage chain" in result["reason"], result
+    result = router.decide(physical_state("PROJECT_DEFINED", project_type="NOT_A_TYPE"), "DUTY_DEFINED")
+    assert result["decision"] == "DENY" and "no routed stage chain" in result["reason"], result
+    # A MISSING project_type still runs the full chain (pre-existing state).
+    result = router.decide(physical_state("PROJECT_DEFINED"), "DUTY_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "duty-definition", result
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages)")
     return 0
 

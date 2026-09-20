@@ -78,6 +78,18 @@ def decide(project_state: object, requested_stage: str) -> dict:
         return {"decision": "DENY", "reason": f"project status {status} is terminal and cannot advance", "skill": None}
 
     ptype = project_state.get("project_type")
+    # A declared project_type must be one this router knows. The pack documents
+    # exactly five workflows (README §4, project-definition/SKILL.md) and
+    # `project.schema.json` enumerates the same five, so an unrouted value is a
+    # contract violation — DENY it rather than silently handing it the full
+    # NEW_PRODUCT chain. A missing project_type stays on the full chain for
+    # pre-existing state.
+    if ptype is not None and ptype not in TYPE_ROUTES:
+        return {
+            "decision": "DENY",
+            "reason": f"project_type {ptype!r} has no routed stage chain; define TYPE_ROUTES[{ptype!r}] before advancing",
+            "skill": None,
+        }
     route = TYPE_ROUTES.get(ptype, STAGES)
 
     if current == START_STAGE:
