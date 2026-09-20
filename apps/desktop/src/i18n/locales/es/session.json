@@ -190,6 +190,10 @@
       "label": "Ejecuciones",
       "title": "Las ejecuciones de experimentos de esta sesión — junto al chat"
     },
+    "lubricantToggle": {
+      "label": "Fase",
+      "title": "Fases de desarrollo y revisión de puerta — junto al chat"
+    },
     "notebook": {
       "chooseTitle": "Elegir un cuaderno",
       "openTitle": "Abrir {{path}} — el agente trabaja en este cuaderno dentro de esta sesión"

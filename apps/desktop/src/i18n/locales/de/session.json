@@ -190,6 +190,10 @@
       "label": "Durchläufe",
       "title": "Die Experimentdurchläufe dieser Sitzung — neben dem Chat"
     },
+    "lubricantToggle": {
+      "label": "Phase",
+      "title": "Entwicklungsphasen und Gate-Review — neben dem Chat"
+    },
     "notebook": {
       "chooseTitle": "Notebook auswählen",
       "openTitle": "{{path}} öffnen — der Agent arbeitet in dieser Sitzung an diesem Notebook"

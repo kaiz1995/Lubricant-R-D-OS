@@ -1,459 +1,248 @@
 /* eslint-disable i18next/no-literal-string */
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   CheckCircle2,
-  Clock,
-  Circle,
   ChevronDown,
   ChevronRight,
+  Circle,
+  Clock,
+  FileCode2,
+  FolderOpen,
+  Layers,
+  Lock,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
-  FileCode2,
-  FileText,
-  AlertTriangle,
-  Send,
-  Layers,
-  Check,
+  WifiOff,
   X,
-  ArrowRight,
 } from "lucide-react";
 import { PaneTitlebarInset } from "@/components/inspector/RightPane";
 import { cn } from "@/lib/cn";
+import { useRuntimeStore } from "@/lib/runtime";
+import { useUiStore } from "@/lib/store";
+import {
+  GATE_STATUSES,
+  PROJECT_TYPES,
+  isGateStatus,
+  routeFor,
+  type GateStatus,
+  type ProjectType,
+} from "@/lib/lubricantContracts";
+import {
+  buildGatePrompt,
+  buildStepPrompt,
+  deriveSteps,
+  probeWorkspace,
+  type WorkspaceSnapshot,
+} from "@/lib/lubricantArtifacts";
+import {
+  buildGateArtifact,
+  evaluateGate,
+  nextGateId,
+  suggestGateSubmission,
+  writeGateArtifact,
+} from "@/lib/lubricantGate";
 
-export type DevType =
-  | "forward"
-  | "benchmark"
-  | "cost_reduction"
-  | "substitution"
-  | "failure_analysis";
+/** 轻量轮询间隔；仅在文档处于 visible 时执行。 */
+const POLL_MS = 3000;
 
-interface StageStep {
-  id: number;
-  stageName: string;
-  title: string;
-  file: string;
-  status: "completed" | "active" | "pending";
-  description: string;
-  criteria: string[];
-  deliverables: string[];
-}
-
-interface DevTypeConfig {
-  key: DevType;
-  label: string;
-  shortLabel: string;
-  badge: string;
-  totalStages: number;
-  completedStages: number;
-  currentStageText: string;
-  gateStatus: "GO" | "HOLD" | "REVISE";
-  gateNote: string;
-  steps: StageStep[];
-}
-
-const DEV_CONFIGS: Record<DevType, DevTypeConfig> = {
-  forward: {
-    key: "forward",
-    label: "新产品正向开发",
-    shortLabel: "正向开发",
-    badge: "11阶段全流程",
-    totalStages: 11,
-    completedStages: 2,
-    currentStageText: "Stage 1: 工况与指标定义中",
-    gateStatus: "GO",
-    gateNote: "Stage 0 准入条件满足，工况关键指标无冲突，准予进入配方设计空间探索。",
-    steps: [
-      {
-        id: 0,
-        stageName: "Stage 0",
-        title: "立项章程与项目定义",
-        file: "project.json",
-        status: "completed",
-        description: "确定项目代号、应用场景目标、成本上限约束与团队权责。",
-        criteria: ["明确应用机型与工况环境", "锁定目标成本上限 (如 <= 22元/kg)", "完成立项评审批准"],
-        deliverables: ["project.json (立项信息)", "charter_review.md"],
-      },
-      {
-        id: 1,
-        stageName: "Stage 1",
-        title: "严苛工况与指标定义",
-        file: "duty.json",
-        status: "active",
-        description: "将机械运转环境转化为润滑油理化与台架指标规格清单。",
-        criteria: ["排气/油池工作温度 (如 85℃)", "运动黏度等级 (如 ISO VG 320)", "关键微点蚀等级 FVA 54/7 >= 10级"],
-        deliverables: ["duty.json (工况规范)", "standards_comparison.xlsx"],
-      },
-      {
-        id: 2,
-        stageName: "Stage 2",
-        title: "核心技术挑战梳理",
-        file: "challenge.json",
-        status: "pending",
-        description: "识别配方矛盾与极端工况下的技术难点与机理风险。",
-        criteria: ["基础油热氧化与高温抗老矛盾", "极压抗磨与防锈添加剂竞争吸附冲突", "成本红线对全合成基础油比例限制"],
-        deliverables: ["challenge.json (7大技术挑战清单)"],
-      },
-      {
-        id: 3,
-        stageName: "Stage 3",
-        title: "失效模式与CTQ关键质量指标",
-        file: "failure_ctq.json",
-        status: "pending",
-        description: "明确齿轮点蚀、擦伤、起泡、沉积物等失效模式及CTQ阈值。",
-        criteria: ["齿面微点蚀保护能力 (FZG/FVA)", "起泡倾向与空气释放值", "抗乳化分水性能"],
-        deliverables: ["failure_ctq.json (CTQ矩阵与判定基准)"],
-      },
-      {
-        id: 4,
-        stageName: "Stage 4",
-        title: "测试与表征方法确认",
-        file: "test_method.json",
-        status: "pending",
-        description: "锁定实验室与第三方台架评估的标准化测试规范。",
-        criteria: ["DIN 51517-3 工业齿轮油标准", "FVA 54 微点蚀试验规程", "Flender 齿轮箱相容性测试"],
-        deliverables: ["test_method.json (测试协议与试验台架配置)"],
-      },
-      {
-        id: 5,
-        stageName: "Stage 5",
-        title: "配方原材料与设计空间",
-        file: "design_space.json",
-        status: "pending",
-        description: "确定基础油（PAO/酯类/mPAO）与添加剂候选池及比例上下限。",
-        criteria: ["基础油配比边界约束 (60%-85%)", "复合添加剂包加注量窗口 (1.5%-3.5%)", "原材料BOM成本测算模型"],
-        deliverables: ["design_space.json (原材料数据库与候选空间)"],
-      },
-      {
-        id: 6,
-        stageName: "Stage 6",
-        title: "混料DOE实验设计",
-        file: "doe_design.json",
-        status: "pending",
-        description: "运行混料设计算法（D-Optimal/Simplex），生成实验矩阵。",
-        criteria: ["多组分混料配比归一化 (Sum=100%)", "覆盖拐点与极值试验点", "控制总实验轮次成本"],
-        deliverables: ["doe_design.json (12~16组配方DOE矩阵)"],
-      },
-      {
-        id: 7,
-        stageName: "Stage 7",
-        title: "实验室调配与台架测试数据",
-        file: "experiment.json",
-        status: "pending",
-        description: "试制调配实样，录入40℃/100℃黏度、抗微点蚀及四球实测值。",
-        criteria: ["实测理化数据完整录入", "微点蚀与承载能力台架验证", "异常数据复测标定"],
-        deliverables: ["experiment.json (批次实测数据集)"],
-      },
-      {
-        id: 8,
-        stageName: "Stage 8",
-        title: "响应面模型拟合与统计分析",
-        file: "model.json",
-        status: "pending",
-        description: "建立基础油与添加剂对黏度指数、抗磨、成本的回归方程。",
-        criteria: ["R²拟合优度与残差正态分布检验", "因子显著性与交互效应分析", "预测方差膨胀系数VIF核查"],
-        deliverables: ["model.json (多项式响应面回归模型)"],
-      },
-      {
-        id: 9,
-        stageName: "Stage 9",
-        title: "多目标配方Pareto优化",
-        file: "optimization.json",
-        status: "pending",
-        description: "在抗微点蚀性能最大化与成本<=22元/kg约束下求解最佳配方。",
-        criteria: ["Pareto最优前沿求解", "鲁棒性与公差敏感度分析", "推荐最优主选配方与候选平替配方"],
-        deliverables: ["optimization.json (最优候选配方表与指标预测)"],
-      },
-      {
-        id: 10,
-        stageName: "Stage 10",
-        title: "门禁终审与配方定型冻结",
-        file: "gate.json / design_freeze.json",
-        status: "pending",
-        description: "综合全链条证据包完成Gate终审放行，正式冻结产品配方。",
-        criteria: ["全部CTQ指标100%合格达标", "主机厂认可与试验报告齐套", "生成最终开发报告与技术规格书TDS"],
-        deliverables: ["gate.json (终审放行决议)", "design_freeze.json (配方冻结归档)"],
-      },
-    ],
-  },
-  benchmark: {
-    key: "benchmark",
-    label: "竞品对标与逆向工程",
-    shortLabel: "竞品对标",
-    badge: "7阶段对标流",
-    totalStages: 7,
-    completedStages: 1,
-    currentStageText: "Stage 1: 理化与红外剖析",
-    gateStatus: "GO",
-    gateNote: "标杆竞品样品已送检入库，进入光谱逆向剖析。",
-    steps: [
-      {
-        id: 0,
-        stageName: "Stage 0",
-        title: "竞品信息建档与样品入库",
-        file: "sample_profile.json",
-        status: "completed",
-        description: "收集对标品牌油品样品、技术手册TDS及应用背景。",
-        criteria: ["竞品批次可追溯", "基础指标与宣称卖点对齐"],
-        deliverables: ["sample_profile.json"],
-      },
-      {
-        id: 1,
-        stageName: "Stage 1",
-        title: "理化指标与红外光谱剖析",
-        file: "spectrum_analysis.json",
-        status: "active",
-        description: "FTIR红外光谱、ICP发射光谱分析元素与特征官能团。",
-        criteria: ["P/Zn/Ca/B添加剂元素定性定量", "特征酯键与聚合物吸收峰确认"],
-        deliverables: ["spectrum_analysis.json"],
-      },
-      {
-        id: 2,
-        stageName: "Stage 2",
-        title: "基础油分类与添加剂逆向解析",
-        file: "reverse_composition.json",
-        status: "pending",
-        description: "反推竞品基础油组合类型及添加剂功能包构成。",
-        criteria: ["基础油组分判定 (PAO/矿物油/合成酯)", "核心极压抗磨剂类别锁定"],
-        deliverables: ["reverse_composition.json"],
-      },
-      {
-        id: 3,
-        stageName: "Stage 3",
-        title: "全性能对比台架测试",
-        file: "benchmark_testing.json",
-        status: "pending",
-        description: "平行测试自研对标样与竞品样在相同机台的性能差异。",
-        criteria: ["抗磨擦伤对齐", "热氧化寿命与分水性能对齐"],
-        deliverables: ["benchmark_testing.json"],
-      },
-      {
-        id: 4,
-        stageName: "Stage 4",
-        title: "替代配方设计空间构建",
-        file: "substitute_design.json",
-        status: "pending",
-        description: "采用国内自主可控原材料寻找替代与超越路径。",
-        criteria: ["避开竞品专利阻断", "保障关键物性一致性"],
-        deliverables: ["substitute_design.json"],
-      },
-      {
-        id: 5,
-        stageName: "Stage 5",
-        title: "平替配方台架复验",
-        file: "validation.json",
-        status: "pending",
-        description: "对选定对标自研配方进行严格台架与耐久盲测验证。",
-        criteria: ["综合性能指标达到或超越竞品"],
-        deliverables: ["validation.json"],
-      },
-      {
-        id: 6,
-        stageName: "Stage 6",
-        title: "对标定型与量产门禁",
-        file: "design_freeze.json",
-        status: "pending",
-        description: "形成竞品对标分析白皮书并完成配方冻结。",
-        criteria: ["对标差异度分析结论明确", "签署量产批准"],
-        deliverables: ["design_freeze.json"],
-      },
-    ],
-  },
-  cost_reduction: {
-    key: "cost_reduction",
-    label: "配方降本优化",
-    shortLabel: "配方降本",
-    badge: "5阶段敏捷流",
-    totalStages: 5,
-    completedStages: 1,
-    currentStageText: "Stage 1: 成本驱动因素审计",
-    gateStatus: "GO",
-    gateNote: "BOM基线确立，高价添加剂替代方案已建立候选池。",
-    steps: [
-      {
-        id: 0,
-        stageName: "Stage 0",
-        title: "现有配方BOM基线审计",
-        file: "baseline_bom.json",
-        status: "completed",
-        description: "核算现有在产油品的每公斤原材料成本构成比率。",
-        criteria: ["建立精确BOM成本台账", "锁定降本目标幅度 (如降低12%)"],
-        deliverables: ["baseline_bom.json"],
-      },
-      {
-        id: 1,
-        stageName: "Stage 1",
-        title: "高价值组分降本杠杆识别",
-        file: "cost_levers.json",
-        status: "active",
-        description: "识别高单价酯类或过量添加剂加注量的降本空间。",
-        criteria: ["评估基础油微调可能性", "评估国产优质平替添加剂加注效率"],
-        deliverables: ["cost_levers.json"],
-      },
-      {
-        id: 2,
-        stageName: "Stage 2",
-        title: "性能无损约束DOE设计",
-        file: "cost_doe.json",
-        status: "pending",
-        description: "以抗微点蚀不降级为硬约束开展降本混料试验。",
-        criteria: ["关键CTQ边界硬锁定", "筛选性价比最优组合"],
-        deliverables: ["cost_doe.json"],
-      },
-      {
-        id: 3,
-        stageName: "Stage 3",
-        title: "等效性平行台架验证",
-        file: "parity_testing.json",
-        status: "pending",
-        description: "对比新旧配方在标准台架下的磨耗与油泥指标。",
-        criteria: ["性能零劣化 (Parity/Better)", "关键工况数据重现"],
-        deliverables: ["parity_testing.json"],
-      },
-      {
-        id: 4,
-        stageName: "Stage 4",
-        title: "效益核算与变更门禁放行",
-        file: "cost_gate.json",
-        status: "pending",
-        description: "核算年度物料节约总额并完成工程变更审批。",
-        criteria: ["年化成本节约达标", "生产车间调配工艺无障碍"],
-        deliverables: ["cost_gate.json"],
-      },
-    ],
-  },
-  substitution: {
-    key: "substitution",
-    label: "原材料替代 / 供应链保供",
-    shortLabel: "材料替代",
-    badge: "4阶段验证流",
-    totalStages: 4,
-    completedStages: 1,
-    currentStageText: "Stage 1: 相容性与理化初筛",
-    gateStatus: "GO",
-    gateNote: "备选供应商资质合格，进入相容性理化试验。",
-    steps: [
-      {
-        id: 0,
-        stageName: "Stage 0",
-        title: "替代原料资质与指标比对",
-        file: "raw_material_spec.json",
-        status: "completed",
-        description: "比对二供/新供应商基础油或添加剂规格参数。",
-        criteria: ["关键理化指标容差在允许范围内", "保供产能与商务资质合规"],
-        deliverables: ["raw_material_spec.json"],
-      },
-      {
-        id: 1,
-        stageName: "Stage 1",
-        title: "相容性与理化稳定性初筛",
-        file: "compatibility.json",
-        status: "active",
-        description: "高温储存浊点、分层、析出及铜片腐蚀测试。",
-        criteria: ["与现存基础油相容无浑浊", "抗乳化与消泡性能不劣化"],
-        deliverables: ["compatibility.json"],
-      },
-      {
-        id: 2,
-        stageName: "Stage 2",
-        title: "台架核心失效指标评估",
-        file: "ctq_evaluation.json",
-        status: "pending",
-        description: "考察微点蚀、承载极压与抗剪切等硬指标。",
-        criteria: ["核心性能通过台架考核标准"],
-        deliverables: ["ctq_evaluation.json"],
-      },
-      {
-        id: 3,
-        stageName: "Stage 3",
-        title: "批量试制与二供导入门禁",
-        file: "supplier_gate.json",
-        status: "pending",
-        description: "车间百公斤试制并签署合格供方准入决议。",
-        criteria: ["试调批次稳定性达标", "签署供方变更报告"],
-        deliverables: ["supplier_gate.json"],
-      },
-    ],
-  },
-  failure_analysis: {
-    key: "failure_analysis",
-    label: "质量故障根因诊断",
-    shortLabel: "故障排查",
-    badge: "5阶段排查流",
-    totalStages: 5,
-    completedStages: 1,
-    currentStageText: "Stage 1: 理化衰变与磨粒诊断",
-    gateStatus: "HOLD",
-    gateNote: "现场工况数据采集中，等待铁谱分析报告。",
-    steps: [
-      {
-        id: 0,
-        stageName: "Stage 0",
-        title: "现场工况与失效样品建档",
-        file: "failure_record.json",
-        status: "completed",
-        description: "采集现场环境温度、载荷波动历史及油样取样点。",
-        criteria: ["现场故障照片与运行日志齐备", "取样遵循规范无污染"],
-        deliverables: ["failure_record.json"],
-      },
-      {
-        id: 1,
-        stageName: "Stage 1",
-        title: "在用油理化衰变与铁谱磨粒",
-        file: "oil_degradation.json",
-        status: "active",
-        description: "分析酸值升高、黏度变化、氧化及磨损金属颗粒尺寸。",
-        criteria: ["磨损颗粒形貌定性 (切削/疲劳/剥落)", "残余抗氧剂含量衰减率"],
-        deliverables: ["oil_degradation.json"],
-      },
-      {
-        id: 2,
-        stageName: "Stage 2",
-        title: "齿轮微观形貌机理复盘",
-        file: "microscopy_analysis.json",
-        status: "pending",
-        description: "电镜扫描齿面点蚀微裂纹，判定制约机理。",
-        criteria: ["判定是否为润滑油油膜破裂导致", "还是机械硬度热处理缺陷"],
-        deliverables: ["microscopy_analysis.json"],
-      },
-      {
-        id: 3,
-        stageName: "Stage 3",
-        title: "根本原因判定与应急措施",
-        file: "root_cause.json",
-        status: "pending",
-        description: "给出故障鱼骨图与临时纠正措施 (ICA)。",
-        criteria: ["消除次要干扰因素，锁定核心失效源"],
-        deliverables: ["root_cause.json"],
-      },
-      {
-        id: 4,
-        stageName: "Stage 4",
-        title: "配方防再发永久改进措施 (PCA)",
-        file: "preventive_action.json",
-        status: "pending",
-        description: "升级油品抗微点蚀添加剂或推荐清洗换油规范。",
-        criteria: ["改进方案经台架复现验证有效", "闭环质量事故归档"],
-        deliverables: ["preventive_action.json"],
-      },
-    ],
-  },
+const TYPE_META: Record<ProjectType, { label: string; shortLabel: string }> = {
+  NEW_PRODUCT: { label: "新产品正向开发", shortLabel: "正向开发" },
+  IMPROVEMENT: { label: "已有产品性能优化", shortLabel: "性能优化" },
+  COST_DOWN: { label: "降本替代", shortLabel: "配方降本" },
+  CUSTOMIZATION: { label: "客户定制", shortLabel: "客户定制" },
+  EXPLORATION: { label: "机理 / 平台型探索", shortLabel: "机理探索" },
 };
 
+const GATE_TONE: Record<GateStatus, string> = {
+  GO: "border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  HOLD: "border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  PIVOT: "border-sky-500/30 bg-sky-500/15 text-sky-600 dark:text-sky-400",
+  KILL: "border-red-500/30 bg-red-500/15 text-red-600 dark:text-red-400",
+  FREEZE: "border-violet-500/30 bg-violet-500/15 text-violet-600 dark:text-violet-400",
+};
+
+function formatAge(probedAt: number, now: number): string {
+  const seconds = Math.max(0, Math.round((now - probedAt) / 1000));
+  if (seconds < 5) return "刚刚";
+  if (seconds < 60) return `${seconds} 秒前`;
+  return `${Math.round(seconds / 60)} 分钟前`;
+}
+
 export function LubricantStagePane({
-  sessionId: _sessionId,
+  sessionId,
+  sessionDir,
   onClose,
   controls,
 }: {
   sessionId?: string;
+  sessionDir?: string;
   onClose: () => void;
   controls?: React.ReactNode;
 }) {
-  const [selectedType, setSelectedType] = useState<DevType>("forward");
-  const [expandedStep, setExpandedStep] = useState<number | null>(1); // default expand current active step
-  const [gateDecision, setGateDecision] = useState<"GO" | "HOLD" | "REVISE">("GO");
+  const [snapshot, setSnapshot] = useState<WorkspaceSnapshot | null>(null);
+  const [probing, setProbing] = useState(false);
+  const [selectedType, setSelectedType] = useState<ProjectType>("NEW_PRODUCT");
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
-  const currentConfig = DEV_CONFIGS[selectedType];
-  const percent = Math.round((currentConfig.completedStages / currentConfig.totalStages) * 100);
+  // 门禁签发表单
+  const [showChecks, setShowChecks] = useState(false);
+  const [gateDraftStatus, setGateDraftStatus] = useState<GateStatus>("GO");
+  const [gateDraftReason, setGateDraftReason] = useState("");
+  const [gateDraftRisks, setGateDraftRisks] = useState("");
+  const [signing, setSigning] = useState(false);
+  const [gateSignResult, setGateSignResult] = useState<{ ok: boolean; message: string } | null>(
+    null,
+  );
+
+  const running = useRuntimeStore((s) => !!(sessionId && s.runningSessions[sessionId]));
+
+  const generation = useRef(0);
+  const wasRunning = useRef(false);
+
+  const refresh = useCallback(async () => {
+    const gen = ++generation.current;
+    setProbing(true);
+    try {
+      const next = await probeWorkspace();
+      if (gen === generation.current) setSnapshot(next);
+    } finally {
+      if (gen === generation.current) {
+        setProbing(false);
+        setNow(Date.now());
+      }
+    }
+  }, []);
+
+  // 首次探测 + 轻量轮询 + 工作区切换时重探。后台标签页不轮询，避免空转。
+  useEffect(() => {
+    void refresh();
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void refresh();
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [refresh, sessionDir]);
+
+  // 会话回合结束时立即补一次探测，不必等下一个轮询周期。
+  useEffect(() => {
+    if (wasRunning.current && !running) void refresh();
+    wasRunning.current = running;
+  }, [running, refresh]);
+
+  const live = snapshot?.live ?? false;
+
+  // project.json 存在时其 project_type 是权威，锁定类型选择器。
+  const lockedType = snapshot?.projectType ?? null;
+  const lockedProjectType = useMemo<ProjectType | null>(() => {
+    if (!lockedType) return null;
+    return (PROJECT_TYPES as string[]).includes(lockedType) ? (lockedType as ProjectType) : null;
+  }, [lockedType]);
+
+  const effectiveType = lockedProjectType ?? selectedType;
+  const steps = useMemo(() => deriveSteps(effectiveType, snapshot), [effectiveType, snapshot]);
+
+  const totalStages = routeFor(effectiveType).length;
+  const completedCount = steps.filter((s) => s.status === "completed").length;
+  const percent = totalStages ? Math.round((completedCount / totalStages) * 100) : 0;
+  const activeStep = steps.find((s) => s.status === "active") ?? null;
+
+  const gateStatus: GateStatus | null = isGateStatus(snapshot?.gateStatus)
+    ? snapshot.gateStatus
+    : null;
+  const gateProbe = snapshot?.probes.gate ?? null;
+
+  const openGaps = useMemo(
+    () =>
+      steps
+        .filter((s) => s.status !== "completed")
+        .map((s) => `${s.file} 未就绪`)
+        .slice(0, 5),
+    [steps],
+  );
+
+  // 首次拿到进行中的步骤时自动展开一次；只做一次，之后不与用户的折叠操作抢。
+  const autoExpanded = useRef(false);
+  useEffect(() => {
+    if (autoExpanded.current || !activeStep) return;
+    autoExpanded.current = true;
+    setExpandedStep(activeStep.chainIndex);
+  }, [activeStep]);
+
+  /* ---- 门禁：前置校验 + 签发 ---- */
+
+  const evaluation = useMemo(() => evaluateGate(snapshot), [snapshot]);
+
+  // 已存在的 gate_id 即使结构不合规也读出来，避免复用同一个编号静默覆盖。
+  const existingGateId = (() => {
+    const value = snapshot?.probes.gate?.data?.gate_id;
+    return typeof value === "string" && value.length > 0 ? value : null;
+  })();
+  const gateIdDraft = useMemo(
+    () => nextGateId(evaluation.projectId, existingGateId),
+    [evaluation.projectId, existingGateId],
+  );
+
+  const needsReason = gateDraftStatus !== "GO" && gateDraftStatus !== "HOLD";
+  const gateSignBlocked = !live
+    ? "需在桌面版中执行"
+    : gateDraftStatus === "GO" && !evaluation.canGo
+      ? "存在阻塞项，无法签发 GO；可改选 HOLD 记录未解条件"
+      : needsReason && !gateDraftReason.trim()
+        ? `${gateDraftStatus} 必须填写决议理由`
+        : null;
+
+  const handleSignGate = useCallback(async () => {
+    if (!snapshot?.live) return;
+    setSigning(true);
+    setGateSignResult(null);
+    try {
+      const submission = suggestGateSubmission(snapshot, evaluation, {
+        gateId: gateIdDraft,
+        scope: `Stage Gate verification for ${evaluation.projectId ?? "project"}`,
+        gateStatus: gateDraftStatus,
+        reason: gateDraftReason,
+        risksText: gateDraftRisks,
+      });
+      const artifact = buildGateArtifact(evaluation, submission);
+      const result = await writeGateArtifact(artifact, {
+        operator: "研发项目组",
+        signedAt: new Date().toISOString(),
+        note: gateDraftReason || undefined,
+      });
+      setGateSignResult({
+        ok: true,
+        message:
+          `已写入 ${result.path}（gate_status = ${result.gateStatus}）` +
+          (result.historyPath
+            ? `，签名记录追加到 ${result.historyPath}`
+            : "；但签名记录写入失败，请检查 docs/ 目录权限"),
+      });
+      setGateDraftReason("");
+      await refresh();
+    } catch (error) {
+      setGateSignResult({
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setSigning(false);
+    }
+  }, [
+    snapshot,
+    evaluation,
+    gateIdDraft,
+    gateDraftStatus,
+    gateDraftReason,
+    gateDraftRisks,
+    refresh,
+  ]);
+
+  const injectPrompt = useCallback((prompt: string) => {
+    useUiStore.getState().setComposerDraft(prompt);
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col border-l border-border bg-surface text-text select-none overflow-hidden">
@@ -467,6 +256,14 @@ export function LubricantStagePane({
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => void refresh()}
+            aria-label="重新扫描工件"
+            title={live ? "重新扫描工作区工件" : "浏览器环境无磁盘访问"}
+            className="rounded p-1 text-muted transition-colors hover:bg-surface-2 hover:text-text"
+          >
+            <RefreshCw size={13} className={probing ? "animate-spin" : undefined} />
+          </button>
           {controls}
           <button
             onClick={onClose}
@@ -478,38 +275,81 @@ export function LubricantStagePane({
         </div>
       </div>
 
+      {/* Data source strip: live workspace / still scanning / browser mock */}
+      <div className="shrink-0 border-b border-border bg-surface-2/40 px-3 py-1.5">
+        {snapshot === null ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <RefreshCw size={11} className="shrink-0 animate-spin" />
+            <span>扫描工作区工件…</span>
+          </div>
+        ) : live ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <FolderOpen size={11} className="shrink-0 text-emerald-500" />
+            <span className="truncate font-mono" title={sessionDir ?? undefined}>
+              {sessionDir ?? "当前工作区"}
+            </span>
+            <span className="ml-auto shrink-0 tabular-nums">
+              {formatAge(snapshot.probedAt, now)}
+            </span>
+          </div>
+        ) : (
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400"
+            title="磁盘探测仅在桌面版可用。请在 pnpm tauri dev 中查看真实工件状态。"
+          >
+            <WifiOff size={11} className="shrink-0" />
+            <span className="font-medium">离线预览 · Mock 数据</span>
+            <span className="truncate opacity-80">需在桌面版查看真实工件</span>
+          </div>
+        )}
+      </div>
+
       {/* Development Type Selection Bar */}
       <div className="border-b border-border bg-surface-2/40 px-3 py-2 shrink-0">
         <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted">
-          <span className="font-medium">研发开发类型:</span>
+          <span className="flex items-center gap-1 font-medium">
+            研发开发类型
+            {lockedProjectType && <Lock size={10} className="text-emerald-500" />}
+          </span>
           <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
-            {currentConfig.badge}
+            {totalStages} 阶段
           </span>
         </div>
         <div className="flex gap-1 overflow-x-auto pb-0.5 no-scrollbar">
-          {(Object.keys(DEV_CONFIGS) as DevType[]).map((typeKey) => {
-            const cfg = DEV_CONFIGS[typeKey];
-            const isSelected = selectedType === typeKey;
+          {PROJECT_TYPES.map((typeKey) => {
+            const isSelected = effectiveType === typeKey;
+            const isLockedOut = lockedProjectType !== null && lockedProjectType !== typeKey;
             return (
               <button
                 key={typeKey}
+                disabled={isLockedOut}
+                title={
+                  isLockedOut
+                    ? `已由 project.json 锁定为 ${TYPE_META[lockedProjectType].label}`
+                    : TYPE_META[typeKey].label
+                }
                 onClick={() => {
                   setSelectedType(typeKey);
-                  setExpandedStep(cfg.steps.find((s) => s.status === "active")?.id ?? 0);
-                  setGateDecision(cfg.gateStatus);
+                  setExpandedStep(null);
                 }}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all",
                   isSelected
                     ? "bg-primary text-white shadow-sm"
-                    : "bg-surface text-muted hover:bg-surface-2 hover:text-text border border-border/60",
+                    : "border border-border/60 bg-surface text-muted hover:bg-surface-2 hover:text-text",
+                  isLockedOut && "cursor-not-allowed opacity-40 hover:bg-surface",
                 )}
               >
-                {cfg.shortLabel}
+                {TYPE_META[typeKey].shortLabel}
               </button>
             );
           })}
         </div>
+        {lockedProjectType && (
+          <div className="mt-1.5 text-[10px] text-muted">
+            类型由 project.json 的 project_type 锁定，切换需先修改该工件。
+          </div>
+        )}
       </div>
 
       {/* Main Scrollable Content */}
@@ -520,77 +360,212 @@ export function LubricantStagePane({
             <div className="space-y-0.5">
               <div className="text-[11px] text-muted">当前工序状态</div>
               <div className="text-xs font-bold text-text flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{currentConfig.currentStageText}</span>
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    activeStep ? "bg-emerald-500 animate-pulse" : "bg-muted/50",
+                  )}
+                />
+                <span>
+                  {snapshot === null
+                    ? "扫描工作区中…"
+                    : activeStep
+                      ? `${activeStep.stage}：${activeStep.titleZh}`
+                      : `工件链已全部就绪（${totalStages}/${totalStages}）`}
+                </span>
               </div>
             </div>
             <div className="text-right space-y-0.5">
               <div className="text-[11px] text-muted">整体完成度</div>
               <div className="font-mono text-sm font-extrabold text-primary">
-                {currentConfig.completedStages} / {currentConfig.totalStages}{" "}
+                {completedCount} / {totalStages}{" "}
                 <span className="text-xs font-normal text-muted">({percent}%)</span>
               </div>
             </div>
           </div>
 
-          {/* Progress Visual Bar */}
           <div className="space-y-1">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-border/80 flex">
+            <div className="flex h-2 w-full overflow-hidden rounded-full bg-border/80">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 to-primary transition-all duration-500"
                 style={{ width: `${percent}%` }}
               />
             </div>
             <div className="flex justify-between text-[10px] text-muted">
-              <span>起步: 立项与定义</span>
-              <span>终点: 验证与定型</span>
+              <span>起步：立项与定义</span>
+              <span>终点：门禁终审</span>
             </div>
           </div>
+
+          {!live && (
+            <p className="rounded-md border border-border/40 bg-surface/60 p-2 text-[10px] leading-relaxed text-muted">
+              当前为离线预览：进度与状态为内置示例数据，不代表工作区真实工件。
+            </p>
+          )}
         </div>
 
-        {/* Gate Decision Banner */}
+        {/* Gate Decision Banner — 判定与签发 */}
         <div className="rounded-xl border border-border bg-surface-2/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-semibold text-text text-xs">
-              <ShieldCheck size={14} className="text-emerald-500" />
-              <span>最新门禁决议 (Gate Review)</span>
+              <ShieldCheck size={14} className={gateStatus ? "text-emerald-500" : "text-muted"} />
+              <span>门禁决议（Gate Review）</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide",
-                  gateDecision === "GO"
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                    : gateDecision === "HOLD"
-                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                      : "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30",
-                )}
-              >
-                {gateDecision} 放行
-              </span>
-            </div>
+            <span
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-extrabold tracking-wide",
+                gateStatus ? GATE_TONE[gateStatus] : "border-border bg-surface text-muted",
+              )}
+            >
+              {gateStatus ?? "未签署"}
+            </span>
           </div>
-          <p className="text-[11px] leading-relaxed text-muted bg-surface/60 rounded-md p-2 border border-border/40">
-            {currentConfig.gateNote}
-          </p>
-          <div className="flex items-center justify-end gap-1.5 pt-1">
+
+          {gateStatus && (
+            <p className="rounded-md border border-border/40 bg-surface/60 p-2 text-[11px] leading-relaxed text-muted">
+              gate.json 已落盘，gate_status = {gateStatus}
+              {gateProbe?.resolvedPath ? `（${gateProbe.resolvedPath}）` : ""}。
+            </p>
+          )}
+
+          {gateProbe?.exists && !gateProbe.valid && (
+            <ul className="space-y-0.5 rounded-md border border-red-500/30 bg-red-500/5 p-2">
+              {gateProbe.errors.slice(0, 3).map((e) => (
+                <li
+                  key={e}
+                  className="flex items-start gap-1 text-[10px] text-red-600 dark:text-red-400"
+                >
+                  <AlertCircle size={10} className="mt-0.5 shrink-0" />
+                  <span>{e}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* 前置校验结果 */}
+          <div className="space-y-1">
             <button
-              onClick={() => setGateDecision("GO")}
-              className={cn(
-                "rounded px-2 py-0.5 text-[10px] font-medium transition-colors",
-                gateDecision === "GO" ? "bg-emerald-600 text-white" : "bg-surface hover:bg-surface-2 text-muted",
-              )}
+              onClick={() => setShowChecks((v) => !v)}
+              className="flex w-full items-center justify-between rounded-md border border-border/50 bg-surface/60 px-2 py-1.5 text-[11px] transition-colors hover:bg-surface-2"
             >
-              批准放行
+              <span className="flex items-center gap-1.5">
+                {evaluation.canGo ? (
+                  <CheckCircle2 size={12} className="text-emerald-500" />
+                ) : (
+                  <AlertCircle size={12} className="text-amber-500" />
+                )}
+                <span className="font-medium text-text">
+                  门禁前置校验 {evaluation.checks.filter((c) => c.ok).length}/
+                  {evaluation.checks.length} 通过
+                </span>
+              </span>
+              {showChecks ? (
+                <ChevronDown size={13} className="text-muted" />
+              ) : (
+                <ChevronRight size={13} className="text-muted" />
+              )}
             </button>
-            <button
-              onClick={() => setGateDecision("HOLD")}
+
+            {showChecks && (
+              <ul className="space-y-1 rounded-md border border-border/40 bg-surface/40 p-2">
+                {evaluation.checks.map((check) => (
+                  <li key={check.id} className="flex items-start gap-1.5 text-[10px]">
+                    {check.ok ? (
+                      <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-emerald-500" />
+                    ) : (
+                      <AlertCircle size={11} className="mt-0.5 shrink-0 text-red-500" />
+                    )}
+                    <span className="text-text/90">
+                      <span className="font-medium">{check.label}</span>
+                      <span className="text-muted"> — {check.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {!live ? (
+            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] leading-relaxed text-amber-700 dark:text-amber-400">
+              磁盘写入仅在桌面版可用，浏览器下无法签发门禁决议。
+            </p>
+          ) : (
+            <div className="space-y-2 rounded-md border border-border/50 bg-surface/60 p-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted">决议</span>
+                <select
+                  value={gateDraftStatus}
+                  onChange={(e) => setGateDraftStatus(e.target.value as GateStatus)}
+                  className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[11px] text-text"
+                >
+                  {GATE_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                <span className="ml-auto font-mono text-[10px] text-muted">{gateIdDraft}</span>
+              </div>
+
+              <input
+                value={gateDraftReason}
+                onChange={(e) => setGateDraftReason(e.target.value)}
+                placeholder="决议理由（PIVOT / KILL / FREEZE 必填）"
+                className="w-full rounded border border-border bg-surface px-2 py-1 text-[11px] text-text placeholder:text-muted"
+              />
+
+              <textarea
+                value={gateDraftRisks}
+                onChange={(e) => setGateDraftRisks(e.target.value)}
+                rows={2}
+                placeholder="残余风险，每行一条（留空则汇总上游工件的 risks）"
+                className="w-full resize-y rounded border border-border bg-surface px-2 py-1 text-[11px] text-text placeholder:text-muted"
+              />
+
+              <button
+                onClick={() => void handleSignGate()}
+                disabled={signing || gateSignBlocked !== null}
+                title={gateSignBlocked ?? "写入 gate.json 并把签名追加到 docs/gate-history.jsonl"}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {signing ? (
+                  <RefreshCw size={12} className="animate-spin" />
+                ) : (
+                  <ShieldCheck size={12} />
+                )}
+                <span>签发门禁决议</span>
+              </button>
+
+              {gateSignBlocked && (
+                <p className="text-[10px] leading-relaxed text-amber-600 dark:text-amber-400">
+                  {gateSignBlocked}
+                </p>
+              )}
+            </div>
+          )}
+
+          {gateSignResult && (
+            <p
               className={cn(
-                "rounded px-2 py-0.5 text-[10px] font-medium transition-colors",
-                gateDecision === "HOLD" ? "bg-amber-600 text-white" : "bg-surface hover:bg-surface-2 text-muted",
+                "rounded-md border p-2 text-[10px] leading-relaxed",
+                gateSignResult.ok
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
               )}
             >
-              暂停待补
+              {gateSignResult.message}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              onClick={() =>
+                injectPrompt(buildGatePrompt(snapshot?.projectStage ?? null, openGaps))
+              }
+              className="flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-surface-2"
+            >
+              <Sparkles size={10} />
+              <span>在会话中执行门禁终审</span>
             </button>
           </div>
         </div>
@@ -599,22 +574,23 @@ export function LubricantStagePane({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-xs tracking-tight text-text">
-              工件链阶段步骤 ({currentConfig.steps.length} 步独立推进)
+              工件链阶段步骤（{steps.length} 步独立推进）
             </span>
             <span className="text-[11px] text-muted">点击展开步骤细则</span>
           </div>
 
           <div className="space-y-2">
-            {currentConfig.steps.map((step) => {
-              const isExpanded = expandedStep === step.id;
+            {steps.map((step) => {
+              const isExpanded = expandedStep === step.chainIndex;
               const isCompleted = step.status === "completed";
               const isActive = step.status === "active";
+              const invalid = !!step.probe?.exists && !step.probe.valid;
 
               return (
                 <div
-                  key={step.id}
+                  key={step.chainIndex}
                   className={cn(
-                    "rounded-xl border transition-all duration-150 overflow-hidden",
+                    "overflow-hidden rounded-xl border transition-all duration-150",
                     isActive
                       ? "border-primary/60 bg-primary/5 shadow-xs"
                       : isCompleted
@@ -622,20 +598,20 @@ export function LubricantStagePane({
                         : "border-border/60 bg-surface/50 opacity-80 hover:opacity-100",
                   )}
                 >
-                  {/* Step Card Header */}
                   <div
-                    onClick={() => setExpandedStep(isExpanded ? null : step.id)}
-                    className="flex cursor-pointer items-center justify-between p-2.5 select-none hover:bg-surface-2/40"
+                    onClick={() => setExpandedStep(isExpanded ? null : step.chainIndex)}
+                    className="flex cursor-pointer select-none items-center justify-between p-2.5 hover:bg-surface-2/40"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {/* Step Indicator Icon */}
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <div className="shrink-0">
-                        {isCompleted ? (
+                        {invalid ? (
+                          <AlertCircle size={16} className="text-red-500" />
+                        ) : isCompleted ? (
                           <CheckCircle2 size={16} className="text-emerald-500" />
                         ) : isActive ? (
                           <div className="relative flex h-4 w-4 items-center justify-center">
                             <span className="absolute h-full w-full rounded-full bg-primary/20 animate-ping" />
-                            <Clock size={15} className="text-primary relative z-10" />
+                            <Clock size={15} className="relative z-10 text-primary" />
                           </div>
                         ) : (
                           <Circle size={15} className="text-muted/60" />
@@ -646,7 +622,7 @@ export function LubricantStagePane({
                         <div className="flex items-center gap-1.5">
                           <span
                             className={cn(
-                              "rounded px-1 py-0.2 text-[10px] font-mono font-bold",
+                              "rounded px-1 py-0.2 font-mono text-[10px] font-bold",
                               isActive
                                 ? "bg-primary text-white"
                                 : isCompleted
@@ -654,52 +630,68 @@ export function LubricantStagePane({
                                   : "bg-surface-2 text-muted",
                             )}
                           >
-                            {step.stageName}
+                            {step.chainIndex}
                           </span>
-                          <span className="font-semibold text-xs text-text truncate">
-                            {step.title}
+                          <span className="truncate text-xs font-semibold text-text">
+                            {step.titleZh}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 text-[11px] text-muted mt-0.5">
-                          <FileCode2 size={11} className="text-primary/70 shrink-0" />
-                          <span className="font-mono text-[10px] truncate">{step.file}</span>
+                        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
+                          <FileCode2 size={11} className="shrink-0 text-primary/70" />
+                          <span className="truncate font-mono text-[10px]">{step.file}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
                       <span
                         className={cn(
-                          "text-[10px] font-medium px-1.5 py-0.2 rounded-full",
-                          isCompleted
-                            ? "text-emerald-600 bg-emerald-500/10"
-                            : isActive
-                              ? "text-primary bg-primary/10 font-bold"
-                              : "text-muted bg-surface-2",
+                          "rounded-full px-1.5 py-0.2 text-[10px] font-medium",
+                          invalid
+                            ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                            : isCompleted
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : isActive
+                                ? "bg-primary/10 font-bold text-primary"
+                                : "bg-surface-2 text-muted",
                         )}
                       >
-                        {isCompleted ? "已完成" : isActive ? "进行中" : "待推进"}
+                        {invalid
+                          ? "不合规"
+                          : isCompleted
+                            ? "已完成"
+                            : isActive
+                              ? "进行中"
+                              : "待推进"}
                       </span>
-                      {isExpanded ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
+                      {isExpanded ? (
+                        <ChevronDown size={14} className="text-muted" />
+                      ) : (
+                        <ChevronRight size={14} className="text-muted" />
+                      )}
                     </div>
                   </div>
 
-                  {/* Expanded Step Details */}
                   {isExpanded && (
-                    <div className="border-t border-border/50 bg-surface-2/20 p-3 space-y-2.5 text-xs">
+                    <div className="space-y-2.5 border-t border-border/50 bg-surface-2/20 p-3 text-xs">
                       <div>
-                        <div className="text-[11px] font-medium text-muted">阶段目标:</div>
-                        <div className="text-text leading-relaxed mt-0.5 text-[11px]">
+                        <div className="text-[11px] font-medium text-muted">阶段目标：</div>
+                        <div className="mt-0.5 text-[11px] leading-relaxed text-text">
                           {step.description}
                         </div>
                       </div>
 
                       <div>
-                        <div className="text-[11px] font-medium text-muted">准入考核标准 (Criteria):</div>
+                        <div className="text-[11px] font-medium text-muted">
+                          准入考核标准（Criteria）：
+                        </div>
                         <ul className="mt-1 space-y-1">
-                          {step.criteria.map((c, idx) => (
-                            <li key={idx} className="flex items-start gap-1.5 text-[11px] text-text/90">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                          {step.criteria.map((c) => (
+                            <li
+                              key={c}
+                              className="flex items-start gap-1.5 text-[11px] text-text/90"
+                            >
+                              <span className="font-bold text-emerald-500">✓</span>
                               <span>{c}</span>
                             </li>
                           ))}
@@ -707,18 +699,54 @@ export function LubricantStagePane({
                       </div>
 
                       <div>
-                        <div className="text-[11px] font-medium text-muted">关联交付工件:</div>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {step.deliverables.map((d, idx) => (
+                        <div className="text-[11px] font-medium text-muted">关联交付工件：</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          <span className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                            {step.file}
+                          </span>
+                          {step.probe && (
                             <span
-                              key={idx}
-                              className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-primary border border-border"
+                              className={cn(
+                                "rounded px-1.5 py-0.5 font-mono text-[10px]",
+                                step.probe.valid
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  : step.probe.exists
+                                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                                    : "bg-surface-2 text-muted",
+                              )}
                             >
-                              📄 {d}
+                              {step.probe.valid
+                                ? "已校验通过"
+                                : step.probe.exists
+                                  ? "结构不合规"
+                                  : "未找到"}
                             </span>
-                          ))}
+                          )}
                         </div>
                       </div>
+
+                      {invalid && step.probe && (
+                        <ul className="space-y-0.5 rounded-md border border-red-500/30 bg-red-500/5 p-2">
+                          {step.probe.errors.slice(0, 4).map((e) => (
+                            <li
+                              key={e}
+                              className="flex items-start gap-1 text-[10px] text-red-600 dark:text-red-400"
+                            >
+                              <AlertCircle size={10} className="mt-0.5 shrink-0" />
+                              <span>{e}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <button
+                        onClick={() => injectPrompt(buildStepPrompt(step))}
+                        title="将提示词追加到会话输入框（不自动发送）"
+                        className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs text-white transition-colors hover:bg-primary/90"
+                      >
+                        <Sparkles size={12} />
+                        <span>在会话中推进此步骤（{step.file}）</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -730,4 +758,3 @@ export function LubricantStagePane({
     </div>
   );
 }
-

@@ -190,6 +190,10 @@
       "label": "Exécutions",
       "title": "Les exécutions d'expériences de cette session — à côté du chat"
     },
+    "lubricantToggle": {
+      "label": "Étape",
+      "title": "Étapes de développement et revue de jalon — à côté du chat"
+    },
     "notebook": {
       "chooseTitle": "Choisir un notebook",
       "openTitle": "Ouvrir {{path}} — l'agent travaille sur ce notebook dans cette session"

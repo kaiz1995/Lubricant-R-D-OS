@@ -551,6 +551,7 @@ export function SessionView({
     <LubricantStagePane
       key={`lubricant:${eid ?? key}`}
       sessionId={eid ?? undefined}
+      sessionDir={sessionDir ?? undefined}
       onClose={() => {
         setLocalLubricant(false);
         setShowLubricant(false, key);
@@ -657,7 +658,6 @@ export function SessionView({
             </button>
           )}
           {/* Lubricant R&D Stage & Gate Inspector */}
-          {/* eslint-disable-next-line i18next/no-literal-string */}
           <button
             onClick={() => {
               pinEphemeral();
@@ -669,11 +669,11 @@ export function SessionView({
               "flex items-center gap-1 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-surface-2",
               showLubricant ? "bg-surface-2 text-text font-medium" : "text-muted",
             )}
-            title="研发阶段与门禁"
+            title={t("live.lubricantToggle.title")}
             aria-pressed={showLubricant}
           >
             <Layers size={13} className="text-amber-500" />
-            {showToolLabels && <span>研发阶段</span>}
+            {showToolLabels && <span>{t("live.lubricantToggle.label")}</span>}
           </button>
           {/* Subagents: only offered once this conversation has spawned one,
               so a plain single-agent chat keeps a clean header. */}

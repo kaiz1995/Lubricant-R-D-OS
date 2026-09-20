@@ -190,6 +190,10 @@
       "label": "Runs",
       "title": "This session's experiment runs — beside the chat"
     },
+    "lubricantToggle": {
+      "label": "Stage",
+      "title": "R&D stages and gate review — beside the chat"
+    },
     "notebook": {
       "chooseTitle": "Choose a notebook",
       "openTitle": "Open {{path}} — the agent works on this notebook in this session"
