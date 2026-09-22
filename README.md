@@ -38,6 +38,19 @@ runs, and review into one auditable desktop workflow.
 
 ---
 
+> [!IMPORTANT]
+> **本仓库是 Lubricant R&D OS —— 工业润滑油研发分支，不是上游原版。**
+>
+> 它是 [ai4s-research/open-science](https://github.com/ai4s-research/open-science) 的长期下游分支，在其上叠加了**工业润滑油产品开发**领域层与三栏研发工作台：
+>
+> - **领域层** → [`domains/lubricant/`](./domains/lubricant/)：12 个研发阶段技能、16 个工件 JSON Schema、阶段状态机、Phase 4 计算引擎（成本 / 混料 DOE / 统计 / 多目标优化）、13 个自动化测试。详见[领域包文档](./domains/lubricant/README.md)。
+> - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Open Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 11 步工件链、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
+> - **上游基线** → `0.5.2`（`cea3c3a`）；同步状态与核心改动清单见 [`UPSTREAM.md`](./UPSTREAM.md)。
+>
+> 下文是上游 Open Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
+
+---
+
 ## News
 
 - **2026-08-18** — 🖥️ **Runs without a screen, and the terminal command comes with it.** `osd server` starts the whole workbench — workspace, agent runtime, and the *same* web UI — on a machine with no display, and `osd session send … --wait` drives it from a script or another agent. `osd` ships inside the desktop installer and puts itself on your PATH on first launch; on a server the archive needs nothing installed. Models, keys and approvals are all configurable from the terminal (`osd model`, `osd auth`, `osd approval`).
