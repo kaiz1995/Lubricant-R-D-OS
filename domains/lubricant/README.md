@@ -108,7 +108,7 @@
    - *Open Science 优势*：基于 Tauri 2 + 本地 SQLite + 本地沙箱文件系统，数据 100% 留存于企业内网或本地工作台。既可无缝对接本地离线开源大模型，也可在安全网络环境下接入商用模型，从物理层面隔离配方机密。
 3. **开箱即用的专业科研基础设施（无需重复造轮子）**：
    - *通用 Agent 痛点*：从零开发桌面端交互、多模型适配、运行时进程管理和工具链调度需耗费团队 70% 以上的工程基建精力。
-   - *Open Science 优势*：底座已完整封装跨平台桌面应用壳、OpenCode Agent Runtime、MCP 协议拓展支持、Python/Jupyter 计算执行环境与项目/会话隔离机制，使领域专家能 100% 聚焦于润滑油机理、DOE 算法与研发流程本身。
+   - *Open Science 优势*：底座已完整封装跨平台桌面应用壳、**OpenCode Agent Runtime**（[anomalyco/opencode](https://github.com/anomalyco/opencode)，随安装包分发的第三方 Agent 运行时）、MCP 协议拓展支持、Python/Jupyter 计算执行环境与项目/会话隔离机制，使领域专家能 100% 聚焦于润滑油机理、DOE 算法与研发流程本身。
 4. **LLM 语义路由与确定性科学计算的严格解耦**：
    - *通用 Agent 痛点*：直接让大模型捏造数字、估算粘度或拟合回归曲线，极易产生“看似合理但实际完全错误”的工程幻觉。
    - *Open Science 优势*：提供规范的 Skill 扩展协议与 Python 宿主运行能力。大模型仅作为“研发副驾驶”负责理解意图、结构化提取与语义解释；而配方成本、约束混料极值设计（Mixture DOE）、方差分析（ANOVA）与多目标优化等计算完全由独立的确定性数学引擎执行，确保数字严谨可信。
@@ -117,7 +117,7 @@
 
 ## 6. 12 个领域技能清单 (Skills)
 
-每个 Skill 均可被 OpenCode 独立加载，并输出遵循标准 JSON Schema 的结构化工件：
+每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Open Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
 
 | Skill 名称 | 所属阶段 | 输出状态 / 工件 | 关键功能与职责 |
 |---|---|---|---|
