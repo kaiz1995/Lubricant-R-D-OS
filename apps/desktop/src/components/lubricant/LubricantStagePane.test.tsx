@@ -3,6 +3,8 @@
 // "Reproduce" uses. These checks pin that: the draft reaches the store, it
 // carries the domain pack's real skill path and file name, and nothing is
 // sent behind the researcher's back.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -150,6 +152,61 @@ describe("LubricantStagePane — 浏览器降级", () => {
     renderPane();
     await userEvent.click(await screen.findByRole("button", { name: /在会话中推进此步骤/ }));
     expect(useUiStore.getState().composerDraft).toContain("duty.json");
+  });
+});
+
+describe("LubricantStagePane — 主题色 token", () => {
+  // 这里曾经写着 `bg-primary text-white`。`primary` 不在 tailwind.config.js 的色板里，
+  // 于是 `bg-primary` 一个 class 都生成不出来 —— 没有背景，而白字落在浅色面板上，
+  // 按钮看起来完全是空白的（鼠标悬停能看到 title，但看不到字）。正确的一对是
+  // `accent` + `accent-fg`。
+  const source = () =>
+    readFileSync(
+      join(process.cwd(), "src/components/lubricant/LubricantStagePane.tsx"),
+      "utf8",
+    );
+
+  const palette = () => {
+    const config = readFileSync(join(process.cwd(), "tailwind.config.js"), "utf8");
+    const block = config.slice(config.indexOf("colors:"), config.indexOf("fontFamily:"));
+    const keys = new Set(
+      [...block.matchAll(/["']?([a-z][a-z0-9-]*)["']?\s*:/g)].map((m) => m[1]),
+    );
+    keys.delete("colors");
+    return keys;
+  };
+
+  /** Tailwind 的尺寸/方位/结构后缀，以及 CSS 关键字 —— 都不是主题色。 */
+  const KEYWORDS = new Set([
+    "xs", "sm", "base", "lg", "xl",
+    "center", "left", "right", "justify", "start", "end",
+    "b", "t", "l", "r", "x", "y", "s", "e",
+    "white", "black", "transparent", "current", "inherit", "none", "auto", "full",
+  ]);
+
+  it("只用 tailwind.config.js 里定义的颜色，不发明 token", () => {
+    const known = palette();
+    expect(known.size).toBeGreaterThan(8); // 色板读到了
+
+    const unknown = new Set<string>();
+    // 只查主题色会出现的工具类；带数字后缀的是标准 Tailwind 色阶（red-500 等），跳过。
+    for (const m of source().matchAll(/(?:^|[\s"'`])(?:bg|text|border|from|to|via)-([a-z][a-z0-9-]*)/g)) {
+      const token = m[1];
+      if (/-\d+$/.test(token)) continue;
+      if (token.includes("gradient")) continue;
+      if (KEYWORDS.has(token) || known.has(token)) continue;
+      unknown.add(token);
+    }
+    expect([...unknown]).toEqual([]);
+  });
+
+  it("填充按钮用 accent + accent-fg 这一对（对比度由主题保证）", () => {
+    const text = source();
+    // 有 bg-accent 的地方必须有 accent-fg 配它，否则就是白字/黑字撞背景
+    expect(text).toContain("bg-accent text-accent-fg");
+    expect(text).not.toContain("text-white");
+    expect(text).not.toContain("bg-primary");
+    expect(text).not.toContain("text-primary");
   });
 });
 

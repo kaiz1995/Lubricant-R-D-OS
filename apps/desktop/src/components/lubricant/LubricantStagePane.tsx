@@ -311,7 +311,7 @@ export function LubricantStagePane({
             研发开发类型
             {lockedProjectType && <Lock size={10} className="text-emerald-500" />}
           </span>
-          <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+          <span className="rounded bg-accent/10 px-1.5 py-0.2 text-[10px] font-semibold text-accent">
             {totalStages} 阶段
           </span>
         </div>
@@ -335,7 +335,7 @@ export function LubricantStagePane({
                 className={cn(
                   "rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all",
                   isSelected
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-accent text-accent-fg shadow-sm"
                     : "border border-border/60 bg-surface text-muted hover:bg-surface-2 hover:text-text",
                   isLockedOut && "cursor-not-allowed opacity-40 hover:bg-surface",
                 )}
@@ -377,7 +377,7 @@ export function LubricantStagePane({
             </div>
             <div className="text-right space-y-0.5">
               <div className="text-[11px] text-muted">整体完成度</div>
-              <div className="font-mono text-sm font-extrabold text-primary">
+              <div className="font-mono text-sm font-extrabold text-accent">
                 {completedCount} / {totalStages}{" "}
                 <span className="text-xs font-normal text-muted">({percent}%)</span>
               </div>
@@ -387,7 +387,7 @@ export function LubricantStagePane({
           <div className="space-y-1">
             <div className="flex h-2 w-full overflow-hidden rounded-full bg-border/80">
               <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-primary transition-all duration-500"
+                className="h-full bg-gradient-to-r from-emerald-500 to-accent transition-all duration-500"
                 style={{ width: `${percent}%` }}
               />
             </div>
@@ -526,7 +526,7 @@ export function LubricantStagePane({
                 onClick={() => void handleSignGate()}
                 disabled={signing || gateSignBlocked !== null}
                 title={gateSignBlocked ?? "写入 gate.json 并把签名追加到 docs/gate-history.jsonl"}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {signing ? (
                   <RefreshCw size={12} className="animate-spin" />
@@ -562,7 +562,7 @@ export function LubricantStagePane({
               onClick={() =>
                 injectPrompt(buildGatePrompt(snapshot?.projectStage ?? null, openGaps))
               }
-              className="flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-surface-2"
+              className="flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-[10px] font-medium text-accent transition-colors hover:bg-surface-2"
             >
               <Sparkles size={10} />
               <span>在会话中执行门禁终审</span>
@@ -592,7 +592,7 @@ export function LubricantStagePane({
                   className={cn(
                     "overflow-hidden rounded-xl border transition-all duration-150",
                     isActive
-                      ? "border-primary/60 bg-primary/5 shadow-xs"
+                      ? "border-accent/60 bg-accent/5 shadow-xs"
                       : isCompleted
                         ? "border-emerald-500/30 bg-surface/90"
                         : "border-border/60 bg-surface/50 opacity-80 hover:opacity-100",
@@ -610,8 +610,8 @@ export function LubricantStagePane({
                           <CheckCircle2 size={16} className="text-emerald-500" />
                         ) : isActive ? (
                           <div className="relative flex h-4 w-4 items-center justify-center">
-                            <span className="absolute h-full w-full rounded-full bg-primary/20 animate-ping" />
-                            <Clock size={15} className="relative z-10 text-primary" />
+                            <span className="absolute h-full w-full rounded-full bg-accent/20 animate-ping" />
+                            <Clock size={15} className="relative z-10 text-accent" />
                           </div>
                         ) : (
                           <Circle size={15} className="text-muted/60" />
@@ -624,7 +624,7 @@ export function LubricantStagePane({
                             className={cn(
                               "rounded px-1 py-0.2 font-mono text-[10px] font-bold",
                               isActive
-                                ? "bg-primary text-white"
+                                ? "bg-accent text-accent-fg"
                                 : isCompleted
                                   ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                                   : "bg-surface-2 text-muted",
@@ -637,7 +637,7 @@ export function LubricantStagePane({
                           </span>
                         </div>
                         <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
-                          <FileCode2 size={11} className="shrink-0 text-primary/70" />
+                          <FileCode2 size={11} className="shrink-0 text-accent/70" />
                           <span className="truncate font-mono text-[10px]">{step.file}</span>
                         </div>
                       </div>
@@ -652,7 +652,7 @@ export function LubricantStagePane({
                             : isCompleted
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                               : isActive
-                                ? "bg-primary/10 font-bold text-primary"
+                                ? "bg-accent/10 font-bold text-accent"
                                 : "bg-surface-2 text-muted",
                         )}
                       >
@@ -701,7 +701,7 @@ export function LubricantStagePane({
                       <div>
                         <div className="text-[11px] font-medium text-muted">关联交付工件：</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
-                          <span className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                          <span className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-accent">
                             {step.file}
                           </span>
                           {step.probe && (
@@ -742,7 +742,7 @@ export function LubricantStagePane({
                       <button
                         onClick={() => injectPrompt(buildStepPrompt(step))}
                         title="将提示词追加到会话输入框（不自动发送）"
-                        className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs text-white transition-colors hover:bg-primary/90"
+                        className="flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1 text-xs text-accent-fg transition-colors hover:bg-accent/90"
                       >
                         <Sparkles size={12} />
                         <span>在会话中推进此步骤（{step.file}）</span>
