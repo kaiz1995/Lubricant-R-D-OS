@@ -12,7 +12,11 @@ last_sync: 2026-09-14
 sync_status: SYNCED
 
 downstream_repository: https://github.com/kaiz1995/Lubricant-R-D-OS.git
-downstream_branch: feat/lubricant-rd-ui-minimal
+downstream_branch: dev/lubricant-rd-v0
+downstream_working_branch: feat/lubricant-rd-ui-minimal
+# Both branches point at the same commit as of 2026-09-22; dev/ is the
+# integration line named in §2 of the sync spec, feat/ is where the UI work
+# landed first.
 
 local_product:
   name: Lubricant R&D OS
