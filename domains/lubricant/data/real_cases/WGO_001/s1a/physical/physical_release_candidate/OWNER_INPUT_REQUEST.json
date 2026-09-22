@@ -1,0 +1,159 @@
+{
+  "artifact_id": "WGO_001_S1A_OWNER_INPUT_REQUEST_V1",
+  "purpose": "REAL_OWNER_INPUT_COLLECTION_ONLY",
+  "status": "OPEN_UNRESOLVED",
+  "scope": "PHYSICAL_RELEASE_CANDIDATE",
+  "source_isolation": "INDEPENDENT_OF_SYNTHETIC_REPLAY_FIXTURES",
+  "collection_rules": {
+    "synthetic_defaults_or_imports": "FORBIDDEN",
+    "unanswered_value": null,
+    "state_transition_allowed": false,
+    "physical_execution_authorized": false,
+    "physical_method_authority": "NONE_UNTIL_OWNER_SIGNOFF",
+    "final_release_authorization": "DEFERRED_UNTIL_HASH_VERIFICATION"
+  },
+  "inputs": {
+    "GOOD_CHARACTERIZATION_CANDIDATE": {
+      "candidate_resolution_key": "GOOD_CHARACTERIZATION_CANDIDATE identity",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "sample_id": {"current_value": null, "response": null},
+        "material_identity": {"current_value": null, "response": null},
+        "supplier_or_product_code": {"current_value": null, "response": null},
+        "batch_or_container_id": {"current_value": null, "response": null},
+        "formula_or_composition": {"current_value": null, "response": null},
+        "water_content": {"current_value": null, "response": null},
+        "water_measurement_method": {"current_value": null, "response": null},
+        "preparation_sop": {"current_value": null, "response": null},
+        "evidence_reference": {"current_value": null, "response": null}
+      }
+    },
+    "BAD_CHARACTERIZATION_CANDIDATE": {
+      "candidate_resolution_key": "BAD_CHARACTERIZATION_CANDIDATE identity",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "definition_choice": {"current_value": null, "response": null},
+        "sample_id": {"current_value": null, "response": null},
+        "material_identity": {"current_value": null, "response": null},
+        "formula_or_composition": {"current_value": null, "response": null},
+        "batch_or_container_id": {"current_value": null, "response": null},
+        "preparation_sop": {"current_value": null, "response": null},
+        "safety_handling_reference": {"current_value": null, "response": null},
+        "qc_acceptance": {"current_value": null, "response": null},
+        "identity_conflict_disposition": {"current_value": null, "response": null},
+        "evidence_reference": {"current_value": null, "response": null}
+      }
+    },
+    "BENCH_REFERENCE_BLANK": {
+      "candidate_resolution_key": "BENCH_REFERENCE_BLANK identity",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "sample_id": {"current_value": null, "response": null},
+        "material_identity": {"current_value": null, "response": null},
+        "supplier_or_product_code": {"current_value": null, "response": null},
+        "batch_or_container_id": {"current_value": null, "response": null},
+        "container_id": {"current_value": null, "response": null},
+        "new_unused_confirmation": {"current_value": null, "response": null},
+        "no_additive_confirmation": {"current_value": null, "response": null},
+        "no_artificial_contamination_confirmation": {"current_value": null, "response": null},
+        "handling_sop": {"current_value": null, "response": null},
+        "evidence_reference": {"current_value": null, "response": null}
+      }
+    },
+    "PHYSICAL_EVENT_DETECTION_RULE_V1": {
+      "candidate_resolution_key": "physical Event Detection Rule V1",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "threshold_db": {"current_value": null, "response": null},
+        "comparator": {"current_value": null, "response": null},
+        "signal_source": {"current_value": null, "response": null},
+        "sampling_interval": {"current_value": null, "response": null},
+        "instrument_resolution": {"current_value": null, "response": null},
+        "weighting_rule": {"current_value": null, "response": null},
+        "rounding_rule": {"current_value": null, "response": null},
+        "filtering_rule": {"current_value": null, "response": null},
+        "persistence_rule": {"current_value": null, "response": null},
+        "missing_sample_rule": {"current_value": null, "response": null},
+        "manual_timestamp_rule": {"current_value": null, "response": null}
+      }
+    },
+    "Q2B_FINAL_CHECKPOINTS": {
+      "candidate_resolution_key": "Q2-B final checkpoints",
+      "current_value": null,
+      "response": null,
+      "fields": {"checkpoints_h": {"current_value": null, "response": null}}
+    },
+    "TEN_HOUR_CENSORING_SEMANTICS": {
+      "candidate_resolution_key": "ten-hour administrative right-censoring semantics",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "administrative_right_censor_h": {"current_value": null, "response": null},
+        "no_event_within_window_interpretation": {"current_value": null, "response": null},
+        "event_not_observed_recording_rule": {"current_value": null, "response": null}
+      }
+    },
+    "PROTOCOL_VERSION": {
+      "candidate_resolution_key": "protocol version",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "protocol_version": {"current_value": null, "response": null},
+        "protocol_artifact_reference": {"current_value": null, "response": null}
+      }
+    },
+    "BENCH_AND_EQUIPMENT_IDENTITIES": {
+      "candidate_resolution_key": "bench and equipment identities",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "bench_id": {"current_value": null, "response": null},
+        "noise_instrument_id": {"current_value": null, "response": null},
+        "equipment_configuration_reference": {"current_value": null, "response": null},
+        "operator_qualification_reference": {"current_value": null, "response": null}
+      }
+    },
+    "BLOCKING_AND_EXECUTION_ORDER_GENERATION_RULE": {
+      "candidate_resolution_key": "blocking and execution-order generation rule",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "blocking_rule": {"current_value": null, "response": null},
+        "order_generation_method": {"current_value": null, "response": null},
+        "seed_policy": {"current_value": null, "response": null}
+      }
+    },
+    "OWNER_PARAMETER_FREEZE_CONFIRMATION": {
+      "candidate_resolution_key": "Owner parameter freeze confirmation",
+      "current_value": null,
+      "response": null,
+      "fields": {
+        "owner": {"current_value": null, "response": null},
+        "confirmed_at": {"current_value": null, "response": null},
+        "approval_reference": {"current_value": null, "response": null}
+      }
+    }
+  },
+  "prohibited_actions": [
+    "GENERATE_EXECUTION_ORDER",
+    "RECORD_EXECUTION_ORDER_PROVENANCE",
+    "CALCULATE_RELEASE_HASHES",
+    "POPULATE_MANIFEST_FINAL_VALUES",
+    "RECORD_FINAL_OWNER_AUTHORIZATION",
+    "START_PHYSICAL_EXECUTION",
+    "START_STAGE_A2",
+    "START_S1B",
+    "START_S2"
+  ],
+  "downstream_state": {
+    "PHYSICAL_STAGE_A": "HOLD",
+    "STAGE_A2": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "PHASE_3_4": "NO_CHANGE"
+  }
+}

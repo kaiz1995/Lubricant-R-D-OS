@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/design_freeze.schema.json",
+  "title": "Design freeze record",
+  "description": "Stage 7 contract. Freeze requires every one of the eight freeze conditions to be satisfied with retained evidence. SYNTHETIC evidence can never freeze a design; the artifact scope is PHYSICAL only.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "design_freeze" },
+    "evidence_scope": { "const": "PHYSICAL" },
+    "freeze_record": {
+      "type": "object",
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence_package": { "type": "string", "minLength": 1 },
+        "evidence_scope": { "const": "PHYSICAL" },
+        "evidence_status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] },
+        "freeze_conditions": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "properties": {
+              "condition_id": {
+                "enum": [
+                  "CRITICAL_CTQ_SATISFIED",
+                  "CRITICAL_RISK_EVIDENCE_SUFFICIENT",
+                  "COST_TARGET_MET",
+                  "RAW_MATERIAL_SUPPLY_ACCEPTABLE",
+                  "MANUFACTURABILITY_ACCEPTABLE",
+                  "CRITICAL_BENCHMARK_NO_DEGRADATION",
+                  "COMPATIBILITY_PASSED",
+                  "RISK_REVIEW_PASSED"
+                ]
+              },
+              "satisfied": { "const": true },
+              "evidence_reference": { "type": "string", "minLength": 1 }
+            },
+            "required": ["condition_id", "satisfied", "evidence_reference"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "reason",
+        "evidence_package",
+        "evidence_scope",
+        "evidence_status",
+        "freeze_conditions"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["artifact_type", "evidence_scope", "freeze_record"],
+  "unevaluatedProperties": false
+}

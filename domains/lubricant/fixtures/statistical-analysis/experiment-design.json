@@ -1,0 +1,71 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "experiment_design",
+  "project_id": "WGO-DOE-001",
+  "stage": "EXPERIMENT_DESIGNED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can supplied CONSTRAINED_MIXTURE request ED-DOE-001 be handed to the Phase 4 deterministic engine?",
+  "hypothesis": "ED-DOE-001 records supplied constrained-mixture planning inputs for later deterministic point generation.",
+  "uncertainty": "Supplied design family, factors, target count, replicates, center points, randomization, response roles, guardrails, total, and information-value statements are not independently verified; statistical sufficiency is not verified and no DOE point, formula, measurement, result, cost, performance, optimization, or downstream conclusion is established.",
+  "decision_rule": "Hand off only a supplied CONSTRAINED_MIXTURE request with linked qualified D/P method, feasible same-unit formulation bounds and total, complete responses and guardrails, and evidence without GAP.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition.",
+  "evidence": [
+    {
+      "evidence_id": "E-ED-001",
+      "statement": "Synthetic supplied planning evidence.",
+      "source": "synthetic",
+      "status": "ASSUMED"
+    }
+  ],
+  "design_space_reference": "DS-DOE-001",
+  "test_method_references": [
+    "TM-DOE-001"
+  ],
+  "experiment_design_id": "ED-DOE-001",
+  "factor_references": [
+    "MIX-A",
+    "MIX-B"
+  ],
+  "design": {
+    "family": "CONSTRAINED_MIXTURE",
+    "rationale": "Supplied factors are constrained mixture proportions.",
+    "effects_to_estimate": [
+      "mixture contribution"
+    ]
+  },
+  "run_plan": {
+    "target_count": 12,
+    "replicate_count": 2,
+    "center_point_count": 2,
+    "randomized": true,
+    "point_generation": "PHASE4_DETERMINISTIC_ENGINE"
+  },
+  "responses": [
+    {
+      "ctq_reference": "CTQ-DOE-001",
+      "test_method_reference": "TM-DOE-001",
+      "role": "OPTIMIZATION_RESPONSE"
+    }
+  ],
+  "guardrails": [
+    "Remain within DS-DOE-001."
+  ],
+  "expected_information_value": {
+    "classification": "RECOMMENDED",
+    "decision_relevance": "Synthetic route comparison.",
+    "expected_information_gain": "Synthetic planning only.",
+    "cost": "Synthetic planning only.",
+    "duration": "Synthetic planning only.",
+    "redundancy": "Synthetic planning only."
+  },
+  "mixture_total": {
+    "value": 1,
+    "unit": "normalized fraction",
+    "source": "approved synthetic design constraint",
+    "method_version": "design-contract-v1",
+    "material_batch": "not_applicable",
+    "formula_version": "not_applicable"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "artifact_id": "WGO_001_S1A_SYNTHETIC_REPLAY_FROZEN_INPUTS_V1",
+  "fixture_status": "PASS_FREEZE",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": ["SYNTHETIC", "DEMO", "NOT_FOR_PHYSICAL_EXECUTION"],
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "physical_execution_authorized": false,
+  "notice": "NOT_FOR_PHYSICAL_EXECUTION",
+  "source_policy": "FIXTURE_LOCAL_ONLY_NO_LIVE_PHYSICAL_ARTIFACTS",
+  "overwrite_policy": "FROZEN_DO_NOT_OVERWRITE",
+  "demo_inputs": {
+    "owner": "张凯",
+    "recorded_at": "2026-05-06",
+    "references": {
+      "GOOD_CHARACTERIZATION_CANDIDATE": {
+        "sample_id": "WGO001-S1A-GCC-20260401",
+        "formula": "1540_ESTER_98_WT_PERCENT_PLUS_ASA4_ACTIVE_2_WT_PERCENT",
+        "water": "1_WT_PERCENT",
+        "preparation": "60_C_60_MIN_60_RPM_OIL_THEN_ADDITIVE_NO_REST"
+      },
+      "BAD_CHARACTERIZATION_CANDIDATE": {
+        "sample_id": "WGO001-S1A-BCC-DEMO-001",
+        "formula": "1540_97_8_WT_PERCENT_PLUS_ASA4_2_0_WT_PERCENT_PLUS_DEMO_HIGH_S_CONTAMINANT_0_2_WT_PERCENT",
+        "contaminant_id": "DEMO-HS-001",
+        "preparation": "60_C_60_MIN_60_RPM_OIL_THEN_ASA4_THEN_CONTAMINANT",
+        "assumption": "SYNTHETIC_DEMO_ONLY"
+      },
+      "BENCH_REFERENCE_BLANK": {
+        "sample_id": "WGO001-S1A-BRB-20260506",
+        "material": "MOBIL_SHC_320_WT",
+        "condition": "NEW_NO_ADDITIVE_NO_INTENTIONAL_CONTAMINATION",
+        "container_id": "WGO001-MOBILBLANK-20260506-01"
+      }
+    },
+    "event_rule": {
+      "threshold_db": 65.0,
+      "comparator": "GREATER_THAN_OR_EQUAL",
+      "signal_source": "SELF_BUILT_ANALOG_POINTER_DISPLAY",
+      "sampling_interval": "CONTINUOUS_VISUAL_OBSERVATION",
+      "instrument_resolution": "1_DB",
+      "weighting_rule": "NONE",
+      "rounding_rule": "POINTER_SCALE_NO_ADDITIONAL_ROUNDING",
+      "filtering_rule": "NONE",
+      "persistence_seconds": 5,
+      "missing_sample_rule": "MISSING_OBSERVATION_AROUND_CROSSING_EVENT_TIME_NOT_ESTIMABLE_AND_INVALID_RUN",
+      "manual_timestamp_rule": "NEAREST_MINUTE"
+    },
+    "q2b_checkpoints_h": [1, 2],
+    "planned_order": [
+      {"planned_run_order": 1, "run_id": "A1-BLANK-01", "role": "BENCH_REFERENCE_BLANK"},
+      {"planned_run_order": 2, "run_id": "A1-GOOD-01", "role": "GOOD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 3, "run_id": "A1-BAD-01", "role": "BAD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 4, "run_id": "A1-BAD-02", "role": "BAD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 5, "run_id": "A1-BLANK-02", "role": "BENCH_REFERENCE_BLANK"},
+      {"planned_run_order": 6, "run_id": "A1-GOOD-02", "role": "GOOD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 7, "run_id": "A1-GOOD-03", "role": "GOOD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 8, "run_id": "A1-BAD-03", "role": "BAD_CHARACTERIZATION_CANDIDATE"},
+      {"planned_run_order": 9, "run_id": "A1-BLANK-03", "role": "BENCH_REFERENCE_BLANK"}
+    ]
+  },
+  "fixture_sha256": {
+    "clean_9_run_records.json": "8661b63be0e2c5c57a36b6f5e38355544c504c5a844de2a2f18e079f29899838",
+    "synthetic_raw_traces.json": "690dbe71c775a9b89578215a00b84b0035961c60658f22366df319bc0a2f1fc0",
+    "negative_fixtures.json": "0530c1d73ad3bc9d4b53d449934da287181213754e53f92499d6bb411fbb4289"
+  },
+  "gate_contract": {
+    "WORKFLOW_VALIDATED": true,
+    "synthetic_stage_a_result": "PROMISING",
+    "state_transition_allowed": false,
+    "prohibited_transitions": ["Stage A2", "S1b", "S2"],
+    "prohibited_claims": ["METHOD_QUALIFIED", "PHYSICAL_RELEASE_APPROVED"]
+  }
+}

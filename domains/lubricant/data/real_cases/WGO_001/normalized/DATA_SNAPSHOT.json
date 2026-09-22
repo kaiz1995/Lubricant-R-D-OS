@@ -1,0 +1,16 @@
+{
+  "snapshot_id": "WGO_001_ASA4_DOSE_V1",
+  "created_at": "2026-08-23T17:01:57",
+  "source_files": [
+    {
+      "path": "D:\\临时文件-工作\\风电-临时文件\\风电导电油&抗电蚀剂开发过程记录\\Lubemater WT 抗电蚀复合剂开发-20260510.xlsx",
+      "sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74"
+    }
+  ],
+  "record_count": 10,
+  "data_owner_source": "CF-30C/WT project R&D workbook (ASA#4验证 sheet)",
+  "notes": [
+    "new bench standard >65dB subset only; old >75dB excluded (E-04)",
+    "Mobil base oil only; Shell/Castrol/red-Mobil/aged/current-var columns excluded"
+  ]
+}

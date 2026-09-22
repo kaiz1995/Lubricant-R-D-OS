@@ -1,0 +1,15 @@
+{
+  "duty_artifact": "duty-active.json",
+  "challenge": {
+    "duty_reference": "DP-001",
+    "challenge_id": "CH-001",
+    "category": "WATER_CONTAMINATION",
+    "description": "Potential water ingress during service.",
+    "severity": "HIGH",
+    "exposure": "MEDIUM",
+    "lubricant_sensitivity": "HIGH",
+    "evidence_gap": "No quantified field water history.",
+    "priority": "HIGH"
+  },
+  "challenge_evidence": [{"evidence_id": "E-C-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: supplied duty profile identifies potential water ingress for contract testing only.", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "status": "OBSERVED"}]
+}

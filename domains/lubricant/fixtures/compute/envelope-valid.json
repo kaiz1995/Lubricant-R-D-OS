@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "cost",
+  "engine_version": "0.1.0",
+  "method": "COST_SUM",
+  "parameters": {},
+  "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {},
+  "evidence": []
+}

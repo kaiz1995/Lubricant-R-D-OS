@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "project", "status": "ACTIVE", "project_id": "WGO-OTHER", "stage": "PROJECT_DEFINED",
+  "decision_question": "Can the synthetic project proceed?", "hypothesis": "A constrained project charter can frame the decision.", "uncertainty": "Synthetic fixture only.",
+  "evidence": [{"evidence_id": "E-P-X", "statement": "Synthetic project brief received.", "source": "synthetic source", "status": "OBSERVED"}],
+  "decision_rule": "Advance only after constraints are recorded.", "result": "Synthetic charter is recorded.", "decision": "GO", "next_action": "Define duty conditions.",
+  "project_name": "Synthetic cross-project", "project_type": "COST_DOWN", "product_family": "Synthetic oil", "business_objective": "Synthetic objective.", "technical_objective": "Synthetic constraint.", "hard_constraints": ["synthetic constraint"], "target_cost": {"value": 1, "unit": "unit", "source": "synthetic", "method_version": "v1", "material_batch": "not_applicable", "formula_version": "v1"}, "benchmark_products": ["synthetic benchmark"], "success_criteria": ["synthetic criterion"], "risk_class": "LOW", "owner": "Synthetic owner"
+}

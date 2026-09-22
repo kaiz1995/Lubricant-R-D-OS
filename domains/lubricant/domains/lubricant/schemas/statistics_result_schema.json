@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/statistics_result_schema.json",
+  "title": "Statistics result",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "engine_name": {
+      "const": "statistics"
+    },
+    "engine_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "OK",
+        "REJECTED"
+      ]
+    },
+    "rejection_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "result": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "OBSERVED",
+              "ASSUMED",
+              "GAP"
+            ]
+          }
+        },
+        "required": [
+          "evidence_id",
+          "statement",
+          "source",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "engine_name",
+    "engine_version",
+    "method",
+    "parameters",
+    "input_digest",
+    "status",
+    "rejection_reasons",
+    "result",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "OK"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rejection_reasons": {
+            "maxItems": 0
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "response_ctq": {
+                "type": "string",
+                "minLength": 1
+              },
+              "coefficients": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "term": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "estimate": {
+                      "type": "number"
+                    },
+                    "std_error": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "t_value": {
+                      "type": "number"
+                    },
+                    "p_value": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "term",
+                    "estimate",
+                    "std_error",
+                    "t_value",
+                    "p_value"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "anova_table": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "row_type": {
+                      "enum": [
+                        "TERM",
+                        "RESIDUAL"
+                      ]
+                    },
+                    "sum_squares": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "df": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "mean_square": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "f_value": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "p_value": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "row_type",
+                    "sum_squares",
+                    "df"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "fit_statistics": {
+                "type": "object",
+                "properties": {
+                  "r_squared": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "adj_r_squared": {
+                    "type": "number"
+                  },
+                  "sigma_squared": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "r_squared",
+                  "adj_r_squared",
+                  "sigma_squared"
+                ],
+                "additionalProperties": false
+              },
+              "residual_analysis": {
+                "type": "object",
+                "properties": {
+                  "residuals": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "run_reference": {
+                          "type": "string"
+                        },
+                        "residual": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "run_reference",
+                        "residual"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "standardized_residuals": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "run_reference": {
+                          "type": "string"
+                        },
+                        "std_residual": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "run_reference",
+                        "std_residual"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "skewness": {
+                    "type": "number"
+                  },
+                  "kurtosis": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "residuals",
+                  "standardized_residuals",
+                  "skewness",
+                  "kurtosis"
+                ],
+                "additionalProperties": false
+              },
+              "lack_of_fit": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "COMPUTED",
+                      "NOT_APPLICABLE"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "status": {
+                          "const": "COMPUTED"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "sum_squares_lof": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "df_lof": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sum_squares_pe": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "df_pe": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "f_value": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "p_value": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": [
+                        "sum_squares_lof",
+                        "df_lof",
+                        "sum_squares_pe",
+                        "df_pe",
+                        "f_value",
+                        "p_value"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "response_ctq",
+              "coefficients",
+              "anova_table",
+              "fit_statistics",
+              "residual_analysis",
+              "lack_of_fit"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "rejection_reasons": {
+            "minItems": 1
+          },
+          "result": {
+            "maxProperties": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "artifact_id": "WGO_001_S1A_STAGE_A_EVALUATION_V1",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": [
+    "SYNTHETIC",
+    "DEMO",
+    "NOT_FOR_PHYSICAL_EXECUTION"
+  ],
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "physical_execution_authorized": false,
+  "notice": "NOT_FOR_PHYSICAL_EXECUTION",
+  "frozen_demo_inputs_sha256": "548d332359aac626a9887fa102534d0507b5730fe839847fa7d87d254e194d5e",
+  "raw_trace_sha256": "690dbe71c775a9b89578215a00b84b0035961c60658f22366df319bc0a2f1fc0",
+  "q2_a_event_status_consistency": {
+    "BAD_CHARACTERIZATION_CANDIDATE": {
+      "event_occurred_values": [
+        true
+      ],
+      "consistent": true,
+      "status": "EVENT"
+    },
+    "BENCH_REFERENCE_BLANK": {
+      "event_occurred_values": [
+        true
+      ],
+      "consistent": true,
+      "status": "EVENT"
+    },
+    "GOOD_CHARACTERIZATION_CANDIDATE": {
+      "event_occurred_values": [
+        false
+      ],
+      "consistent": true,
+      "status": "ADMINISTRATIVE_RIGHT_CENSOR_10H"
+    }
+  },
+  "q2_b_noise_db": {
+    "criterion": "within_role_range_db <= 1",
+    "checkpoints": {
+      "1h": {
+        "BAD_CHARACTERIZATION_CANDIDATE": {
+          "min_db": 55,
+          "max_db": 56,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        },
+        "BENCH_REFERENCE_BLANK": {
+          "min_db": 52,
+          "max_db": 53,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        },
+        "GOOD_CHARACTERIZATION_CANDIDATE": {
+          "min_db": 50,
+          "max_db": 51,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        }
+      },
+      "2h": {
+        "BAD_CHARACTERIZATION_CANDIDATE": {
+          "min_db": 61,
+          "max_db": 62,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        },
+        "BENCH_REFERENCE_BLANK": {
+          "min_db": 55,
+          "max_db": 56,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        },
+        "GOOD_CHARACTERIZATION_CANDIDATE": {
+          "min_db": 52,
+          "max_db": 53,
+          "range_db": 1,
+          "within_role_range_le_1_db": true
+        }
+      }
+    }
+  },
+  "blank_stability": {
+    "event_time_h": [
+      5.9,
+      6.0,
+      6.1
+    ],
+    "range_h": 0.2,
+    "range_le_0_2_h": true
+  },
+  "gross_discrimination": {
+    "GOOD_CHARACTERIZATION_CANDIDATE": "ALL_3_ADMINISTRATIVE_RIGHT_CENSOR_10H",
+    "BAD_CHARACTERIZATION_CANDIDATE": "ALL_3_EVENT_REACHED_BEFORE_10H",
+    "passed": true
+  },
+  "invalid_count": 0,
+  "deviation_count": 0,
+  "negative_fixture_detections": [
+    {
+      "fixture_id": "INVALID_RUN_EQUIPMENT_FAULT",
+      "expected_detection": "INVALID_RUN_REQUIRES_DEVIATION_AND_EXCLUDE_FROM_Q1_Q2",
+      "detected": true
+    },
+    {
+      "fixture_id": "EXECUTION_ORDER_DEVIATION",
+      "expected_detection": "EXECUTION_ORDER_DEVIATION_ACTUAL_NOT_EQUAL_PLANNED_WITH_REASON_REQUIRED",
+      "detected": true
+    },
+    {
+      "fixture_id": "OTHER_DOCUMENTED",
+      "expected_detection": "OTHER_DOCUMENTED_REQUIRES_NONEMPTY_SPECIFIC_DETAIL",
+      "detected": true
+    },
+    {
+      "fixture_id": "MISSING_RAW_TRACE",
+      "expected_detection": "RAW_SIGNAL_REFERENCE_REQUIRED",
+      "detected": true
+    },
+    {
+      "fixture_id": "EVENT_CENSORING_INCONSISTENT",
+      "expected_detection": "EVENT_AND_CENSORING_OUTCOME_INCONSISTENT",
+      "detected": true
+    }
+  ],
+  "stage_a_demo_decision": "PROMISING",
+  "state_transition_allowed": false,
+  "prohibited_claims": [
+    "METHOD_QUALIFIED",
+    "KNOWN_GOOD",
+    "KNOWN_BAD",
+    "PHYSICAL_RELEASE_APPROVED"
+  ]
+}

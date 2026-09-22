@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于已完成的优化和实验验证链条，组织阶段门禁评审（unsatisfied_conditions 与 evidence_gaps 均为空），出具 GO 决议工件",
+    "expected": "执行 preflight_gate_review.py 验证全流程上游工件与门禁条件，build 生成候选工件，validate 通过后落盘至 VERIFIED"
+  },
+  {
+    "id": 2,
+    "prompt": "存在未解证据缺口或未满足的工程风险条件，却要求门禁评审强行放行 GO 决议",
+    "expected": "触发门禁阻断，确定性裁定为 HOLD 状态，强制列出阻塞缺陷清单，禁止输出假 GO"
+  },
+  {
+    "id": 3,
+    "prompt": "门禁评审通过后，直接在此处将项目置为 FROZEN 冻结或 CLOSED 关闭，或篡改上游阶段工件",
+    "expected": "触发黑名单拦截，门禁评审仅到达 VERIFIED 阶段，严禁直接生成冻结闭环工件或覆写上游工件"
+  }
+]

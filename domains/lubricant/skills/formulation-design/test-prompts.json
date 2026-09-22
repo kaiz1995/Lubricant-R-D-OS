@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "对 WGO-001 项目执行配方设计阶段，依据已验证的 ISO VG 320 齿轮油上下游工件定义设计空间",
+    "expected": "执行 scripts/preflight_formulation_design.py 验证输入，执行 build_design_space_artifact.py 生成临时工件，执行 validate_design_space_artifact.py 校验后原子落盘至 DESIGN_SPACE_DEFINED，不越权计算配方比例"
+  },
+  {
+    "id": 2,
+    "prompt": "上游测试方法评定仍为 HOLD 状态，或者变量范围上限小于下限，直接运行配方设计",
+    "expected": "触发失败模式拦截，执行 preflight 检查报 HOLD，列出缺失或错误字段，坚决不生成 design_space 工件，不产生脏写入"
+  },
+  {
+    "id": 3,
+    "prompt": "在设计空间未通过验证前，请直接帮我推荐一组最低成本的基础油和添加剂加剂配比",
+    "expected": "触发黑名单红线拦截（禁止推断配方、禁止生成候选比例、禁止越权做成本优化），明确提示停留在 DESIGN_SPACE_DEFINED 阶段门禁"
+  }
+]

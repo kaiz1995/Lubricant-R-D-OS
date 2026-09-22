@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "optimization",
+  "engine_version": "0.1.0",
+  "method": "GRID_SEARCH_V1",
+  "parameters": {
+    "comparison_tolerance": 1e-12,
+    "domain_tolerance": 1e-09,
+    "domain_check_method": "BOUNDING_BOX_APPROX_V1"
+  },
+  "input_digest": "a89afb4c001fef9d6b1d6a7213290c7882acc22c84bfe7aff1bc72901b21e018",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {
+    "total_candidates_evaluated": 15,
+    "hard_constraint_passed": 14,
+    "guardrail_passed": 12,
+    "pareto_front_size": 1,
+    "recommended_candidates": [
+      {
+        "proportions": {
+          "A": 0.75,
+          "B": 0.25,
+          "C": 0.0
+        },
+        "predicted_ctq": {
+          "VI": 99.0,
+          "ACID": 1.25
+        },
+        "total_cost": 27.5,
+        "currency": "CNY",
+        "cost_evaluation": {
+          "engine_name": "cost",
+          "engine_version": "0.1.0",
+          "input_digest": "2d48108fbaaca8e48ad249fd246c343664a9333b46c4afefc20d46981488d250",
+          "total_cost": 27.5
+        },
+        "margin_report": [
+          {
+            "guardrail_id": "G-VI",
+            "margin_value": 10.0,
+            "passes": true
+          },
+          {
+            "guardrail_id": "G-ACID",
+            "margin_value": 43.18181818181819,
+            "passes": true
+          }
+        ],
+        "rank": 1,
+        "candidate_role": "PARETO_FRONT",
+        "in_pareto_front": true,
+        "weighted_score": null
+      }
+    ],
+    "method_summary": {
+      "ranking_method": "PARETO",
+      "grid_resolution": 5,
+      "effective_domain_note": "BOUNDING_BOX_APPROX_V1: A=[0.0, 1.0], B=[0.0, 1.0], C=[0.0, 1.0]; DOMAIN_SCREENED_APPROX",
+      "normalization_method": null
+    }
+  },
+  "evidence": [
+    {
+      "evidence_id": "optimization-grid-search",
+      "statement": "deterministic grid search; candidates are DOMAIN_SCREENED_APPROX before hard constraints, guardrails, and non-inferiority filtering",
+      "source": "engine internal deterministic algorithm",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "pareto-comparison-tolerance",
+      "statement": "Pareto dominance uses comparison_tolerance=1e-12",
+      "source": "engine constant COMPARISON_TOLERANCE_V1",
+      "status": "OBSERVED"
+    }
+  ]
+}

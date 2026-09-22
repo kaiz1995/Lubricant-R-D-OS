@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "challenge", "project_id": "WGO-001", "stage": "CHALLENGES_DEFINED",
+  "decision_question": "Which duty-derived challenge is recorded?", "hypothesis": "Potential water ingress is a supplied challenge.", "uncertainty": "No quantified field water history is available.",
+  "evidence": [{"evidence_id": "E-C-001", "statement": "The duty profile identifies potential water ingress.", "source": "duty profile DP-001", "status": "OBSERVED"}],
+  "decision_rule": "Record only supplied challenge levels.", "result": "The water-contamination challenge is recorded.", "decision": "GO", "next_action": "Define failure and CTQ relationships.",
+  "duty_reference": "DP-001", "challenge_id": "CH-001", "category": "WATER_CONTAMINATION", "description": "Potential water ingress during service.", "severity": "HIGH", "exposure": "MEDIUM", "lubricant_sensitivity": "HIGH", "evidence_gap": "No quantified field water history.", "priority": "HIGH"
+}

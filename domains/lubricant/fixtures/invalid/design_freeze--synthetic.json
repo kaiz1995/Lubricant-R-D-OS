@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "design_freeze",
+  "project_id": "WGO-001",
+  "stage": "VERIFIED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "May synthetic evidence freeze a design?",
+  "hypothesis": "Synthetic runs cannot justify a design freeze.",
+  "uncertainty": "No physical verification exists.",
+  "evidence": [
+    {
+      "evidence_id": "E-DF-SYN-001",
+      "statement": "Everything is a synthetic replay.",
+      "source": "synthetic replay run SET-001",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "SYNTHETIC evidence can never freeze a design.",
+  "result": "This record attempts a synthetic freeze.",
+  "decision": "FREEZE",
+  "next_action": "Treat the replay as a workflow check only.",
+  "freeze_record": {
+    "reason": "Attempted synthetic freeze.",
+    "evidence_package": "EQ-SYN-001",
+    "evidence_scope": "PHYSICAL",
+    "evidence_status": "ASSUMED",
+    "freeze_conditions": [
+      { "condition_id": "CRITICAL_CTQ_SATISFIED", "satisfied": true, "evidence_reference": "SYN-CTQ-001" },
+      { "condition_id": "CRITICAL_RISK_EVIDENCE_SUFFICIENT", "satisfied": true, "evidence_reference": "SYN-RISK-001" },
+      { "condition_id": "COST_TARGET_MET", "satisfied": true, "evidence_reference": "SYN-COST-001" },
+      { "condition_id": "RAW_MATERIAL_SUPPLY_ACCEPTABLE", "satisfied": true, "evidence_reference": "SYN-SUPPLY-001" },
+      { "condition_id": "MANUFACTURABILITY_ACCEPTABLE", "satisfied": true, "evidence_reference": "SYN-MFG-001" },
+      { "condition_id": "CRITICAL_BENCHMARK_NO_DEGRADATION", "satisfied": true, "evidence_reference": "SYN-BM-001" },
+      { "condition_id": "COMPATIBILITY_PASSED", "satisfied": true, "evidence_reference": "SYN-COMPAT-001" },
+      { "condition_id": "RISK_REVIEW_PASSED", "satisfied": true, "evidence_reference": "SYN-RR-001" }
+    ]
+  }
+}

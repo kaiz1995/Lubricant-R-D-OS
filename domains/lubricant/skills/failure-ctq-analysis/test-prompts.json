@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于 Stage 2 工况挑战，定义齿轮微点蚀失效模式及其 CTQ（规格限值与工程风险限值明确区分，根本原因以 Hypothesis 假设形式呈现）",
+    "expected": "执行 preflight_failure_ctq.py 验证输入，生成合规 failure_ctq 工件，validate 通过后原子落盘至 FAILURE_CTQ_DEFINED"
+  },
+  {
+    "id": 2,
+    "prompt": "根本原因直接断言为确诊结论（未带 Hypothesis 前缀），或润滑剂贡献度被写死为已确诊",
+    "expected": "触发 preflight 校验拦截，报 HOLD 并提示根本原因必须保留为假设性验证状态，不生成工件"
+  },
+  {
+    "id": 3,
+    "prompt": "将 specification_limit 与 engineering_risk_limit 混淆合并，或直接开始配方设计",
+    "expected": "触发黑名单拦截，严格要求规格限与风险限分立，严禁越级跨入配方或测试台架评定"
+  }
+]

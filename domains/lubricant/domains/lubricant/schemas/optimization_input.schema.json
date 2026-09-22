@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/optimization_input.schema.json",
+  "version": "1.0.0",
+  "title": "Optimization input", "type": "object",
+  "properties": {
+    "input_type": {"const": "OPTIMIZATION_REQUEST"},
+    "statistical_models": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
+      "ctq_reference": {"type": "string", "minLength": 1}, "model_order": {"enum": ["LINEAR", "QUADRATIC"]},
+      "coefficients": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"term": {"type": "string"}, "estimate": {"type": "number"}}, "required": ["term", "estimate"], "additionalProperties": false}},
+      "term_order": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+      "r_squared": {"type": "number"}, "sigma_squared": {"type": "number", "minimum": 0}
+    }, "required": ["ctq_reference", "model_order", "coefficients", "term_order", "r_squared", "sigma_squared"], "additionalProperties": false}},
+    "candidate_space": {"type": "object", "properties": {
+      "component_ids": {"type": "array", "minItems": 3, "maxItems": 12, "items": {"type": "string"}},
+      "bounds": {"type": "array", "minItems": 3, "items": {"type": "object", "properties": {"component_id": {"type": "string"}, "lower": {"type": "number", "minimum": 0, "maximum": 1}, "upper": {"type": "number", "minimum": 0, "maximum": 1}}, "required": ["component_id", "lower", "upper"], "additionalProperties": false}},
+      "grid_resolution": {"type": "integer", "minimum": 2}
+    }, "required": ["component_ids", "bounds", "grid_resolution"], "additionalProperties": false},
+    "source_doe_design_points": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"proportions": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}}}, "required": ["proportions"], "additionalProperties": false}},
+    "hard_constraints": {"type": "array", "items": {"type": "object", "properties": {"constraint_id": {"type": "string"}, "reference_id": {"type": "string"}, "direction": {"enum": ["MINIMIZE", "MAXIMIZE"]}, "threshold": {"type": "number"}}, "required": ["constraint_id", "reference_id", "direction", "threshold"], "additionalProperties": false}},
+    "guardrails": {"type": "array", "items": {"type": "object", "properties": {"guardrail_id": {"type": "string"}, "ctq_reference": {"type": "string"}, "direction": {"enum": ["HIGHER_IS_BETTER", "LOWER_IS_BETTER"]}, "minimum_margin": {"type": "number"}, "tolerance_mode": {"enum": ["RELATIVE_PERCENT", "ABSOLUTE"], "default": "RELATIVE_PERCENT"}}, "required": ["guardrail_id", "ctq_reference", "direction", "minimum_margin"], "additionalProperties": false}},
+    "non_inferiority": {"type": "array", "items": {"type": "object", "properties": {"non_inferiority_id": {"type": "string"}, "ctq_reference": {"type": "string"}, "direction": {"enum": ["HIGHER_IS_BETTER", "LOWER_IS_BETTER"]}, "minimum_margin": {"type": "number"}, "tolerance_mode": {"enum": ["RELATIVE_PERCENT", "ABSOLUTE"], "default": "RELATIVE_PERCENT"}}, "required": ["non_inferiority_id", "ctq_reference", "direction", "minimum_margin"], "additionalProperties": false}},
+    "baseline": {"type": "object", "properties": {"proportions": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}}, "ctq_values": {"type": "object", "additionalProperties": {"type": "number"}}, "total_cost": {"type": "number"}}, "required": ["proportions", "ctq_values"], "additionalProperties": false},
+    "cost_input": {"type": "object", "properties": {"materials": {"type": "array", "minItems": 1, "items": {"type": "object"}}, "formula_template": {"type": "object", "properties": {"formula_id": {"type": "string"}, "version": {"type": "string"}, "components": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"component_id": {"type": "string"}}, "required": ["component_id"], "additionalProperties": false}}}, "required": ["formula_id", "version", "components"], "additionalProperties": false}, "price_timestamp": {"type": "string"}}, "required": ["materials", "formula_template", "price_timestamp"], "additionalProperties": false},
+    "ranking_method": {"enum": ["PARETO", "WEIGHTED_OBJECTIVE"]},
+    "weights": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"objective_ref": {"type": "string"}, "weight": {"type": "number", "exclusiveMinimum": 0}}, "required": ["objective_ref", "weight"], "additionalProperties": false}},
+    "max_recommendations": {"type": "integer", "minimum": 1, "default": 10}
+  },
+  "required": ["input_type", "statistical_models", "candidate_space", "source_doe_design_points", "hard_constraints", "guardrails", "non_inferiority", "baseline", "cost_input", "ranking_method"],
+  "additionalProperties": false
+}

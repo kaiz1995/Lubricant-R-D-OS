@@ -1,0 +1,73 @@
+[
+  {
+    "name": "go-advances-one-stage",
+    "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence_scope": "PHYSICAL", "evidence": ["E-001"] },
+      "after": { "project_id": "WGO-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence_scope": "PHYSICAL", "evidence": ["E-001"] }
+    }
+  },
+  {
+    "name": "hold-preserves-version-and-evidence",
+    "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "HOLD", "gate_status": "HOLD",
+      "before": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 2, "decision_question": "Are methods qualified?", "evidence_scope": "PHYSICAL", "evidence": ["E-201", "E-202"] },
+      "after": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 2, "decision_question": "Are methods qualified?", "evidence_scope": "PHYSICAL", "evidence": ["E-201", "E-202"] }
+    }
+  },
+  {
+    "name": "pivot-preserves-old-branch", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "PIVOT", "gate_status": "PIVOT",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence_scope": "PHYSICAL", "evidence": ["E-301"] },
+      "after": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 4, "decision_question": "Can an alternative base-oil route meet cost and risk limits?", "evidence_scope": "PHYSICAL", "evidence": ["E-401"] },
+      "preserved_branch": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "PIVOTED", "version": 3, "decision_question": "Can the current base-oil route meet cost and risk limits?", "evidence_scope": "PHYSICAL", "evidence": ["E-301"] }
+    }
+  },
+  {
+    "name": "go-resumes-hold-after-gap-evidence-is-added", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "GO", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 2, "decision_question": "Are methods qualified?", "evidence_scope": "PHYSICAL", "evidence": ["E-201"] },
+      "after": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 2, "decision_question": "Are methods qualified?", "evidence_scope": "PHYSICAL", "evidence": ["E-201", "E-203"] }
+    }
+  },
+  {
+    "name": "kill-retains-reason-and-evidence", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "KILL", "gate_status": "KILL",
+      "before": { "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "status": "ACTIVE", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence_scope": "PHYSICAL", "evidence": ["E-501"] },
+      "after": { "project_id": "WGO-001", "stage": "EXPERIMENT_DESIGNED", "status": "KILLED", "version": 4, "decision_question": "Can the selected route proceed to experiment?", "evidence_scope": "PHYSICAL", "evidence": ["E-501"] },
+      "termination": { "reason": "Supply constraint makes the route infeasible.", "evidence": ["E-501"] }
+    }
+  },
+  {
+    "name": "rollback-creates-a-revision-at-nearest-accepted-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "ROLLBACK", "gate_status": "HOLD",
+      "before": { "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED", "status": "ACTIVE", "version": 4, "decision_question": "Is the design space ready for experiment design?", "evidence_scope": "PHYSICAL", "evidence": ["E-601"] },
+      "after": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "HOLD", "version": 5, "decision_question": "Is the design space ready for experiment design?", "evidence_scope": "PHYSICAL", "evidence": ["E-601", "E-602"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED"],
+      "revision": { "reason": "Method qualification evidence was found incomplete.", "operator": "R&D owner", "impact": "Design-space conclusion requires revision." }
+    }
+  },
+  {
+    "name": "freeze-locks-the-verified-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "close-frozen-project-without-modifying-it", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "CLOSE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "CLOSED", "status": "CLOSED", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] }
+    }
+  }
+]

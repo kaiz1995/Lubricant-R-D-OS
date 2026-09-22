@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "design_space", "project_id": "WGO-001", "stage": "DESIGN_SPACE_DEFINED",
+  "decision_question": "What constrained variable range may be tested?", "hypothesis": "A bounded variable range can be evaluated against qualified responses.", "uncertainty": "No candidate is selected by this artifact.",
+  "evidence": [{ "evidence_id": "E-D-001", "statement": "CTQ and qualified method references are available.", "source": "CTQ-001 and TM-001", "status": "OBSERVED" }],
+  "decision_rule": "Only test variables within recorded constraints.", "result": "A test boundary is recorded; no formulation is generated.", "decision": "GO", "next_action": "Design experiments within the boundary.",
+  "design_space_id": "DS-001", "scope": "Water-separation response study", "variables": [{ "variable_id": "V-001", "variable_type": "FORMULATION_VARIABLE", "lower_bound": { "value": 0, "unit": "mass percent", "source": "approved range", "method_version": "design-space-v1", "material_batch": "not_applicable", "formula_version": "not_applicable" }, "upper_bound": { "value": 1, "unit": "mass percent", "source": "approved range", "method_version": "design-space-v1", "material_batch": "not_applicable", "formula_version": "not_applicable" }, "constraint_rationale": "Range must respect material and manufacturing constraints." }],
+  "ctq_references": ["CTQ-001"], "qualified_test_method_references": ["TM-001"], "constraints": ["supplier approval required"]
+}

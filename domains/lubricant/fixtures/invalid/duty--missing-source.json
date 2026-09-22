@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "duty",
+  "project_id": "WGO-001",
+  "stage": "DUTY_DEFINED",
+  "decision_question": "Can supplied duty profile DP-001 be recorded?",
+  "hypothesis": "Supplied observed duty conditions can define the project duty profile.",
+  "uncertainty": "This record does not derive a challenge.",
+  "evidence": [{"evidence_id": "E-D-001", "statement": "Duty record identifies a wind turbine gearbox.", "source": "duty record DP-001", "status": "OBSERVED"}],
+  "decision_rule": "Record only complete observed duty conditions.",
+  "result": "Synthetic invalid duty record.",
+  "decision": "UNDECIDED",
+  "next_action": "Supply the missing source.",
+  "duty_id": "DP-001",
+  "project_reference": "WGO-001",
+  "duty": {
+    "equipment": {"value": "Wind turbine gearbox", "evidence_id": "E-D-001", "statement": "Duty record identifies a wind turbine gearbox.", "status": "OBSERVED"},
+    "operating_conditions": {"value": "Variable-speed service", "source": "duty record DP-001", "evidence_id": "E-D-002", "statement": "Duty record states variable-speed operation.", "status": "OBSERVED"},
+    "maintenance": {"value": "Condition-monitored maintenance", "source": "maintenance plan MP-001", "evidence_id": "E-D-003", "statement": "Maintenance plan states condition monitoring.", "status": "OBSERVED"},
+    "temperature": {"value": "-20 to 90 C", "source": "duty record DP-001", "evidence_id": "E-D-004", "statement": "Duty record states the recorded temperature range.", "status": "OBSERVED"},
+    "load": {"value": "Variable transmitted load", "source": "duty record DP-001", "evidence_id": "E-D-005", "statement": "Duty record states variable transmitted load.", "status": "OBSERVED"},
+    "contamination": {"value": "Potential water ingress", "source": "service history SH-001", "evidence_id": "E-D-006", "statement": "Service history records potential water ingress.", "status": "OBSERVED"},
+    "life": {"value": "Long drain interval target", "source": "project brief PB-001", "evidence_id": "E-D-007", "statement": "Project brief records a long drain interval target.", "status": "OBSERVED"}
+  }
+}

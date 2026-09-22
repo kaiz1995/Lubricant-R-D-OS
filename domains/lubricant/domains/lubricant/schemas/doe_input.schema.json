@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/doe_input.schema.json",
+  "title": "DOE input",
+  "type": "object",
+  "properties": {
+    "input_type": { "const": "MIXTURE_DOE_DESIGN" },
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "component_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "lower_bound": { "type": "number", "minimum": 0, "maximum": 1 },
+          "upper_bound": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "required": ["component_id", "lower_bound", "upper_bound"],
+        "additionalProperties": false
+      }
+    },
+    "mixture_total": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE"] },
+    "model_order": { "enum": ["LINEAR", "QUADRATIC"] },
+    "target_runs": { "type": "integer", "minimum": 0 },
+    "responses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "ctq_reference": { "type": "string", "minLength": 1 },
+          "test_method_reference": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["OPTIMIZATION_RESPONSE", "GUARDRAIL", "DIAGNOSTIC_RESPONSE"] }
+        },
+        "required": ["ctq_reference", "test_method_reference", "role"],
+        "additionalProperties": false
+      }
+    },
+    "experiment_card": {
+      "type": "object",
+      "properties": {
+        "decision_question": { "type": "string", "minLength": 1 },
+        "hypothesis": { "type": "string", "minLength": 1 },
+        "variables_note": { "type": "string", "minLength": 1 },
+        "constraints_note": { "type": "string", "minLength": 1 },
+        "responses_note": { "type": "string", "minLength": 1 },
+        "doe_selection_reason": { "type": "string", "minLength": 1 },
+        "expected_information_value": { "type": "string", "minLength": 1 },
+        "decision_rule": { "type": "string", "minLength": 1 }
+      },
+      "required": ["decision_question", "hypothesis", "variables_note", "constraints_note", "responses_note", "doe_selection_reason", "expected_information_value", "decision_rule"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["input_type", "components", "mixture_total", "design_type", "model_order", "target_runs", "responses", "experiment_card"],
+  "additionalProperties": false
+}

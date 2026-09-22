@@ -1,0 +1,23 @@
+{
+  "components": [{"component_id": "A"}, {"component_id": "B"}, {"component_id": "C"}],
+  "design_points": [
+    {"proportions": {"A": 1, "B": 0, "C": 0}, "run_reference": "R01"},
+    {"proportions": {"A": 0, "B": 1, "C": 0}, "run_reference": "R02"},
+    {"proportions": {"A": 0, "B": 0, "C": 1}, "run_reference": "R03"},
+    {"proportions": {"A": 0.5, "B": 0.5, "C": 0}, "run_reference": "R04"},
+    {"proportions": {"A": 0.5, "B": 0, "C": 0.5}, "run_reference": "R05"},
+    {"proportions": {"A": 0, "B": 0.5, "C": 0.5}, "run_reference": "R06"}
+  ],
+  "input_type": "STATISTICAL_ANALYSIS",
+  "model_order": "QUADRATIC",
+  "observations": [
+    {"ctq_reference": "KV40", "run_reference": "R01", "value": 10},
+    {"ctq_reference": "KV40", "run_reference": "R02", "value": 20},
+    {"ctq_reference": "KV40", "run_reference": "R03", "value": 30},
+    {"ctq_reference": "KV40", "run_reference": "R04", "value": 16},
+    {"ctq_reference": "KV40", "run_reference": "R05", "value": 18.5},
+    {"ctq_reference": "KV40", "run_reference": "R06", "value": 27}
+  ],
+  "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL", "LACK_OF_FIT"],
+  "response_ctq": "KV40"
+}

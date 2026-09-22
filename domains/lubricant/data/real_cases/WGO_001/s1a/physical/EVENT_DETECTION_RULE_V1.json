@@ -1,0 +1,51 @@
+{
+  "schema_version": "EVENT_DETECTION_RULE_V1",
+  "status": "FROZEN_FOR_SYNTHETIC_DEMO",
+  "release_status": "DRAFT_NOT_RELEASED",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": ["SYNTHETIC", "DEMO", "NOT_FOR_PHYSICAL_EXECUTION"],
+  "physical_execution_authorized": false,
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "rule": {
+    "threshold_db": 65.0,
+    "comparator": "GREATER_THAN_OR_EQUAL",
+    "signal_source": "SELF_BUILT_ANALOG_POINTER_DISPLAY",
+    "sampling_interval": "CONTINUOUS_VISUAL_OBSERVATION",
+    "instrument_resolution": "1_DB",
+    "weighting_rule": "NONE",
+    "rounding_rule": "POINTER_SCALE_NO_ADDITIONAL_ROUNDING",
+    "filtering_rule": "NONE",
+    "persistence_rule": "CONTINUOUS_GREATER_THAN_OR_EQUAL_65_DB_FOR_5_SECONDS",
+    "missing_sample_rule": "MISSING_OBSERVATION_AROUND_CROSSING_EVENT_TIME_NOT_ESTIMABLE_AND_INVALID_RUN",
+    "manual_timestamp_rule": "NEAREST_MINUTE"
+  },
+  "evidence": {
+    "raw_trace": {
+      "priority": "NOT_AVAILABLE_FOR_SYNTHETIC_DEMO",
+      "exportable": false,
+      "reference": null
+    },
+    "event_time": {
+      "derivation": "MANUAL_TIMESTAMP_NEAREST_MINUTE_IF_OBSERVATION_COVERS_CROSSING_OTHERWISE_NOT_ESTIMABLE_INVALID_RUN",
+      "value": null
+    }
+  },
+  "release_validation": {
+    "required_non_null_fields": [
+      "signal_source",
+      "sampling_interval",
+      "instrument_resolution",
+      "rounding_rule",
+      "filtering_rule",
+      "persistence_rule",
+      "missing_sample_rule"
+    ],
+    "forbidden_release_values": ["TBD", "UNKNOWN", "OWNER_TO_FREEZE"]
+  },
+  "owner_signoff": {
+    "owner": "张凯",
+    "approved_at": "2026-05-06",
+    "approval_reference": null
+  }
+}

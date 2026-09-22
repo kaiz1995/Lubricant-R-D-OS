@@ -1,0 +1,107 @@
+{
+  "_comment": "WGO_001 S1a WP-3 control band V0. EVIDENCE ONLY, PROVISIONAL, INSUFFICIENT N. Built 2026-08-23 per plan @ f8ea247 Section 3. Rationale embedded in admission_filter/excluded_examples/deficiencies/next_steps fields. Censored 10h never stored as event_time=10.",
+  "artifact": "CONTROL_BAND_V0",
+  "case": "WGO_001",
+  "built_date": "2026-08-23",
+  "plan_basis": "WGO_001_S1A_METHOD_CHARACTERIZATION_PLAN.md @ f8ea247 Section 3",
+  "source_xlsx_sha256": "2e22213dfea8f47594dcd21f0d796211c7f627d4de12aa30c322d84c53ce9f74",
+  "status": "PROVISIONAL_INSUFFICIENT_N_AND_CONFOUNDED",
+  "band_type": "DESCRIPTIVE_MIN_MEDIAN_MAX_ENVELOPE",
+  "metric": {
+    "name": "TIME_TO_FIRST_REACH_65_DB",
+    "unit": "h",
+    "direction": "LONGER_IS_BETTER",
+    "censoring_semantics": {
+      "event_definition": "FIRST_REACH_65_DB",
+      "event_occurred_false": {
+        "event_time": null,
+        "censoring_type": "ADMINISTRATIVE_RIGHT_CENSOR",
+        "censor_time_h": 10
+      },
+      "rule": "right-censored 10h is never recorded or used as event_time=10h"
+    }
+  },
+  "admission_filter": [
+    "base_oil == Mobil SHC 320 WT blank, no ASA#4",
+    "current setpoint in standard 12-14A family (nominal 13.5A)",
+    "new-standard era (commissioning onward, post 251210)",
+    "measured durations only; fitted/projected values excluded"
+  ],
+  "n_usable": 3,
+  "n_preferred": 6,
+  "included_observations": [
+    {
+      "run_id": "ASA4V_D",
+      "test_date": "251215",
+      "provenance": "ASA#4验证!D列 (rows 6/8/9)",
+      "event_occurred": false,
+      "event_time_h": null,
+      "censoring_type": "ADMINISTRATIVE_RIGHT_CENSOR",
+      "censor_time_h": 10,
+      "last_recorded_noise_db": 61,
+      "condition_tag": "COMMISSIONING_FIRST_BATCH"
+    },
+    {
+      "run_id": "ASA4V_G",
+      "test_date": "251219",
+      "provenance": "ASA#4验证!G列",
+      "event_occurred": true,
+      "event_time_h": 3,
+      "endpoint_db": 65,
+      "censoring_type": null,
+      "condition_tag": "DEBUG_VERIFICATION_RUN"
+    },
+    {
+      "run_id": "ASA4V_U",
+      "test_date": "260305",
+      "provenance": "ASA#4验证!U列",
+      "event_occurred": true,
+      "event_time_h": 3.5,
+      "endpoint_db": null,
+      "censoring_type": null,
+      "condition_tag": "RUN_IN_VERIFICATION_RUN",
+      "note": "原始记录无终点dB值"
+    }
+  ],
+  "excluded_examples": [
+    {
+      "run_id": "ASA4V_H",
+      "reason": "不同油品（红色美孚），非目标空白"
+    },
+    {
+      "run_id": "ASA4V_X/Y/Z",
+      "reason": "9A/6A/3A 非标准电流；Z 另含滑脱拟合值 20h，禁用"
+    },
+    {
+      "run_id": "all dosed arms",
+      "reason": "含 ASA#4，非空白"
+    }
+  ],
+  "envelope": {
+    "min_h": 3,
+    "median_h_point_estimate": 3.5,
+    "median_note": "descriptive median of ordered [3.0, 3.5, 10+censored]; censored run positioned last for ordering only",
+    "max": "UNBOUNDED_ABOVE__RIGHT_CENSORED_AT_10H"
+  },
+  "deficiencies": [
+    "INSUFFICIENT_N: 3 usable < 6 preferred",
+    "COMMISSIONING_CONFOUNDED: D=新组装台架首批期; G=台架调试验证; U=跑和验证; 苛刻度下降官方记录见 工作安排!B2 (20251218)",
+    "ENDPOINT_DB_INCOMPLETE: U 无终点 dB; D 的 61dB 为删失时刻末读",
+    "NO_STEADY_STATE_BLANK: 现有空白均为调试/跑和期，无稳态期空白观测"
+  ],
+  "prohibited_uses": [
+    "as S1b acceptance band",
+    "as any PASS/FAIL threshold",
+    "same-data build-and-validate (plan Section 3 prohibition)"
+  ],
+  "next_steps": [
+    "dedicated blank-reference characterization runs: >=3 fresh replicates on stabilized bench",
+    "rebuild band V1 exclusively from those runs; freeze before first S1b batch",
+    "S1b validates band on further independent batches"
+  ],
+  "owner_sign_off": {
+    "reviewed_by": null,
+    "date": null,
+    "decision": null
+  }
+}

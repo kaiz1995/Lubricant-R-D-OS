@@ -1,0 +1,6 @@
+{
+  "project_artifact": "project-active.json",
+  "challenge_artifact": "challenge-defined.json",
+  "evidence": [{"evidence_id": "E-F-001", "statement": "Potential water ingress is a duty-derived challenge.", "source": "challenge CH-001", "status": "OBSERVED"}],
+  "failure_ctq": {"challenge_reference": "CH-001", "failure_id": "FM-001", "failure_mode": "Corrosion", "mechanism": "Water exposure can promote corrosion.", "failure_diagnosis": "Potential water ingress is assessed.", "root_cause_hypotheses": ["Hypothesis: confirmed root cause is water ingress."], "lubricant_contribution": "Water separation may influence exposure duration and is pending verification.", "ctqs": [{"ctq_id": "CTQ-001", "classification": "CTQ", "observable": "Water separation time", "specification_limit": {"value": 30, "unit": "min", "source": "OEM specification compliance line", "method_version": "D1401-2024", "material_batch": "baseline-batch", "formula_version": "baseline-v1"}, "engineering_risk_limit": {"value": 20, "unit": "min", "source": "Engineering risk line", "method_version": "risk-model-v1", "material_batch": "baseline-batch", "formula_version": "baseline-v1"}, "test_references": ["TM-001"], "evidence_required": ["qualified test method"]}], "test_chain": ["TM-001"]}
+}

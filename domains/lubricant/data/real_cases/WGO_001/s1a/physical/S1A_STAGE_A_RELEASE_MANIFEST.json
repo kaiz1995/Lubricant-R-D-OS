@@ -1,0 +1,35 @@
+{
+  "project_id": "WGO_001",
+  "stage": "S1A_STAGE_A",
+  "release_version": null,
+  "release_status": "DRAFT_NOT_RELEASED",
+  "execution_package_draft_gate": "PASS_FREEZE",
+  "approved_by": null,
+  "release_date": null,
+  "protocol_version": null,
+  "artifacts": [
+    {"path": "data/real_cases/WGO_001/s1a/physical/experiment_record_template.json", "sha256": null},
+    {"path": "data/real_cases/WGO_001/s1a/physical/EVENT_DETECTION_RULE_V1.json", "sha256": null},
+    {"path": "data/real_cases/WGO_001/s1a/physical/release_checklist.md", "sha256": null},
+    {"path": "data/real_cases/WGO_001/s1a/physical/run_plan.json", "sha256": null},
+    {"path": "data/real_cases/WGO_001/s1a/physical/stage_a_run_matrix.json", "sha256": null}
+  ],
+  "reference_identities": {
+    "GOOD_CHARACTERIZATION_CANDIDATE": null,
+    "BAD_CHARACTERIZATION_CANDIDATE": null,
+    "BENCH_REFERENCE_BLANK": null
+  },
+  "stop_reason_version": "STOP_REASON_V1",
+  "q2b_checkpoints": null,
+  "event_detection_rule_version": null,
+  "supersedes": {
+    "release_version": null,
+    "prior_release_disposition": null,
+    "allowed_dispositions": ["SUPERSEDED", "VOID"],
+    "reason": null
+  },
+  "draft_hash_rule": "Draft artifacts retain sha256=null; SHA-256 is not calculated until the five-artifact release set is frozen.",
+  "release_gate": "ALL_13_CONDITIONS_SIMULTANEOUSLY_PASS_PLUS_OWNER_AUTHORIZATION; AGENT_WAIVER_PARTIAL_RELEASE_SILENT_EXCEPTION_PROHIBITED; OWNER_APPROVED_RELEASE_DEVIATION_ONLY",
+  "immutability_rules": "After Owner authorization and release version assignment, listed artifact paths and SHA-256 values are immutable for that release.",
+  "supersede_rules": "Corrections require a new release version and manifest that references the superseded release; never overwrite an approved manifest."
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/validation_result_schema.json",
+  "version": "1.0.0",
+  "title": "Validation result",
+  "allOf": [{"$ref": "compute_envelope.schema.json"}],
+  "type": "object",
+  "properties": {
+    "method": {"const": "VALIDATION_FRAMEWORK_V1"},
+    "result": {
+      "type": "object",
+      "properties": {
+        "overall_status": {"enum": ["VALID", "VALID_WITH_WARNINGS", "REJECTED"]},
+        "artifact_type": {"type": "string"},
+        "artifact_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "checks": {"type": "array", "items": {"type": "object", "properties": {
+          "check_id": {"type": "string"}, "layer": {"enum": ["CONTRACT", "PROVENANCE", "NUMERICAL", "CROSS_STAGE"]},
+          "status": {"enum": ["PASS", "WARNING", "ERROR"]}, "severity": {"enum": ["INFO", "WARNING", "ERROR", "FATAL"]},
+          "message": {"type": "string"}, "evidence_reference": {"type": "string"}
+        }, "required": ["check_id", "layer", "status", "severity", "message", "evidence_reference"], "additionalProperties": false,
+          "allOf": [
+            {"if": {"properties": {"status": {"const": "PASS"}}}, "then": {"properties": {"severity": {"const": "INFO"}}}},
+            {"if": {"properties": {"status": {"const": "WARNING"}}}, "then": {"properties": {"severity": {"const": "WARNING"}}}},
+            {"if": {"properties": {"status": {"const": "ERROR"}}}, "then": {"properties": {"severity": {"enum": ["ERROR", "FATAL"]}}}}
+          ]}},
+        "errors": {"type": "array", "items": {"type": "string"}},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "upstream_consistency": {"type": "object", "properties": {
+          "doe_to_statistics": {"enum": ["CONSISTENT", "MISMATCH", "NOT_CHECKED"]},
+          "statistics_to_optimization": {"enum": ["CONSISTENT", "MISMATCH", "NOT_CHECKED"]},
+          "cost_basis": {"enum": ["CONSISTENT", "MISMATCH", "NOT_CHECKED"]},
+          "design_space_domain": {"enum": ["CONSISTENT", "MISMATCH", "NOT_CHECKED"]}
+        }, "required": ["doe_to_statistics", "statistics_to_optimization", "cost_basis", "design_space_domain"], "additionalProperties": false},
+        "eligible_for_downstream": {"type": "boolean"}
+      },
+      "required": ["overall_status", "artifact_type", "artifact_digest", "checks", "errors", "warnings", "upstream_consistency", "eligible_for_downstream"],
+      "additionalProperties": false
+    }
+  }
+}

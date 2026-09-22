@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "project", "status": "ACTIVE", "project_id": "WGO-001", "stage": "PROJECT_DEFINED",
+  "decision_question": "Can the cost-down project proceed to duty definition?", "hypothesis": "A constrained project charter can frame the decision.", "uncertainty": "Duty conditions are not yet complete.",
+  "evidence": [{"evidence_id": "E-P-001", "statement": "Business brief received.", "source": "approved project brief", "status": "OBSERVED"}],
+  "decision_rule": "Advance only after project constraints are recorded.", "result": "Charter is recorded; no product conclusion is made.", "decision": "GO", "next_action": "Define duty conditions.",
+  "project_name": "Wind gear oil cost-down", "project_type": "COST_DOWN", "product_family": "ISO VG 320 wind gear oil", "business_objective": "Reduce cost within the approved business range.", "technical_objective": "Maintain required CTQ and risk boundaries.", "hard_constraints": ["local data only", "compatibility evidence required"], "target_cost": {"value": 100, "unit": "CNY/t", "source": "approved cost baseline", "method_version": "cost-baseline-v1", "material_batch": "not_applicable", "formula_version": "baseline-v1"}, "benchmark_products": ["Mobilgear SHC Gear 320 WT"], "success_criteria": ["critical CTQs have evidence"], "risk_class": "STRATEGIC", "owner": "R&D owner"
+}

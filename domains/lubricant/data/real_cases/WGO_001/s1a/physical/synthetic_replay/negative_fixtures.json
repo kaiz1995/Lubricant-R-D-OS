@@ -1,0 +1,16 @@
+{
+  "artifact_id": "WGO_001_S1A_NEGATIVE_FIXTURES_V1",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": ["SYNTHETIC", "DEMO", "NOT_FOR_PHYSICAL_EXECUTION"],
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "physical_execution_authorized": false,
+  "notice": "NOT_FOR_PHYSICAL_EXECUTION",
+  "fixtures": [
+    {"fixture_id":"INVALID_RUN_EQUIPMENT_FAULT","base_run_id":"A1-BAD-01","overrides":{"run_status":"INVALID_RUN","stop_reason":"EQUIPMENT_FAULT","deviation":["EQUIPMENT_FAULT: synthetic equipment failure"]},"expected_detection":"INVALID_RUN_REQUIRES_DEVIATION_AND_EXCLUDE_FROM_Q1_Q2"},
+    {"fixture_id":"EXECUTION_ORDER_DEVIATION","base_run_id":"A1-GOOD-01","overrides":{"actual_run_order":9,"execution_order_deviation":true,"deviation_reason":"Synthetic replay: actual order differs from planned order."},"expected_detection":"EXECUTION_ORDER_DEVIATION_ACTUAL_NOT_EQUAL_PLANNED_WITH_REASON_REQUIRED"},
+    {"fixture_id":"OTHER_DOCUMENTED","base_run_id":"A1-BAD-02","overrides":{"stop_reason":"OTHER_DOCUMENTED","stop_reason_detail":"Synthetic replay: documented nonstandard bench shutdown."},"expected_detection":"OTHER_DOCUMENTED_REQUIRES_NONEMPTY_SPECIFIC_DETAIL"},
+    {"fixture_id":"MISSING_RAW_TRACE","base_run_id":"A1-BLANK-01","overrides":{"raw_signal_reference":null,"raw_signal_sha256":null},"expected_detection":"RAW_SIGNAL_REFERENCE_REQUIRED"},
+    {"fixture_id":"EVENT_CENSORING_INCONSISTENT","base_run_id":"A1-GOOD-02","overrides":{"event_occurred":true,"event_time_h":3.0,"censoring_type":"ADMINISTRATIVE_RIGHT_CENSOR","censor_time_h":10,"method_outcome":"NO_EVENT_WITHIN_10H","stop_reason":"ADMINISTRATIVE_10H_END"},"expected_detection":"EVENT_AND_CENSORING_OUTCOME_INCONSISTENT"}
+  ]
+}

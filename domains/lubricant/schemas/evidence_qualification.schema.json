@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/evidence_qualification.schema.json",
+  "title": "Evidence qualification",
+  "description": "A gate-time judgment on an evidence chain. QUALIFIED requires physical evidence only; SYNTHETIC evidence can reach at most PROVISIONAL and must carry the SYNTHETIC_DEMO_ONLY marker.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "evidence_qualification" },
+    "qualification_id": { "type": "string", "minLength": 1 },
+    "qualification": { "enum": ["QUALIFIED", "PROVISIONAL", "UNQUALIFIED"] },
+    "evidence_chain": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_reference": { "type": "string", "minLength": 1 },
+          "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" },
+          "evidence_status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+        },
+        "required": ["artifact_reference", "evidence_scope", "evidence_status"],
+        "additionalProperties": false
+      }
+    },
+    "rule_reference": { "type": "string", "minLength": 1 },
+    "decided_by": { "type": "string", "minLength": 1 },
+    "decided_on": { "type": "string", "minLength": 1 },
+    "synthetic_marker": { "const": "SYNTHETIC_DEMO_ONLY" }
+  },
+  "required": [
+    "artifact_type",
+    "evidence_scope",
+    "qualification_id",
+    "qualification",
+    "evidence_chain",
+    "rule_reference",
+    "decided_by",
+    "decided_on"
+  ],
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "QUALIFIED is allowed on physical evidence chains only.",
+      "if": {
+        "properties": { "qualification": { "const": "QUALIFIED" } },
+        "required": ["qualification"]
+      },
+      "then": {
+        "properties": {
+          "evidence_chain": {
+            "items": {
+              "properties": { "evidence_scope": { "const": "PHYSICAL" } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Any SYNTHETIC evidence caps qualification at PROVISIONAL and requires the demo marker.",
+      "if": {
+        "properties": {
+          "evidence_chain": {
+            "contains": {
+              "properties": { "evidence_scope": { "const": "SYNTHETIC" } },
+              "required": ["evidence_scope"]
+            }
+          }
+        },
+        "required": ["evidence_chain"]
+      },
+      "then": {
+        "properties": {
+          "qualification": { "enum": ["PROVISIONAL", "UNQUALIFIED"] },
+          "synthetic_marker": { "const": "SYNTHETIC_DEMO_ONLY" }
+        },
+        "required": ["qualification", "synthetic_marker"]
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

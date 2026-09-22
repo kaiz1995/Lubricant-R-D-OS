@@ -1,0 +1,32 @@
+{
+  "artifact_id": "WGO_001_S1A_SYNTHETIC_REPLAY_GATE_V1",
+  "scope": "SYNTHETIC_DEMO_ONLY",
+  "classification_labels": [
+    "SYNTHETIC",
+    "DEMO",
+    "NOT_FOR_PHYSICAL_EXECUTION"
+  ],
+  "evidence_status": "SYNTHETIC_DEMO_ASSUMPTION",
+  "physical_method_authority": "NONE",
+  "physical_execution_authorized": false,
+  "notice": "NOT_FOR_PHYSICAL_EXECUTION",
+  "frozen_demo_inputs_sha256": "548d332359aac626a9887fa102534d0507b5730fe839847fa7d87d254e194d5e",
+  "result": "WORKFLOW_VALIDATED",
+  "WORKFLOW_VALIDATED": true,
+  "stage_a_demo_decision": "PROMISING",
+  "synthetic_stage_a_result": "PROMISING",
+  "state_transition_allowed": false,
+  "qualification_claims": {
+    "METHOD_QUALIFIED": false,
+    "KNOWN_GOOD": false,
+    "KNOWN_BAD": false,
+    "PHYSICAL_RELEASE_APPROVED": false
+  },
+  "holds": {
+    "Physical Stage A": "HOLD",
+    "Stage A2": "HOLD",
+    "S1b": "HOLD",
+    "S2": "HOLD"
+  },
+  "reason": "Synthetic replay validates workflow controls only; it is not physical-method, material, or release evidence."
+}

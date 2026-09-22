@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/duty.schema.json",
+  "title": "Duty definition",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "duty" },
+    "stage": { "const": "DUTY_DEFINED" },
+    "duty_id": { "type": "string", "minLength": 1 },
+    "project_reference": { "type": "string", "minLength": 1 },
+    "duty": {
+      "type": "object",
+      "properties": {
+        "equipment": { "$ref": "#/$defs/duty_item" },
+        "operating_conditions": { "$ref": "#/$defs/duty_item" },
+        "maintenance": { "$ref": "#/$defs/duty_item" },
+        "temperature": { "$ref": "#/$defs/duty_item" },
+        "load": { "$ref": "#/$defs/duty_item" },
+        "contamination": { "$ref": "#/$defs/duty_item" },
+        "life": { "$ref": "#/$defs/duty_item" }
+      },
+      "required": ["equipment", "operating_conditions", "maintenance", "temperature", "load", "contamination", "life"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["artifact_type", "duty_id", "project_reference", "duty"],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "duty_item": {
+      "type": "object",
+      "properties": {
+        "value": { "type": ["string", "number"], "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED"] }
+      },
+      "required": ["value", "source", "evidence_id", "statement", "status"],
+      "additionalProperties": false
+    }
+  }
+}

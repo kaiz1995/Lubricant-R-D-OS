@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "gate",
+  "project_id": "WGO-DOE-001",
+  "stage": "VERIFIED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Does review Gate GATE-HOLD-001 have sufficient supplied conditions and evidence?",
+  "hypothesis": "GATE-HOLD-001 records supplied review conditions without creating a Freeze or Close artifact.",
+  "uncertainty": "This review records supplied conditions, gaps, risks, and disposition only; it does not create new experiment, model, optimization, Freeze, Close, or product-performance evidence.",
+  "decision_rule": "GO requires no unsatisfied conditions, no evidence gaps, and no GAP evidence; PIVOT, KILL, and FREEZE require explicit reason and evidence; otherwise retain HOLD.",
+  "result": "Synthetic workflow fixture is WORKFLOW_VALIDATED only and remains on HOLD; no state transition is authorized.",
+  "decision": "HOLD",
+  "next_action": "Retain this synthetic workflow fixture on HOLD; do not create a state transition, Freeze, or Close artifact.",
+  "evidence": [
+    {
+      "evidence_id": "E-G-HOLD-001",
+      "statement": "Synthetic review evidence supplied.",
+      "source": "synthetic",
+      "status": "OBSERVED"
+    }
+  ],
+  "experiment_reference": "EXP-DOE-001",
+  "gate_id": "GATE-HOLD-001",
+  "scope": "Synthetic conditional review.",
+  "satisfied_conditions": [],
+  "unsatisfied_conditions": [
+    "Missing external evidence."
+  ],
+  "evidence_gaps": [
+    "External evidence has not been supplied."
+  ],
+  "risks": [
+    "Synthetic review remains incomplete."
+  ],
+  "gate_status": "HOLD"
+}

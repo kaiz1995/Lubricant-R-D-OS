@@ -1,0 +1,136 @@
+{
+  "artifact_id": "WGO_001_S1A_OWNER_INPUT_PROPOSAL_EXAMPLE_V1",
+  "purpose": "ASSISTANT_PROPOSED_OWNER_INPUT_REVIEW_EXAMPLE_ONLY",
+  "status": "EXAMPLE_SCHEMA_ACCEPTED",
+  "scope": "DEMO_EXAMPLE_ONLY",
+  "evidence_status": "ASSISTANT_PROPOSED_EXAMPLE_ASSUMPTION",
+  "labels": [
+    "ASSISTANT_PROPOSED_EXAMPLE",
+    "EXAMPLE_SCHEMA_ACCEPTED",
+    "NOT_OWNER_APPROVED",
+    "NOT_FOR_PHYSICAL_RELEASE",
+    "NOT_FOR_EXECUTION"
+  ],
+  "source_isolation": "INDEPENDENT_OF_SYNTHETIC_REPLAY_AND_LIVE_PHYSICAL_RELEASE_ARTIFACTS",
+  "promotion_policy": "NEVER_AUTOMATIC_MANUAL_OWNER_REENTRY_REQUIRED",
+  "state_transition_allowed": false,
+  "physical_execution_authorized": false,
+  "physical_method_authority": "NONE",
+  "prohibited_actions": [
+    "GENERATE_EXECUTION_ORDER",
+    "RECORD_EXECUTION_ORDER_PROVENANCE",
+    "CALCULATE_RELEASE_HASHES",
+    "POPULATE_MANIFEST_FINAL_VALUES",
+    "RECORD_FINAL_OWNER_AUTHORIZATION",
+    "START_PHYSICAL_EXECUTION",
+    "START_STAGE_A2",
+    "START_S1B",
+    "START_S2"
+  ],
+  "proposed_inputs": {
+    "GOOD_CHARACTERIZATION_CANDIDATE": {
+      "sample_id": {"proposed_value": "EXAMPLE-GOOD-001"},
+      "material_identity": {"proposed_value": "EXAMPLE ester base oil plus example additive blend"},
+      "supplier_or_product_code": {"proposed_value": "EXAMPLE-SUP-GOOD-001"},
+      "batch_or_container_id": {"proposed_value": "EXAMPLE-GOOD-BATCH-001"},
+      "formula_or_composition": {"proposed_value": "EXAMPLE: ester base oil 97.50 wt%, additive active 2.50 wt%"},
+      "water_content": {"proposed_value": "EXAMPLE: 0.10 wt%"},
+      "water_measurement_method": {"proposed_value": "EXAMPLE: documented laboratory method to be owner selected"},
+      "preparation_sop": {"proposed_value": "EXAMPLE-SOP-GOOD-001"},
+      "evidence_reference": {"proposed_value": "EXAMPLE-EVID-GOOD-001"}
+    },
+    "BAD_CHARACTERIZATION_CANDIDATE": {
+      "definition_choice": {"proposed_value": "EXAMPLE_A_CONTAMINATED_OIL_WITHOUT_ADDITIVE"},
+      "sample_id": {"proposed_value": "EXAMPLE-BAD-001"},
+      "material_identity": {"proposed_value": "EXAMPLE contaminated ester base oil control"},
+      "formula_or_composition": {"proposed_value": "EXAMPLE: ester base oil 99.50 wt%, example contaminant 0.50 wt%"},
+      "batch_or_container_id": {"proposed_value": "EXAMPLE-BAD-BATCH-001"},
+      "preparation_sop": {"proposed_value": "EXAMPLE-SOP-BAD-001"},
+      "safety_handling_reference": {"proposed_value": "EXAMPLE-SDS-BAD-001"},
+      "qc_acceptance": {"proposed_value": "EXAMPLE-QC-BAD-001: appearance and contamination target verified before use"},
+      "identity_conflict_disposition": {"proposed_value": "EXAMPLE: no ASA identity is asserted; Owner must resolve actual material identity"},
+      "evidence_reference": {"proposed_value": "EXAMPLE-EVID-BAD-001"}
+    },
+    "BENCH_REFERENCE_BLANK": {
+      "sample_id": {"proposed_value": "EXAMPLE-BLANK-001"},
+      "material_identity": {"proposed_value": "EXAMPLE unused blank reference oil"},
+      "supplier_or_product_code": {"proposed_value": "EXAMPLE-SUP-BLANK-001"},
+      "batch_or_container_id": {"proposed_value": "EXAMPLE-BLANK-BATCH-001"},
+      "container_id": {"proposed_value": "EXAMPLE-BLANK-CONTAINER-001"},
+      "new_unused_confirmation": {"proposed_value": true},
+      "no_additive_confirmation": {"proposed_value": true},
+      "no_artificial_contamination_confirmation": {"proposed_value": true},
+      "handling_sop": {"proposed_value": "EXAMPLE-SOP-BLANK-001"},
+      "evidence_reference": {"proposed_value": "EXAMPLE-EVID-BLANK-001"}
+    },
+    "PHYSICAL_EVENT_DETECTION_RULE_V1": {
+      "threshold_db": {"proposed_value": 70.0},
+      "comparator": {"proposed_value": ">="},
+      "signal_source": {"proposed_value": "EXAMPLE noise meter model and serial to be owner entered"},
+      "sampling_interval": {"proposed_value": "EXAMPLE: 2 seconds"},
+      "instrument_resolution": {"proposed_value": "EXAMPLE: 0.5 dB"},
+      "weighting_rule": {"proposed_value": "EXAMPLE: A-weighting"},
+      "rounding_rule": {"proposed_value": "EXAMPLE: record displayed value without extra rounding"},
+      "filtering_rule": {"proposed_value": "EXAMPLE: no software filtering"},
+      "persistence_rule": {"proposed_value": "EXAMPLE: continuous >=70 dB for 10 seconds"},
+      "missing_sample_rule": {"proposed_value": "EXAMPLE: invalidate a crossing interval with missing observation"},
+      "manual_timestamp_rule": {"proposed_value": "EXAMPLE: record event time to nearest 10 seconds"}
+    },
+    "Q2B_FINAL_CHECKPOINTS": {
+      "checkpoints_h": {"proposed_value": [1.5, 3.0]}
+    },
+    "PROTOCOL_VERSION": {
+      "protocol_version": {"proposed_value": "EXAMPLE-PROTOCOL-V1"},
+      "protocol_artifact_reference": {"proposed_value": "EXAMPLE-PROTOCOL-REF-001"}
+    },
+    "BENCH_AND_EQUIPMENT_IDENTITIES": {
+      "bench_id": {"proposed_value": "EXAMPLE-BENCH-001"},
+      "noise_instrument_id": {"proposed_value": "EXAMPLE-NOISE-INSTRUMENT-001"},
+      "equipment_configuration_reference": {"proposed_value": "EXAMPLE-EQUIPMENT-CONFIG-001"},
+      "operator_qualification_reference": {"proposed_value": "EXAMPLE-OPERATOR-QUAL-001"}
+    },
+    "BLOCKING_AND_EXECUTION_ORDER_GENERATION_RULE": {
+      "blocking_rule": {"proposed_value": "EXAMPLE: three blocks, one run per group in each block"},
+      "order_generation_method": {"proposed_value": "EXAMPLE: documented balanced permutation selected before execution"},
+      "seed_policy": {"proposed_value": "EXAMPLE: Owner records a new seed or declares no seed before order generation"}
+    },
+    "OWNER_PARAMETER_FREEZE_CONFIRMATION": {
+      "owner": {"proposed_value": "EXAMPLE OWNER NAME TO BE RE-ENTERED"},
+      "confirmed_at": null,
+      "approval_reference": null,
+      "freeze_status": "NOT_CONFIRMED"
+    }
+  },
+  "release_manifest": {
+    "final_values": null,
+    "artifact_hashes": null,
+    "final_authorization": null
+  },
+  "execution_order": null,
+  "execution_order_provenance": null,
+  "owner_review": {
+    "decision": "ACCEPT_EXAMPLE_SCHEMA",
+    "reviewed_by": "USER_CONFIRMED_IN_CODEX_THREAD",
+    "reviewed_at": "2026-08-24",
+    "review_reference": "CODEX_THREAD_CONFIRMATION_2026-08-24",
+    "allowed_decisions": [
+      "ACCEPT_EXAMPLE_SCHEMA",
+      "REQUEST_EXAMPLE_REVISION",
+      "REJECT_EXAMPLE"
+    ],
+    "acceptance_scope": "EXAMPLE_SCHEMA_ONLY_NOT_PHYSICAL_APPROVAL"
+  },
+  "downstream_state": {
+    "PHYSICAL_STAGE_A": "HOLD",
+    "STAGE_A2": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "PHASE_3_4": "NO_CHANGE"
+  },
+  "prohibited_claims": [
+    "METHOD_QUALIFIED",
+    "KNOWN_GOOD",
+    "KNOWN_BAD",
+    "PHYSICAL_RELEASE_APPROVED"
+  ]
+}

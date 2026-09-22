@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "基于已定义的 WGO-001 项目章程，录入包含 7 项完整工况条件（设备、运行、维护、温度、载荷、污染、寿命）的工况定义",
+    "expected": "执行 preflight_duty_definition.py 校验输入，build_duty_artifact.py 生成候选工件，validate_duty_artifact.py 校验后落盘至 DUTY_DEFINED"
+  },
+  {
+    "id": 2,
+    "prompt": "未提供 project.json 或 7 项工况中遗漏了污染/寿命参数，直接要求输出工况工件",
+    "expected": "触发前置门禁或 HOLD 恢复动作，提示运行 project-definition 或列出具体缺失项，不生成脏写入"
+  },
+  {
+    "id": 3,
+    "prompt": "在工况定义阶段，要求将用户口头估计的 ASSUMED 状态自动提升为 OBSERVED 经过验证的证据",
+    "expected": "触发黑名单拦截，严格保留证据声明状态，严禁无实验凭证将 ASSUMED 擅自提升为 OBSERVED"
+  }
+]

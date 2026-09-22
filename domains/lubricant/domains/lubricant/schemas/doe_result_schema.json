@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/doe_result_schema.json",
+  "title": "DOE result",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "engine_name": {
+      "const": "doe"
+    },
+    "engine_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "OK",
+        "REJECTED"
+      ]
+    },
+    "rejection_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision_question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_information_value": {
+      "type": "string",
+      "minLength": 1
+    },
+    "variables_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "constraints_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "responses_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doe_selection_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "OBSERVED",
+              "ASSUMED",
+              "GAP"
+            ]
+          }
+        },
+        "required": [
+          "evidence_id",
+          "statement",
+          "source",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "engine_name",
+    "engine_version",
+    "method",
+    "parameters",
+    "input_digest",
+    "status",
+    "rejection_reasons",
+    "result",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "REJECTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rejection_reasons": {
+            "minItems": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "rejection_reasons": {
+            "maxItems": 0
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "design_type": {
+                "enum": [
+                  "SIMPLEX_MIXTURE",
+                  "D_OPTIMAL_MIXTURE"
+                ]
+              },
+              "model_order": {
+                "enum": [
+                  "LINEAR",
+                  "QUADRATIC"
+                ]
+              },
+              "runs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "run_index": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "proportions": {
+                      "type": "object",
+                      "minProperties": 1,
+                      "propertyNames": {
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      },
+                      "additionalProperties": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "run_index",
+                    "proportions"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "run_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "candidates_considered": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "selection_reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "design_type",
+              "model_order",
+              "runs",
+              "run_count",
+              "candidates_considered",
+              "selection_reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "decision_question",
+          "hypothesis",
+          "decision_rule",
+          "expected_information_value",
+          "variables_note",
+          "constraints_note",
+          "responses_note",
+          "doe_selection_reason"
+        ]
+      }
+    }
+  ]
+}

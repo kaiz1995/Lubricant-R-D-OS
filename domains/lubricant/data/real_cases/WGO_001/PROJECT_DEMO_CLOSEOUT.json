@@ -1,0 +1,86 @@
+{
+  "WORKFLOW_VALIDATED": true,
+  "artifact_id": "WGO_001_PROJECT_DEMO_CLOSEOUT_V1",
+  "closure_authorization": {
+    "authorized_at": "2026-08-24",
+    "authorized_by": "USER_CONFIRMED_IN_CODEX_THREAD",
+    "decision": "CLOSE_AS_DEMO",
+    "reference": "CODEX_THREAD_USER_CONFIRMATION_2026-08-24",
+    "scope": "DEMO_WORKFLOW_ONLY_NOT_TECHNICAL_APPROVAL"
+  },
+  "completed_scope": [
+    "S1A_EXECUTION_PACKAGE_AUTHORING",
+    "SYNTHETIC_9_RUN_REPLAY",
+    "NEGATIVE_REGRESSION_FIXTURES_5_OF_5",
+    "OWNER_INPUT_EXAMPLE_SCHEMA",
+    "OWNER_INPUT_EXAMPLE_MAPPING_9_OF_9",
+    "PHYSICAL_ENTRY_GUARDS"
+  ],
+  "demo_workflow_status": "COMPLETE",
+  "downstream_state": {
+    "PHASE_3_4": "NO_CHANGE",
+    "PHYSICAL_STAGE_A": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "STAGE_A2": "HOLD"
+  },
+  "historical_evidence_disposition": "PRESERVED_AS_DESCRIPTIVE_NOT_RECLASSIFIED",
+  "manifest_final_hashes": [
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "manifest_status": "DRAFT_NOT_RELEASED",
+  "not_executed_or_unverified": [
+    "PHYSICAL_S1A_STAGE_A",
+    "REAL_OWNER_INPUTS",
+    "METHOD_QUALIFICATION",
+    "MATERIAL_PERFORMANCE_OR_EFFICACY",
+    "PHYSICAL_RELEASE",
+    "S1B",
+    "S2"
+  ],
+  "physical_program_status": "PAUSED_NOT_EXECUTED",
+  "physical_release_candidate_status": "HOLD_NOT_READY",
+  "prohibited_actions": [
+    "GENERATE_EXECUTION_ORDER",
+    "CALCULATE_RELEASE_HASHES",
+    "POPULATE_MANIFEST_FINAL_VALUES",
+    "RECORD_FINAL_OWNER_AUTHORIZATION",
+    "START_PHYSICAL_STAGE_A",
+    "START_STAGE_A2",
+    "START_S1B",
+    "START_S2"
+  ],
+  "project_disposition": "CLOSED_AS_DEMO",
+  "qualification_claims": {
+    "ASA4_OPTIMAL_OR_EFFECTIVE": false,
+    "KNOWN_BAD": false,
+    "KNOWN_GOOD": false,
+    "METHOD_QUALIFIED": false,
+    "PHYSICAL_RELEASE_APPROVED": false
+  },
+  "release_finalization_preflight_status": "BLOCKED_AS_DESIGNED",
+  "resume_requirements": {
+    "next_checks": [
+      "PHYSICAL_CONSISTENCY_REVIEW",
+      "RELEASE_FINALIZATION_ENTRY_PREFLIGHT"
+    ],
+    "real_owner_inputs_required": 10
+  },
+  "resume_trigger": "EXPLICIT_REAL_OWNER_REENTRY_REQUIRED",
+  "scope": "WORKFLOW_DEMONSTRATION_ONLY",
+  "source_artifact_sha256": {
+    "data/real_cases/WGO_001/s1a/physical/S1A_STAGE_A_RELEASE_MANIFEST.json": "f49a6779342247507363f868ae8c406d86c12e217d56aa3d28c39b80d01015e4",
+    "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/PHYSICAL_RELEASE_CANDIDATE.json": "c306386d6e966c829e2a966a59c1a8fe72fa84b230298292a8aeaa8fd7204cc9",
+    "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/RELEASE_FINALIZATION_ENTRY_PREFLIGHT.json": "9c54b0fb9ee7330a8a4c6071b9c7c8492a924bd37da4fc492b802c5396521a6e",
+    "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/review_examples/OWNER_INPUT_PROPOSAL_EXAMPLE.json": "74598b4e8b4a6c53d7cd964c926787a776db99a7ae672720a80e14a2f3c22b1a",
+    "data/real_cases/WGO_001/s1a/physical/physical_release_candidate/review_examples/OWNER_INPUT_RESOLUTION_EXAMPLE_REPLAY.json": "7c48e545bcd452070d3cb6df5e94d603bf91ba0a9adc77e51969a2dea024e263",
+    "data/real_cases/WGO_001/s1a/physical/synthetic_replay/gate_result.json": "2c3d2d2d54380f8436090206ce78f9474f3d07136e4a88e172f8fa430414702d"
+  },
+  "state_transition_allowed": false,
+  "synthetic_stage_a_result": "PROMISING",
+  "workflow_validation_meaning": "WORKFLOW_VALIDATED does not equal METHOD_QUALIFIED."
+}

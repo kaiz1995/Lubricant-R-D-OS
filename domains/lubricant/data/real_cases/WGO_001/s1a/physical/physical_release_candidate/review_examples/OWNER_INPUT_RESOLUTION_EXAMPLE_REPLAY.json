@@ -1,0 +1,144 @@
+{
+  "artifact_id": "WGO_001_S1A_OWNER_INPUT_RESOLUTION_EXAMPLE_REPLAY_V1",
+  "completion_gate": "PASS_EXAMPLE_ONLY",
+  "completion_requirements": {
+    "downstream_transition_prohibited": true,
+    "isolation_upheld": true,
+    "mapping_9_of_9": true,
+    "physical_consistency_not_evaluated": true,
+    "schema_accepted": true,
+    "source_hash_locked": true
+  },
+  "downstream_state": {
+    "PHASE_3_4": "NO_CHANGE",
+    "PHYSICAL_STAGE_A": "HOLD",
+    "S1B": "HOLD",
+    "S2": "HOLD",
+    "STAGE_A2": "HOLD"
+  },
+  "evidence_status": "ASSISTANT_PROPOSED_EXAMPLE_ASSUMPTION",
+  "example_stage": "REAL_OWNER_INPUT_COLLECTION_EXAMPLE",
+  "example_stage_status": "COMPLETE",
+  "execution_order": null,
+  "execution_order_provenance": null,
+  "final_authorization": null,
+  "finalization_allowed": false,
+  "labels": [
+    "EXAMPLE_MAPPING_ONLY",
+    "NOT_OWNER_APPROVED",
+    "NOT_FOR_PHYSICAL_RELEASE",
+    "NOT_FOR_EXECUTION"
+  ],
+  "mapping_coverage": "9/9",
+  "no_write_targets": [
+    "physical_release_candidate/PHYSICAL_RELEASE_CANDIDATE.json",
+    "physical_release_candidate/OWNER_INPUT_REQUEST.json",
+    "physical_release_candidate/CONSISTENCY_REVIEW.json",
+    "s1a/physical/synthetic_replay/*",
+    "Phase_3_4_frozen_artifacts/*"
+  ],
+  "normalized_example_inputs": {
+    "BAD_CHARACTERIZATION_CANDIDATE": {
+      "batch_or_container_id": "EXAMPLE-BAD-BATCH-001",
+      "definition_choice": "EXAMPLE_A_CONTAMINATED_OIL_WITHOUT_ADDITIVE",
+      "evidence_reference": "EXAMPLE-EVID-BAD-001",
+      "formula_or_composition": "EXAMPLE: ester base oil 99.50 wt%, example contaminant 0.50 wt%",
+      "identity_conflict_disposition": "EXAMPLE: no ASA identity is asserted; Owner must resolve actual material identity",
+      "material_identity": "EXAMPLE contaminated ester base oil control",
+      "preparation_sop": "EXAMPLE-SOP-BAD-001",
+      "qc_acceptance": "EXAMPLE-QC-BAD-001: appearance and contamination target verified before use",
+      "safety_handling_reference": "EXAMPLE-SDS-BAD-001",
+      "sample_id": "EXAMPLE-BAD-001"
+    },
+    "BENCH_AND_EQUIPMENT_IDENTITIES": {
+      "bench_id": "EXAMPLE-BENCH-001",
+      "equipment_configuration_reference": "EXAMPLE-EQUIPMENT-CONFIG-001",
+      "noise_instrument_id": "EXAMPLE-NOISE-INSTRUMENT-001",
+      "operator_qualification_reference": "EXAMPLE-OPERATOR-QUAL-001"
+    },
+    "BENCH_REFERENCE_BLANK": {
+      "batch_or_container_id": "EXAMPLE-BLANK-BATCH-001",
+      "container_id": "EXAMPLE-BLANK-CONTAINER-001",
+      "evidence_reference": "EXAMPLE-EVID-BLANK-001",
+      "handling_sop": "EXAMPLE-SOP-BLANK-001",
+      "material_identity": "EXAMPLE unused blank reference oil",
+      "new_unused_confirmation": true,
+      "no_additive_confirmation": true,
+      "no_artificial_contamination_confirmation": true,
+      "sample_id": "EXAMPLE-BLANK-001",
+      "supplier_or_product_code": "EXAMPLE-SUP-BLANK-001"
+    },
+    "BLOCKING_AND_EXECUTION_ORDER_GENERATION_RULE": {
+      "blocking_rule": "EXAMPLE: three blocks, one run per group in each block",
+      "order_generation_method": "EXAMPLE: documented balanced permutation selected before execution",
+      "seed_policy": "EXAMPLE: Owner records a new seed or declares no seed before order generation"
+    },
+    "GOOD_CHARACTERIZATION_CANDIDATE": {
+      "batch_or_container_id": "EXAMPLE-GOOD-BATCH-001",
+      "evidence_reference": "EXAMPLE-EVID-GOOD-001",
+      "formula_or_composition": "EXAMPLE: ester base oil 97.50 wt%, additive active 2.50 wt%",
+      "material_identity": "EXAMPLE ester base oil plus example additive blend",
+      "preparation_sop": "EXAMPLE-SOP-GOOD-001",
+      "sample_id": "EXAMPLE-GOOD-001",
+      "supplier_or_product_code": "EXAMPLE-SUP-GOOD-001",
+      "water_content": "EXAMPLE: 0.10 wt%",
+      "water_measurement_method": "EXAMPLE: documented laboratory method to be owner selected"
+    },
+    "OWNER_PARAMETER_FREEZE_CONFIRMATION": {
+      "approval_reference": null,
+      "confirmed_at": null,
+      "freeze_status": "NOT_CONFIRMED",
+      "owner": "EXAMPLE OWNER NAME TO BE RE-ENTERED"
+    },
+    "PHYSICAL_EVENT_DETECTION_RULE_V1": {
+      "comparator": ">=",
+      "filtering_rule": "EXAMPLE: no software filtering",
+      "instrument_resolution": "EXAMPLE: 0.5 dB",
+      "manual_timestamp_rule": "EXAMPLE: record event time to nearest 10 seconds",
+      "missing_sample_rule": "EXAMPLE: invalidate a crossing interval with missing observation",
+      "persistence_rule": "EXAMPLE: continuous >=70 dB for 10 seconds",
+      "rounding_rule": "EXAMPLE: record displayed value without extra rounding",
+      "sampling_interval": "EXAMPLE: 2 seconds",
+      "signal_source": "EXAMPLE noise meter model and serial to be owner entered",
+      "threshold_db": 70.0,
+      "weighting_rule": "EXAMPLE: A-weighting"
+    },
+    "PROTOCOL_VERSION": {
+      "protocol_artifact_reference": "EXAMPLE-PROTOCOL-REF-001",
+      "protocol_version": "EXAMPLE-PROTOCOL-V1"
+    },
+    "Q2B_FINAL_CHECKPOINTS": {
+      "checkpoints_h": [
+        1.5,
+        3.0
+      ]
+    }
+  },
+  "physical_consistency_review": "NOT_EVALUATED",
+  "physical_execution_authorized": false,
+  "physical_method_authority": "NONE",
+  "prohibited_claims": [
+    "KNOWN_BAD",
+    "KNOWN_GOOD",
+    "METHOD_QUALIFIED",
+    "OWNER_INPUT_RESOLVED_FOR_PHYSICAL",
+    "PHYSICAL_RELEASE_APPROVED"
+  ],
+  "real_owner_input_status": "OPEN_UNRESOLVED",
+  "release_manifest": {
+    "artifact_hashes": null,
+    "final_authorization": null,
+    "final_values": null
+  },
+  "remaining_real_blocker": "EXPLICIT_OWNER_REENTRY_REQUIRED",
+  "result": "EXAMPLE_SCHEMA_REPLAYED_NOT_RESOLVED",
+  "scope": "DEMO_EXAMPLE_ONLY",
+  "source": {
+    "path": "OWNER_INPUT_PROPOSAL_EXAMPLE.json",
+    "sha256": "74598b4e8b4a6c53d7cd964c926787a776db99a7ae672720a80e14a2f3c22b1a"
+  },
+  "source_isolation": "READS_ACCEPTED_EXAMPLE_PROPOSAL_ONLY",
+  "state_transition_allowed": false,
+  "status": "PASS_EXAMPLE_MAPPING_ONLY",
+  "workflow_result": "EXAMPLE_WORKFLOW_VALIDATED"
+}

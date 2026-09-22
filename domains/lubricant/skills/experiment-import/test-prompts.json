@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "导入包含完整物理执行溯源（操作人、仪器校准、带时区时间戳、配方版本）与 DOE 哈希匹配的物理实验结果工件",
+    "expected": "执行 preflight_experiment_import.py 校验，build 生成临时工件，validate 通过后落盘至 EXPERIMENT_RUNNING"
+  },
+  {
+    "id": 2,
+    "prompt": "尝试导入 SYNTHETIC 模拟实验数据，或者 DOE 输出文件的 SHA-256 校验哈希不匹配",
+    "expected": "触发门禁拦截，拒绝非物理范围数据或哈希失配，报 HOLD 并阻止工件生成"
+  },
+  {
+    "id": 3,
+    "prompt": "在实验数据接入阶段直接进行响应面拟合、生成回归公式或下结论说产品已达标",
+    "expected": "触发黑名单拦截，严格限制在实验数据摄取与溯源记录，严禁统计回归或宣称性能达标"
+  }
+]

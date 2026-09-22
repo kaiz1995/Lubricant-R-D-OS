@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "benchmark",
+  "project_id": "WGO-001",
+  "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Is the benchmark entry usable as a comparison baseline?",
+  "hypothesis": "The benchmark product reflects a known mature reference.",
+  "uncertainty": "Benchmark data may not cover every field condition.",
+  "evidence": [
+    {
+      "evidence_id": "E-B-001",
+      "statement": "Benchmark source batch and test data are recorded.",
+      "source": "benchmark record BK-001",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "Benchmark entries are comparison baselines only and never formula copy sources.",
+  "result": "Benchmark reference is recorded for validation use only.",
+  "decision": "HOLD",
+  "next_action": "Use the benchmark only for comparison validation.",
+  "product_id": "BK-001",
+  "product_type": "EXTERNAL_COMPETITOR",
+  "source": "competitor product datasheet",
+  "batch_reference": "BATCH-BK-001",
+  "test_data_references": ["TD-001", "TD-002"],
+  "applicable_scenarios": ["hydraulic oil comparison", "antiwear validation"],
+  "usage_role": "COMPARISON_VALIDATION",
+  "evidence_status": "OBSERVED"
+}

@@ -1,0 +1,5 @@
+{
+  "project_artifact": "project-active.json", "challenge_artifact": "challenge-defined.json", "failure_ctq_artifact": "failure-ctq-defined.json",
+  "evidence": [{"evidence_id": "E-T-STD-001", "statement": "ASTM D1401 is the supplied method identity.", "source": "", "status": "OBSERVED"}],
+  "test_method": {"method_id": "TM-001", "name": "Water separation screening", "standard": "ASTM D1401", "challenge_reference": "CH-001", "target_failure_reference": "FM-001", "role": ["D"], "qualification_metrics": [{"metric": "DISCRIMINATION", "measurement": {"value": 2, "unit": "rank positions", "source": "qualification record Q-001", "method_version": "D1401-2024", "material_batch": "benchmark-batch", "formula_version": "benchmark-v1"}}], "qualification_basis": ["benchmark ranking"], "qualification_status": "QUALIFIED", "method_source_evidence_id": "E-T-STD-001", "qualification_evidence_ids": ["E-T-STD-001"]}
+}

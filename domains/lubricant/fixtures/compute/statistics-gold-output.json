@@ -1,0 +1,205 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "statistics",
+  "engine_version": "0.1.0",
+  "method": "OLS_ANOVA_V1",
+  "parameters": {
+    "parameterization": "SCHEFFE_UNCENTERED_V1",
+    "model_order": "QUADRATIC",
+    "term_order": [
+      "x_A",
+      "x_B",
+      "x_C",
+      "x_A*x_B",
+      "x_A*x_C",
+      "x_B*x_C"
+    ],
+    "anova_type": "TYPE_I_SEQUENTIAL",
+    "response_ctq": "KV40"
+  },
+  "input_digest": "d17cba69c8f1c61e04a7ec755d23b8da7559d6633b50e18118accae13e0b1512",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {
+    "response_ctq": "KV40",
+    "coefficients": [
+      {
+        "term": "x_A",
+        "estimate": 10.0,
+        "std_error": 0.0,
+        "t_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "term": "x_B",
+        "estimate": 20.000000000000004,
+        "std_error": 0.0,
+        "t_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "term": "x_C",
+        "estimate": 30.00000000000001,
+        "std_error": 0.0,
+        "t_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "term": "x_A*x_B",
+        "estimate": 3.999999999999991,
+        "std_error": 0.0,
+        "t_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "term": "x_A*x_C",
+        "estimate": -6.000000000000012,
+        "std_error": 0.0,
+        "t_value": -1e+300,
+        "p_value": 0.0
+      },
+      {
+        "term": "x_B*x_C",
+        "estimate": 7.999999999999972,
+        "std_error": 0.0,
+        "t_value": 1e+300,
+        "p_value": 0.0
+      }
+    ],
+    "anova_table": [
+      {
+        "source": "INTERCEPT",
+        "row_type": "TERM",
+        "sum_squares": 266.875,
+        "df": 1,
+        "mean_square": 266.875,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "x_B",
+        "row_type": "TERM",
+        "sum_squares": 1.2000000000000455,
+        "df": 1,
+        "mean_square": 1.2000000000000455,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "x_C",
+        "row_type": "TERM",
+        "sum_squares": 260.09999999999997,
+        "df": 1,
+        "mean_square": 260.09999999999997,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "x_A*x_B",
+        "row_type": "TERM",
+        "sum_squares": 0.6035714285714242,
+        "df": 1,
+        "mean_square": 0.6035714285714242,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "x_A*x_C",
+        "row_type": "TERM",
+        "sum_squares": 2.30476190476191,
+        "df": 1,
+        "mean_square": 2.30476190476191,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "x_B*x_C",
+        "row_type": "TERM",
+        "sum_squares": 2.666666666666667,
+        "df": 1,
+        "mean_square": 2.666666666666667,
+        "f_value": 1e+300,
+        "p_value": 0.0
+      },
+      {
+        "source": "RESIDUAL",
+        "row_type": "RESIDUAL",
+        "sum_squares": 6.310887241768095e-30,
+        "df": 0,
+        "mean_square": 0.0
+      }
+    ],
+    "fit_statistics": {
+      "r_squared": 1.0,
+      "adj_r_squared": 1.0,
+      "sigma_squared": 0.0
+    },
+    "residual_analysis": {
+      "residuals": [
+        {
+          "run_reference": "R01",
+          "residual": 0.0
+        },
+        {
+          "run_reference": "R02",
+          "residual": -3.552713678800501e-15
+        },
+        {
+          "run_reference": "R03",
+          "residual": -1.0658141036401503e-14
+        },
+        {
+          "run_reference": "R04",
+          "residual": 0.0
+        },
+        {
+          "run_reference": "R05",
+          "residual": -3.552713678800501e-15
+        },
+        {
+          "run_reference": "R06",
+          "residual": 0.0
+        }
+      ],
+      "standardized_residuals": [
+        {
+          "run_reference": "R01",
+          "std_residual": 0.0
+        },
+        {
+          "run_reference": "R02",
+          "std_residual": 0.0
+        },
+        {
+          "run_reference": "R03",
+          "std_residual": 0.0
+        },
+        {
+          "run_reference": "R04",
+          "std_residual": 0.0
+        },
+        {
+          "run_reference": "R05",
+          "std_residual": 0.0
+        },
+        {
+          "run_reference": "R06",
+          "std_residual": 0.0
+        }
+      ],
+      "skewness": -1.1579713076618592,
+      "kurtosis": 0.017846519928613525
+    },
+    "lack_of_fit": {
+      "status": "NOT_APPLICABLE"
+    }
+  },
+  "evidence": [
+    {
+      "evidence_id": "statistics-computation",
+      "statement": "deterministic OLS + Type I ANOVA computed from supplied design points and observations; F p-values via Lentz regularized incomplete beta (NR 6.4)",
+      "source": "engine internal deterministic algorithm",
+      "status": "OBSERVED"
+    }
+  ]
+}

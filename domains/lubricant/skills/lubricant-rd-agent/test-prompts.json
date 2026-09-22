@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "项目处于 PROJECT_DEFINED 且证据为 PHYSICAL、gate 为 GO，请求推进到 DUTY_DEFINED",
+    "expected": "执行 route_step.py 判定 ALLOW，正确路由到 skills/duty-definition"
+  },
+  {
+    "id": 2,
+    "prompt": "项目处于 PROJECT_DEFINED，试图直接推进到 DESIGN_SPACE_DEFINED（跳过失效分析和测试评定）",
+    "expected": "判定 DENY，给出跨阶段跳跃拒绝原因，指出当前合法下一阶段"
+  },
+  {
+    "id": 3,
+    "prompt": "项目证据为 SYNTHETIC，或者存在未解的 evidence_gaps / unsatisfied_conditions",
+    "expected": "判定 DENY 或 HOLD，拒绝基于合成数据或缺口放行，列出具体阻塞条件"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "challenge",
+  "project_id": "WGO-001",
+  "stage": "CHALLENGES_DEFINED",
+  "decision_question": "Which duty-derived challenge is recorded for the supplied operating conditions?",
+  "hypothesis": "Potential water ingress is a supplied duty-derived lubrication challenge.",
+  "uncertainty": "No quantified field water history is available.",
+  "evidence": [
+    {"evidence_id": "E-D-001", "statement": "Duty record identifies a wind turbine gearbox.", "source": "duty record DP-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-002", "statement": "Duty record states variable-speed operation.", "source": "duty record DP-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-003", "statement": "Maintenance plan states condition monitoring.", "source": "maintenance plan MP-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-004", "statement": "Duty record states the recorded temperature range.", "source": "duty record DP-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-005", "statement": "Duty record states variable transmitted load.", "source": "duty record DP-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-006", "statement": "Service history records potential water ingress.", "source": "service history SH-001", "status": "OBSERVED"},
+    {"evidence_id": "E-D-007", "statement": "Project brief records a long drain interval target.", "source": "project brief PB-001", "status": "OBSERVED"},
+    {"evidence_id": "E-C-001", "statement": "The recorded duty profile identifies potential water ingress during service.", "source": "duty profile DP-001", "status": "OBSERVED"}
+  ],
+  "decision_rule": "Record only fully evidenced duty conditions and explicitly supplied challenge levels.",
+  "result": "The supplied water-contamination challenge is recorded without failure, CTQ, test, or formulation conclusions.",
+  "decision": "GO",
+  "next_action": "Define failure and CTQ relationships.",
+  "duty_reference": "DP-001",
+  "challenge_id": "CH-001",
+  "category": "WATER_CONTAMINATION",
+  "description": "Potential water ingress during service.",
+  "severity": "HIGH",
+  "exposure": "MEDIUM",
+  "lubricant_sensitivity": "HIGH",
+  "evidence_gap": "No quantified field water history.",
+  "priority": "HIGH"
+}
