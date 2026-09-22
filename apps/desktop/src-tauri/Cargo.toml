@@ -18,7 +18,7 @@ tauri-build = { version = "2", features = [] }
 osd-core.workspace = true
 # macos-private-api: transparent webview background for the vibrancy sidebar
 # (tauri.macos.conf.json); no-op on other platforms.
-tauri = { version = "2", features = ["macos-private-api"] }
+tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 tauri-plugin-single-instance = "2"
 serde.workspace = true
