@@ -2,6 +2,9 @@
 
 > **基于 [ai4s-research/open-science](https://github.com/ai4s-research/open-science) 架构的工业润滑油产品开发 AI Agent 领域包（Domain Pack）**  
 > 当前版本：`V0` | 规范契约：`Draft 2020-12 JSON Schema` | 许可证：`MIT`
+>
+> 📍 **本领域包位于 [`kaiz1995/Lubricant-R-D-OS`](https://github.com/kaiz1995/Lubricant-R-D-OS) 仓库的 `domains/lubricant/` 目录下**（2026-09-22 由独立仓库 `lubricant-rd-domain-pack` 合并进来，92 个提交的历史完整保留）。
+> 下文所有 `python scripts/...`、`python -B tests/...` 命令均**以本目录为工作目录**执行。
 
 ---
 
@@ -140,7 +143,7 @@
 - 本地安装 Python 3.10+ 环境
 
 ### 7.2 安装领域包技能至 Open Science
-在仓库根目录执行 PowerShell 命令，一键将 12 个领域技能部署到 Open Science Desktop 用户目录：
+在本目录（`domains/lubricant/`）执行 PowerShell 命令，一键将 12 个领域技能部署到 Open Science Desktop 用户目录：
 
 ```powershell
 # 将全部 12 个领域技能安装到 Desktop
@@ -186,7 +189,7 @@ python scripts/install_domain_skill.py --all `
 4. 后续所有技能执行落盘后，副驾驶会按 AGENTS.md 中的"活报告维护"规则自动同步该报告；项目全门禁通过后，该报告即成为完整开发报告交付。
 
 ### 7.5 软件侧离线自动化验证
-领域包自带完整的无外部依赖原生测试套件，无需启动桌面端即可完成端到端验证：
+领域包自带完整的无外部依赖原生测试套件，无需启动桌面端即可完成端到端验证（在本目录执行）：
 
 ```powershell
 # 1. 验证工作区打包与数据范围安全隔离
@@ -226,43 +229,49 @@ python -B tests/test_release_preflight.py
 ## 9. 目录结构说明
 
 ```
-lubricant-rd-domain-pack/
-├── contracts/               # 状态机与研发生命周期契约定义
-│   └── state-machine.json
-├── schemas/                 # 10 大核心研发工件 JSON Schema 规范 (Draft 2020-12)
-│   ├── common.schema.json
-│   ├── project.schema.json
-│   ├── duty.schema.json
-│   ├── challenge.schema.json
-│   ├── failure_ctq.schema.json
-│   ├── test_method.schema.json
-│   ├── design_space.schema.json
-│   ├── experiment_design.schema.json
-│   ├── experiment.schema.json
-│   └── gate.schema.json
-├── skills/                  # 12 个独立研发阶段 Skill
-│   ├── project-definition/
-│   ├── duty-definition/
-│   ├── duty-challenge-analysis/
-│   ├── failure-ctq-analysis/
-│   ├── test-method-qualification/
-│   ├── formulation-design/
-│   ├── doe-design/
-│   ├── experiment-import/
-│   ├── statistical-analysis/
-│   ├── optimization/
-│   ├── gate-review/
-│   └── lubricant-rd-agent/  # 智能路由与阶段流转仲裁器
-├── domains/lubricant/       # 领域计算引擎与数据管理
-│   ├── db.py                # SQLite 五表数据层
-│   ├── cost_engine.py       # 成本计算引擎
-│   ├── mixture_doe.py       # 混料实验设计引擎
-│   ├── statistics_engine.py # 回归建模引擎
-│   └── optimization_engine.py# 多目标 Pareto 优化器
-├── scripts/                 # 构建、安装、校验与仪表盘生成脚本
-├── tests/                   # 自动化单元与集成测试套件
-└── LICENSE                  # MIT 开源许可证
+Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
+└── domains/lubricant/               # ← 本领域包（92 个提交的历史随合并保留）
+    ├── README.md  LICENSE           # 本文档 / MIT
+    ├── contracts/
+    │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
+    ├── schemas/                     # 16 个工件 JSON Schema (Draft 2020-12)
+    │   ├── common.schema.json       #   所有工件的公共契约（$defs: artifact / measurement）
+    │   ├── project.schema.json      #   11 步链的核心 11 个
+    │   ├── duty / challenge / failure_ctq / test_method / design_space
+    │   ├── experiment_design / experiment / model / optimization / gate
+    │   └── benchmark / evidence_qualification / design_freeze / knowledge_asset
+    ├── skills/                      # 13 个技能目录
+    │   ├── project-definition/      #   Stage 0
+    │   ├── duty-definition/         #   Stage 1
+    │   ├── duty-challenge-analysis/ #   Stage 1
+    │   ├── failure-ctq-analysis/    #   Stage 2
+    │   ├── test-method-qualification/
+    │   ├── formulation-design/      #   Stage 3
+    │   ├── doe-design/
+    │   ├── experiment-import/
+    │   ├── statistical-analysis/    #   Stage 4
+    │   ├── optimization/
+    │   ├── gate-review/             #   门禁终审
+    │   ├── lubricant-rd-agent/      #   元路由器（阶段流转仲裁）
+    │   └── hello-lubricant/         #   环境自检
+    ├── domains/lubricant/           # 领域计算引擎与数据层
+    │   ├── compute/{cost,doe,statistics,optimization,validation}/
+    │   ├── schemas/                 #   Phase 4 引擎信封契约
+    │   └── db.py                    #   SQLite 五表数据层
+    ├── tests/                       # 自动化测试套件（13 个可执行测试）
+    │   ├── lubricant_e2e/           #   端到端链条测试
+    │   └── upstream_compat/         #   上游技能安装兼容性
+    ├── scripts/                     # 安装、校验、打包、仪表盘生成
+    ├── templates/project-workspace/ # 新项目工作区模板（AGENTS.md + 活报告模板）
+    ├── fixtures/  data/  integrations/
+    └── PHASE4*.md                   # Phase 4 引擎设计文档
+        REAL_CASE_WGO_001*.md        # 真实课题（V600 风电齿轮油）记录
+        WGO_001_*.md
 ```
+
+> ⚠️ **已知冗余**：本领域包内部也有一个 `domains/lubricant/` 命名空间（Python 包路径 `domains.lubricant.compute...`），
+> 合并后成为 `domains/lubricant/domains/lubricant/`。这是原样保留的 —— 扁平化会破坏所有引擎的 import 路径，
+> 收益不抵风险。
 
 ---
 

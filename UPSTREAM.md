@@ -12,29 +12,51 @@ last_sync: 2026-09-14
 sync_status: SYNCED
 
 downstream_repository: https://github.com/kaiz1995/Lubricant-R-D-OS.git
-downstream_branch: dev/lubricant-rd-v0
+downstream_branch: feat/lubricant-rd-ui-minimal
 
 local_product:
   name: Lubricant R&D OS
   version: 0.1.0-dev
 
 domain_layer:
-  external_repository: lubricant-rd-domain-pack
-  stable_commit: 3d935cd64422dc50c56c2efef52e47d83d204fec
-  pending_wip_branch: wip/doe-design-freeze
-  pending_wip_commit: 862f33a2c6fea36f5ef192cbec8f497b71779c2c
+  # Merged into this repository on 2026-09-22 (merge commit d7e064f), per §20 of
+  # 03_Open_science二次开发与上游同步规范, which places the domain layer at
+  # domains/lubricant/ rather than in a separate repository.
+  location: domains/lubricant/
+  merged_commit: d7e064ff0e2edf44487525183eead753f4fa5116
+  history_commits: 92          # reachable via the merge's second parent
+  previous_repository: https://github.com/kaiz1995/lubricant-rd-domain-pack.git
 
-core_modifications: []
+core_modifications:
+  # Review with: git log upstream/master..HEAD -- apps packages crates
+  # New files (no upstream counterpart):
+  - apps/desktop/src/lib/lubricantContracts.ts
+  - apps/desktop/src/lib/lubricantArtifacts.ts
+  - apps/desktop/src/lib/lubricantGate.ts
+  - apps/desktop/src/components/lubricant/LubricantStagePane.tsx
+  - apps/desktop/src/app/routes/LubricantWorkbenchPage.tsx
+  # Edits to upstream files (keep small and concentrated):
+  - apps/desktop/src/app/router.tsx                    # /lubricant route
+  - apps/desktop/src/components/session/SessionView.tsx # right-pane mount + toolbar toggle
+  - apps/desktop/src/components/sidebar/Sidebar.tsx     # nav entry
+  - apps/desktop/src/i18n/locales/*/{nav,session}.json  # 7 locales
+  - apps/desktop/src-tauri/Cargo.toml                   # drop macos-private-api feature
 
 compatibility_status:
   upstream_compat_tests: PASS
   lubricant_stage_chain: PASS_THROUGH_DESIGN_SPACE
-  lubricant_full_e2e: BLOCKED_NOT_IMPLEMENTED
+  lubricant_full_e2e: PASS
+  desktop_three_pane: VERIFIED_ON_WINDOWS
 
 notes:
-  - origin is currently an empty repository and this baseline has not been pushed.
-  - The Domain layer is maintained independently from the upstream Core repository.
-  - This metadata extension is not a Core patch.
-  - The stage-chain smoke uses canonical validated artifacts where Stage 0-2 builders do not yet exist.
-  - DOE, experiment import, statistical analysis, Gate, and Freeze remain outside the accepted baseline.
+  - The domain layer is 359 files that do not exist upstream, so
+    `git merge upstream/master` cannot conflict on them. Filtering by path is
+    what keeps the core-modification list readable.
+  - tauri.macos.conf.json still declares `macOSPrivateApi: true` while
+    Cargo.toml no longer enables the `macos-private-api` feature. Windows is
+    unaffected; a macOS build needs one of the two sides changed.
+  - The stage-chain smoke uses canonical validated artifacts where Stage 0-2
+    builders do not yet exist.
+  - DOE, experiment import, statistical analysis, Gate, and Freeze remain
+    outside the accepted baseline.
 ```
