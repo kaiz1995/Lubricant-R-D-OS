@@ -47,7 +47,65 @@ runs, and review into one auditable desktop workflow.
 > - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Open Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 11 步工件链、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
 > - **上游基线** → `0.5.2`（`cea3c3a`）；同步状态与核心改动清单见 [`UPSTREAM.md`](./UPSTREAM.md)。
 >
-> 下文是上游 Open Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
+> 下文「[润滑研发领域层](#润滑研发领域层lubricant-rd-os)」为本分支新增内容；其后的 News 与各功能章节是上游 Open Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
+
+---
+
+## 润滑研发领域层（Lubricant R&D OS）
+
+> 本节为本分支新增内容。领域包的**完整文档** —— 研发背景与行业痛点、核心研发哲学、五大类研发性质与差异化流程、系统架构设计、快速开始与离线验证步骤、当前项目状态、许可证 —— 见 [`domains/lubricant/README.md`](./domains/lubricant/README.md)。
+
+### 产品定位
+
+**Lubricant R&D OS** 是一套运行在 Open Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
+
+它**不是**一个简单的"输入几个技术指标，AI 自动吐出配方"的黑盒生成器。它的核心使命是：
+
+> **把润滑油研发从"经验试错与逆向仿制"升级为"科学决策与证据闭环"**。
+> 让每一个配方决策都有工况证据支撑，每一次实验设计都最大化信息增益，每一个阶段流转都可追溯、可审计、可复用。
+
+### 12 个领域技能清单 (Skills)
+
+每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Open Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
+
+| Skill 名称 | 所属阶段 | 输出状态 / 工件 | 关键功能与职责 |
+|---|---|---|---|
+| `project-definition` | Stage 0 | `PROJECT_DEFINED` | 引导用户确认 5 类研发性质，定义商业/技术目标、硬约束与项目章程。 |
+| `duty-definition` | Stage 1 | `DUTY_DEFINED` | 结构化录入 7 大工况（设备、工况谱、维护、温度、负荷、污染、寿命）。 |
+| `duty-challenge-analysis` | Stage 1 | `CHALLENGES_DEFINED` | 从工况推导润滑挑战 Map（严重度、暴露度、敏感度分级）。 |
+| `failure-ctq-analysis` | Stage 2 | `FAILURE_CTQ_DEFINED` | 梳理失效机制与关键质量特性（CTQ），建立挑战到性能的映射链。 |
+| `test-method-qualification` | Stage 2 | `TEST_METHODS_QUALIFIED` | 评价方法资格确认，验证测试方法与真实工况的相关性及区分能力。 |
+| `formulation-design` | Stage 3 | `DESIGN_SPACE_DEFINED` | 建立基础油与添加剂混料设计空间，设定物理与化学约束边界。 |
+| `doe-design` | Stage 3 | `EXPERIMENT_DESIGNED` | 结构化生成混料实验设计（D-Optimal / Extreme Vertices）评估请求。 |
+| `experiment-import` | Stage 3 | `EXPERIMENT_RUNNING` | 录入实验测试观测结果，强制校验测试批次与物理溯源凭证。 |
+| `statistical-analysis` | Stage 4 | `MODEL_BUILT` | 拟合回归与响应面模型，提供残差检验与模型解释力报告。 |
+| `optimization` | Stage 4 | `OPTIMIZED` | 基于成本与 CTQ 模型执行多目标约束优化，给出候选配方推荐。 |
+| `gate-review` | 评审门禁 | `VERIFIED` | 汇总阶段证据链，执行正式审查决策（GO / HOLD / PIVOT / KILL）。 |
+| `lubricant-rd-agent` | 核心路由 | — | 元技能（Meta-Skill）路由器，执行跨阶段拦截、性质分流与证据门控。 |
+
+### 目录结构
+
+```
+Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
+└── domains/lubricant/               # ← 本领域包（92 个提交的历史随合并保留）
+    ├── README.md  LICENSE           # 领域包完整文档 / MIT
+    ├── contracts/
+    │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
+    ├── schemas/                     # 16 个工件 JSON Schema (Draft 2020-12)
+    ├── skills/                      # 13 个技能目录（12 个领域技能 + 环境自检）
+    ├── domains/lubricant/           # 领域计算引擎与数据层
+    │   ├── compute/{cost,doe,statistics,optimization,validation}/
+    │   └── db.py                    # SQLite 五表数据层
+    ├── tests/                       # 自动化测试套件（13 个可执行测试）
+    ├── scripts/                     # 安装、校验、打包、仪表盘生成
+    ├── templates/project-workspace/ # 新项目工作区模板（AGENTS.md + 活报告模板）
+    ├── fixtures/  data/  integrations/
+    └── PHASE4*.md                   # Phase 4 引擎设计文档
+        REAL_CASE_WGO_001*.md        # 真实课题（V600 风电齿轮油）记录
+        WGO_001_*.md
+```
+
+> ⚠️ **已知冗余**：领域包内部也有一个 `domains/lubricant/` 命名空间（Python 包路径 `domains.lubricant.compute...`），合并后成为 `domains/lubricant/domains/lubricant/`。这是原样保留的 —— 扁平化会破坏所有引擎的 import 路径，收益不抵风险。
 
 ---
 
