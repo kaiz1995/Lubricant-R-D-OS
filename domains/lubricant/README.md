@@ -225,9 +225,13 @@ python -B tests/test_release_preflight.py
 
 进入后，**左栏与中栏和原生 Open Science 完全一致**（项目 / 会话 / 技能导航 + 多模型对话流 + 输入框），只有右栏是本领域包新增。也就是说：不需要学一套新软件，只需要学右栏这一块。
 
+<img src="./docs/assets/workbench.webp" alt="润滑研发 Copilot 三栏工作台" width="100%">
+
+> **上图**：桌面端「润滑研发 Copilot」实机界面 —— 左栏导航（含「润滑研发 Copilot」入口）、中栏会话流、右栏「研发阶段与门禁」。右栏是本领域包新增部分。
+
 ### 8.2 右栏面板导览
 
-面板自上而下分五个功能区：
+面板自上而下分六个功能区：
 
 | 区域 | 作用 | 关键行为 |
 |---|---|---|
@@ -237,6 +241,10 @@ python -B tests/test_release_preflight.py
 | **当前工序状态** | 整体进度总览 | 进行中的工序名 + 完成度 `N/M (X%)` + 进度条 |
 | **门禁决议** | 证据链汇总与签发 | 前置校验逐条列出，满足条件才允许签发 GO |
 | **工件链步骤** | 逐步推进 | 每步显示状态徽章与工件名，展开可见阶段目标与考核标准 |
+
+<img src="./docs/assets/stage-pane.webp" alt="研发阶段与门禁面板实机界面" width="340">
+
+> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）、11 步工件链。图中为**浏览器离线预览态**（数据源条显示「离线预览 · Mock 数据」）；桌面版布局完全一致，仅数据源换成工作区真实工件。
 
 ### 8.3 工件链：11 步与 5 条路线
 
@@ -331,6 +339,7 @@ python -B tests/test_release_preflight.py
 Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
 └── domains/lubricant/               # ← 本领域包（92 个提交的历史随合并保留）
     ├── README.md  LICENSE           # 本文档 / MIT
+    ├── docs/assets/                 # 文档配图（工作台与面板实机截图）
     ├── contracts/
     │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
     ├── schemas/                     # 16 个工件 JSON Schema (Draft 2020-12)
