@@ -102,7 +102,7 @@ def main() -> int:
 
     # 10. A DECLARED project_type with no routed chain is DENIED (fail-closed),
     #     never silently handed the full NEW_PRODUCT chain. The pack documents
-    #     exactly five workflows (README §4, project-definition/SKILL.md) and
+    #     exactly five workflows (README §5, project-definition/SKILL.md) and
     #     project.schema.json enumerates the same five, so anything else is a
     #     contract violation. A missing project_type still runs the full chain
     #     for pre-existing state.

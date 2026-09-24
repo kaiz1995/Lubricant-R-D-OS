@@ -79,7 +79,7 @@ def decide(project_state: object, requested_stage: str) -> dict:
 
     ptype = project_state.get("project_type")
     # A declared project_type must be one this router knows. The pack documents
-    # exactly five workflows (README §4, project-definition/SKILL.md) and
+    # exactly five workflows (README §5, project-definition/SKILL.md) and
     # `project.schema.json` enumerates the same five, so an unrouted value is a
     # contract violation — DENY it rather than silently handing it the full
     # NEW_PRODUCT chain. A missing project_type stays on the full chain for
