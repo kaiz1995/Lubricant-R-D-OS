@@ -51,6 +51,44 @@ const LINKS: readonly { from: string; fromField: string; to: string; toField: st
   { from: "optimization", fromField: "model_reference", to: "model", toField: "model_id" },
 ];
 
+/**
+ * 面板文案用的交付物中文名。
+ *
+ * 为什么不直接用 GATE_UPSTREAM.label：label 是链路术语（「立项章程」），面板
+ * 面向研发员，改用步骤名「立项与项目定义」。其余 8 项两者一致，但集中在一处
+ * 便于后续统一改文案。
+ */
+const UPSTREAM_PANEL_NAME = new Map<string, string>([
+  ["project", "立项与项目定义"],
+  ["challenge", "技术挑战"],
+  ["failure_ctq", "失效与 CTQ"],
+  ["test_method", "测试方法"],
+  ["design_space", "设计空间"],
+  ["experiment_design", "DOE 设计"],
+  ["experiment", "实验数据"],
+  ["model", "统计模型"],
+  ["optimization", "配方优化"],
+]);
+
+function panelNameOf(artifactType: string): string {
+  return UPSTREAM_PANEL_NAME.get(artifactType) ?? artifactType;
+}
+
+/** 面板文案用的项目状态说法：ACTIVE 是唯一放行态，其余如实回显原值。 */
+function projectStatusZh(status: unknown): string {
+  const raw = String(status);
+  if (raw === "ACTIVE") return "进行中";
+  if (raw === "FROZEN") return "已冻结（FROZEN）";
+  return `状态为 ${raw}`;
+}
+
+/** 面板文案用的证据范围说法。 */
+function evidenceScopeZh(scope: string): string {
+  if (scope === "PHYSICAL") return "物理实测数据（PHYSICAL）";
+  if (scope === "SYNTHETIC") return "合成数据（SYNTHETIC）";
+  return scope;
+}
+
 export interface GateCheck {
   readonly id: string;
   readonly label: string;
@@ -162,62 +200,79 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
   const data = new Map<string, Record<string, unknown> | null>();
   for (const item of GATE_UPSTREAM) data.set(item.artifactType, dataOf(snapshot, item.artifactType));
 
-  // 1) 9 个上游工件齐备且结构合规
-  const missing = GATE_UPSTREAM.filter((item) => !data.get(item.artifactType)).map(
-    (item) => `${item.artifactType}.json`,
+  // 1) 9 份交付物齐备且结构合规
+  const missing = GATE_UPSTREAM.filter((item) => !data.get(item.artifactType)).map((item) =>
+    panelNameOf(item.artifactType),
   );
   add(
     "upstream-present",
-    "9 个上游工件齐备且结构合规",
+    "门禁前的 9 份交付物齐全且格式合规",
     missing.length === 0,
-    missing.length
-      ? `缺失或不合规：${missing.join("、")}`
-      : `${GATE_UPSTREAM.length} 个上游工件全部就绪`,
+    missing.length ? `未就绪：${missing.join("、")}` : `${GATE_UPSTREAM.length} 份交付物全部就绪`,
   );
 
-  // 2) 各上游 stage 正确
-  const wrongStage = GATE_UPSTREAM.filter((item) => {
-    const d = data.get(item.artifactType);
-    return d && d.stage !== item.stage;
-  }).map((item) => `${item.artifactType}(期望 ${item.stage})`);
+  // 2) 各交付物归属正确的研发阶段
+  //    空集前提：零工件时「错位」列表必然为空，若不另计「读到几份」就会假通过。
+  //    门禁必须 fail-closed —— 缺证据即拦，不能靠「没有反例」放行。
+  //    staged = 真正读到数据的工件，check3 复用同一集合（工件存在即同时带 stage 与 decision）。
+  const staged = GATE_UPSTREAM.filter((item) => data.get(item.artifactType));
+  const wrongStage = staged
+    .filter((item) => data.get(item.artifactType)?.stage !== item.stage)
+    .map((item) => `${panelNameOf(item.artifactType)}（应为 ${item.stage}）`);
   add(
     "upstream-stage",
-    "上游工件 stage 与链位一致",
-    wrongStage.length === 0,
-    wrongStage.length ? `stage 不符：${wrongStage.join("、")}` : "全部匹配",
+    "各交付物归属正确的研发阶段",
+    staged.length > 0 && wrongStage.length === 0,
+    staged.length === 0
+      ? "未读到任何交付物，无法核对阶段归属"
+      : wrongStage.length
+        ? `阶段归属不符：${wrongStage.join("、")}`
+        : `${staged.length} 份交付物均归属正确`,
   );
 
-  // 3) 各上游 decision 为 GO
-  const notGo = GATE_UPSTREAM.filter((item) => {
-    const d = data.get(item.artifactType);
-    return d && d.decision !== "GO";
-  }).map((item) => `${item.artifactType}(${String(data.get(item.artifactType)?.decision)})`);
+  // 3) 前序各阶段均已评审通过（同款空集前提）
+  const decided = staged;
+  const notGo = decided
+    .filter((item) => data.get(item.artifactType)?.decision !== "GO")
+    .map(
+      (item) =>
+        `${panelNameOf(item.artifactType)}（decision = ${String(data.get(item.artifactType)?.decision)}）`,
+    );
   add(
     "upstream-decision",
-    "上游工件 decision 均为 GO",
-    notGo.length === 0,
-    notGo.length ? `非 GO：${notGo.join("、")}` : "全部 GO",
+    "前序各阶段均已评审通过",
+    decided.length > 0 && notGo.length === 0,
+    decided.length === 0
+      ? "未读到任何交付物，无法核对评审结论"
+      : notGo.length
+        ? `未通过评审：${notGo.join("、")}`
+        : `${decided.length} 个阶段均已通过`,
   );
 
   // 4) project.status === ACTIVE
   const project = data.get("project");
   add(
     "project-active",
-    "project.json 状态为 ACTIVE",
+    "项目处于进行中状态",
     project?.status === "ACTIVE",
-    project ? `status = ${String(project.status)}` : "project.json 不可用",
+    project ? projectStatusZh(project.status) : "未读到项目定义工件",
   );
 
-  // 5) 全部上游 project_id 一致
+  // 5) 全部交付物同属一个项目编号
   const ids = GATE_UPSTREAM.map((item) => str(data.get(item.artifactType)?.project_id)).filter(
     (v): v is string => v !== null,
   );
   const uniqueIds = [...new Set(ids)];
   add(
     "project-id",
-    "上游工件 project_id 一致",
+    "全部交付物同属一个项目编号",
     ids.length > 0 && uniqueIds.length === 1,
-    uniqueIds.length === 1 ? uniqueIds[0] : `出现多个 project_id：${uniqueIds.join("、") || "无"}`,
+    // 三种情况分开说：零交付物是「没读到」，不是「没冲突」——不能写成通过。
+    ids.length === 0
+      ? "未读到任何交付物，无法核对项目编号"
+      : uniqueIds.length === 1
+        ? `未检测到多个项目编号，通过（${uniqueIds[0]}）`
+        : `检测到多个项目编号：${uniqueIds.join("、")}`,
   );
 
   // 6) 5 个承范围工件的 evidence_scope 存在且一致
@@ -231,11 +286,11 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
     (uniqueScopes[0] === "SYNTHETIC" || uniqueScopes[0] === "PHYSICAL");
   add(
     "evidence-scope",
-    "证据范围一致且合法",
+    "全部结论基于同一批实验数据",
     scopesValid,
     scopesValid
-      ? `evidence_scope = ${uniqueScopes[0]}`
-      : `5 个承范围工件需存在且一致，实际：${uniqueScopes.join("、") || "无"}`,
+      ? evidenceScopeZh(uniqueScopes[0])
+      : `需 5 份关键交付物证据同源，当前仅读到：${uniqueScopes.join("、") || "无"}`,
   );
 
   const evidenceScope = uniqueScopes.length === 1 ? uniqueScopes[0] : null;
@@ -250,36 +305,57 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
     method.qualification_status === "QUALIFIED";
   add(
     "method-qualified",
-    "test_method 已资格确认并关联失效项",
+    "测试方法已通过资格确认，并关联到对应失效模式",
     methodLinked,
     methodLinked
-      ? `qualification_status = QUALIFIED，method_id = ${String(method.method_id)}`
-      : `需 target_failure_reference 指向 failure_ctq 且 qualification_status = QUALIFIED，实际 ${String(method?.qualification_status)}`,
+      ? `已关联失效模式 ${String(failure?.failure_id)}`
+      : method
+        ? method.qualification_status !== "QUALIFIED"
+          ? `测试方法尚未通过资格确认，实际 qualification_status = ${String(method.qualification_status)}`
+          : !failure
+            ? "未读到失效与 CTQ 工件，无法核对关联关系"
+            : `测试方法未关联到对应失效模式（实际指向 ${String(method.target_failure_reference)}）`
+        : "未读到测试方法工件",
   );
 
   // 8) 链路完整性（design_space → test_method 的比较方式与 preflight 一致）
+  //    空集前提：两端缺任一端就不参与比较，全缺时 compared 为 0，必须判 fail。
+  //    且必须 7 条全部可比较 —— label 说的是「完整」，只比对了一部分就打绿勾是
+  //    误导：交付物缺失导致没核对上的那几条，不能算「追溯关系完整」。
   const broken: string[] = [];
+  let comparedLinks = 0;
   for (const link of LINKS) {
     const from = data.get(link.from);
     const to = data.get(link.to);
     if (!from || !to) continue;
+    comparedLinks += 1;
     if (link.toField === "__method_link__") {
       const expected = [str(to.method_id)];
       const actual = arr(from.qualified_test_method_references).map(String);
       if (actual.length !== expected.length || actual[0] !== expected[0]) {
-        broken.push(`${link.from}.qualified_test_method_references ≠ [${String(to.method_id)}]`);
+        broken.push(
+          `${panelNameOf(link.from)}未正确引用${panelNameOf(link.to)}（qualified_test_method_references ≠ [${String(to.method_id)}]）`,
+        );
       }
       continue;
     }
     if (from[link.fromField] !== to[link.toField]) {
-      broken.push(`${link.from}.${link.fromField} ≠ ${link.to}.${link.toField}`);
+      broken.push(
+        `${panelNameOf(link.from)}的引用与${panelNameOf(link.to)}不一致（${link.from}.${link.fromField} ≠ ${link.to}.${link.toField}）`,
+      );
     }
   }
   add(
     "chain-links",
-    "工件引用链完整",
-    broken.length === 0,
-    broken.length ? broken.join("；") : "7 条引用全部对齐",
+    "交付物之间的追溯关系完整",
+    comparedLinks === LINKS.length && broken.length === 0,
+    comparedLinks === 0
+      ? "未读到任何交付物，无法核对引用关系"
+      : broken.length
+        ? broken.join("；")
+        : comparedLinks < LINKS.length
+          ? `${comparedLinks} / ${LINKS.length} 条引用可核对，其余因交付物缺失无法比对`
+          : `${LINKS.length} 条引用关系全部一致`,
   );
 
   // 9) 上游未解缺口汇总（preflight 不检查，但 HOLD 语义要求面板先暴露）

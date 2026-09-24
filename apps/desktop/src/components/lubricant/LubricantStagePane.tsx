@@ -455,8 +455,8 @@ export function LubricantStagePane({
                   <AlertCircle size={12} className="text-amber-500" />
                 )}
                 <span className="font-medium text-text">
-                  门禁前置校验 {evaluation.checks.filter((c) => c.ok).length}/
-                  {evaluation.checks.length} 通过
+                  放行前检查：{evaluation.checks.filter((c) => c.ok).length} /{" "}
+                  {evaluation.checks.length} 项通过
                 </span>
               </span>
               {showChecks ? (

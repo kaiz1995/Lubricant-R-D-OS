@@ -100,6 +100,33 @@ function snapshotWith(
   };
 }
 
+/**
+ * 零工件快照：9 个 probe 全部 exists:false / valid:false / data:null，
+ * 等价于工作区里一个工件都没探测到（dataOf 只认 valid 的 probe）。
+ */
+function snapshotWithNoArtifacts(): WorkspaceSnapshot {
+  const probes: Record<string, ArtifactProbe> = {};
+  for (const item of GATE_UPSTREAM) {
+    probes[item.artifactType] = {
+      artifactType: item.artifactType,
+      file: `${item.artifactType}.json`,
+      exists: false,
+      valid: false,
+      errors: [],
+      data: null,
+      resolvedPath: null,
+    };
+  }
+  return {
+    live: true,
+    probedAt: Date.now(),
+    probes,
+    projectType: null,
+    projectStage: null,
+    gateStatus: null,
+  };
+}
+
 const submission = {
   gateId: "GATE-WGO-001-001",
   scope: "Stage Gate verification.",
@@ -165,6 +192,34 @@ describe("evaluateGate", () => {
     expect(result.checks.every((c) => c.ok)).toBe(true);
   });
 
+  it("零工件时不得假通过：全部检查为 fail", () => {
+    const result = evaluateGate(snapshotWithNoArtifacts());
+    expect(result.checks).toHaveLength(8);
+    expect(result.checks.every((c) => !c.ok)).toBe(true);
+    // 空集通道必须堵死：这三项曾经靠「没有反例」假通过
+    const byId = new Map(result.checks.map((c) => [c.id, c]));
+    for (const id of ["upstream-stage", "upstream-decision", "chain-links"]) {
+      expect(byId.get(id)?.ok).toBe(false);
+    }
+  });
+
+  it("零工件时 canGo 为 false 且阻塞项覆盖 8 项", () => {
+    const result = evaluateGate(snapshotWithNoArtifacts());
+    expect(result.canGo).toBe(false);
+    expect(result.blockers).toHaveLength(8);
+  });
+
+  it("交付物不齐时追溯关系不得判为完整", () => {
+    // 只留前 5 份（缺 DOE 设计 / 实验数据 / 统计模型 / 配方优化）→ 仅 3 条引用可核对。
+    // 只比对一部分就打绿勾会误导：没核对上的那几条不能算「完整」。
+    const result = evaluateGate(
+      snapshotWith({}, ["experiment_design", "experiment", "model", "optimization"]),
+    );
+    const chain = result.checks.find((c) => c.id === "chain-links");
+    expect(chain?.ok).toBe(false);
+    expect(chain?.detail).toContain("3 / 7 条引用可核对");
+  });
+
   it("SYNTHETIC 链不可签发 GO", () => {
     const result = evaluateGate(
       snapshotWith({
@@ -182,44 +237,45 @@ describe("evaluateGate", () => {
   it("上游 decision 非 GO 时被拦下", () => {
     const result = evaluateGate(snapshotWith({ model: { decision: "HOLD" } }));
     expect(result.canGo).toBe(false);
-    expect(result.blockers.some((b) => b.includes("model(HOLD)"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("统计模型（decision = HOLD）"))).toBe(true);
   });
 
   it("stage 错位时被拦下", () => {
     const result = evaluateGate(snapshotWith({ experiment: { stage: "EXPERIMENT_DESIGNED" } }));
-    expect(result.blockers.some((b) => b.includes("experiment(期望 EXPERIMENT_RUNNING)"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("实验数据（应为 EXPERIMENT_RUNNING）"))).toBe(true);
   });
 
   it("project 非 ACTIVE 时被拦下", () => {
     const result = evaluateGate(snapshotWith({ project: { status: "FROZEN" } }));
-    expect(result.blockers.some((b) => b.includes("status = FROZEN"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("已冻结（FROZEN）"))).toBe(true);
   });
 
   it("evidence_scope 不一致时被拦下", () => {
     const result = evaluateGate(snapshotWith({ optimization: { evidence_scope: "SYNTHETIC" } }));
     expect(result.evidenceScope).toBeNull();
-    expect(result.blockers.some((b) => b.includes("证据范围一致且合法"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("全部结论基于同一批实验数据"))).toBe(true);
   });
 
   it("method 未资格确认时被拦下", () => {
     const result = evaluateGate(snapshotWith({ test_method: { qualification_status: "PENDING" } }));
-    expect(result.blockers.some((b) => b.includes("qualification_status = QUALIFIED"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("尚未通过资格确认"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("qualification_status = PENDING"))).toBe(true);
   });
 
   it("链路断裂时被拦下", () => {
     const result = evaluateGate(snapshotWith({ model: { experiment_reference: "EXP-999" } }));
-    expect(result.blockers.some((b) => b.includes("工件引用链完整"))).toBe(true);
-    expect(result.blockers.some((b) => b.includes("model.experiment_reference"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("交付物之间的追溯关系完整"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("统计模型的引用与实验数据不一致"))).toBe(true);
   });
 
   it("阻塞项带上检查名，可直接作为未解条件", () => {
     const result = evaluateGate(snapshotWith({ project: { status: "FROZEN" } }));
-    expect(result.blockers.some((b) => b.startsWith("project.json 状态为 ACTIVE："))).toBe(true);
+    expect(result.blockers.some((b) => b.startsWith("项目处于进行中状态："))).toBe(true);
   });
 
   it("结构不合规的工件等同于缺失", () => {
     const result = evaluateGate(snapshotWith({}, ["optimization"]));
-    expect(result.blockers.some((b) => b.includes("optimization.json"))).toBe(true);
+    expect(result.blockers.some((b) => b.includes("未就绪：配方优化"))).toBe(true);
   });
 });
 
@@ -439,7 +495,7 @@ describe("suggestGateSubmission", () => {
       gateStatus: "HOLD",
     });
     expect(result.unsatisfiedConditions.length).toBeGreaterThan(0);
-    expect(result.unsatisfiedConditions[0]).toContain("project.json 状态为 ACTIVE");
+    expect(result.unsatisfiedConditions[0]).toContain("项目处于进行中状态");
   });
 
   it("留空风险时如实写「未记录残余风险」，不编造内容", () => {
