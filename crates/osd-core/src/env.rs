@@ -298,9 +298,9 @@ mod tests {
         assert_eq!(resource_root_near(&archive), Some(archive_resources));
 
         // 2. macOS .app — the binary in Contents/MacOS, resources in Contents/Resources.
-        let macos = root.join("Open Science.app/Contents/MacOS");
+    let macos = root.join("Lubricant Science.app/Contents/MacOS");
         std::fs::create_dir_all(&macos).unwrap();
-        let app_resources = root.join("Open Science.app/Contents/Resources");
+    let app_resources = root.join("Lubricant Science.app/Contents/Resources");
         marker(&app_resources);
         assert_eq!(
             resource_root_near(&macos).map(|p| std::fs::canonicalize(p).unwrap()),
@@ -317,7 +317,7 @@ mod tests {
         let usr = root.join("usr");
         let bin = usr.join("bin");
         std::fs::create_dir_all(&bin).unwrap();
-        let product = usr.join("lib").join("Open Science");
+    let product = usr.join("lib").join("Lubricant Science");
         marker(&product);
         // A sibling that is NOT a resource root must not be picked.
         std::fs::create_dir_all(usr.join("lib").join("something-else")).unwrap();

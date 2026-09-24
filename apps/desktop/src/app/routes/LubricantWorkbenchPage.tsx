@@ -6,7 +6,7 @@ import { LiveSessionPage } from "./LiveSessionPage";
 /**
  * Lubricant R&D Copilot Surface.
  * Keeps left pane (Sidebar) and middle pane (Live conversation & composer) 100%
- * identical to native Open Science, and auto-opens the dedicated LubricantStagePane
+ * identical to native Lubricant Science, and auto-opens the dedicated LubricantStagePane
  * on the right side.
  */
 export function LubricantWorkbenchPage() {
@@ -19,4 +19,3 @@ export function LubricantWorkbenchPage() {
 
   return <LiveSessionPage />;
 }
-

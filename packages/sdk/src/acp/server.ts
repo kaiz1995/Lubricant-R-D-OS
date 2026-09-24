@@ -1,4 +1,4 @@
-// Open Science AS an ACP agent — the server direction of #14.
+// Lubricant Science AS an ACP agent — the server direction of #14.
 //
 // The other half of `AcpRuntime`: there, this app is the CLIENT driving someone
 // else's agent; here, someone else's editor (Zed, JetBrains, Neovim, …) drives
@@ -28,7 +28,7 @@ import { ACP_PROTOCOL_VERSION, JsonRpcPeer, type JsonRpcTransport } from "./prot
 
 /** What we call ourselves in `initialize`. */
 const AGENT_NAME = "open-science";
-const AGENT_TITLE = "Open Science";
+const AGENT_TITLE = "Lubricant Science";
 
 /** ACP's `auth_required`; unused here (the gateway token is the auth) but kept
  *  next to the codes we do answer with. */

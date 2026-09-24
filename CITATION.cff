@@ -1,9 +1,9 @@
 cff-version: 1.2.0
-message: "If you use Open Science Desktop in your research, please cite it as below."
-title: "Open Science Desktop: a local-first, model-agnostic AI research workbench"
+message: "If you use Lubricant Science Desktop in your research, please cite it as below."
+title: "Lubricant Science Desktop: a local-first, model-agnostic AI research workbench"
 type: software
 authors:
-  - name: "The Open Science Desktop Contributors"
+  - name: "The Lubricant Science Desktop Contributors"
 repository-code: "https://github.com/ai4s-research/open-science"
 url: "https://openedscience.com"
 license: MIT

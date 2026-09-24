@@ -1,12 +1,12 @@
 <div align="center">
 
-[![Open Science Desktop — 本地优先 AI 科研桌面工作台](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
+[![Lubricant Science Desktop — 本地优先 AI 科研桌面工作台](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
 
-# Open Science Desktop
+# Lubricant Science Desktop
 
 **本地优先、模型无关的 macOS、Windows & Linux AI 科研桌面工作台。**
 
-原名 Open Science。它是 Claude Science 及同类 AI-for-science 工作台的开源桌面替代：
+原名 Lubricant Science。它是 Claude Science 及同类 AI-for-science 工作台的开源桌面替代：
 基于 Tauri、MCP、agent skills 和可复现工件构建。它把智能体、笔记本、文件、图表、
 报告、运行记录和审查连接成一条可审计的桌面工作流。
 
@@ -40,12 +40,12 @@
 ## 最新动态
 
 - **2026-08-18** — 🖥️ **无屏也能跑，终端命令随包附带。** `osd server` 在没有显示器的机器上启动整套工作台——工作区、智能体运行时，以及*同一套* Web UI；`osd session send … --wait` 让脚本或另一个智能体来驱动它。`osd` 现在装在桌面安装包里，首次启动自动进入 PATH；服务器上用压缩包，什么都不用装。模型、密钥、审批都能在终端配置（`osd model`、`osd auth`、`osd approval`）。
-- **2026-08-13** — 🔌 **双向支持 Agent Client Protocol。** 在本应用里直接驱动 Codex、Gemini CLI、Claude Code 等任意 ACP 智能体——沿用它自己的模型、历史，以及你在本应用配置的 MCP 连接器；反过来，也可以从 Zed、JetBrains、Neovim 里驱动 Open Science。 *(v0.4.0)*
+- **2026-08-13** — 🔌 **双向支持 Agent Client Protocol。** 在本应用里直接驱动 Codex、Gemini CLI、Claude Code 等任意 ACP 智能体——沿用它自己的模型、历史，以及你在本应用配置的 MCP 连接器；反过来，也可以从 Zed、JetBrains、Neovim 里驱动 Lubricant Science。 *(v0.4.0)*
 - **2026-08-01** — 🗂️ **项目、记忆与完整历史。** 会话可以归入命名项目（**就地**导入已有仓库，不做复制），智能体获得持久的全局记忆与项目记忆，全部历史对话都能在可搜索的历史视图中找到，并支持归档、恢复与导出。 *(v0.3.1)*
 - **2026-07-24** — 🪟 **分屏平铺。** 会话可以并排平铺、拖拽分栏重新停靠、保留多个互不干扰的「屏幕」，每个分栏还能用不同的模型。 *(v0.3.0)*
 - **2026-07-21** — 🌐 **随时随地访问——连手机都行。** 一个基于令牌认证的网关，把*真正的*桌面 UI 提供给命令行、局域网中的浏览器或你的手机（默认仅回环地址；局域网需手动开启）。在电脑前发起一次运行，然后在手机上查看完成的图表和报告。 *(v0.2.3)*
 - **2026-07-21** — 🧭 **浏览器控制。** 智能体可以驱动你自己的 Chrome——保留配置文件和登录状态——像你一样浏览实时网页，也可以按需使用隔离的隐私浏览器。 *(v0.2.3)*
-- **2026-07-09** — 🎉 **ResearchClawBench 排名第 1。** Open Science Desktop 在面向自主科研智能体的端到端基准 [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/) 上，按已评分任务平均分排名第 1（Pass@1 榜单）。
+- **2026-07-09** — 🎉 **ResearchClawBench 排名第 1。** Lubricant Science Desktop 在面向自主科研智能体的端到端基准 [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/) 上，按已评分任务平均分排名第 1（Pass@1 榜单）。
 
 ---
 
@@ -148,7 +148,7 @@
 | 文件 | 全局和会话内文件浏览、右键菜单、系统打开/定位、复制路径、本地预览服务。 |
 | 无头与命令行 | `osd server` 以无窗口方式运行工作台——同样的工作区、同样的运行时、同样的 Web UI，全部来自一个自包含目录；`osd` 则从终端驱动它（或驱动正在运行的桌面应用）：会话、项目、运行记录、文件、审批，支持 `--wait` 与 `--json`。 |
 | 远程访问 | 基于令牌认证的网关，把真正的 UI 提供给命令行、局域网 Web 浏览器或你的手机(默认仅回环地址，局域网需手动开启);支持只读与完全访问两种模式;可复制一条内嵌令牌的链接，一键连接。API key 永不经过网络传输。 |
-| 编辑器互通（ACP） | 双向支持 Agent Client Protocol：既可以把任意 ACP 智能体（Codex、Gemini CLI、Claude Code 等）作为运行时接到常规界面背后，沿用它自己的模型与推理档位选择、历史回放，以及本应用的 MCP 连接器；也可以让外部编辑器（Zed、JetBrains、Neovim 等）驱动 Open Science，复用网关令牌。 |
+| 编辑器互通（ACP） | 双向支持 Agent Client Protocol：既可以把任意 ACP 智能体（Codex、Gemini CLI、Claude Code 等）作为运行时接到常规界面背后，沿用它自己的模型与推理档位选择、历史回放，以及本应用的 MCP 连接器；也可以让外部编辑器（Zed、JetBrains、Neovim 等）驱动 Lubricant Science，复用网关令牌。 |
 | 浏览器控制 | 智能体驱动你自己的 Chrome——保留配置文件和登录状态——通过无障碍树读取页面，也可按需使用隔离的隐私浏览器。 |
 | 笔记本 | 真实 `.ipynb` 文件、Python/R 笔记本创建、本地内核运行、内置 `uv` 管理 Jupyter 环境，以及打开 JupyterLab。 |
 | 运行记录 | 追加式 run log、全局 SQLite 索引、搜索/筛选/分页、本地与远程 surface、输出链接、日志和复现提示。 |
@@ -180,7 +180,7 @@
 [`docs/CONNECT_YOUR_TOOLS.md`](./docs/CONNECT_YOUR_TOOLS.md)。
 
 中立定位对比见
-[`Open Science Desktop vs OpenScience`](./docs/open-science-desktop-vs-openscience.md)。
+[`Lubricant Science Desktop vs OpenScience`](./docs/open-science-desktop-vs-openscience.md)。
 
 ## 安装
 
@@ -261,7 +261,7 @@ osd approval set full   # 一律不问：命令、删除、装依赖、访问网
 ```ini
 # /etc/systemd/system/osd.service
 [Unit]
-Description=Open Science Desktop (headless)
+Description=Lubricant Science Desktop (headless)
 After=network-online.target
 
 [Service]
@@ -351,16 +351,16 @@ pnpm lint
 ## 参与贡献
 
 欢迎 Issue 和 PR。请保持改动最小且可验证，遵循 [`AGENTS.md`](./AGENTS.md)，并在提交 PR 前运行检查。讨论和交流可以加入
-[Open Science Discord](https://discord.gg/fWNMDKcd5P)，也可以在 [linux.do](https://linux.do) 社区参与。
+[Lubricant Science Discord](https://discord.gg/fWNMDKcd5P)，也可以在 [linux.do](https://linux.do) 社区参与。
 
 ## 引用
 
-如果 Open Science Desktop 对你的研究有帮助,请如下引用:
+如果 Lubricant Science Desktop 对你的研究有帮助,请如下引用:
 
 ```bibtex
 @software{open_science_desktop,
-  author  = {{The Open Science Desktop Contributors}},
-  title   = {Open Science Desktop: a local-first, model-agnostic AI research workbench},
+  author  = {{The Lubricant Science Desktop Contributors}},
+  title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
   version = {0.5.2},
   doi     = {10.5281/zenodo.22004919},
@@ -375,4 +375,4 @@ pnpm lint
 
 [MIT](./LICENSE)。随附的第三方技能和连接器保留各自许可证。
 
-> Open Science Desktop 仍是 beta 阶段科研工具。产出应视为草稿：发表或决策前请核对数字、引用、代码和结论。
+> Lubricant Science Desktop 仍是 beta 阶段科研工具。产出应视为草稿：发表或决策前请核对数字、引用、代码和结论。

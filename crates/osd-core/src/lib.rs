@@ -1,4 +1,4 @@
-// Open Science Desktop — the server core.
+// Lubricant Science Desktop — the server core.
 //
 // Everything here runs with or without a window: workspace layout, the bundled
 // OpenCode sidecar, the opencode profile and config, projects, run provenance,

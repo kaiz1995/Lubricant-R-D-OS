@@ -5,7 +5,7 @@ Target: land before v0.4.0 ACP work (see "Timing").
 
 ## TL;DR
 
-Open Science Desktop already treats `packages/sdk` as *the* boundary between the
+Lubricant Science Desktop already treats `packages/sdk` as *the* boundary between the
 UI and the agent runtime (an architecture rule in `AGENTS.md`). In practice the
 boundary is a **concrete class, `OpenCodeClient`**, not an interface, and the only
 runtime is a bundled OpenCode sidecar. This RFC proposes formalizing that boundary
@@ -132,7 +132,7 @@ for *editors driving agents*. Upstream already lists ACP under v0.4.0.
 This RFC is **complementary, not competing**:
 
 - ACP standardizes the **editor → agent** direction (an external editor drives our
-  runtime). That is an *additive* surface — "Open Science as a runtime others can
+  runtime). That is an *additive* surface — "Lubricant Science as a runtime others can
   drive."
 - `AgentRuntime` standardizes the **app UI → runtime** direction *internally*. That
   is the seam *we already rely on*.

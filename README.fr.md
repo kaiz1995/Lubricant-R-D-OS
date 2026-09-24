@@ -1,12 +1,12 @@
 <div align="center">
 
-[![Open Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
+[![Lubricant Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
 
-# Open Science Desktop
+# Lubricant Science Desktop
 
 **Atelier de recherche IA local-first et agnostique au modèle pour macOS, Windows & Linux.**
 
-Formerly Open Science. Une alternative desktop open source à Claude Science et aux workbenches AI-for-science similaires, construite avec Tauri, MCP, agent skills et des artefacts reproductibles. Elle relie agents, notebooks, fichiers, figures, rapports, exécutions et revue dans un flux desktop auditable.
+Formerly Lubricant Science. Une alternative desktop open source à Claude Science et aux workbenches AI-for-science similaires, construite avec Tauri, MCP, agent skills et des artefacts reproductibles. Elle relie agents, notebooks, fichiers, figures, rapports, exécutions et revue dans un flux desktop auditable.
 
 <p>
   <a href="./README.md">English</a> ·
@@ -36,18 +36,18 @@ Formerly Open Science. Une alternative desktop open source à Claude Science et 
 ## Actualités
 
 - **2026-08-18** — 🖥️ **Fonctionne sans écran.** `osd server` lance tout l'atelier — workspace, runtime de l'agent et la *même* UI web — sur une machine sans affichage, et `osd session send … --wait` le pilote depuis un script ou depuis un autre agent. Une archive, pas d'installateur. `osd` est inclus dans l'installeur du bureau et se place sur votre PATH au premier démarrage ; sur un serveur, l'archive suffit. Modèles, clés et approbations se configurent depuis le terminal (`osd model`, `osd auth`, `osd approval`).
-- **2026-08-13** — 🔌 **Parle l'Agent Client Protocol, dans les deux sens.** Pilotez Codex, Gemini CLI, Claude Code ou tout autre agent ACP depuis cette application — avec ses propres modèles, son historique et vos connecteurs MCP — ou pilotez Open Science depuis Zed, JetBrains ou Neovim. *(v0.4.0)*
+- **2026-08-13** — 🔌 **Parle l'Agent Client Protocol, dans les deux sens.** Pilotez Codex, Gemini CLI, Claude Code ou tout autre agent ACP depuis cette application — avec ses propres modèles, son historique et vos connecteurs MCP — ou pilotez Lubricant Science depuis Zed, JetBrains ou Neovim. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **Projets, mémoire et historique complet.** Regroupez les sessions dans des projets nommés (un dépôt existant est importé *sur place*, sans copie), donnez à l'agent une mémoire persistante globale et par projet, et retrouvez chaque conversation passée dans un historique cherchable avec archivage, restauration et export. *(v0.3.1)*
 - **2026-07-24** — 🪟 **Panneaux divisés.** Disposez les sessions côte à côte, faites glisser les panneaux pour les réancrer, gardez plusieurs écrans indépendants et utilisez un modèle différent par panneau. *(v0.3.0)*
 - **2026-07-21** — 🌐 **Accès depuis n'importe où — même votre téléphone.** Une passerelle authentifiée par jeton sert l'*vraie* UI desktop à une CLI, à un navigateur sur votre réseau local ou à votre téléphone (loopback par défaut ; le LAN est opt-in). Lancez une exécution à votre bureau et lisez la figure et le rapport terminés sur votre téléphone. *(v0.2.3)*
 - **2026-07-21** — 🧭 **Contrôle du navigateur.** L'agent peut piloter votre propre Chrome — profil et sessions intacts — pour lire le web en direct comme vous le faites, ou un navigateur privé isolé à la demande. *(v0.2.3)*
-- **2026-07-09** — 🎉 **N° 1 sur ResearchClawBench.** Open Science Desktop est n° 1 au score moyen des tâches évaluées sur [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/), un benchmark de bout en bout pour agents autonomes de recherche scientifique (classement Pass@1).
+- **2026-07-09** — 🎉 **N° 1 sur ResearchClawBench.** Lubricant Science Desktop est n° 1 au score moyen des tâches évaluées sur [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/), un benchmark de bout en bout pour agents autonomes de recherche scientifique (classement Pass@1).
 
 ---
 
 ## Sommaire
 
-- [✨ Ce que fait Open Science](#ce-que-fait-open-science)
+- [✨ Ce que fait Lubricant Science](#ce-que-fait-open-science)
 - [🎬 Captures](#captures)
 - [🧪 Fonctionnalités actuelles](#fonctionnalités-actuelles)
 - [🔌 Skills et connecteurs](#skills-et-connecteurs)
@@ -58,7 +58,7 @@ Formerly Open Science. Une alternative desktop open source à Claude Science et 
 - [🗂️ Structure du dépôt](#structure-du-dépôt)
 - [📌 État](#état)
 
-## Ce que fait Open Science
+## Ce que fait Lubricant Science
 
 **Déroule toute la boucle de recherche** — d'une direction large à un article terminé : exploration, revue de littérature, hypothèse, code d'expérience, analyse, figures et rédaction, en une seule session continue et auditable.
 
@@ -138,7 +138,7 @@ Ils sont fournis dans le pack `ai4s-skills`, aux côtés des skills de revue mai
 | Fichiers | Navigation globale et par session, menu contextuel, ouvrir/révéler, copier le chemin, serveur local de preview. |
 | Sans écran & CLI | `osd server` fait tourner l'atelier sans fenêtre — même workspace, même runtime, même UI web, servis depuis un seul répertoire autonome — et `osd` le pilote (ou pilote une app de bureau en cours d'exécution) depuis un terminal : sessions, projets, exécutions, fichiers, approbations, `--wait`, `--json`. |
 | Accès distant | Passerelle authentifiée par jeton qui sert la vraie UI à une CLI, à un navigateur web du réseau local ou à votre téléphone (loopback par défaut, LAN opt-in) ; modes lecture seule ou accès complet ; copiez un lien avec le jeton intégré pour vous connecter en un tap. Les clés API ne transitent jamais par le réseau. |
-| Interopérabilité éditeur (ACP) | Parle l'Agent Client Protocol dans les deux sens : n'importe quel agent ACP (Codex, Gemini CLI, Claude Code, …) tourne comme runtime derrière l'UI habituelle, avec ses propres sélecteurs de modèle et d'effort de raisonnement, la relecture de l'historique et les connecteurs MCP de cette application ; ou un éditeur externe (Zed, JetBrains, Neovim, …) pilote Open Science en réutilisant le jeton de la passerelle. |
+| Interopérabilité éditeur (ACP) | Parle l'Agent Client Protocol dans les deux sens : n'importe quel agent ACP (Codex, Gemini CLI, Claude Code, …) tourne comme runtime derrière l'UI habituelle, avec ses propres sélecteurs de modèle et d'effort de raisonnement, la relecture de l'historique et les connecteurs MCP de cette application ; ou un éditeur externe (Zed, JetBrains, Neovim, …) pilote Lubricant Science en réutilisant le jeton de la passerelle. |
 | Contrôle du navigateur | L'agent pilote votre propre Chrome — profil et état de connexion préservés — en lisant les pages via l'arbre d'accessibilité, ou un navigateur isolé/privé à la demande. |
 | Notebooks | Fichiers `.ipynb` réels, création Python/R, kernel local, environnement Jupyter géré via `uv`, action Open JupyterLab. |
 | Exécutions | Run logs append-only, index SQLite global, recherche/facettes/pagination, surfaces locales/distantes, liens de sorties, logs et prompts de reproduction. |
@@ -252,7 +252,7 @@ plantage, arrêt :
 ```ini
 # /etc/systemd/system/osd.service
 [Unit]
-Description=Open Science Desktop (headless)
+Description=Lubricant Science Desktop (headless)
 After=network-online.target
 
 [Service]
@@ -322,18 +322,18 @@ Les fichiers du workspace, données brutes, historique, provenance, notebooks et
 
 ## État
 
-Le journal d'implémentation le plus fiable est [`PROGRESS.md`](./PROGRESS.md). Les prochains travaux portent sur la signature de code Windows, l'auto-update, une vérification Windows/Linux plus large, le durcissement des connecteurs et la revue de reproductibilité. Les releases macOS sont déjà signées et notarisées. Pour discuter du projet, rejoignez le [Discord Open Science](https://discord.gg/fWNMDKcd5P).
+Le journal d'implémentation le plus fiable est [`PROGRESS.md`](./PROGRESS.md). Les prochains travaux portent sur la signature de code Windows, l'auto-update, une vérification Windows/Linux plus large, le durcissement des connecteurs et la revue de reproductibilité. Les releases macOS sont déjà signées et notarisées. Pour discuter du projet, rejoignez le [Discord Lubricant Science](https://discord.gg/fWNMDKcd5P).
 
-[MIT](./LICENSE). Open Science Desktop est un outil de recherche beta : traitez les sorties comme des brouillons et vérifiez nombres, citations, code et conclusions avant publication ou décision.
+[MIT](./LICENSE). Lubricant Science Desktop est un outil de recherche beta : traitez les sorties comme des brouillons et vérifiez nombres, citations, code et conclusions avant publication ou décision.
 
 ## Citation
 
-Si vous utilisez Open Science Desktop dans vos recherches, merci de le citer ainsi :
+Si vous utilisez Lubricant Science Desktop dans vos recherches, merci de le citer ainsi :
 
 ```bibtex
 @software{open_science_desktop,
-  author  = {{The Open Science Desktop Contributors}},
-  title   = {Open Science Desktop: a local-first, model-agnostic AI research workbench},
+  author  = {{The Lubricant Science Desktop Contributors}},
+  title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
   version = {0.5.2},
   doi     = {10.5281/zenodo.22004919},

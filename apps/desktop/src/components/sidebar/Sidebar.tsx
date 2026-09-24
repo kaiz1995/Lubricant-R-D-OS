@@ -601,7 +601,7 @@ export function Sidebar({ project }: { project: Project }) {
               <img src={logo} alt="" className="h-[18px] w-auto shrink-0 self-center" />
               {/* eslint-disable-next-line i18next/no-literal-string -- product brand name, not translated across locales (see AGENTS.md) */}
               <div className="truncate font-serif text-[17px] font-semibold leading-none tracking-tight text-text">
-                Open Science
+                Lubricant Science
               </div>
             </button>
             {!overlayTitlebar && (

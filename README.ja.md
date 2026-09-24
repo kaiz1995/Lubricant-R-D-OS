@@ -1,12 +1,12 @@
 <div align="center">
 
-[![Open Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
+[![Lubricant Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
 
-# Open Science Desktop
+# Lubricant Science Desktop
 
 **macOS、Windows & Linux 向けのローカルファースト、モデル非依存 AI 研究ワークベンチ。**
 
-Formerly Open Science. Claude Science などの AI-for-science ワークベンチに対するオープンソースのデスクトップ代替です。Tauri、MCP、agent skills、再現可能な成果物を基盤に、エージェント、ノートブック、ファイル、図、レポート、実行記録、レビューを 1 つの監査可能なデスクトップワークフローにまとめます。
+Formerly Lubricant Science. Claude Science などの AI-for-science ワークベンチに対するオープンソースのデスクトップ代替です。Tauri、MCP、agent skills、再現可能な成果物を基盤に、エージェント、ノートブック、ファイル、図、レポート、実行記録、レビューを 1 つの監査可能なデスクトップワークフローにまとめます。
 
 <p>
   <a href="./README.md">English</a> ·
@@ -36,12 +36,12 @@ Formerly Open Science. Claude Science などの AI-for-science ワークベン�
 ## ニュース
 
 - **2026-08-18** — 🖥️ **画面がなくても動き、ターミナルのコマンドも同梱。** `osd server` はディスプレイのないマシンでワークベンチ一式（ワークスペース、エージェントランタイム、そして*同じ* Web UI）を起動し、`osd session send … --wait` でスクリプトや別のエージェントから動かせます。`osd` はデスクトップのインストーラーに入り、初回起動で PATH に載ります。サーバーではアーカイブだけで、追加インストールは不要です。モデル・鍵・承認はすべてターミナルから設定できます（`osd model`、`osd auth`、`osd approval`）。
-- **2026-08-13** — 🔌 **Agent Client Protocol に双方向で対応。** Codex、Gemini CLI、Claude Code などの ACP エージェントを、そのエージェント自身のモデル・履歴と本アプリの MCP コネクタごと、このアプリの中から動かせます。逆に Zed、JetBrains、Neovim から Open Science を動かすこともできます。 *(v0.4.0)*
+- **2026-08-13** — 🔌 **Agent Client Protocol に双方向で対応。** Codex、Gemini CLI、Claude Code などの ACP エージェントを、そのエージェント自身のモデル・履歴と本アプリの MCP コネクタごと、このアプリの中から動かせます。逆に Zed、JetBrains、Neovim から Lubricant Science を動かすこともできます。 *(v0.4.0)*
 - **2026-08-01** — 🗂️ **プロジェクト・メモリ・全履歴。** セッションを名前付きプロジェクトにまとめ（既存リポジトリはコピーせず**その場で**インポート）、グローバルとプロジェクトの永続メモリを持たせ、過去のすべての会話を検索可能な履歴（アーカイブ／復元／エクスポート付き）から辿れます。 *(v0.3.1)*
 - **2026-07-24** — 🪟 **分割ペインのタイリング。** セッションを並べて表示し、ペインをドラッグして再配置し、独立した「スクリーン」を複数保持でき、ペインごとに別のモデルを使えます。 *(v0.3.0)*
 - **2026-07-21** — 🌐 **どこからでもアクセス——スマホからでも。** トークン認証ゲートウェイが*本物の*デスクトップ UI を CLI、LAN 上のブラウザ、あるいはスマホへ配信します（既定はループバック、LAN はオプトイン）。デスクで実行を開始し、完成した図とレポートをスマホで読めます。 *(v0.2.3)*
 - **2026-07-21** — 🧭 **ブラウザ制御。** エージェントがあなた自身の Chrome を——プロファイルとログインを保ったまま——操作し、あなたと同じようにライブな Web を読み取ります。必要に応じて分離されたプライベートブラウザも使えます。 *(v0.2.3)*
-- **2026-07-09** — 🎉 **ResearchClawBench 第 1 位。** Open Science Desktop は、自律型科学研究エージェント向けのエンドツーエンドベンチマーク [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/) で、採点済みタスク平均スコア第 1 位です（Pass@1 リーダーボード）。
+- **2026-07-09** — 🎉 **ResearchClawBench 第 1 位。** Lubricant Science Desktop は、自律型科学研究エージェント向けのエンドツーエンドベンチマーク [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/) で、採点済みタスク平均スコア第 1 位です（Pass@1 リーダーボード）。
 
 ---
 
@@ -138,7 +138,7 @@ Formerly Open Science. Claude Science などの AI-for-science ワークベン�
 | ファイル | グローバル/セッション内のファイルブラウズ、右クリック操作、外部アプリで開く、パスコピー、ローカルプレビューサーバー。 |
 | ヘッドレスと CLI | `osd server` はウィンドウなしでワークベンチを動かします（同じワークスペース、同じランタイム、同じ Web UI を、自己完結したディレクトリひとつから配信）。`osd` はそれを（あるいは動作中のデスクトップアプリを）ターミナルから操作します: セッション、プロジェクト、実行履歴、ファイル、承認、`--wait`、`--json`。 |
 | リモートアクセス | 本物の UI を CLI、LAN 上の Web ブラウザ、またはスマホへ配信するトークン認証ゲートウェイ（既定はループバック、LAN はオプトイン）。読み取り専用/フルアクセスの各モード。トークンを埋め込んだリンクをコピーし、ワンタップで接続。API キーが通信路を渡ることはありません。 |
-| エディタ連携（ACP） | Agent Client Protocol に双方向で対応：任意の ACP エージェント（Codex、Gemini CLI、Claude Code など）を通常の UI の背後のランタイムとして動かし、そのエージェント自身のモデル／推論レベルの選択、履歴の再生、本アプリの MCP コネクタをそのまま使えます。逆に外部エディタ（Zed、JetBrains、Neovim など）がゲートウェイのトークンを再利用して Open Science を駆動することもできます。 |
+| エディタ連携（ACP） | Agent Client Protocol に双方向で対応：任意の ACP エージェント（Codex、Gemini CLI、Claude Code など）を通常の UI の背後のランタイムとして動かし、そのエージェント自身のモデル／推論レベルの選択、履歴の再生、本アプリの MCP コネクタをそのまま使えます。逆に外部エディタ（Zed、JetBrains、Neovim など）がゲートウェイのトークンを再利用して Lubricant Science を駆動することもできます。 |
 | ブラウザ制御 | エージェントがあなた自身の Chrome を——プロファイルとログイン状態を保ったまま——操作し、アクセシビリティツリーを通じてページを読み取ります。必要に応じて分離された/プライベートなブラウザも使えます。 |
 | ノートブック | 実際の `.ipynb`、Python/R ノートブック作成、ローカルカーネル実行、バンドル `uv` による Jupyter 環境、JupyterLab 起動。 |
 | 実行記録 | 追記型 run log、グローバル SQLite インデックス、検索/ファセット/ページング、出力リンク、ログ、再現プロンプト。 |
@@ -223,7 +223,7 @@ osd approval set full   # 一切尋ねない: コマンド・削除・インス�
 ```ini
 # /etc/systemd/system/osd.service
 [Unit]
-Description=Open Science Desktop (headless)
+Description=Lubricant Science Desktop (headless)
 After=network-online.target
 
 [Service]
@@ -290,18 +290,18 @@ pnpm lint
 
 ## 状態
 
-現在の実装ログは [`PROGRESS.md`](./PROGRESS.md) を参照してください。近い作業は Windows のコード署名、自動更新、Windows/Linux 検証の拡大、コネクタの堅牢化、再現性レビューの継続です。macOS リリースは署名・Notarization 済みです。議論には [Open Science Discord](https://discord.gg/fWNMDKcd5P) も使えます。
+現在の実装ログは [`PROGRESS.md`](./PROGRESS.md) を参照してください。近い作業は Windows のコード署名、自動更新、Windows/Linux 検証の拡大、コネクタの堅牢化、再現性レビューの継続です。macOS リリースは署名・Notarization 済みです。議論には [Lubricant Science Discord](https://discord.gg/fWNMDKcd5P) も使えます。
 
-[MIT](./LICENSE). Open Science Desktop は beta の研究ツールです。出力は草稿として扱い、公開や意思決定の前に数字、引用、コード、結論を検証してください。
+[MIT](./LICENSE). Lubricant Science Desktop は beta の研究ツールです。出力は草稿として扱い、公開や意思決定の前に数字、引用、コード、結論を検証してください。
 
 ## 引用
 
-研究で Open Science Desktop を使用した場合は、以下のように引用してください:
+研究で Lubricant Science Desktop を使用した場合は、以下のように引用してください:
 
 ```bibtex
 @software{open_science_desktop,
-  author  = {{The Open Science Desktop Contributors}},
-  title   = {Open Science Desktop: a local-first, model-agnostic AI research workbench},
+  author  = {{The Lubricant Science Desktop Contributors}},
+  title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
   version = {0.5.2},
   doi     = {10.5281/zenodo.22004919},

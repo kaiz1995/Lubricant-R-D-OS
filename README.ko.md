@@ -1,12 +1,12 @@
 <div align="center">
 
-[![Open Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
+[![Lubricant Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
 
-# Open Science Desktop
+# Lubricant Science Desktop
 
 **macOS, Windows & Linux용 로컬 우선, 모델 독립 AI 연구 워크벤치.**
 
-Formerly Open Science. Claude Science 및 유사한 AI-for-science 워크벤치의 오픈소스 데스크톱 대안으로, Tauri, MCP, agent skills, 재현 가능한 산출물을 기반으로 합니다. 에이전트, 노트북, 파일, 그림, 보고서, 실행 기록, 리뷰를 하나의 감사 가능한 데스크톱 워크플로로 연결합니다.
+Formerly Lubricant Science. Claude Science 및 유사한 AI-for-science 워크벤치의 오픈소스 데스크톱 대안으로, Tauri, MCP, agent skills, 재현 가능한 산출물을 기반으로 합니다. 에이전트, 노트북, 파일, 그림, 보고서, 실행 기록, 리뷰를 하나의 감사 가능한 데스크톱 워크플로로 연결합니다.
 
 <p>
   <a href="./README.md">English</a> ·
@@ -36,12 +36,12 @@ Formerly Open Science. Claude Science 및 유사한 AI-for-science 워크벤치�
 ## 소식
 
 - **2026-08-18** — 🖥️ **화면 없이도 동작합니다.** `osd server`는 디스플레이가 없는 머신에서 워크벤치 전체 — 워크스페이스, 에이전트 런타임, 그리고 *동일한* 웹 UI — 를 실행하고, `osd session send … --wait`로 스크립트나 다른 에이전트가 이를 구동합니다. 압축 파일 하나면 되고 설치 프로그램은 필요 없습니다. `osd`는 데스크톱 설치 파일에 함께 들어가며 첫 실행 때 PATH에 올라갑니다. 서버에서는 아카이브만으로 충분합니다. 모델·키·승인 모두 터미널에서 설정합니다(`osd model`, `osd auth`, `osd approval`).
-- **2026-08-13** — 🔌 **Agent Client Protocol을 양방향으로 지원.** Codex, Gemini CLI, Claude Code 등 어떤 ACP 에이전트든 이 앱 안에서 — 그 에이전트 자신의 모델과 히스토리, 그리고 이 앱의 MCP 커넥터를 그대로 쓰면서 — 구동할 수 있고, 반대로 Zed, JetBrains, Neovim에서 Open Science를 구동할 수도 있습니다. *(v0.4.0)*
+- **2026-08-13** — 🔌 **Agent Client Protocol을 양방향으로 지원.** Codex, Gemini CLI, Claude Code 등 어떤 ACP 에이전트든 이 앱 안에서 — 그 에이전트 자신의 모델과 히스토리, 그리고 이 앱의 MCP 커넥터를 그대로 쓰면서 — 구동할 수 있고, 반대로 Zed, JetBrains, Neovim에서 Lubricant Science를 구동할 수도 있습니다. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **프로젝트, 메모리, 전체 히스토리.** 세션을 이름이 있는 프로젝트로 묶고(기존 저장소는 복사하지 않고 **그 자리에서** 가져옵니다), 에이전트에 전역·프로젝트 영속 메모리를 부여하며, 모든 과거 대화를 검색 가능한 히스토리에서 보관·복원·내보내기와 함께 찾을 수 있습니다. *(v0.3.1)*
 - **2026-07-24** — 🪟 **분할 페인 타일링.** 세션을 나란히 배치하고, 페인을 드래그해 재배치하며, 독립적인 화면을 여러 개 유지하고, 페인마다 다른 모델을 사용할 수 있습니다. *(v0.3.0)*
 - **2026-07-21** — 🌐 **어디서나 접속 — 심지어 휴대폰에서도.** 토큰 인증 게이트웨이가 *실제* 데스크톱 UI를 CLI, LAN 내 브라우저, 또는 휴대폰에 제공합니다(기본은 loopback, LAN은 선택적 활성화). 책상에서 실행을 시작하고 완성된 그림과 보고서를 휴대폰에서 확인하세요. *(v0.2.3)*
 - **2026-07-21** — 🧭 **브라우저 제어.** 에이전트가 프로필과 로그인이 유지된 당신의 Chrome을 직접 조작해 당신이 보는 방식 그대로 실시간 웹을 읽거나, 필요할 때 격리된 비공개 브라우저를 사용할 수 있습니다. *(v0.2.3)*
-- **2026-07-09** — 🎉 **ResearchClawBench 1위.** Open Science Desktop은 자율 과학 연구 에이전트를 위한 엔드투엔드 벤치마크 [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/)에서 채점된 작업 평균 기준 1위를 기록했습니다(Pass@1 리더보드).
+- **2026-07-09** — 🎉 **ResearchClawBench 1위.** Lubricant Science Desktop은 자율 과학 연구 에이전트를 위한 엔드투엔드 벤치마크 [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/)에서 채점된 작업 평균 기준 1위를 기록했습니다(Pass@1 리더보드).
 
 ---
 
@@ -138,7 +138,7 @@ Formerly Open Science. Claude Science 및 유사한 AI-for-science 워크벤치�
 | 파일 | 전역/세션 파일 탐색, 컨텍스트 메뉴, 외부 열기/표시, 경로 복사, 로컬 미리보기 서버. |
 | 헤드리스와 CLI | `osd server`는 창 없이 워크벤치를 실행합니다 — 같은 워크스페이스, 같은 런타임, 같은 웹 UI를 자체 완결적인 디렉터리 하나에서 제공합니다. `osd`는 그것(또는 실행 중인 데스크톱 앱)을 터미널에서 조작합니다: 세션, 프로젝트, 실행 기록, 파일, 승인, `--wait`, `--json`. |
 | 원격 접속 | 실제 UI를 CLI, LAN 웹 브라우저, 또는 휴대폰에 제공하는 토큰 인증 게이트웨이(기본은 loopback, LAN은 선택적 활성화); 읽기 전용/전체 접근 모드; 토큰이 포함된 링크를 복사해 한 번의 탭으로 연결. API 키는 네트워크를 통해 전송되지 않습니다. |
-| 에디터 상호운용(ACP) | Agent Client Protocol을 양방향으로 지원합니다: 임의의 ACP 에이전트(Codex, Gemini CLI, Claude Code 등)를 일반 UI 뒤의 런타임으로 실행하면서 그 에이전트 자신의 모델·추론 강도 선택, 히스토리 재생, 이 앱의 MCP 커넥터를 그대로 사용하거나, 외부 에디터(Zed, JetBrains, Neovim 등)가 게이트웨이 토큰을 재사용해 Open Science를 구동하게 할 수 있습니다. |
+| 에디터 상호운용(ACP) | Agent Client Protocol을 양방향으로 지원합니다: 임의의 ACP 에이전트(Codex, Gemini CLI, Claude Code 등)를 일반 UI 뒤의 런타임으로 실행하면서 그 에이전트 자신의 모델·추론 강도 선택, 히스토리 재생, 이 앱의 MCP 커넥터를 그대로 사용하거나, 외부 에디터(Zed, JetBrains, Neovim 등)가 게이트웨이 토큰을 재사용해 Lubricant Science를 구동하게 할 수 있습니다. |
 | 브라우저 제어 | 에이전트가 프로필과 로그인 상태가 보존된 당신의 Chrome을 조작해 접근성 트리로 페이지를 읽거나, 필요할 때 격리된/비공개 브라우저를 사용합니다. |
 | 노트북 | 실제 `.ipynb`, Python/R 노트북 생성, 로컬 커널 실행, 번들 `uv` 기반 Jupyter 환경, JupyterLab 열기. |
 | 실행 기록 | append-only run log, 전역 SQLite 인덱스, 검색/필터/페이지네이션, 로컬/원격 surface, 출력 링크, 로그, 재현 prompt. |
@@ -223,7 +223,7 @@ osd approval set full   # 아무것도 묻지 않음: 명령, 삭제, 설치, �
 ```ini
 # /etc/systemd/system/osd.service
 [Unit]
-Description=Open Science Desktop (headless)
+Description=Lubricant Science Desktop (headless)
 After=network-online.target
 
 [Service]
@@ -290,18 +290,18 @@ pnpm lint
 
 ## 상태
 
-가장 신뢰할 수 있는 구현 로그는 [`PROGRESS.md`](./PROGRESS.md)입니다. 가까운 작업은 Windows 코드 서명, 자동 업데이트, Windows/Linux 검증 확대, 커넥터 강화, 재현성 리뷰 지속입니다. macOS 릴리스는 이미 서명·공증되었습니다. 토론은 [Open Science Discord](https://discord.gg/fWNMDKcd5P)에서도 할 수 있습니다.
+가장 신뢰할 수 있는 구현 로그는 [`PROGRESS.md`](./PROGRESS.md)입니다. 가까운 작업은 Windows 코드 서명, 자동 업데이트, Windows/Linux 검증 확대, 커넥터 강화, 재현성 리뷰 지속입니다. macOS 릴리스는 이미 서명·공증되었습니다. 토론은 [Lubricant Science Discord](https://discord.gg/fWNMDKcd5P)에서도 할 수 있습니다.
 
-[MIT](./LICENSE). Open Science Desktop은 beta 연구 도구입니다. 출력은 초안으로 보고, 공개나 의사결정 전에 숫자, 인용, 코드, 결론을 검증하세요.
+[MIT](./LICENSE). Lubricant Science Desktop은 beta 연구 도구입니다. 출력은 초안으로 보고, 공개나 의사결정 전에 숫자, 인용, 코드, 결론을 검증하세요.
 
 ## 인용
 
-연구에서 Open Science Desktop을 사용했다면 아래와 같이 인용해 주세요:
+연구에서 Lubricant Science Desktop을 사용했다면 아래와 같이 인용해 주세요:
 
 ```bibtex
 @software{open_science_desktop,
-  author  = {{The Open Science Desktop Contributors}},
-  title   = {Open Science Desktop: a local-first, model-agnostic AI research workbench},
+  author  = {{The Lubricant Science Desktop Contributors}},
+  title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
   version = {0.5.2},
   doi     = {10.5281/zenodo.22004919},

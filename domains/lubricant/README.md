@@ -10,7 +10,7 @@
 
 ## 1. 这是什么（产品定位）
 
-**Lubricant R&D OS** 是一套运行在 Open Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
+**Lubricant R&D OS** 是一套运行在 Lubricant Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
 
 它**不是**一个简单的"输入几个技术指标，AI 自动吐出配方"的黑盒生成器。它的核心使命是：
 
@@ -66,11 +66,11 @@
 
 ## 5. 系统架构设计
 
-系统采用**解耦的三层架构**，确保通用科研底座与润滑油领域逻辑相互隔离，支持随上游 Open Science 持续平滑升级：
+系统采用**解耦的三层架构**，确保通用科研底座与润滑油领域逻辑相互隔离，支持随上游 Lubricant Science 持续平滑升级：
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        Open Science 桌面工作台                         │
+│                        Lubricant Science 桌面工作台                         │
 │       (Tauri 2 + React + OpenCode Agent Runtime + 本地工作区 + Provenance) │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ 调用 / 加载
@@ -96,28 +96,28 @@
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 为什么选择基于 Open Science 开发？（核心优势）
+### 为什么选择基于 Lubricant Science 开发？（核心优势）
 
-工业润滑油配方属于核心商业机密，且研发决策依赖严谨的物理实验与数据溯源。相比使用通用聊天型 AI 或从零自研桌面软件，基于 Open Science 开发具备以下四大不可替代的底座优势：
+工业润滑油配方属于核心商业机密，且研发决策依赖严谨的物理实验与数据溯源。相比使用通用聊天型 AI 或从零自研桌面软件，基于 Lubricant Science 开发具备以下四大不可替代的底座优势：
 
 1. **完整的科研数据血统追溯（Scientific Provenance）**：
    - *通用 Agent 痛点*：上下文窗口一旦压缩或会话结束，研发推导过程和参数逻辑丢失，成为不可审计的黑盒。
-   - *Open Science 优势*：原生提供以 Run 和 Session 为核心的不可篡改执行追踪记录（`.openscience/provenance.jsonl`）。任何一个终版配方（如 Freeze Formula V7），均可向上无缝追溯至其数学优化模型、DOE 混兑点、物理实验批次、检验方法版本以及原料批次物化属性，满足严苛的工程审计要求。
+   - *Lubricant Science 优势*：原生提供以 Run 和 Session 为核心的不可篡改执行追踪记录（`.openscience/provenance.jsonl`）。任何一个终版配方（如 Freeze Formula V7），均可向上无缝追溯至其数学优化模型、DOE 混兑点、物理实验批次、检验方法版本以及原料批次物化属性，满足严苛的工程审计要求。
 2. **工业级数据隐私与离线闭环（Local-First Architecture）**：
    - *通用 Agent 痛点*：依赖云端 SaaS 交互，涉及企业绝密的基础油组分、添加剂配比、专有成本与客户工况面临泄密风险。
-   - *Open Science 优势*：基于 Tauri 2 + 本地 SQLite + 本地沙箱文件系统，数据 100% 留存于企业内网或本地工作台。既可无缝对接本地离线开源大模型，也可在安全网络环境下接入商用模型，从物理层面隔离配方机密。
+   - *Lubricant Science 优势*：基于 Tauri 2 + 本地 SQLite + 本地沙箱文件系统，数据 100% 留存于企业内网或本地工作台。既可无缝对接本地离线开源大模型，也可在安全网络环境下接入商用模型，从物理层面隔离配方机密。
 3. **开箱即用的专业科研基础设施（无需重复造轮子）**：
    - *通用 Agent 痛点*：从零开发桌面端交互、多模型适配、运行时进程管理和工具链调度需耗费团队 70% 以上的工程基建精力。
-   - *Open Science 优势*：底座已完整封装跨平台桌面应用壳、**OpenCode Agent Runtime**（[anomalyco/opencode](https://github.com/anomalyco/opencode)，随安装包分发的第三方 Agent 运行时）、MCP 协议拓展支持、Python/Jupyter 计算执行环境与项目/会话隔离机制，使领域专家能 100% 聚焦于润滑油机理、DOE 算法与研发流程本身。
+   - *Lubricant Science 优势*：底座已完整封装跨平台桌面应用壳、**OpenCode Agent Runtime**（[anomalyco/opencode](https://github.com/anomalyco/opencode)，随安装包分发的第三方 Agent 运行时）、MCP 协议拓展支持、Python/Jupyter 计算执行环境与项目/会话隔离机制，使领域专家能 100% 聚焦于润滑油机理、DOE 算法与研发流程本身。
 4. **LLM 语义路由与确定性科学计算的严格解耦**：
    - *通用 Agent 痛点*：直接让大模型捏造数字、估算粘度或拟合回归曲线，极易产生“看似合理但实际完全错误”的工程幻觉。
-   - *Open Science 优势*：提供规范的 Skill 扩展协议与 Python 宿主运行能力。大模型仅作为“研发副驾驶”负责理解意图、结构化提取与语义解释；而配方成本、约束混料极值设计（Mixture DOE）、方差分析（ANOVA）与多目标优化等计算完全由独立的确定性数学引擎执行，确保数字严谨可信。
+   - *Lubricant Science 优势*：提供规范的 Skill 扩展协议与 Python 宿主运行能力。大模型仅作为“研发副驾驶”负责理解意图、结构化提取与语义解释；而配方成本、约束混料极值设计（Mixture DOE）、方差分析（ANOVA）与多目标优化等计算完全由独立的确定性数学引擎执行，确保数字严谨可信。
 
 ---
 
 ## 6. 12 个领域技能清单 (Skills)
 
-每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Open Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
+每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Lubricant Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
 
 | Skill 名称 | 所属阶段 | 输出状态 / 工件 | 关键功能与职责 |
 |---|---|---|---|
@@ -139,11 +139,11 @@
 ## 7. 快速开始与使用指南
 
 ### 7.1 前置条件
-- 已安装 [Open Science Desktop](https://github.com/ai4s-research/open-science/releases) v0.5.1 或更高版本
+- 已安装 [Lubricant Science Desktop](https://github.com/ai4s-research/open-science/releases) v0.5.1 或更高版本
 - 本地安装 Python 3.10+ 环境
 
-### 7.2 安装领域包技能至 Open Science
-在本目录（`domains/lubricant/`）执行 PowerShell 命令，一键将 12 个领域技能部署到 Open Science Desktop 用户目录：
+### 7.2 安装领域包技能至 Lubricant Science
+在本目录（`domains/lubricant/`）执行 PowerShell 命令，一键将 12 个领域技能部署到 Lubricant Science Desktop 用户目录：
 
 ```powershell
 # 将全部 12 个领域技能安装到 Desktop
@@ -151,16 +151,16 @@ python scripts/install_domain_skill.py --all `
   --target "C:\Users\<用户名>\AppData\Roaming\com.ai4s.workbench\runtime\xdg-config\opencode\skills\user"
 ```
 
-安装完成后重启 Open Science 桌面端，在工作台「技能」面板中即可直接查看和使用。
+安装完成后重启 Lubricant Science 桌面端，在工作台「技能」面板中即可直接查看和使用。
 
 ### 7.3 桌面三栏工作台（研发阶段与门禁）
 
-领域包不只是"一堆技能"。在 Open Science 桌面端，研发链会直接渲染成**右侧第三栏**：
+领域包不只是"一堆技能"。在 Lubricant Science 桌面端，研发链会直接渲染成**右侧第三栏**：
 
 | 栏位 | 归属 | 内容 |
 |---|---|---|
-| 左 | Open Science 原生 | 项目 / 会话 / 技能导航 |
-| 中 | Open Science 原生 | 多模型对话流 + 工具调用 + 输入框 |
+| 左 | Lubricant Science 原生 | 项目 / 会话 / 技能导航 |
+| 中 | Lubricant Science 原生 | 多模型对话流 + 工具调用 + 输入框 |
 | **右** | **本领域包** | **「研发阶段与门禁」：11 步工件链 + 整体进度 + 门禁决议** |
 
 **进入方式**：左侧边栏点「润滑研发 Copilot」，或访问 `/lubricant` 路由。
@@ -183,7 +183,7 @@ python scripts/install_domain_skill.py --all `
 ### 7.4 新项目启动（活报告工作区）
 新课题按以下步骤初始化工作区，使项目自带"活报告"进度机制：
 
-1. 在 Open Science 中新建项目工作区；
+1. 在 Lubricant Science 中新建项目工作区；
 2. 复制 `templates/project-workspace/AGENTS.md` 到项目根目录，仅修改"角色与使命"中的一句话核心目标；
 3. 复制 `templates/project-workspace/docs/开发报告模板.md` 到项目 `docs/` 目录并按项目命名；
 4. 后续所有技能执行落盘后，副驾驶会按 AGENTS.md 中的"活报告维护"规则自动同步该报告；项目全门禁通过后，该报告即成为完整开发报告交付。
@@ -216,14 +216,14 @@ python -B tests/test_release_preflight.py
 
 ### 8.1 软件是什么
 
-**Lubricant R&D OS 不是一个独立软件**，而是 [Open Science Desktop](https://github.com/ai4s-research/open-science) 的下游分支 —— 同一个桌面壳，只做了两处叠加：
+**Lubricant R&D OS 不是一个独立软件**，而是 [Lubricant Science Desktop](https://github.com/ai4s-research/open-science) 的下游分支 —— 同一个桌面壳，只做了两处叠加：
 
 1. 内置 12 个润滑油研发技能（`domains/lubricant/skills/`）；
 2. 右侧多出一个「**研发阶段与门禁**」面板。
 
 **进入方式**：左侧边栏点「**润滑研发 Copilot**」，或访问 `/lubricant` 路由。面板标题栏右侧的 `×` 可收起，刷新按钮可手动重新扫描工件。
 
-进入后，**左栏与中栏和原生 Open Science 完全一致**（项目 / 会话 / 技能导航 + 多模型对话流 + 输入框），只有右栏是本领域包新增。也就是说：不需要学一套新软件，只需要学右栏这一块。
+进入后，**左栏与中栏和原生 Lubricant Science 完全一致**（项目 / 会话 / 技能导航 + 多模型对话流 + 输入框），只有右栏是本领域包新增。也就是说：不需要学一套新软件，只需要学右栏这一块。
 
 <img src="./docs/assets/workbench.webp" alt="润滑研发 Copilot 三栏工作台" width="100%">
 
@@ -326,7 +326,7 @@ python -B tests/test_release_preflight.py
 | **P2: 数据库原子性** | ✅ PASS | 事务写入、防公式注入、重复项拒绝均通过测试。 |
 | **P3: 安装幂等性** | ✅ PASS | 安装失败零残留，环境指纹一致。 |
 | **P4: 发布前置门禁** | ✅ PASS | Preflight 自动扫描全量 Schema、证书与测试套件。 |
-| **P5: 上游合并兼容** | ✅ PASS | Open Science v0.5.1 代码合入，1166 项核心测试全绿通过。 |
+| **P5: 上游合并兼容** | ✅ PASS | Lubricant Science v0.5.1 代码合入，1166 项核心测试全绿通过。 |
 | **P6: 桌面实机验收** | ✅ PASS | 真实 Desktop 会话调用成功，Provenance 链条闭环。 |
 | **G5: 真实数据补全** | 🔄 IN PROGRESS | 依托 V600 风电齿轮油等真实课题实战推进中；PDS 基线与历史台架已录入，物理样品（B0）已调配，待实验室物理实测闭环。 |
 | **G6: 物理发布签字** | ⏸ HOLD | 待真实物理数据（WGO_001 等）注入并完成完整台架验证后签署。 |

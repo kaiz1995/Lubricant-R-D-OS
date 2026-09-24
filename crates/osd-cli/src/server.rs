@@ -144,7 +144,7 @@ pub fn run(args: &Args) -> Result<(), String> {
     if assets::is_empty() {
         eprintln!("note: this build carries no web client; /v1 is served, / is not.");
     }
-    println!("Open Science Desktop — headless\n");
+    println!("Lubricant Science Desktop — headless\n");
     println!("  workspace   {}", workspace.display());
     println!("  runtime     {sidecar}");
     println!("  access      {mode}");

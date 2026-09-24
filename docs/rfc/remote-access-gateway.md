@@ -104,7 +104,7 @@ protocol serves both.
 **Shape:** REST for commands + SSE for the event stream — deliberately mirroring
 what `OpenCodeClient` already does, so `RemoteRuntime` is nearly a clone and
 `curl` / a Feishu webhook can drive it trivially. (A JSON-RPC/WebSocket dialect
-is added later only for "Open Science *as* an ACP server," which needs
+is added later only for "Lubricant Science *as* an ACP server," which needs
 bidirectional framing.)
 
 **Base:** `/{version}/…`, e.g. `/v1`. All responses JSON. Auth on every request
@@ -281,7 +281,7 @@ deferred until the mechanism is proven on loopback.
   (and Slack) bot that relays `sendPrompt` → streamed events, and fetches
   artifacts for "give me the result."
 - **Later (v0.5.0 overlap).** `RemoteRuntime` as a first-class runtime (remote
-  agent execution, #35); Open Science *as* an ACP server (#14). Both reuse this
+  agent execution, #35); Lubricant Science *as* an ACP server (#14). Both reuse this
   wire protocol.
 
 ## Open questions

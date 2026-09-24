@@ -1,12 +1,12 @@
-# Open Science Desktop vs OpenScience: two open-source Claude Science alternatives
+# Lubricant Science Desktop vs OpenScience: two open-source Claude Science alternatives
 
-Open Science Desktop and Synthetic Sciences OpenScience are both open-source
+Lubricant Science Desktop and Synthetic Sciences OpenScience are both open-source
 AI-for-science workbenches. The names are similar, but the product focus is
 different enough that researchers can choose by workflow.
 
 ## Short version
 
-- **Choose Open Science Desktop** if you want a local-first desktop app for macOS,
+- **Choose Lubricant Science Desktop** if you want a local-first desktop app for macOS,
   Windows, and Linux, with local files, notebook-style work, artifact provenance, and
   reproducible run records.
 - **Choose Synthetic Sciences OpenScience** if you want a browser workspace and a
@@ -15,7 +15,7 @@ different enough that researchers can choose by workflow.
 
 ## Comparison
 
-| Dimension | Open Science Desktop | Synthetic Sciences OpenScience |
+| Dimension | Lubricant Science Desktop | Synthetic Sciences OpenScience |
 | --- | --- | --- |
 | Positioning | Local-first desktop research workbench | Browser workspace / research-agent workflow |
 | Primary surface | macOS, Windows, and Linux desktop app | Browser workspace and `openscience` CLI |
@@ -29,11 +29,11 @@ different enough that researchers can choose by workflow.
 
 This is a neutral comparison, not an endorsement or criticism of either project.
 Both projects are independent and open source. The practical difference is product
-surface: Open Science Desktop emphasizes a desktop, local-first workflow; Synthetic
+surface: Lubricant Science Desktop emphasizes a desktop, local-first workflow; Synthetic
 Sciences OpenScience emphasizes a browser workspace and CLI-driven research loop.
 
 ## Sources
 
-- Open Science Desktop GitHub: <https://github.com/ai4s-research/open-science>
+- Lubricant Science Desktop GitHub: <https://github.com/ai4s-research/open-science>
 - Synthetic Sciences OpenScience GitHub: <https://github.com/synthetic-sciences/openscience>
 - Synthetic Sciences OpenScience docs repository: <https://github.com/synthetic-sciences/docs>

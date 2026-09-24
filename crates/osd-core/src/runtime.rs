@@ -198,7 +198,7 @@ pub fn base_workspace_dir(env: &Env) -> Result<PathBuf, String> {
     // One-time migrations, oldest name last. A failed rename (e.g. cross-volume)
     // keeps the existing location rather than splitting the user's files.
     if !dir.exists() {
-        for old in [docs.join("Open Science"), runtime_root(env)?.join("workspace")] {
+    for old in [docs.join("Lubricant Science"), runtime_root(env)?.join("workspace")] {
             if old.is_dir() {
                 if std::fs::rename(&old, &dir).is_ok() {
                     break;

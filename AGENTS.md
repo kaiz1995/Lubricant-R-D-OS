@@ -1,7 +1,7 @@
-# Open Science Desktop
+# Lubricant Science Desktop
 
-Brand name: **Open Science Desktop** — "Local-first, model-agnostic AI research
-workbench for macOS, Windows & Linux." Formerly Open Science. Bundle identifier stays
+Brand name: **Lubricant Science Desktop** — "Local-first, model-agnostic AI research
+workbench for macOS, Windows & Linux." Formerly Lubricant Science. Bundle identifier stays
 `com.ai4s.workbench` and internal `@ai4s/*` package names are unchanged.
 
 Project rules and working context for AI agents (Claude Code, Cursor, Codex, etc.).

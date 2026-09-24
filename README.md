@@ -1,12 +1,12 @@
 <div align="center">
 
-[![Open Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
+[![Lubricant Science Desktop — Local-first AI research workbench](./docs/assets/banner.webp)](https://github.com/ai4s-research/open-science)
 
-# Open Science Desktop
+# Lubricant Science Desktop
 
 **Local-first, model-agnostic AI research workbench for macOS, Windows & Linux.**
 
-Formerly Open Science. An open-source desktop alternative to Claude Science and
+Formerly Lubricant Science. An open-source desktop alternative to Claude Science and
 similar AI-for-science workbenches — built with Tauri, MCP, agent skills, and
 reproducible artifacts. It connects agents, notebooks, files, figures, reports,
 runs, and review into one auditable desktop workflow.
@@ -44,10 +44,10 @@ runs, and review into one auditable desktop workflow.
 > 它是 [ai4s-research/open-science](https://github.com/ai4s-research/open-science) 的长期下游分支，在其上叠加了**工业润滑油产品开发**领域层与三栏研发工作台：
 >
 > - **领域层** → [`domains/lubricant/`](./domains/lubricant/)：12 个研发阶段技能、16 个工件 JSON Schema、阶段状态机、Phase 4 计算引擎（成本 / 混料 DOE / 统计 / 多目标优化）、13 个自动化测试。详见[领域包文档](./domains/lubricant/README.md)。
-> - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Open Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 11 步工件链、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
+> - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Lubricant Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 11 步工件链、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
 > - **上游基线** → `0.5.2`（`cea3c3a`）；同步状态与核心改动清单见 [`UPSTREAM.md`](./UPSTREAM.md)。
 >
-> 下文「[润滑研发领域层](#润滑研发领域层lubricant-rd-os)」为本分支新增内容；其后的 News 与各功能章节是上游 Open Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
+> 下文「[润滑研发领域层](#润滑研发领域层lubricant-rd-os)」为本分支新增内容；其后的 News 与各功能章节是上游 Lubricant Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
 
 ---
 
@@ -57,7 +57,7 @@ runs, and review into one auditable desktop workflow.
 
 ### 产品定位
 
-**Lubricant R&D OS** 是一套运行在 Open Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
+**Lubricant R&D OS** 是一套运行在 Lubricant Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
 
 它**不是**一个简单的"输入几个技术指标，AI 自动吐出配方"的黑盒生成器。它的核心使命是：
 
@@ -66,7 +66,7 @@ runs, and review into one auditable desktop workflow.
 
 ### 12 个领域技能清单 (Skills)
 
-每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Open Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
+每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Lubricant Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
 
 | Skill 名称 | 所属阶段 | 输出状态 / 工件 | 关键功能与职责 |
 |---|---|---|---|
@@ -112,12 +112,12 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
 ## News
 
 - **2026-08-18** — 🖥️ **Runs without a screen, and the terminal command comes with it.** `osd server` starts the whole workbench — workspace, agent runtime, and the *same* web UI — on a machine with no display, and `osd session send … --wait` drives it from a script or another agent. `osd` ships inside the desktop installer and puts itself on your PATH on first launch; on a server the archive needs nothing installed. Models, keys and approvals are all configurable from the terminal (`osd model`, `osd auth`, `osd approval`).
-- **2026-08-13** — 🔌 **Speaks the Agent Client Protocol, both directions.** Drive Codex, Gemini CLI, Claude Code, or any other ACP agent from inside this app — with its own models, history, and your MCP connectors — or drive Open Science itself from Zed, JetBrains, or Neovim. *(v0.4.0)*
+- **2026-08-13** — 🔌 **Speaks the Agent Client Protocol, both directions.** Drive Codex, Gemini CLI, Claude Code, or any other ACP agent from inside this app — with its own models, history, and your MCP connectors — or drive Lubricant Science itself from Zed, JetBrains, or Neovim. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **Projects, memory, and full history.** Group sessions into named projects (import an existing repo *in place*, no copying), give the agent persistent global and project memory, and reach every past conversation through a searchable history with archive, restore, and export. *(v0.3.1)*
 - **2026-07-24** — 🪟 **Split-pane tiling.** Tile sessions side by side, drag panes to re-dock them, keep several independent Screens, and run a different model in each pane. *(v0.3.0)*
 - **2026-07-21** — 🌐 **Access from anywhere — even your phone.** A token-authenticated gateway serves the *real* desktop UI to a CLI, a browser on your LAN, or your phone (loopback by default; LAN is opt-in). Start a run at your desk and read the finished figure and report on your phone. *(v0.2.3)*
 - **2026-07-21** — 🧭 **Browser control.** The agent can drive your own Chrome — profile and logins intact — to read the live web the way you do, or an isolated private browser on demand. *(v0.2.3)*
-- **2026-07-09** — 🎉 **#1 on ResearchClawBench.** Open Science Desktop ranks #1 by scored-task average on [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/), an end-to-end benchmark for autonomous scientific research agents (Pass@1 leaderboard).
+- **2026-07-09** — 🎉 **#1 on ResearchClawBench.** Lubricant Science Desktop ranks #1 by scored-task average on [ResearchClawBench](https://internscience.github.io/ResearchClawBench-Home/), an end-to-end benchmark for autonomous scientific research agents (Pass@1 leaderboard).
 
 ---
 
@@ -251,7 +251,7 @@ office/document skills below.
 | Files | Global and per-session file browsing, context menu actions, external open/reveal, copy path, and local preview server. |
 | Headless & CLI | `osd server` runs the workbench with no window — same workspace, same runtime, same web UI, served from one self-contained directory — and `osd` drives it (or a running desktop app) from a terminal: sessions, projects, runs, files, approvals, `--wait`, `--json`. |
 | Remote access | Token-authenticated gateway that serves the real UI to a CLI, a LAN web browser, or your phone (loopback by default, LAN opt-in); read-only vs full access modes; copy a link with the token embedded to connect in one tap. API keys never cross the wire. |
-| Editor interop (ACP) | Speaks the Agent Client Protocol in both directions: run any ACP agent (Codex, Gemini CLI, Claude Code, …) as the runtime behind the ordinary UI, with its own model and reasoning selectors, history replay, and this app's MCP connectors; or let an external editor (Zed, JetBrains, Neovim, …) drive Open Science, reusing the gateway token. |
+| Editor interop (ACP) | Speaks the Agent Client Protocol in both directions: run any ACP agent (Codex, Gemini CLI, Claude Code, …) as the runtime behind the ordinary UI, with its own model and reasoning selectors, history replay, and this app's MCP connectors; or let an external editor (Zed, JetBrains, Neovim, …) drive Lubricant Science, reusing the gateway token. |
 | Browser control | The agent drives your own Chrome — profile and login state preserved — reading pages through the accessibility tree, or an isolated/private browser on demand. |
 | Notebooks | Real `.ipynb` files, Python and R notebook creation, local kernel execution, managed Jupyter environment via bundled `uv`, and an Open JupyterLab action. |
 | Runs | Append-only run logs, global SQLite run index, search/facets/pagination, local/remote surfaces, output links, logs, and reproduce prompts. |
@@ -287,7 +287,7 @@ You can also add any local or remote MCP server from Settings. See
 [`docs/CONNECT_YOUR_TOOLS.md`](./docs/CONNECT_YOUR_TOOLS.md).
 
 For a neutral positioning note, see
-[`Open Science Desktop vs OpenScience`](./docs/open-science-desktop-vs-openscience.md).
+[`Lubricant Science Desktop vs OpenScience`](./docs/open-science-desktop-vs-openscience.md).
 
 ## Install
 
@@ -401,7 +401,7 @@ unit was run end to end on Ubuntu — enable, restart, crash, stop:
 ```ini
 # /etc/systemd/system/osd.service
 [Unit]
-Description=Open Science Desktop (headless)
+Description=Lubricant Science Desktop (headless)
 After=network-online.target
 
 [Service]
@@ -512,17 +512,17 @@ reproducibility review. macOS releases are already signed and notarized.
 
 Issues and PRs are welcome. Keep changes minimal and verifiable, follow
 [`AGENTS.md`](./AGENTS.md), and run the checks before opening a PR. For discussion,
-join the [Open Science Discord](https://discord.gg/fWNMDKcd5P) or the
+join the [Lubricant Science Discord](https://discord.gg/fWNMDKcd5P) or the
 [linux.do](https://linux.do) community.
 
 ## Citation
 
-If you use Open Science Desktop in your research, please cite it:
+If you use Lubricant Science Desktop in your research, please cite it:
 
 ```bibtex
 @software{open_science_desktop,
-  author  = {{The Open Science Desktop Contributors}},
-  title   = {Open Science Desktop: a local-first, model-agnostic AI research workbench},
+  author  = {{The Lubricant Science Desktop Contributors}},
+  title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
   version = {0.5.2},
   doi     = {10.5281/zenodo.22136307},
@@ -538,5 +538,5 @@ GitHub's **"Cite this repository"** button (top of the repo page, generated from
 
 [MIT](./LICENSE). Bundled third-party skills and connectors keep their own licenses.
 
-> Open Science Desktop is beta research tooling. Treat outputs as drafts: verify numbers,
+> Lubricant Science Desktop is beta research tooling. Treat outputs as drafts: verify numbers,
 > citations, code, and conclusions before publication or decision-making.

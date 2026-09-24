@@ -71,7 +71,7 @@ fn probe(base_url: &str, api_key: Option<&str>, kind: &str) -> Result<Vec<Probed
 
 fn client() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
-        .user_agent("Open Science Desktop model probe")
+        .user_agent("Lubricant Science Desktop model probe")
         .timeout(Duration::from_secs(5))
         .build()
         .map_err(|e| format!("could not create HTTP client: {e}"))

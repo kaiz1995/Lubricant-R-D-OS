@@ -397,7 +397,7 @@ discussion. Shipped versions are kept here as the delivery record.
   history replay, the agent's own model / reasoning selectors, this app's MCP
   connectors and survival across an agent restart — all capability-gated on what
   each agent advertises. Southbound, external editors (Zed, JetBrains, Neovim,
-  …) spawn `acp-server.mjs` from inside the bundle and drive Open Science in
+  …) spawn `acp-server.mjs` from inside the bundle and drive Lubricant Science in
   ACP's dialect, reusing the shipped gateway and its token. Alongside it: a
   subagent opens into its own transcript (#105); a configured per-agent model
   actually runs the turn (#96); `resolve_artifact` moved off the UI thread,

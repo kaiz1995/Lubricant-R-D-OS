@@ -7,7 +7,7 @@ Builds on: upstream roadmap v0.4.0 "Agent Client Protocol (ACP) support" (#14).
 
 ## TL;DR
 
-The goal is to let users run Open Science Desktop with **Codex, Gemini CLI, Claude
+The goal is to let users run Lubricant Science Desktop with **Codex, Gemini CLI, Claude
 Code, pi, zcode, and agents the community contributes later** — not just OpenCode.
 This RFC argues the right way to get there is **not** to write a private adapter
 per agent, but to adopt the **[Agent Client Protocol (ACP)](https://agentclientprotocol.com/)**
@@ -148,7 +148,7 @@ Key points:
    ACP agents are stdio *children*. The `RuntimeState` in Rust assumes a port+url.
    How much of that model do we generalize vs. keep OpenCode-specific?
 5. **Scope of v0.4.0 #14.** Is this RFC the design for #14, or a subset? Should
-   we also expose Open Science *as* an ACP server (editor → us), or only consume
+   we also expose Lubricant Science *as* an ACP server (editor → us), or only consume
    ACP servers (us → agent) in this round?
 6. **First agent to prove it.** Gemini CLI (native ACP) is the lowest-friction
    target; Codex needs `codex-acp`. Which should be the Phase 2 proof-of-concept?
@@ -178,7 +178,7 @@ not by preference:
    long-lived child serves every workspace. Nothing about Rust's port+url
    `RuntimeState` needed to change.
 
-Still open: (5) the server direction (Open Science *as* an ACP agent), and
+Still open: (5) the server direction (Lubricant Science *as* an ACP agent), and
 (6) is answered in practice — codex-acp was the agent this was proven against.
 
 ## Alternatives considered

@@ -1,4 +1,4 @@
-// The process an external editor spawns to drive Open Science over ACP (#14).
+// The process an external editor spawns to drive Lubricant Science over ACP (#14).
 //
 // Node-only, and deliberately NOT exported from the browser barrel: it owns
 // `process.stdin`/`stdout`, which the webview does not have. stdio is the only
@@ -124,9 +124,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const token = flag("token") ?? process.env.OPENSCIENCE_GATEWAY_TOKEN ?? "";
   if (!url || !token) {
     process.stderr.write(
-      "Open Science ACP server: --url and --token are required " +
+      "Lubricant Science ACP server: --url and --token are required " +
         "(or OPENSCIENCE_GATEWAY_URL / OPENSCIENCE_GATEWAY_TOKEN).\n" +
-        "Both are shown in Open Science → Settings → Remote Access.\n",
+      "Both are shown in Lubricant Science → Settings → Remote Access.\n",
     );
     process.exitCode = 2;
     return;
@@ -135,9 +135,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     await serveStdio({ url, token, version: flag("version") });
   } catch (err) {
     process.stderr.write(
-      `Open Science ACP server: could not reach the desktop app at ${url} — ` +
+      `Lubricant Science ACP server: could not reach the desktop app at ${url} — ` +
         `${err instanceof Error ? err.message : String(err)}\n` +
-        "Is Open Science running with remote access enabled?\n",
+      "Is Lubricant Science running with remote access enabled?\n",
     );
     process.exitCode = 1;
   }

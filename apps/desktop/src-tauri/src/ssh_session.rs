@@ -139,7 +139,7 @@ fn control_path_pattern(dir: &Path) -> String {
 /// clients read this same file, so they agree on whichever path won.
 pub fn managed_config(control_dir: &Path, user_config: Option<&Path>) -> String {
     let mut out = String::new();
-    out.push_str("# Managed by Open Science Desktop — regenerated on every start.\n");
+    out.push_str("# Managed by Lubricant Science Desktop — regenerated on every start.\n");
     out.push_str("# Edit ~/.ssh/config instead: it is included below and wins.\n\n");
     if let Some(user) = user_config {
         out.push_str(&format!("Include \"{}\"\n\n", user.to_string_lossy()));

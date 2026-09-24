@@ -101,7 +101,7 @@ describe("MarkdownViewer", () => {
 
   it("opens an http(s) link externally without navigating the application", () => {
     const { getByRole } = render(
-      <MarkdownViewer>{"[Open Science](https://example.com/research)"}</MarkdownViewer>,
+      <MarkdownViewer>{"[Lubricant Science](https://example.com/research)"}</MarkdownViewer>,
     );
     const link = getByRole("link");
     const click = new MouseEvent("click", { bubbles: true, cancelable: true });

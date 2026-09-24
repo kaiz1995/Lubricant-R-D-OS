@@ -184,7 +184,7 @@ jobs:
           # On a v* tag push, attach installers to a draft GitHub Release.
           # Empty tagName (workflow_dispatch) skips release creation.
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('Open Science Desktop {0}', github.ref_name) || '' }}
+          releaseName: ${{ github.ref_type == 'tag' && format('Lubricant Science Desktop {0}', github.ref_name) || '' }}
           releaseDraft: true
           # Standing install/first-launch notes. Tagged macOS releases are blocked
           # above unless Developer ID signing + notarization credentials are
@@ -193,7 +193,7 @@ jobs:
             ## Install & first launch
 
             **macOS** — Apple Silicon: `…_aarch64.dmg` · Intel: `…_x64.dmg` (requires macOS 13+)
-            - Developer ID-signed and notarized. Open the DMG and drag **Open Science** into Applications.
+            - Developer ID-signed and notarized. Open the DMG and drag **Lubricant Science** into Applications.
             - When you use an existing project in place, allow access to its folder if macOS asks.
 
             **Windows** — `…_x64-setup.exe` (start here) · `…_x64_en-US.msi` (IT-managed deployment only)
