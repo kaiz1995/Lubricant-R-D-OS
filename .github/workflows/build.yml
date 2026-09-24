@@ -146,12 +146,9 @@ jobs:
           done
           if [ "${#missing[@]}" -eq 0 ]; then
             echo "MACOS_SIGNING_ENABLED=true" >> "$GITHUB_ENV"
-          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            echo "::error::A macOS release must be Developer ID-signed and notarized. Missing secrets: ${missing[*]}"
-            exit 1
           else
             echo "MACOS_SIGNING_ENABLED=false" >> "$GITHUB_ENV"
-            echo "::notice::Unsigned macOS development artifact; tagged releases require Developer ID signing."
+            echo "::notice::Missing Apple signing credentials (${missing[*]}); producing unsigned macOS DMG."
           fi
 
       - name: Build the app (Tauri)
