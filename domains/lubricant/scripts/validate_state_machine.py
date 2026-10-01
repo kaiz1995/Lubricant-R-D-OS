@@ -75,6 +75,30 @@ def lifecycle_error(kind: object, gate: object, before: dict, after: dict) -> st
     return None
 
 
+def go_project_type(event: dict, before: dict) -> object:
+    """Read the optional declared workflow. Event level wins, then the before state."""
+    declared = event.get("project_type")
+    return declared if declared is not None else before.get("project_type")
+
+
+def advances_one_routed_step(event: dict, before: dict, after: dict) -> bool:
+    """True when after.stage is the next stage of the declared project_type route.
+
+    The contract publishes one routing list (`type_routes`) shared with the router,
+    so a GO step is legal only when it is adjacent *inside that route*. The global
+    stage order (where the router's differentiated workflows skip stages) is only a
+    fallback for state that declares no routed project_type.
+    """
+    project_type = go_project_type(event, before)
+    route = CONTRACT["type_routes"].get(project_type) if isinstance(project_type, str) else None
+    if route is None:
+        stages = CONTRACT["stages"]
+        return stages.index(after["stage"]) == stages.index(before["stage"]) + 1
+    if before["stage"] not in route or after["stage"] not in route:
+        return False
+    return route.index(after["stage"]) == route.index(before["stage"]) + 1
+
+
 def validate(event: object) -> str | None:
     if not isinstance(event, dict):
         return "event must be an object"
@@ -101,7 +125,7 @@ def validate(event: object) -> str | None:
     immutable = ("project_id", "decision_question", "evidence")
 
     if kind == "GO":
-        if after_index != before_index + 1 or after["stage"] in ("FROZEN", "CLOSED"):
+        if after["stage"] in ("FROZEN", "CLOSED") or not advances_one_routed_step(event, before, after):
             return "GO must advance exactly one stage"
         if before["status"] == "HOLD":
             if not retains_evidence(before, after) or len(after["evidence"]) <= len(before["evidence"]):

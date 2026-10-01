@@ -134,5 +134,23 @@
       "before": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701"] },
       "after": { "project_id": "WGO-001", "stage": "CLOSED", "status": "CLOSED", "version": 6, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] }
     }
+  },
+  {
+    "name": "go-cost-down-cannot-take-a-stage-outside-its-route", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "COST_DOWN",
+      "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a cost-down route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-C-001"] },
+      "after": { "project_id": "WGO-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a cost-down route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-C-001"] }
+    }
+  },
+  {
+    "name": "go-new-product-cannot-skip-a-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "NEW_PRODUCT",
+      "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a new-product route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] },
+      "after": { "project_id": "WGO-001", "stage": "FAILURE_CTQ_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a new-product route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] }
+    }
   }
 ]
