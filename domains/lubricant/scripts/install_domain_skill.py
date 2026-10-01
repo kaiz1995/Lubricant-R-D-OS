@@ -31,6 +31,19 @@ SKILLS = {
 ENGINE_ROOT = PACK_ROOT / "domains" / "lubricant"
 ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "optimization"}
 
+# Pack-level shared modules deployed beside a skill's own scripts so the deployed
+# preflight resolves them without reaching back into the pack tree. Single source
+# of truth lives in PACK_ROOT/scripts; this only declares which skills consume
+# which module (WP-04a doe-design will reuse constraint_role.py).
+SHARED_MODULE_ROOT = PACK_ROOT / "scripts"
+SHARED_MODULES = {
+    "formulation-design": ("constraint_role.py",),
+}
+
+
+def shared_modules_for(skill: str) -> tuple[Path, ...]:
+    return tuple(SHARED_MODULE_ROOT / name for name in SHARED_MODULES.get(skill, ()))
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -57,6 +70,7 @@ def main() -> int:
             args.target,
             engine_root=engine_root,
             workspace_root=args.workspace_root,
+            shared_modules=shared_modules_for(args.skill),
         )
     except (ValueError, OSError) as error:
         print(f"FAIL: {error}")

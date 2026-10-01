@@ -15,11 +15,26 @@ from design_space_policy import has_gap
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 
-# Shared role resolver lives in the pack-level scripts/ tree so the Stage 4
-# preflight and the WP-04a DOE bridge preflight resolve roles identically.
-PACK_SCRIPTS = SKILL_ROOT.parents[1] / "scripts"
-if str(PACK_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(PACK_SCRIPTS))
+
+def _ensure_constraint_role_importable() -> None:
+    """Make the shared role resolver importable in both layouts.
+
+    Repository layout: the module lives in the pack-level ``scripts/`` tree.
+    Deployed layout: the installer copies it beside the skill's own scripts, so
+    it is already on the script directory's path. Probe both candidates and pin
+    the first that actually contains the file; never inline a second copy.
+    """
+    for candidate in (SKILL_ROOT / "scripts", SKILL_ROOT.parents[1] / "scripts"):
+        if (candidate / "constraint_role.py").is_file():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            return
+    raise ImportError(
+        "constraint_role.py not found beside the skill scripts or in the pack scripts/ directory"
+    )
+
+
+_ensure_constraint_role_importable()
 
 from constraint_role import ConstraintRoleError, describe_constraint_role, resolve_constraint_role  # noqa: E402
 

@@ -338,6 +338,29 @@ def main() -> int:
         assert hold_result.returncode != 0, hold_result.stdout
         assert "design_space_artifact must have decision GO" in hold_result.stdout, hold_result.stdout
 
+        # Deployed copies (installed to a temp target, never the user's real skills
+        # directory) must run their preflight standalone against a valid input.
+        sys.path.insert(0, str(ROOT))
+        from integrations.open_science import install_skill
+        from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, shared_modules_for
+
+        deploy_ws = workspace / "deploy"
+        deploy_target = deploy_ws / ".opencode" / "skills"
+        deploy_target.mkdir(parents=True)
+        for skill in ("formulation-design", "process-definition"):
+            install_skill(
+                ROOT / "skills" / skill, ROOT / "schemas", SKILLS[skill], deploy_target,
+                engine_root=ENGINE_ROOT if skill in ENGINE_SKILLS else None,
+                workspace_root=deploy_ws, shared_modules=shared_modules_for(skill),
+            )
+        deployed_formulation = deploy_target / "formulation-design"
+        deployed_process = deploy_target / "process-definition"
+        assert (deployed_formulation / "scripts" / "constraint_role.py").is_file()
+        deployed_design = run(deployed_formulation / "scripts" / "preflight_formulation_design.py", explicit_path)
+        assert deployed_design.returncode == 0, deployed_design.stdout + deployed_design.stderr
+        deployed_process_result = run(deployed_process / "scripts" / "preflight_process_definition.py", valid_process_path)
+        assert deployed_process_result.returncode == 0, deployed_process_result.stdout + deployed_process_result.stderr
+
     # Continuous regression: the 11 existing formulation-design fixtures are unchanged.
     fixture_dir = FIXTURES / "formulation-design"
     fixture_names = sorted(path.name for path in fixture_dir.glob("*.json"))

@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from integrations.open_science import install_skill  # noqa: E402
-from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS  # noqa: E402
+from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, shared_modules_for  # noqa: E402
 
 
 FORBIDDEN_CONCLUSIONS = ("METHOD_QUALIFIED", "KNOWN_GOOD", "KNOWN_BAD", "PHYSICAL_RELEASE_APPROVED")
@@ -83,6 +83,7 @@ def run_preflight(pack_root: Path = ROOT) -> dict:
                     target,
                     engine_root=ENGINE_ROOT if skill in ENGINE_SKILLS else None,
                     workspace_root=workspace,
+                    shared_modules=shared_modules_for(skill),
                 )
             checks.append({"check": "install:all-skills", "status": "PASS", "detail": f"{len(SKILLS)} skills"})
         except (ValueError, OSError) as exc:

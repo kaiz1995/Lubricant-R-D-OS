@@ -122,6 +122,7 @@ def _build_staging_tree(
     schema_names: tuple[str, ...],
     target: Path,
     engine_root: Path | None,
+    shared_modules: tuple[Path, ...],
 ) -> tuple[Path, set[Path]]:
     staging = Path(tempfile.mkdtemp(prefix=f".{source_skill.name}.staging-", dir=target))
     expected = non_cached_files(source_skill) | {Path("references") / name for name in schema_names}
@@ -139,6 +140,18 @@ def _build_staging_tree(
             shutil.copytree(engine_root, engine_target, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
             expected |= {Path("engine") / engine_root.name / relative for relative in non_cached_files(engine_root)}
             _verify_tree(engine_root, engine_target, "engine")
+        if shared_modules:
+            # Pack-level shared modules (single source, e.g. scripts/constraint_role.py)
+            # are deployed beside the skill scripts so a deployed preflight resolves
+            # them without reaching back into the pack tree.
+            scripts = staging / "scripts"
+            scripts.mkdir(exist_ok=True)
+            for module in shared_modules:
+                deployed_module = scripts / module.name
+                shutil.copy2(module, deployed_module)
+                if digest(module) != digest(deployed_module):
+                    raise OSError(f"deployed shared module hash mismatch: {module.name}")
+                expected |= {Path("scripts") / module.name}
         if non_cached_files(staging) != expected:
             raise OSError("deployed non-cached file set does not match expected files")
         _verify_tree(source_skill, staging, "skill")
@@ -155,8 +168,9 @@ def install_skill(
     target: Path,
     engine_root: Path | None = None,
     workspace_root: Path | None = None,
+    shared_modules: tuple[Path, ...] = (),
 ) -> Path:
-    """Copy one skill and its canonical schemas into an explicit target."""
+    """Copy one skill, its canonical schemas, and any pack-level shared modules into an explicit target."""
     target = validate_install_target(target, workspace_root)
     if not source_skill.is_dir() or not (source_skill / "SKILL.md").is_file():
         raise ValueError(f"skill source is missing SKILL.md: {source_skill}")
@@ -169,11 +183,15 @@ def install_skill(
         if not (schema_root / name).is_file():
             raise ValueError(f"canonical schema is missing: {schema_root / name}")
 
+    for module in shared_modules:
+        if not module.is_file():
+            raise ValueError(f"shared module is missing: {module}")
+
     if engine_root is not None:
         if not engine_root.is_dir() or not (engine_root / "compute" / "__main__.py").is_file():
             raise ValueError(f"engine root is missing the compute package: {engine_root}")
 
-    staging, expected = _build_staging_tree(source_skill, schema_root, schema_names, target, engine_root)
+    staging, expected = _build_staging_tree(source_skill, schema_root, schema_names, target, engine_root, shared_modules)
     if destination.exists():
         if has_symlink_descendant(destination):
             shutil.rmtree(staging, ignore_errors=True)

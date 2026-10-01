@@ -14,7 +14,13 @@ sys.path.insert(0, str(ROOT))
 
 import integrations.open_science as open_science
 from integrations.open_science import digest, install_skill, rollback_skill
-from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS
+from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, shared_modules_for
+
+
+PREFLIGHT_BY_SKILL = {
+    "formulation-design": "preflight_formulation_design.py",
+    "process-definition": "preflight_process_definition.py",
+}
 
 
 def cached(path: Path) -> bool:
@@ -44,7 +50,11 @@ def main() -> int:
         for skill, schemas in SKILLS.items():
             source = ROOT / "skills" / skill
             engine_root = ENGINE_ROOT if skill in ENGINE_SKILLS else None
-            destination = install_skill(source, ROOT / "schemas", schemas, target, engine_root=engine_root, workspace_root=workspace)
+            destination = install_skill(
+                source, ROOT / "schemas", schemas, target,
+                engine_root=engine_root, workspace_root=workspace,
+                shared_modules=shared_modules_for(skill),
+            )
             for file in source.rglob("*"):
                 relative = file.relative_to(source)
                 if file.is_file() and not cached(relative):
@@ -61,6 +71,24 @@ def main() -> int:
                         assert deployed.is_file() and digest(file) == digest(deployed), relative
             assert not list(destination.rglob("__pycache__"))
             assert not list(destination.rglob("*.pyc"))
+
+        # Deployed copies must run their own preflight standalone: no import may
+        # reach back into the pack tree (this is the WP-01 shared-module regression).
+        probe = workspace / "probe-input.json"
+        probe.write_text("{}", encoding="utf-8")
+        for skill, preflight_name in PREFLIGHT_BY_SKILL.items():
+            deployed_preflight = target / skill / "scripts" / preflight_name
+            assert deployed_preflight.is_file(), deployed_preflight
+            result = subprocess.run(
+                [sys.executable, "-B", str(deployed_preflight), str(probe)],
+                cwd=deployed_preflight.parent, capture_output=True, text=True,
+            )
+            assert "ImportError" not in result.stderr and "ModuleNotFoundError" not in result.stderr and "Traceback" not in result.stderr, result.stderr
+            assert result.stdout.startswith("HOLD:"), result.stdout
+
+        # The shared module is deployed beside the consuming skill's scripts (single source).
+        for module in shared_modules_for("formulation-design"):
+            assert (target / "formulation-design" / "scripts" / module.name).is_file(), module
 
         stale_target = Path(temporary) / "stale-workspace" / ".opencode" / "skills"
         stale_destination = stale_target / "project-definition"
