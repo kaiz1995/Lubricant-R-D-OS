@@ -3,6 +3,12 @@
 Pure stdlib. Reads one JSON object with project_state + requested_stage and
 prints ALLOW (exit 0) or DENY/HOLD with reasons (exit 1). Never writes
 artifacts and never performs business calculation.
+
+The differentiated per-project_type stage chains are NOT hardcoded here: they
+are read from the shared contract `contracts/state-machine.json` (`type_routes`),
+the same list `scripts/validate_state_machine.py` uses for its GO adjacency
+assertion. One list, two consumers, so the router and the state machine cannot
+drift apart.
 """
 
 from __future__ import annotations
@@ -12,7 +18,29 @@ import sys
 from pathlib import Path
 
 
-# Frozen planned order: skill -> target stage it produces.
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+CONTRACT_ERRORS: list[str] = []
+
+
+def load_contract() -> dict | None:
+    """Read the shared state-machine contract from the pack or the deployed skill."""
+    for candidate in (SKILL_ROOT.parents[1] / "contracts", SKILL_ROOT / "references"):
+        path = candidate / "state-machine.json"
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as error:
+                CONTRACT_ERRORS.append(f"{path}: {error}")
+                return None
+    CONTRACT_ERRORS.append("state-machine.json is absent from the pack contracts/ and deployed references/ directories")
+    return None
+
+
+CONTRACT = load_contract()
+
+# Frozen planned order: skill -> target stage it produces. This is the router's
+# own fact (which skill materialises a stage); the *workflow* order per project
+# type comes from the contract.
 ROUTE_TABLE = (
     ("project-definition", "PROJECT_DEFINED"),
     ("duty-definition", "DUTY_DEFINED"),
@@ -24,42 +52,27 @@ ROUTE_TABLE = (
     ("experiment-import", "EXPERIMENT_RUNNING"),
     ("statistical-analysis", "MODEL_BUILT"),
     ("optimization", "OPTIMIZED"),
+    ("process-scale-up", "PROCESS_WINDOW_DEFINED"),
     ("gate-review", "VERIFIED"),
 )
 
 STAGES = tuple(stage for _, stage in ROUTE_TABLE)
 SKILL_FOR_STAGE = dict((stage, skill) for skill, stage in ROUTE_TABLE)
-NEXT_STAGE = dict(zip(STAGES, STAGES[1:]))
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
-KNOWN_STAGES = (START_STAGE, *STAGES)
-# Differentiated workflows for 5 project types
-TYPE_ROUTES = {
-    "NEW_PRODUCT": STAGES,
-    "IMPROVEMENT": (
-        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
-        "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
-        "MODEL_BUILT", "OPTIMIZED", "VERIFIED"
-    ),
-    "COST_DOWN": (
-        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "DESIGN_SPACE_DEFINED",
-        "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED", "VERIFIED"
-    ),
-    "CUSTOMIZATION": (
-        "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
-        "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
-        "VERIFIED"
-    ),
-    "EXPLORATION": (
-        "PROJECT_DEFINED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED",
-        "EXPERIMENT_RUNNING", "MODEL_BUILT", "VERIFIED"
-    ),
-}
 
+# Differentiated workflows for the 5 project types, published by the contract.
+TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
+# Stage universe = the contract's 15 stages. A contract that cannot be read
+# leaves the universe empty so decide() denies every request instead of guessing.
+KNOWN_STAGES = tuple(CONTRACT["stages"]) if CONTRACT else ()
+NEXT_STAGE = dict(zip(KNOWN_STAGES, KNOWN_STAGES[1:]))
 
 
 def decide(project_state: object, requested_stage: str) -> dict:
     """Return {'decision': 'ALLOW'|'DENY'|'HOLD', 'reason': str, 'skill': str|None}."""
+    if CONTRACT is None:
+        return {"decision": "DENY", "reason": f"routing contract unavailable: {'; '.join(CONTRACT_ERRORS)}", "skill": None}
     if not isinstance(project_state, dict):
         return {"decision": "DENY", "reason": "project_state must be a JSON object", "skill": None}
     if not isinstance(requested_stage, str) or requested_stage not in KNOWN_STAGES:
@@ -78,19 +91,19 @@ def decide(project_state: object, requested_stage: str) -> dict:
         return {"decision": "DENY", "reason": f"project status {status} is terminal and cannot advance", "skill": None}
 
     ptype = project_state.get("project_type")
-    # A declared project_type must be one this router knows. The pack documents
+    # A declared project_type must be one the contract routes. The pack documents
     # exactly five workflows (README §5, project-definition/SKILL.md) and
     # `project.schema.json` enumerates the same five, so an unrouted value is a
     # contract violation — DENY it rather than silently handing it the full
     # NEW_PRODUCT chain. A missing project_type stays on the full chain for
     # pre-existing state.
-    if ptype is not None and ptype not in TYPE_ROUTES:
+    if ptype is not None and (not isinstance(ptype, str) or ptype not in TYPE_ROUTES):
         return {
             "decision": "DENY",
-            "reason": f"project_type {ptype!r} has no routed stage chain; define TYPE_ROUTES[{ptype!r}] before advancing",
+            "reason": f"project_type {ptype!r} has no routed stage chain; publish type_routes[{ptype!r}] in contracts/state-machine.json before advancing",
             "skill": None,
         }
-    route = TYPE_ROUTES.get(ptype, STAGES)
+    route = TYPE_ROUTES.get(ptype, STAGES) if isinstance(ptype, str) else STAGES
 
     if current == START_STAGE:
         target_stage = "PROJECT_DEFINED"

@@ -40,9 +40,22 @@ SHARED_MODULES = {
     "formulation-design": ("constraint_role.py",),
 }
 
+# Pack-level language-agnostic contracts deployed into a skill's references/ so a
+# deployed router resolves them without reaching back into the pack tree. Single
+# source of truth stays PACK_ROOT/contracts; lubricant-rd-agent's route_step.py
+# reads `type_routes` from it (WP-02).
+CONTRACT_ROOT = PACK_ROOT / "contracts"
+CONTRACTS = {
+    "lubricant-rd-agent": ("state-machine.json",),
+}
+
 
 def shared_modules_for(skill: str) -> tuple[Path, ...]:
     return tuple(SHARED_MODULE_ROOT / name for name in SHARED_MODULES.get(skill, ()))
+
+
+def contracts_for(skill: str) -> tuple[Path, ...]:
+    return tuple(CONTRACT_ROOT / name for name in CONTRACTS.get(skill, ()))
 
 
 def main() -> int:
@@ -71,6 +84,7 @@ def main() -> int:
             engine_root=engine_root,
             workspace_root=args.workspace_root,
             shared_modules=shared_modules_for(args.skill),
+            contract_files=contracts_for(args.skill),
         )
     except (ValueError, OSError) as error:
         print(f"FAIL: {error}")

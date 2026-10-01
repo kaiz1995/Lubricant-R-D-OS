@@ -114,11 +114,41 @@ def main() -> int:
     result = router.decide(physical_state("PROJECT_DEFINED"), "DUTY_DEFINED")
     assert result["decision"] == "ALLOW" and result["skill"] == "duty-definition", result
 
+    # 11. The differentiated routes are published by the shared contract (the
+    #     same list validate_state_machine.py uses for GO adjacency), and the
+    #     router's own skill table agrees with the contract's NEW_PRODUCT route.
+    contract = json.loads((ROOT / "contracts" / "state-machine.json").read_text(encoding="utf-8"))
+    assert router.CONTRACT is not None, router.CONTRACT_ERRORS
+    assert router.TYPE_ROUTES == contract["type_routes"], router.TYPE_ROUTES
+    assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.STAGES), router.STAGES
+    assert tuple(router.KNOWN_STAGES) == tuple(contract["stages"]), router.KNOWN_STAGES
+    assert len(router.KNOWN_STAGES) == 15, router.KNOWN_STAGES
+    assert router.STAGES == ROUTE_TABLE_REF, router.STAGES
+    assert router.SKILL_FOR_STAGE["PROCESS_WINDOW_DEFINED"] == "process-scale-up", router.SKILL_FOR_STAGE
+    assert router.NEXT_STAGE["OPTIMIZED"] == "PROCESS_WINDOW_DEFINED", router.NEXT_STAGE
+
+    # 12. OPTIMIZED now advances to PROCESS_WINDOW_DEFINED, then to VERIFIED.
+    result = router.decide(physical_state("OPTIMIZED"), "PROCESS_WINDOW_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "process-scale-up", result
+    result = router.decide(physical_state("PROCESS_WINDOW_DEFINED"), "VERIFIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "gate-review", result
+
+    # 13. Route-aware jumps: the same request is legal in COST_DOWN and illegal in
+    #     NEW_PRODUCT, because the chains differ per project type.
+    result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="COST_DOWN"), "OPTIMIZED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "optimization", result
+    result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="NEW_PRODUCT"), "OPTIMIZED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+
+    # 14. A project type whose chain has no process-window stage cannot be handed it.
+    result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="CUSTOMIZATION"), "PROCESS_WINDOW_DEFINED")
+    assert result["decision"] == "DENY" and "VERIFIED" in result["reason"], result
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages)")
     return 0
 
 
-ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED")
+ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED")
 
 
 if __name__ == "__main__":

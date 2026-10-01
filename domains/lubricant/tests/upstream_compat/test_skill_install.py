@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 import integrations.open_science as open_science
 from integrations.open_science import digest, install_skill, rollback_skill
-from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, shared_modules_for
+from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, contracts_for, shared_modules_for
 
 
 PREFLIGHT_BY_SKILL = {
@@ -54,6 +55,7 @@ def main() -> int:
                 source, ROOT / "schemas", schemas, target,
                 engine_root=engine_root, workspace_root=workspace,
                 shared_modules=shared_modules_for(skill),
+                contract_files=contracts_for(skill),
             )
             for file in source.rglob("*"):
                 relative = file.relative_to(source)
@@ -89,6 +91,28 @@ def main() -> int:
         # The shared module is deployed beside the consuming skill's scripts (single source).
         for module in shared_modules_for("formulation-design"):
             assert (target / "formulation-design" / "scripts" / module.name).is_file(), module
+
+        # The shared state-machine contract is deployed inside the consuming skill's
+        # references/ (single source), so the deployed router resolves it locally.
+        for contract in contracts_for("lubricant-rd-agent"):
+            deployed_contract = target / "lubricant-rd-agent" / "references" / contract.name
+            assert deployed_contract.is_file() and digest(contract) == digest(deployed_contract), contract
+        route_input = workspace / "route-input.json"
+        route_input.write_text(json.dumps({
+            "project_state": {
+                "project_id": "WGO-DOE-001", "stage": "OPTIMIZED", "status": "ACTIVE",
+                "evidence_scope": "PHYSICAL", "gate_status": "GO",
+                "evidence_gaps": [], "unsatisfied_conditions": [],
+            },
+            "requested_stage": "PROCESS_WINDOW_DEFINED",
+        }), encoding="utf-8")
+        deployed_router = target / "lubricant-rd-agent" / "scripts" / "route_step.py"
+        routed = subprocess.run(
+            [sys.executable, "-B", str(deployed_router), str(route_input)],
+            cwd=deployed_router.parent, capture_output=True, text=True,
+        )
+        assert routed.returncode == 0 and routed.stdout.startswith("ALLOW") and "process-scale-up" in routed.stdout, (routed.returncode, routed.stdout, routed.stderr)
+        assert "Traceback" not in routed.stderr and "ImportError" not in routed.stderr, routed.stderr
 
         stale_target = Path(temporary) / "stale-workspace" / ".opencode" / "skills"
         stale_destination = stale_target / "project-definition"

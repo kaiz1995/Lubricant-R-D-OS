@@ -123,6 +123,7 @@ def _build_staging_tree(
     target: Path,
     engine_root: Path | None,
     shared_modules: tuple[Path, ...],
+    contract_files: tuple[Path, ...],
 ) -> tuple[Path, set[Path]]:
     staging = Path(tempfile.mkdtemp(prefix=f".{source_skill.name}.staging-", dir=target))
     expected = non_cached_files(source_skill) | {Path("references") / name for name in schema_names}
@@ -135,6 +136,14 @@ def _build_staging_tree(
             shutil.copy2(canonical, deployed)
             if digest(canonical) != digest(deployed):
                 raise OSError(f"deployed schema hash mismatch: {name}")
+        for contract in contract_files:
+            # Pack-level contracts travel with the skill as deployed reference
+            # material, so a deployed router does not reach back into the pack.
+            deployed_contract = references / contract.name
+            shutil.copy2(contract, deployed_contract)
+            if digest(contract) != digest(deployed_contract):
+                raise OSError(f"deployed contract hash mismatch: {contract.name}")
+            expected |= {Path("references") / contract.name}
         if engine_root is not None:
             engine_target = staging / "engine" / engine_root.name
             shutil.copytree(engine_root, engine_target, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -169,8 +178,9 @@ def install_skill(
     engine_root: Path | None = None,
     workspace_root: Path | None = None,
     shared_modules: tuple[Path, ...] = (),
+    contract_files: tuple[Path, ...] = (),
 ) -> Path:
-    """Copy one skill, its canonical schemas, and any pack-level shared modules into an explicit target."""
+    """Copy one skill, its canonical schemas, any pack-level shared modules, and pack contracts into an explicit target."""
     target = validate_install_target(target, workspace_root)
     if not source_skill.is_dir() or not (source_skill / "SKILL.md").is_file():
         raise ValueError(f"skill source is missing SKILL.md: {source_skill}")
@@ -187,11 +197,15 @@ def install_skill(
         if not module.is_file():
             raise ValueError(f"shared module is missing: {module}")
 
+    for contract in contract_files:
+        if not contract.is_file():
+            raise ValueError(f"pack contract is missing: {contract}")
+
     if engine_root is not None:
         if not engine_root.is_dir() or not (engine_root / "compute" / "__main__.py").is_file():
             raise ValueError(f"engine root is missing the compute package: {engine_root}")
 
-    staging, expected = _build_staging_tree(source_skill, schema_root, schema_names, target, engine_root, shared_modules)
+    staging, expected = _build_staging_tree(source_skill, schema_root, schema_names, target, engine_root, shared_modules, contract_files)
     if destination.exists():
         if has_symlink_descendant(destination):
             shutil.rmtree(staging, ignore_errors=True)
