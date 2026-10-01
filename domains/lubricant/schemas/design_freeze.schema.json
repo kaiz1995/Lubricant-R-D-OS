@@ -22,6 +22,7 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
+            "description": "MANUFACTURABILITY_ACCEPTABLE must cite the fixed process-window artifact as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record.",
             "properties": {
               "condition_id": {
                 "enum": [
@@ -39,7 +40,14 @@
               "evidence_reference": { "type": "string", "minLength": 1 }
             },
             "required": ["condition_id", "satisfied", "evidence_reference"],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "if": {
+              "properties": { "condition_id": { "const": "MANUFACTURABILITY_ACCEPTABLE" } },
+              "required": ["condition_id"]
+            },
+            "then": {
+              "properties": { "evidence_reference": { "pattern": "^PROCESS-WINDOW:" } }
+            }
           }
         }
       },

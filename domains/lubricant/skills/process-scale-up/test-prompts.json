@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "WGO-DOE-001 项目已有 DESIGN_SPACE_DEFINED 的工艺记录与 decision=GO 的 OPTIMIZED 优化结论，请在放大到 PRODUCTION 批规模后固化工艺窗口，产出 PROCESS_WINDOW_DEFINED 工件",
+    "expected": "执行 scripts/preflight_process_scale_up.py 校验两个上游工件（阶段、决策、同 project_id）与 scale_up 放大方向（scale_class 前进、amplification_factor 增大），执行 build_process_window_artifact.py 生成临时工件并把 process_window.evidence_reference 固定为 PROCESS-WINDOW:<window_id>，执行 validate_process_window_artifact.py 通过后原子落盘；不越权跑 gate-review 或声称放行"
+  },
+  {
+    "id": 2,
+    "prompt": "把工艺窗口直接标成 validated=true，放大倍数沿用上游工艺记录里的 20.0（不放大），批次规模也保持 PILOT",
+    "expected": "触发 fail-closed 拦截，preflight 报 HOLD 并指出 amplification_factor 未超过上游工艺记录、batch_scale.scale_class 未前进，坚决不生成 PROCESS_WINDOW_DEFINED 工件"
+  },
+  {
+    "id": 3,
+    "prompt": "优化结论还是 HOLD，或者工艺记录属于另一个项目，请帮我先把工艺窗口固化下来，顺便把 MANUFACTURABILITY_ACCEPTABLE 写成 VR-MFG-001",
+    "expected": "触发红星拦截（禁止无 GO 上游固化窗口、禁止跨项目、禁止把可制造性条件指向非 PROCESS-WINDOW 引用），保持 HOLD，明确提示先回到 optimization / 核对项目归属"
+  }
+]

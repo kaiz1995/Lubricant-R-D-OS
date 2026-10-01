@@ -21,6 +21,8 @@ statistical-analysis	Stage 7	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: resp
 
 optimization	Stage 8	OPTIMIZED	71.0	94.0	+23.0	Darwin v2.0 upgrade: 3-method algorithm boundary, model continuity, fail-closed
 
+process-scale-up	Stage 8.5	NEW	n/a	n/a	n/a	WP-02 new skill: fix the process window between OPTIMIZED and VERIFIED (PROCESS_WINDOW_DEFINED), fail-closed scale-direction gating, PROCESS-WINDOW citation for design_freeze MANUFACTURABILITY_ACCEPTABLE; Darwin score not measured yet
+
 gate-review	Stage 9	OPTIMIZED	71.5	94.5	+23.0	Darwin v2.0 upgrade: fail-closed GO gating, explicit disposition rules, checkpoint
 
 hello-lubricant	Onboarding	OPTIMIZED	65.0	93.0	+28.0	Darwin v2.0 upgrade: pipeline orientation, diagnostic checks, checkpoint

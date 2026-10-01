@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/process.schema.json",
   "title": "Lubricant grease manufacturing process",
-  "description": "Process object for grease manufacturing. Process is an independent design dimension from the formulation; every parameter carries bounds plus source and evidence_id so a parameter can never be declared without provenance. Stage is intentionally not fixed here (WP-02 introduces PROCESS_WINDOW_DEFINED); the inherited artifact contract currently places this object alongside DESIGN_SPACE_DEFINED.",
+  "description": "Process object for grease manufacturing. Process is an independent design dimension from the formulation; every parameter carries bounds plus source and evidence_id so a parameter can never be declared without provenance. Stage is intentionally not fixed here: the same contract describes the DESIGN_SPACE_DEFINED process record and the PROCESS_WINDOW_DEFINED fixed window (WP-02).",
   "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
   "type": "object",
   "properties": {
@@ -29,7 +29,12 @@
       "properties": {
         "window_id": { "type": "string", "minLength": 1 },
         "basis": { "type": "string", "minLength": 1 },
-        "validated": { "type": "boolean" }
+        "validated": { "type": "boolean" },
+        "evidence_reference": {
+          "description": "Optional in WP-01 records; REQUIRED on a PROCESS_WINDOW_DEFINED fixed window as PROCESS-WINDOW:<window_id>, the reference a design freeze must cite for MANUFACTURABILITY_ACCEPTABLE.",
+          "type": "string",
+          "pattern": "^PROCESS-WINDOW:"
+        }
       },
       "required": ["window_id", "basis", "validated"],
       "additionalProperties": false

@@ -73,7 +73,12 @@ def artifact(**overrides: object) -> dict:
 
 def freeze_conditions() -> list[dict]:
     return [
-        {"condition_id": condition, "satisfied": True, "evidence_reference": f"VR-{condition}-001"}
+        {
+            "condition_id": condition,
+            "satisfied": True,
+            # MANUFACTURABILITY_ACCEPTABLE must cite the fixed process window.
+            "evidence_reference": "PROCESS-WINDOW:PW-001" if condition == "MANUFACTURABILITY_ACCEPTABLE" else f"VR-{condition}-001",
+        }
         for condition in sorted(FREEZE_CONDITIONS)
     ]
 
@@ -208,6 +213,15 @@ def main() -> int:
     unqualified = knowledge()
     unqualified["knowledge_assets"]["evidence_package"]["qualification"] = "PROVISIONAL"
     assert errors(knowledge_validator, unqualified), "CLOSED_KNOWLEDGE without QUALIFIED must be rejected"
+
+    # MANUFACTURABILITY_ACCEPTABLE must cite the fixed process window as
+    # PROCESS-WINDOW:<window_id>, never a free-form verification record.
+    unfixed_window = design_freeze(freeze_record=freeze_record())
+    for item in unfixed_window["freeze_record"]["freeze_conditions"]:
+        if item["condition_id"] == "MANUFACTURABILITY_ACCEPTABLE":
+            item["evidence_reference"] = "VR-MFG-001"
+    window_errors = errors(freeze_validator, unfixed_window)
+    assert any("PROCESS-WINDOW" in message for message in window_errors), window_errors
 
     print("PASS: design_freeze / knowledge_asset contracts")
     return 0

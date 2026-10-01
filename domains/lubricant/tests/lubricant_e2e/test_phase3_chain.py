@@ -46,6 +46,91 @@ def rewrite_upstream(input_value: dict, paths: dict[str, Path]) -> None:
         input_value[key] = str(path)
 
 
+PROCESS_STEPS = [
+    ("P-SAP-TEMP", "saponification temperature", 90, 110, "degC", "SAPONIFICATION"),
+    ("P-DEH-TEMP", "dehydration temperature", 100, 130, "degC", "DEHYDRATION"),
+    ("P-PHI-TEMP", "phase inversion temperature", 150, 180, "degC", "PHASE_INVERSION"),
+    ("P-COOL-RATE", "cooling rate", 1, 5, "degC/min", "DILUTION_COOLING"),
+    ("P-MIL-GAP", "mill gap", 0.05, 0.3, "mm", "MILLING"),
+    ("P-HOM-PRES", "homogenization pressure", 5, 20, "MPa", "HOMOGENIZATION"),
+    ("P-VAC-PRES", "vacuum pressure", 1, 10, "kPa", "VACUUM_DEAERATION"),
+    ("P-FILL-TEMP", "filling temperature", 70, 90, "degC", "FILLING"),
+]
+SIMULATED = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
+
+
+def process_input(design_space_path: Path) -> dict:
+    """The DESIGN_SPACE_DEFINED process record for the WGO-DOE-001 chain."""
+    steps = [
+        {
+            "step_id": f"ST-{index + 1:03d}", "step_type": step_type,
+            "parameters": [{
+                "parameter_id": parameter_id, "parameter_name": name,
+                "lower_bound": lower, "upper_bound": upper, "unit": unit,
+                "source": SIMULATED, "evidence_id": f"EV-PROC-{index + 1:03d}", "status": "ASSUMED",
+            }],
+        }
+        for index, (parameter_id, name, lower, upper, unit, step_type) in enumerate(PROCESS_STEPS)
+    ]
+    return {
+        "design_space_artifact": str(design_space_path),
+        "process": {
+            "process_id": "PROC-WGO-DOE-001",
+            "project_reference": PROJECT_ID,
+            "process_step": steps,
+            "batch_scale": {
+                "scale_class": "PILOT",
+                "batch_size": {
+                    "value": 50, "unit": "kg", "source": SIMULATED, "method_version": "scale-v1",
+                    "material_batch": "BATCH-SYN-001", "formula_version": "v0.1",
+                },
+            },
+            "amplification_factor": 20.0,
+            "process_window": {"window_id": "PW-WGO-DOE-001", "basis": f"{SIMULATED}: pilot window", "validated": False},
+            "control_points": [{
+                "control_point_id": "CP-001", "parameter_id": "P-PHI-TEMP", "control_type": "IN_PROCESS",
+                "criterion": "Hold phase inversion within the supplied window",
+                "source": SIMULATED, "evidence_id": "EV-PROC-003",
+            }],
+            "cpk": {"value": 1.33, "ctq_reference": "CTQ-001", "sample_size": 30},
+            "material_batch_reference": "BATCH-SYN-001",
+            "factor_role": "SUB_PLOT",
+            "evidence_scope": "PHYSICAL",
+            "evidence": [{
+                "evidence_id": "EV-PROC-001", "statement": f"{SIMULATED}: pilot process bounds",
+                "source": SIMULATED, "status": "OBSERVED",
+            }],
+        },
+    }
+
+
+def scale_up_input(process_path: Path, optimization_path: Path, optimization_id: str) -> dict:
+    """The pilot-to-production window fixing input for the WGO-DOE-001 chain."""
+    return {
+        "process_artifact": str(process_path),
+        "optimization_artifact": str(optimization_path),
+        "scale_up": {
+            "window_id": "PW-WGO-DOE-001-PROD",
+            "basis": f"{SIMULATED}: pilot-to-production amplification basis",
+            "amplification_factor": 200.0,
+            "batch_scale": {
+                "scale_class": "PRODUCTION",
+                "batch_size": {
+                    "value": 500, "unit": "kg", "source": SIMULATED, "method_version": "scale-v2",
+                    "material_batch": "BATCH-PROD-001", "formula_version": "v0.2",
+                },
+            },
+            "evidence_scope": "PHYSICAL",
+            "evidence": [{
+                "evidence_id": "EV-SCALE-001",
+                "statement": f"{SIMULATED}: amplification run reproduced the window at production scale.",
+                "source": f"{SIMULATED} {optimization_id} + amplification run record AR-001",
+                "status": "OBSERVED",
+            }],
+        },
+    }
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
         workspace = Path(temporary)
@@ -102,6 +187,14 @@ def main() -> int:
                 write_json(path, simulated)
             upstream_paths[key] = path
 
+        # Design-space companion (WP-01): the process record the window is fixed from.
+        process_input_path, process_path = inputs / "process-input.json", artifacts / "process.json"
+        write_json(process_input_path, process_input(upstream_paths["design_space_artifact"]))
+        run(ROOT / "skills/process-definition/scripts/preflight_process_definition.py", process_input_path)
+        run(ROOT / "skills/process-definition/scripts/build_process_artifact.py", process_input_path, process_path)
+        run(ROOT / "skills/process-definition/scripts/validate_process_artifact.py", process_path)
+        assert_artifact(process_path, "process", "DESIGN_SPACE_DEFINED")
+
         analysis_input = read_json(FIXTURES / "statistical-analysis" / "valid-input.synthetic.json")
         rewrite_upstream(analysis_input, upstream_paths)
         analysis_input_path, model_path = inputs / "analysis-input.json", artifacts / "model.json"
@@ -123,6 +216,16 @@ def main() -> int:
         run(ROOT / "skills/optimization/scripts/validate_optimization_artifact.py", optimization_path)
         assert optimization["model_reference"] == model["model_id"]
 
+        # Process window (WP-02): OPTIMIZED + the process record -> PROCESS_WINDOW_DEFINED.
+        window_input_path, window_path = inputs / "scale-up-input.json", artifacts / "process-window.json"
+        write_json(window_input_path, scale_up_input(process_path, optimization_path, optimization["optimization_id"]))
+        run(ROOT / "skills/process-scale-up/scripts/preflight_process_scale_up.py", window_input_path)
+        run(ROOT / "skills/process-scale-up/scripts/build_process_window_artifact.py", window_input_path, window_path)
+        window = assert_artifact(window_path, "process", "PROCESS_WINDOW_DEFINED")
+        run(ROOT / "skills/process-scale-up/scripts/validate_process_window_artifact.py", window_path)
+        assert window["process_window"]["validated"] is True
+        assert window["process_window"]["evidence_reference"] == "PROCESS-WINDOW:PW-WGO-DOE-001-PROD"
+
         gate_input = read_json(FIXTURES / "gate-review" / "valid-input.synthetic.json")
         rewrite_upstream(gate_input, upstream_paths)
         gate_input.update({"model_artifact": str(model_path), "optimization_artifact": str(optimization_path)})
@@ -137,13 +240,14 @@ def main() -> int:
         outputs = [read_json(path) for path in artifacts.glob("*.json")]
         assert {path.name for path in artifacts.glob("*.json")} == {
             "project.json", "challenge.json", "failure-ctq.json", "test-method.json", "design-space.json",
-            "experiment-design.json", "experiment.json", "model.json", "optimization.json", "gate.json",
+            "process.json", "experiment-design.json", "experiment.json", "model.json", "optimization.json",
+            "process-window.json", "gate.json",
         }
         forbidden = {"freeze", "closed"}
         assert not (forbidden & {item["artifact_type"] for item in outputs})
         assert not ({"FROZEN", "CLOSED"} & {item["stage"] for item in outputs})
 
-    print("PASS: WGO-DOE-001 ISO VG 320 chain through VERIFIED (Phase 3)")
+    print("PASS: WGO-DOE-001 ISO VG 320 chain through VERIFIED (Phase 3, incl. PROCESS_WINDOW_DEFINED)")
     return 0
 
 
