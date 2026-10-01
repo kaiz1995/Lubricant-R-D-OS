@@ -18,6 +18,8 @@ SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.j
 
 def semantic_errors(artifact: dict) -> list[str]:
     design_space = {field: artifact.get(field) for field in ("design_space_id", "scope", "variables", "ctq_references", "qualified_test_method_references", "constraints", "evidence")}
+    if artifact.get("process_reference") is not None:
+        design_space["process_reference"] = artifact["process_reference"]
     errors = design_space_errors(design_space, None, None)
     for field, value in expected_decision_fields(design_space).items():
         if artifact.get(field) != value:

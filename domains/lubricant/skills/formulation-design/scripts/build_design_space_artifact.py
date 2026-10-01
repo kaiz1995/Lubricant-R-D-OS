@@ -34,6 +34,8 @@ def main() -> int:
         **expected_decision_fields(design_space), "evidence": design_space["evidence"],
         **{field: design_space[field] for field in DESIGN_SPACE_FIELDS},
     }
+    if "process_reference" in design_space:
+        artifact["process_reference"] = design_space["process_reference"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}")

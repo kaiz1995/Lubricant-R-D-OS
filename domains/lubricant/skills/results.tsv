@@ -25,3 +25,5 @@ gate-review	Stage 9	OPTIMIZED	71.5	94.5	+23.0	Darwin v2.0 upgrade: fail-closed G
 
 hello-lubricant	Onboarding	OPTIMIZED	65.0	93.0	+28.0	Darwin v2.0 upgrade: pipeline orientation, diagnostic checks, checkpoint
 
+process-definition	Design-space companion	NEW	n/a	n/a	n/a	WP-01 new skill: route design-space companion, fail-closed parameter provenance gating (source/evidence_id required), explicit checkpoint, upstream design-space contract; Darwin score not measured yet
+

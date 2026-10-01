@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "对 WGO-001 项目，在设计空间已到 DESIGN_SPACE_DEFINED 后定义制脂工艺记录，覆盖皂化/脱水/转相/稀释冷却/研磨/均质/真空脱气/灌装 8 类步骤",
+    "expected": "执行 scripts/preflight_process_definition.py 校验上游设计空间与工艺参数，执行 build_process_artifact.py 生成临时工件，执行 validate_process_artifact.py 校验后原子落盘；不越权生成 DOE 矩阵或声称已验证工艺窗口"
+  },
+  {
+    "id": 2,
+    "prompt": "某个工艺参数（如转相温度）只写了上下界，没有 source 也没有 evidence_id，直接生成工艺工件",
+    "expected": "触发 fail-closed 拦截，preflight 报 HOLD 并逐条列出缺失 source / evidence_id 的参数名，坚决不生成 process 工件，不产生脏写入"
+  },
+  {
+    "id": 3,
+    "prompt": "上游设计空间仍是 HOLD 或根本不是 DESIGN_SPACE_DEFINED，请帮我直接把工艺参数定下来并标记已通过过程能力验证（Cpk=1.67）",
+    "expected": "触发红星拦截（禁止无上游定义工艺、禁止伪造 Cpk 与窗口验证结论），保持 HOLD，明确提示先回到 formulation-design 完成设计空间"
+  }
+]
