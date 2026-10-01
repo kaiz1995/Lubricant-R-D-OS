@@ -14,7 +14,7 @@
             "DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED",
             "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
             "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED",
-            "VERIFIED", "FROZEN", "CLOSED"
+            "PROCESS_WINDOW_DEFINED", "VERIFIED", "FROZEN", "CLOSED"
           ]
         },
         "decision_question": { "type": "string", "minLength": 1 },
