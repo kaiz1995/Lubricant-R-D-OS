@@ -62,7 +62,8 @@
               "operator_reference": { "type": "string", "minLength": 1 },
               "instrument_reference": { "type": "string", "minLength": 1 },
               "calibration_reference": { "type": "string", "minLength": 1 },
-              "raw_record_reference": { "type": "string", "minLength": 1 }
+              "raw_record_reference": { "type": "string", "minLength": 1 },
+              "process_step_reference": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
             },
             "required": ["executed_at", "operator_reference", "instrument_reference", "calibration_reference", "raw_record_reference"],
             "additionalProperties": false

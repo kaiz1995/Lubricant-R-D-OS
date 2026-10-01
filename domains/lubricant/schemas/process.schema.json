@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/process.schema.json",
+  "title": "Lubricant grease manufacturing process",
+  "description": "Process object for grease manufacturing. Process is an independent design dimension from the formulation; every parameter carries bounds plus source and evidence_id so a parameter can never be declared without provenance. Stage is intentionally not fixed here (WP-02 introduces PROCESS_WINDOW_DEFINED); the inherited artifact contract currently places this object alongside DESIGN_SPACE_DEFINED.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "process" },
+    "process_id": { "type": "string", "minLength": 1 },
+    "project_reference": { "type": "string", "minLength": 1 },
+    "process_step": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/process_step" }
+    },
+    "batch_scale": {
+      "type": "object",
+      "properties": {
+        "scale_class": { "enum": ["LAB", "PILOT", "PRODUCTION"] },
+        "batch_size": { "$ref": "common.schema.json#/$defs/measurement" }
+      },
+      "required": ["scale_class", "batch_size"],
+      "additionalProperties": false
+    },
+    "amplification_factor": { "type": "number", "exclusiveMinimum": 0 },
+    "process_window": {
+      "type": "object",
+      "properties": {
+        "window_id": { "type": "string", "minLength": 1 },
+        "basis": { "type": "string", "minLength": 1 },
+        "validated": { "type": "boolean" }
+      },
+      "required": ["window_id", "basis", "validated"],
+      "additionalProperties": false
+    },
+    "control_points": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/control_point" }
+    },
+    "cpk": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number" },
+        "ctq_reference": { "type": "string", "minLength": 1 },
+        "sample_size": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["value", "ctq_reference", "sample_size"],
+      "additionalProperties": false
+    },
+    "material_batch_reference": { "type": "string", "minLength": 1 },
+    "factor_role": { "enum": ["WHOLE_PLOT", "SUB_PLOT"] }
+  },
+  "required": [
+    "artifact_type",
+    "process_id",
+    "project_reference",
+    "process_step",
+    "batch_scale",
+    "amplification_factor",
+    "process_window",
+    "control_points",
+    "cpk",
+    "material_batch_reference",
+    "factor_role"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "process_step": {
+      "type": "object",
+      "properties": {
+        "step_id": { "type": "string", "minLength": 1 },
+        "step_type": {
+          "enum": [
+            "SAPONIFICATION",
+            "DEHYDRATION",
+            "PHASE_INVERSION",
+            "DILUTION_COOLING",
+            "MILLING",
+            "HOMOGENIZATION",
+            "VACUUM_DEAERATION",
+            "FILLING"
+          ]
+        },
+        "parameters": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/process_parameter" }
+        }
+      },
+      "required": ["step_id", "step_type", "parameters"],
+      "additionalProperties": false
+    },
+    "process_parameter": {
+      "type": "object",
+      "properties": {
+        "parameter_id": { "type": "string", "minLength": 1 },
+        "parameter_name": { "type": "string", "minLength": 1 },
+        "lower_bound": { "type": "number" },
+        "upper_bound": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED"] }
+      },
+      "required": ["parameter_id", "parameter_name", "lower_bound", "upper_bound", "unit", "source", "evidence_id", "status"],
+      "additionalProperties": false
+    },
+    "control_point": {
+      "type": "object",
+      "properties": {
+        "control_point_id": { "type": "string", "minLength": 1 },
+        "parameter_id": { "type": "string", "minLength": 1 },
+        "control_type": { "enum": ["INCOMING", "IN_PROCESS", "FINAL"] },
+        "criterion": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 }
+      },
+      "required": ["control_point_id", "parameter_id", "control_type", "criterion", "source", "evidence_id"],
+      "additionalProperties": false
+    }
+  }
+}
