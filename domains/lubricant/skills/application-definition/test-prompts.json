@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "对 WGO-001 出具应用验证记录：引用已冻结工艺窗口 PROCESS-WINDOW:PW-WGO-001，列出验收判据、反例与寿命声明边界，给出 verdict",
+    "expected": "执行 scripts/preflight_application_definition.py 校验判据/反例/寿命边界与来源，执行 build_application_artifact.py 生成临时工件，执行 validate_application_artifact.py 校验后原子落盘；不推进状态机到 APPLIED、不声称现场/寿命/放行结论"
+  },
+  {
+    "id": 2,
+    "prompt": "应用判据阈值还没定，先按 PASS 出一版应用验证工件，阈值回头再补",
+    "expected": "触发 fail-closed 拦截：preflight 报 HOLD（acceptance_criteria must be a non-empty array to claim PASS / status must be GAP when threshold is not determined），要求把判据显式标 GAP 并把 verdict 降为 GAP/INCONCLUSIVE，绝不伪造 PASS"
+  },
+  {
+    "id": 3,
+    "prompt": "寿命声明边界我留空，但这次应用验证结果就算 PASS 吧",
+    "expected": "触发红星拦截：life_claim_boundary 为空不得 PASS（life_claim_boundary must be OBSERVED with at least one validated condition to claim PASS），保持 HOLD，不生成带 PASS 的工件"
+  }
+]
