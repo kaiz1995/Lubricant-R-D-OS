@@ -13,9 +13,27 @@ import math
 import sys
 from pathlib import Path
 
+from .factorial import (
+    effect_columns,
+    half_fraction_runs,
+    plot_error_term,
+    split_plot_error_terms,
+    split_plot_runs,
+    two_level_runs,
+)
+
+
 ENGINE_NAME = "doe"
 ENGINE_VERSION = "0.1.0"
 CONVERGENCE_THRESHOLD = 1e-12
+
+# WP-04a factorial channel. Two-level factors only; TAGUCHI_ROBUST is declared in the
+# input contract but deliberately deferred (plan: "TAGUCHI_ROBUST 可后置"), so it is
+# rejected with an explicit reason instead of being answered approximately.
+FACTORIAL_DESIGN_TYPES = ("FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT")
+DEFERRED_DESIGN_TYPES = ("TAGUCHI_ROBUST",)
+MAX_FULL_FACTORIAL_FACTORS = 8
+HALF_FRACTION_MIN_FACTORS, HALF_FRACTION_MAX_FACTORS = 3, 7
 
 
 def _load_schemas():
@@ -225,6 +243,13 @@ def generate_doe(input_dict, input_bytes=None):
     if schema_errors:
         return _build_rejected(input_dict, input_bytes,
             [f"input schema validation failed: {schema_errors[0]}"])
+    if isinstance(input_dict, dict) and input_dict.get("input_type") == "MIXTURE_DOE_DESIGN":
+        return _generate_mixture(input_dict, input_bytes)
+    return _generate_factors(input_dict, input_bytes)
+
+
+def _generate_mixture(input_dict, input_bytes):
+    """Phase 4.2 constrained mixture channel — behaviour is byte-for-byte unchanged."""
     reasons, _, _ = _validate_business(input_dict)
     if reasons:
         return _build_rejected(input_dict, input_bytes, reasons)
@@ -346,6 +371,216 @@ def generate_doe(input_dict, input_bytes=None):
         }]
     }
     return envelope
+
+
+def _factor_levels(factor):
+    """(low, high) of a varying factor, or None when the factor is held at hold_at."""
+    if "hold_at" in factor:
+        return None
+    if "levels" in factor:
+        return float(factor["levels"][0]), float(factor["levels"][1])
+    return float(factor["range"]["lower"]), float(factor["range"]["upper"])
+
+
+def _factor_reasons(input_dict):
+    """Fail-closed checks for the factor channel; also returns the varying factors by role."""
+    design_type = input_dict["design_type"]
+    factors = input_dict["factors"]
+    reasons = []
+    ids = [factor["factor_id"] for factor in factors]
+    if len(ids) != len(set(ids)):
+        reasons.append("duplicate factor_id")
+    varying, whole, sub = [], [], []
+    for factor in factors:
+        levels = _factor_levels(factor)
+        if levels is None:
+            continue
+        varying.append(factor)
+        (whole if factor["role"] == "WHOLE_PLOT" else sub).append(factor)
+        if not levels[0] < levels[1]:
+            reasons.append(f"factor {factor['factor_id']} levels must be strictly increasing ({levels[0]} >= {levels[1]})")
+    if not varying:
+        reasons.append("at least one factor must vary (levels or range); a design with only held factors has nothing to estimate")
+    if design_type in DEFERRED_DESIGN_TYPES:
+        reasons.append(f"design_type {design_type} is deferred beyond WP-04a and is not implemented")
+    elif design_type not in FACTORIAL_DESIGN_TYPES:
+        reasons.append(f"design_type {design_type} is not a supported factorial design type")
+    elif design_type == "SPLIT_PLOT":
+        if not whole:
+            reasons.append("SPLIT_PLOT requires at least one varying WHOLE_PLOT factor")
+        if not sub:
+            reasons.append("SPLIT_PLOT requires at least one varying SUB_PLOT factor")
+    elif len(varying) < 2:
+        reasons.append(f"{design_type} requires at least two varying factors")
+    if design_type == "FULL_FACTORIAL" and len(varying) > MAX_FULL_FACTORIAL_FACTORS:
+        reasons.append(f"FULL_FACTORIAL supports at most {MAX_FULL_FACTORIAL_FACTORS} varying factors")
+    if design_type == "FRACTIONAL_FACTORIAL" and not HALF_FRACTION_MIN_FACTORS <= len(varying) <= HALF_FRACTION_MAX_FACTORS:
+        reasons.append(
+            f"FRACTIONAL_FACTORIAL implements the 2^(k-1) half fraction for "
+            f"{HALF_FRACTION_MIN_FACTORS}..{HALF_FRACTION_MAX_FACTORS} varying factors")
+    if input_dict["target_runs"] != 0:
+        reasons.append(f"target_runs must be 0 for {design_type}: the run count is structure-determined")
+    return reasons, whole, sub
+
+
+def _frozen_formula_reasons(input_dict):
+    """MIXTURE_PROCESS keeps the formula fixed, so every component must be a single point."""
+    reasons = []
+    components = input_dict["components"]
+    ids = [component["component_id"] for component in components]
+    if len(ids) != len(set(ids)):
+        reasons.append("duplicate component_id")
+    frozen = []
+    for component in components:
+        if component["lower_bound"] != component["upper_bound"]:
+            reasons.append(
+                f"MIXTURE_PROCESS_DOE_DESIGN freezes the formulation: component {component['component_id']} "
+                "must have lower_bound == upper_bound; vary only factors[]")
+        frozen.append(component["lower_bound"])
+    total = input_dict["mixture_total"]
+    if abs(math.fsum(frozen) - total) > 1e-9:
+        reasons.append(f"frozen component proportions must sum to mixture_total {total}")
+    return reasons
+
+
+def _generate_factors(input_dict, input_bytes):
+    """Two-level factorial / split-plot channel added by WP-04a."""
+    input_type = input_dict["input_type"]
+    design_type = input_dict["design_type"]
+    model_order = input_dict["model_order"]
+    reasons = _frozen_formula_reasons(input_dict) if input_type == "MIXTURE_PROCESS_DOE_DESIGN" else []
+    factor_reasons, whole, sub = _factor_reasons(input_dict)
+    reasons += factor_reasons
+    if reasons:
+        return _build_rejected(input_dict, input_bytes, reasons)
+
+    varying_ids = tuple(sorted(factor["factor_id"] for factor in (*whole, *sub)))
+    whole_ids = tuple(sorted(factor["factor_id"] for factor in whole))
+    sub_ids = tuple(sorted(factor["factor_id"] for factor in sub))
+    levels = {factor["factor_id"]: _factor_levels(factor) for factor in (*whole, *sub)}
+    held = {factor["factor_id"]: float(factor["hold_at"]) for factor in input_dict["factors"] if "hold_at" in factor}
+    replicates = int(input_dict.get("whole_plot_replicates", 1))
+
+    whole_plot_indices = None
+    if design_type == "SPLIT_PLOT":
+        pairs = split_plot_runs(whole_ids, sub_ids, replicates)
+        coded = [settings for _, settings in pairs]
+        whole_plot_indices = [index for index, _ in pairs]
+        method = "SPLIT_PLOT_2LEVEL_V1"
+        structure = (f"split-plot 2^{len(whole_ids)} whole-plot x 2^{len(sub_ids)} sub-plot design "
+                     f"with {replicates} whole-plot replicate(s)")
+    elif design_type == "FRACTIONAL_FACTORIAL":
+        base = half_fraction_runs(varying_ids)
+        coded = [run for _ in range(replicates) for run in base]
+        method = "HALF_FRACTION_FACTORIAL_V1"
+        structure = (f"2^{len(varying_ids) - 1} half fraction of the 2^{len(varying_ids)} two-level design "
+                     "(generator: the last sorted factor equals the product of the others)")
+    else:
+        base = two_level_runs(varying_ids)
+        coded = [run for _ in range(replicates) for run in base]
+        method = "FULL_FACTORIAL_2LEVEL_V1"
+        structure = f"full factorial 2^{len(varying_ids)} two-level design"
+    if input_type == "MIXTURE_PROCESS_DOE_DESIGN":
+        method = f"MIXTURE_PROCESS_{method}"
+
+    frozen_proportions = None
+    if input_type == "MIXTURE_PROCESS_DOE_DESIGN":
+        frozen_proportions = {component["component_id"]: float(component["lower_bound"])
+                              for component in sorted(input_dict["components"], key=lambda item: item["component_id"])}
+
+    runs = []
+    for index, code in enumerate(coded, start=1):
+        settings = {factor_id: (levels[factor_id][1] if code[factor_id] > 0 else levels[factor_id][0]) for factor_id in varying_ids}
+        settings.update(held)
+        run = {"run_index": index, "settings": {key: settings[key] for key in sorted(settings)}}
+        if whole_plot_indices is not None:
+            run["whole_plot_index"] = whole_plot_indices[index - 1]
+        if frozen_proportions is not None:
+            run["fixed_proportions"] = frozen_proportions
+        runs.append(run)
+
+    columns = effect_columns(varying_ids, coded)
+    run_count = len(runs)
+    total_df = run_count - 1
+    replicate_df = replicates - 1
+    model_df = sum(1 for column in columns if column["kind"] == "MAIN_EFFECT") if model_order == "LINEAR" else len(columns)
+    remaining = total_df - replicate_df - model_df
+    if remaining < 0:
+        return _build_rejected(input_dict, input_bytes,
+            [f"{model_order} model is not estimable: it needs {model_df} degrees of freedom "
+             f"but only {total_df - replicate_df} are available"])
+    if design_type == "SPLIT_PLOT":
+        error_terms = split_plot_error_terms(2 ** len(whole_ids), 2 ** len(sub_ids), replicates, remaining)
+    else:
+        error_terms = plot_error_term(remaining)
+    interaction_columns = [column for column in columns if column["kind"] == "INTERACTION"]
+    if model_order == "LINEAR" and interaction_columns:
+        pooled = (f"LINEAR model: {len(interaction_columns)} interaction column(s) are not estimated "
+                  "and are pooled into this error term")
+        last = error_terms[-1]
+        last["pooling"] = f"{last['pooling']} {pooled}" if "pooling" in last else pooled
+    degrees = {
+        "total": total_df,
+        "replicate": replicate_df,
+        "model": model_df,
+        "error": sum(term["degrees_of_freedom"] for term in error_terms),
+    }
+    aliased = [f"{column['column_id']}={'/'.join(column['aliases'])}" for column in columns if "aliases" in column]
+    selection_reason = (f"{structure}, {run_count} structure-determined runs, {model_order} model, "
+                        f"df(total={total_df}, replicate={replicate_df}, model={model_df}, error={degrees['error']}); "
+                        "the run count is determined by the design structure, not by target_runs")
+    if aliased:
+        selection_reason += f"; aliased effects are reported per column ({', '.join(aliased)})"
+
+    card = input_dict["experiment_card"]
+    if input_bytes is not None:
+        digest = _digest_bytes(input_bytes)
+    else:
+        digest = _digest_bytes(json.dumps(input_dict, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    return {
+        "schema_version": "0.1.0",
+        "engine_name": ENGINE_NAME,
+        "engine_version": ENGINE_VERSION,
+        "method": method,
+        "parameters": {
+            "design_type": design_type,
+            "model_order": model_order,
+            "target_runs": input_dict["target_runs"],
+            "whole_plot_replicates": replicates,
+            "factor_count": len(varying_ids),
+            "whole_plot_factor_count": len(whole_ids),
+            "sub_plot_factor_count": len(sub_ids),
+            "run_count": run_count,
+            "design_space_reference": input_dict.get("design_space_reference"),
+        },
+        "input_digest": digest,
+        "status": "OK",
+        "rejection_reasons": [],
+        "decision_question": card["decision_question"],
+        "hypothesis": card["hypothesis"],
+        "decision_rule": card["decision_rule"],
+        "expected_information_value": card["expected_information_value"],
+        "variables_note": card["variables_note"],
+        "constraints_note": card["constraints_note"],
+        "responses_note": card["responses_note"],
+        "doe_selection_reason": card["doe_selection_reason"],
+        "result": {
+            "design_type": design_type,
+            "model_order": model_order,
+            "runs": runs,
+            "run_count": run_count,
+            "columns": columns,
+            "error_terms": error_terms,
+            "degrees_of_freedom": degrees,
+            "selection_reason": selection_reason,
+        },
+        "evidence": [{
+            "evidence_id": "doe-generation",
+            "statement": f"deterministic factorial point generation: {method}, {run_count} structure-determined runs, coded levels -1/+1 mapped onto each factor's two levels; {len(columns)} effect column(s) and {len(error_terms)} error term(s) are reported without estimating any measurement",
+            "source": "engine internal deterministic algorithm",
+            "status": "OBSERVED",
+        }],
+    }
 
 
 def compute_doe(input_dict, input_bytes=None):
