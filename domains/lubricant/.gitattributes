@@ -1,0 +1,4 @@
+# Compute engine gold fixtures are byte-compared by tests (SHA256 frozen
+# in tests/compute/test_*_engine.py). Force LF on checkout/commit so that
+# core.autocrlf=true does not corrupt the bytes with CRLF conversion.
+fixtures/compute/** text eol=lf

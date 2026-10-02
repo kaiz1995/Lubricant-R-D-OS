@@ -261,7 +261,14 @@ Local-First 给的是**选择权**：
 | `NOT_FOR_PHYSICAL_RELEASE` | **不得用于实物放行** |
 | `CANNOT_QUALIFY_METHOD` | **不得用于方法确认** |
 
-标签由引擎根据输入证据等级自动打上，**人无法手动摘掉**。同时输出携带 `input_sha256`，与输入哈希绑定 —— 输入被改动，哈希即失配。
+标签由引擎根据输入证据等级自动打上，**人无法手动摘除**。同时输出携带 `input_sha256`，与输入哈希绑定 —— 输入被改动，哈希即失配。
+
+在此之上还有两级细粒度证据字段（`schemas/` 实测）：
+
+- **实验证据类 `evidence_class`**（`experiment.schema.json`）：`DOE_POINT`（DOE 设计点）/ `APPLICATION_FIELD`（现场应用）/ `CONFIRMATORY_NON_DOE`（非 DOE 验证性实验）。缺 DOE 锚点的验证性实验会被 preflight 拦截误标。
+- **证据来源分级 `claim_class`**（`common.schema.json` 的 `evidence_item`）：`MANUFACTURER_DATASHEET` / `THIRD_PARTY_LAB` / `INTERNAL_TEST` / `REGULATORY_OR_STANDARD` 四级，为每条证据声明标明来源与可信层级。
+
+配套还有**本地知识复用检索**（`scripts/knowledge_retrieval.py`，WP-11）：纯 stdlib 实现的 Okapi BM25（k1=1.5, b=0.75），只索引已关闭项目的 `knowledge_asset`（`CLOSED_KNOWLEDGE`）与 `design_freeze`（`FROZEN`）工件，全程不触网、离线可用；空索引**不阻断** preflight（fail-open 仅此一处）。
 
 ##### 机制四：判定规则硬编码在策略脚本中，不在模型脑子里
 
@@ -358,17 +365,20 @@ Local-First 给的是**选择权**：
 
 ---
 
-## 5. 五大类研发性质与差异化流程
+## 5. 六大类研发性质与差异化流程
 
-工业润滑油开发不是一条死板流水线。系统在**项目定义阶段（Stage 0）**首先识别或引导用户确认项目的具体性质，并自动分流到匹配的专属流程：
+工业润滑油开发不是一条死板流水线。系统在**项目定义阶段**首先识别或引导用户确认项目的具体性质，并按 `contracts/state-machine.json` 的 `type_routes`（6 条路由）自动分流到匹配的专属流程：
 
-| 研发性质 | 核心驱动逻辑 | 差异化阶段路径（Stage 流转） | 核心关注点与输入要求 |
+| 研发性质 | 核心驱动逻辑 | 差异化阶段路径（stage 流转，括号内为步数） | 核心关注点与输入要求 |
 |---|---|---|---|
-| **1. 新产品正向开发**<br>(`NEW_PRODUCT`) | 需求与工况驱动 | `Project → Duty(7项) → Challenge → Failure/CTQ → Method Qual → Design Space → DOE → Running → Model → Opt → Gate` | 完整 7 大工况、润滑挑战映射、失效机理深度分析、混料空间与多目标优化。 |
-| **2. 已有产品性能优化**<br>(`IMPROVEMENT`) | 现场失效与痛点驱动 | `Project → Failure/CTQ(问题诊断) → Method Qual(灵敏度) → Design Space → DOE → Running → Model → Opt → Gate` | **跳过全套工况重推**。聚焦现场真实失效证据，先验证评价方法灵敏度，再对瓶颈指标做定向配方改良。 |
-| **3. 降本替代**<br>(`COST_DOWN`) | 非劣效性驱动<br>(Non-inferiority) | `Project → Failure/CTQ(非劣效红线) → Design Space → DOE → Running → Opt → Gate` | **不推新工况**。基于成熟基线配方与成本结构，划定 CTQ 不劣化底线，优化替代材料属性安全域。 |
-| **4. 客户定制**<br>(`CUSTOMIZATION`) | 技术协议/OEM规范驱动 | `Project → Failure/CTQ(协议指标映射) → Method Qual(指定台架) → Design Space → DOE → Running → Gate` | 以客户技术协议和指定认证台架为准绳，快速匹配成熟平台做微调验证。 |
-| **5. 机理/平台型探索**<br>(`EXPLORATION`) | 科学假设驱动 | `Project → Design Space → DOE → Running → Model → Gate` | **不考核商业 target_cost 和量产**。允许试错，重点提取变量影响规律与知识资产沉淀。 |
+| **1. 新产品正向开发**<br>(`NEW_PRODUCT`) | 需求与工况驱动 | `PROJECT_DEFINED → DUTY_DEFINED → CHALLENGES_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（13 步） | 完整 7 大工况、润滑挑战映射、失效机理深度分析、混料空间、多目标优化，直至工艺窗口放大与应用验证。 |
+| **2. 已有产品性能优化**<br>(`IMPROVEMENT`) | 现场失效与痛点驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（11 步） | **跳过全套工况重推**。聚焦现场真实失效证据，先验证评价方法灵敏度，再对瓶颈指标做定向配方改良。 |
+| **3. 降本替代**<br>(`COST_DOWN`) | 非劣效性驱动<br>(Non-inferiority) | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（9 步） | **不推新工况**。基于成熟基线配方与成本结构，划定 CTQ 不劣化底线，优化替代材料属性安全域。 |
+| **4. 客户定制**<br>(`CUSTOMIZATION`) | 技术协议/OEM规范驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → VERIFIED → APPLIED`（8 步） | 以客户技术协议和指定认证台架为准绳，快速匹配成熟平台做微调验证。 |
+| **5. 机理/平台型探索**<br>(`EXPLORATION`) | 科学假设驱动 | `PROJECT_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → VERIFIED → APPLIED`（8 步） | **不考核商业 target_cost 和量产**。允许试错，重点提取变量影响规律与知识资产沉淀。 |
+| **6. 工艺稳健性**<br>(`PROCESS_ROBUSTNESS`) | 换釜/放大复现驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → PROCESS_WINDOW_DEFINED → APPLIED`（9 步） | 配方冻结后换生产釜/换批复现。以工艺窗口（process window）为核心产物，不做重新优化，验证放大稳健性。 |
+
+> 段内迭代不移动 stage：已冻结配方的换釜复现走 `REVISE` 动作（同 stage 内 `version` 递增），见 §9.5.1。`FROZEN` / `CLOSED` 属于终态，不属于任何路由链。
 
 ---
 
@@ -385,22 +395,28 @@ Local-First 给的是**选择权**：
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                  Lubricant R&D Domain Pack (本仓库)                    │
 │                                                                        │
-│  [Stage 0-4 研发技能群 (12 Skills)]                                    │
+│  [全流程研发技能群 (19 Skills，18 个可经 installer 部署)]              │
 │  - project-definition          - duty-definition                       │
 │  - duty-challenge-analysis     - failure-ctq-analysis                  │
 │  - test-method-qualification   - formulation-design                    │
 │  - doe-design                  - experiment-import                     │
 │  - statistical-analysis        - optimization                          │
+│  - process-definition          - process-scale-up                      │
+│  - application-definition      - application-validation                │
+│  - bench-registration          - interface-definition                  │
 │  - gate-review                 - lubricant-rd-agent (元路由器)          │
+│  - hello-lubricant (环境自检)                                          │
 │                                                                        │
 │  [数据契约与状态机]                                                    │
-│  - Draft 2020-12 JSON Schemas (10类核心研发工件标准契约)                │
-│  - 阶段状态机 (contracts/state-machine.json: ALLOW/DENY/HOLD 门控)     │
+│  - Draft 2020-12 JSON Schemas (20 个研发工件标准契约)                  │
+│  - 阶段状态机 (contracts/state-machine.json: ALLOW/DENY/HOLD 门控,    │
+│    16 stages / 6 条 type_routes / REVISE 段内迭代)                     │
 │                                                                        │
 │  [数据层与计算引擎 (Phase 4)]                                          │
 │  - SQLite 五表存储 (material / formula / test_method / experiment 等) │
 │  - Cost Engine (原料成本核算)   - Mixture DOE Engine (混料极值设计)   │
 │  - Statistics Engine (响应面回归) - Optimization Engine (Pareto 优化)    │
+│  - Validation Engine (跨引擎结果互证)                                  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -408,24 +424,33 @@ Local-First 给的是**选择权**：
 
 ---
 
-## 7. 12 个领域技能清单 (Skills)
+## 7. 领域技能清单 (Skills：19 个目录，18 个可部署)
 
 每个 Skill 均为**自包含目录**（`SKILL.md` + `scripts/`），由 Lubricant Science 内置的 **OpenCode Agent 运行时**扫描加载：运行时读取 `SKILL.md` 的 YAML frontmatter（`name` + `description`）把技能注册为可按需调用的能力，**无需修改运行时源码**即可增删技能 —— 这正是领域包能独立插拔的原因。每个技能输出遵循标准 JSON Schema 的结构化工件：
 
-| Skill 名称 | 所属阶段 | 输出状态 / 工件 | 关键功能与职责 |
+可部署技能以 `scripts/install_domain_skill.py` 的 `SKILLS` 注册表为准（**18 键**，键名 = 技能名，值 = 该技能 preflight 实际加载的 schema 清单）。阶段归属以 `skills/lubricant-rd-agent/scripts/route_step.py` 的 `ROUTE_TABLE` 与 `contracts/state-machine.json` 为准：
+
+| Skill 名称 | 产出 stage / 角色 | 输出状态 / 工件 | 关键功能与职责 |
 |---|---|---|---|
-| `project-definition` | Stage 0 | `PROJECT_DEFINED` | 引导用户确认 5 类研发性质，定义商业/技术目标、硬约束与项目章程。 |
-| `duty-definition` | Stage 1 | `DUTY_DEFINED` | 结构化录入 7 大工况（设备、工况谱、维护、温度、负荷、污染、寿命）。 |
-| `duty-challenge-analysis`| Stage 1 | `CHALLENGES_DEFINED` | 从工况推导润滑挑战 Map（严重度、暴露度、敏感度分级）。 |
-| `failure-ctq-analysis` | Stage 2 | `FAILURE_CTQ_DEFINED` | 梳理失效机制与关键质量特性（CTQ），建立挑战到性能的映射链。 |
-| `test-method-qualification` | Stage 2 | `TEST_METHODS_QUALIFIED` | 评价方法资格确认，验证测试方法与真实工况的相关性及区分能力。 |
-| `formulation-design` | Stage 3 | `DESIGN_SPACE_DEFINED` | 建立基础油与添加剂混料设计空间，设定物理与化学约束边界。 |
-| `doe-design` | Stage 3 | `EXPERIMENT_DESIGNED` | 结构化生成混料实验设计（D-Optimal / Extreme Vertices）评估请求。 |
-| `experiment-import` | Stage 3 | `EXPERIMENT_RUNNING` | 录入实验测试观测结果，强制校验测试批次与物理溯源凭证。 |
-| `statistical-analysis` | Stage 4 | `MODEL_BUILT` | 拟合回归与响应面模型，提供残差检验与模型解释力报告。 |
-| `optimization` | Stage 4 | `OPTIMIZED` | 基于成本与 CTQ 模型执行多目标约束优化，给出候选配方推荐。 |
-| `gate-review` | 评审门禁 | `VERIFIED` | 汇总阶段证据链，执行正式审查决策（GO / HOLD / PIVOT / KILL）。 |
-| `lubricant-rd-agent` | 核心路由 | — | 元技能（Meta-Skill）路由器，执行跨阶段拦截、性质分流与证据门控。 |
+| `project-definition` | `PROJECT_DEFINED` | `PROJECT_DEFINED` / `project.json` | 引导用户确认 **6 类研发性质**（`type_routes` 路由），定义商业/技术目标、硬约束与项目章程。 |
+| `duty-definition` | `DUTY_DEFINED` | `DUTY_DEFINED` / `duty.json` | 结构化录入 7 大工况（设备、工况谱、维护、温度、负荷、污染、寿命）。 |
+| `duty-challenge-analysis` | `CHALLENGES_DEFINED` | `CHALLENGES_DEFINED` / `challenge.json` | 从工况推导润滑挑战 Map（严重度、暴露度、敏感度分级）。 |
+| `failure-ctq-analysis` | `FAILURE_CTQ_DEFINED` | `FAILURE_CTQ_DEFINED` / `failure_ctq.json` | 梳理失效机制与关键质量特性（CTQ），建立挑战到性能的映射链；支持可选接口失效模式（`interface_failure_modes`）。 |
+| `test-method-qualification` | `TEST_METHODS_QUALIFIED` | `TEST_METHODS_QUALIFIED` / `test_method.json` | 评价方法资格确认，验证测试方法与真实工况的相关性及区分能力。 |
+| `formulation-design` | `DESIGN_SPACE_DEFINED` | `DESIGN_SPACE_DEFINED` / `design_space.json` | 建立基础油与添加剂混料设计空间，设定物理与化学约束边界。 |
+| `process-definition` | 工艺过程记录 | `process.json`（`process.schema.json`） | 定义工艺过程（单元操作/工艺参数）记录，是 `process-scale-up` 评估工艺窗口的前置输入。 |
+| `doe-design` | `EXPERIMENT_DESIGNED` | `EXPERIMENT_DESIGNED` / `experiment_design.json` | 结构化生成混料实验设计（D-Optimal / Extreme Vertices）评估请求，可调用确定性 DOE 引擎。 |
+| `experiment-import` | `EXPERIMENT_RUNNING` | `EXPERIMENT_RUNNING` / `experiment.json` | 录入实验测试观测结果，强制校验测试批次与物理溯源凭证；实验证据类 `evidence_class`（DOE_POINT / APPLICATION_FIELD / CONFIRMATORY_NON_DOE）。 |
+| `statistical-analysis` | `MODEL_BUILT` | `MODEL_BUILT` / `model.json` | 拟合回归与响应面模型，提供残差检验与模型解释力报告，可调用确定性统计引擎。 |
+| `optimization` | `OPTIMIZED` | `OPTIMIZED` / `optimization.json` | 基于成本与 CTQ 模型执行多目标约束优化，给出候选配方推荐，可调用确定性优化引擎。 |
+| `process-scale-up` | `PROCESS_WINDOW_DEFINED` | `PROCESS_WINDOW_DEFINED` / 工艺窗口记录 | 基于工艺记录与优化结果划定工艺窗口；`design_freeze` 的 `MANUFACTURABILITY_ACCEPTABLE` 必须引用该窗口证据。 |
+| `gate-review` | `VERIFIED` | `VERIFIED` / `gate.json` | 汇总阶段证据链，执行正式审查决策（GO / HOLD / PIVOT / KILL / FREEZE），fail-closed。 |
+| `application-validation` | `APPLIED` | `APPLIED` / `application.json` 复检 | 对 `application-definition` 构建的应用工件按验收准则做准入复检（PASS / FAIL / INCONCLUSIVE / GAP），给出寿命声明边界。 |
+| `application-definition` | 应用工件构建 | `application.json` | 构建应用验证工件：`application_id`、`acceptance_criteria`、`bench_references`、`life_claim_boundary` 等。 |
+| `bench-registration` | 台架登记 | `bench.json`（`bench.schema.json`） | 登记台架/试验装置档案，供应用验证与工况关联引用。 |
+| `interface-definition` | 接口契约 | interface 工件 + 兼容性判定 | 定义跨工件/跨技能接口契约（`interface.schema.json`），fail-closed 输出兼容性判定（仅 `COMPATIBILITY_PASSED` 放行）。 |
+| `lubricant-rd-agent` | 元路由（不产出 stage） | ALLOW / DENY / HOLD + 指路技能 | 元技能（Meta-Skill）路由器：按 `type_routes` 执行跨阶段拦截、性质分流与证据门控；同 stage 的换釜复现走 `REVISE`。 |
+| `hello-lubricant` | 环境自检（不在 `SKILLS` 安装表内） | — | 冒烟自检技能，验证运行时技能扫描与部署链路。 |
 
 ---
 
@@ -436,12 +461,19 @@ Local-First 给的是**选择权**：
 - 本地安装 Python 3.10+ 环境
 
 ### 8.2 安装领域包技能至 Lubricant Science
-在本目录（`domains/lubricant/`）执行 PowerShell 命令，一键将 12 个领域技能部署到 Lubricant Science Desktop 用户目录：
+在本目录（`domains/lubricant/`）执行 PowerShell 命令，把 18 个可部署技能逐一安装到 Lubricant Science Desktop 用户目录（安装器**按单个技能安装**：`python scripts/install_domain_skill.py <skill> --target <dir>`，没有 `--all` 选项；共享模块由安装器自动随技能部署）：
 
 ```powershell
-# 将全部 12 个领域技能安装到 Desktop
-python scripts/install_domain_skill.py --all `
-  --target "C:\Users\<用户名>\AppData\Roaming\com.ai4s.workbench\runtime\xdg-config\opencode\skills\user"
+# 逐个安装全部 18 个可部署技能（SKILLS 注册表键名）
+$target = "C:\Users\<用户名>\AppData\Roaming\com.ai4s.workbench\runtime\xdg-config\opencode\skills\user"
+$skills = @(
+  "project-definition","duty-definition","duty-challenge-analysis","failure-ctq-analysis",
+  "test-method-qualification","formulation-design","process-definition","doe-design",
+  "experiment-import","statistical-analysis","optimization","process-scale-up",
+  "application-definition","application-validation","bench-registration","interface-definition",
+  "gate-review","lubricant-rd-agent"
+)
+foreach ($s in $skills) { python scripts/install_domain_skill.py $s --target $target }
 ```
 
 安装完成后重启 Lubricant Science 桌面端，在工作台「技能」面板中即可直接查看和使用。
@@ -454,7 +486,7 @@ python scripts/install_domain_skill.py --all `
 |---|---|---|
 | 左 | Lubricant Science 原生 | 项目 / 会话 / 技能导航 |
 | 中 | Lubricant Science 原生 | 多模型对话流 + 工具调用 + 输入框 |
-| **右** | **本领域包** | **「研发阶段与门禁」：11 步工件链 + 整体进度 + 门禁决议** |
+| **右** | **本领域包** | **「研发阶段与门禁」：13 步工件链 + 整体进度 + 门禁决议** |
 
 **进入方式**：左侧边栏点「润滑研发 Copilot」，或访问 `/lubricant` 路由。
 
@@ -465,7 +497,7 @@ python scripts/install_domain_skill.py --all `
 | 工件存在且结构合规 | 该步标记「已完成」 |
 | 第一个缺失的工件 | 自动成为「进行中」 |
 | 结构不合规（如 `artifact_type` 写错） | 该步标红「不合规」并列出原因，**不点亮** |
-| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（11 / 9 / 7 / 7 / 6） |
+| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（13 / 11 / 9 / 8 / 8 / 9，对应 6 条 `type_routes`） |
 
 门禁卡片汇总上游证据链并逐条展示前置校验；存在阻塞项时**禁止签发 GO**（fail-closed），决议值域严格为 `GO / HOLD / PIVOT / KILL / FREEZE`。
 
@@ -491,7 +523,7 @@ python -B tests/test_workspace_bundle.py
 # 2. 验证 SQLite 数据库原子性与数据上限
 python -B tests/test_lubricant_db.py
 
-# 3. 验证 12 个 Skill 部署兼容性
+# 3. 验证 18 个 Skill 部署兼容性
 python -B tests/upstream_compat/test_skill_install.py
 
 # 4. 验证元技能多流程分支路由逻辑
@@ -511,7 +543,7 @@ python -B tests/test_release_preflight.py
 
 **Lubricant R&D OS 不是一个独立软件**，而是 [Lubricant Science Desktop](https://github.com/ai4s-research/open-science) 的下游分支 —— 同一个桌面壳，只做了两处叠加：
 
-1. 内置 12 个润滑油研发技能（`domains/lubricant/skills/`）；
+1. 内置 18 个可部署润滑油研发技能（`domains/lubricant/skills/`，共 19 个技能目录）；
 2. 右侧多出一个「**研发阶段与门禁**」面板。
 
 **进入方式**：左侧边栏点「**润滑研发 Copilot**」，或访问 `/lubricant` 路由。面板标题栏右侧的 `×` 可收起，刷新按钮可手动重新扫描工件。
@@ -530,20 +562,20 @@ python -B tests/test_release_preflight.py
 |---|---|---|
 | **标题栏** | 标题 + 刷新 + 收起 | 「重新扫描工件」手动触发一次工作区探测 |
 | **数据源条** | 当前数据来源 | 桌面版显示工作区路径与「距上次扫描多久」；浏览器显示「离线预览 · Mock 数据」 |
-| **研发开发类型** | 5 类研发性质切换 | 正向开发 / 性能优化 / 配方降本 / 客户定制 / 机理探索，右上角标注该路线的**阶段数** |
+| **研发开发类型** | 6 类研发性质切换 | 正向开发 / 性能优化 / 配方降本 / 客户定制 / 机理探索 / 工艺稳健（`PROCESS_ROBUSTNESS`），右上角标注该路线的**阶段数** |
 | **当前工序状态** | 整体进度总览 | 进行中的工序名 + 完成度 `N/M (X%)` + 进度条 |
 | **门禁决议** | 证据链汇总与签发 | 前置校验逐条列出，满足条件才允许签发 GO |
 | **工件链步骤** | 逐步推进 | 每步显示状态徽章与工件名，展开可见阶段目标与考核标准 |
 
 <img src="./docs/assets/stage-pane.webp" alt="研发阶段与门禁面板实机界面" width="340">
 
-> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）、11 步工件链。图中为**浏览器离线预览态**（数据源条显示「离线预览 · Mock 数据」）；桌面版布局完全一致，仅数据源换成工作区真实工件。
+> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）、13 步工件链。图中为**浏览器离线预览态**（数据源条显示「离线预览 · Mock 数据」）；桌面版布局完全一致，仅数据源换成工作区真实工件。
 
-### 9.3 工件链：11 步与 5 条路线
+### 9.3 工件链：13 步与 6 条路线
 
 面板的核心是一条**工件链**。每一步的产出是一个结构化 JSON 工件，落盘在工作区；面板**读磁盘**判断该步状态，不依赖会话记忆。
 
-**完整 11 步链**（`NEW_PRODUCT` 新产品正向开发）：
+**完整 13 步链**（`NEW_PRODUCT` 新产品正向开发，与 `contracts/state-machine.json` 的 `type_routes.NEW_PRODUCT` 逐一对应）：
 
 | # | 工序 | 技能 | 交付工件 |
 |---|---|---|---|
@@ -557,9 +589,11 @@ python -B tests/test_release_preflight.py
 | 8 | 调配与台架实测数据 | `experiment-import` | `experiment.json` |
 | 9 | 响应面建模与统计分析 | `statistical-analysis` | `model.json` |
 | 10 | 多目标配方优化 | `optimization` | `optimization.json` |
-| 11 | 门禁终审（VERIFIED） | `gate-review` | `gate.json` |
+| 11 | 工艺窗口放大 | `process-scale-up` | 工艺窗口记录（`process.json`） |
+| 12 | 门禁终审（VERIFIED） | `gate-review` | `gate.json` |
+| 13 | 应用验证（APPLIED） | `application-validation` | `application.json` |
 
-其余四类研发性质按 §5 的裁剪规则取子集，阶段数依次为 **9 / 7 / 7 / 6**。
+其余五类研发性质按 §5 的裁剪规则取子集（与 `type_routes` 逐一对应）：`IMPROVEMENT` **11 步**（跳过工况与挑战两步）、`COST_DOWN` **9 步**、`CUSTOMIZATION` **8 步**（无建模与优化步）、`EXPLORATION` **8 步**、`PROCESS_ROBUSTNESS` **9 步**（配方不重新优化，以工艺窗口收尾）。
 
 **每一步的四种状态**：
 
@@ -572,7 +606,7 @@ python -B tests/test_release_preflight.py
 
 ### 9.4 一次完整的研发推进（操作步骤）
 
-1. **装环境** —— 按 §8.2 把 12 个技能部署到 Desktop 用户目录，重启桌面端。
+1. **装环境** —— 按 §8.2 把 18 个技能部署到 Desktop 用户目录，重启桌面端。
 2. **建工作区** —— 按 §8.4 初始化项目工作区（复制 `AGENTS.md` 与开发报告模板）。
 3. **进入面板** —— 侧边栏点「润滑研发 Copilot」。右栏自动展开，数据源条显示工作区路径。
 4. **选路线** —— 在「研发开发类型」选一条。一旦 `project.json` 落盘，类型即被**锁定**（显示锁图标），要换类型必须先改该工件的 `project_type`。
@@ -611,7 +645,7 @@ python -B tests/test_release_preflight.py
 
 - **上限 ≤ 3 次**：同一 stage 内连续 `REVISE` 不超过 3 次；第 3 次后仍要复现，则停止段内迭代、**重新评估设计空间**（即 §7.1 二维状态机触发条件 2）。该上限是**文档 / SKILL 约定**，校验器仅对可选的 `revision_index > 3` 打印 `WARNING`，不阻断流转。
 
-> 载体验证：`python scripts/validate_state_machine.py` 中的 `fixtures/state-machine/{valid,invalid}.json` 已覆盖"连续 3 次复现不触发整链 ROLLBACK""REVISE 改 stage 被拒""`FORMULA_OR_CTQ` 未重审被拒"等正反例。
+> 载体验证：`python scripts/validate_state_machine.py` 的 `fixtures/state-machine/{valid,invalid}.json` 用例已覆盖"连续 3 次复现不触发整链 ROLLBACK""REVISE 改 stage 被拒""`FORMULA_OR_CTQ` 未重审被拒"等正反例。
 
 ### 9.6 桌面版 vs 浏览器版
 
@@ -651,32 +685,41 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
     ├── docs/assets/                 # 文档配图（工作台与面板实机截图）
     ├── contracts/
     │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
-    ├── schemas/                     # 16 个工件 JSON Schema (Draft 2020-12)
-    │   ├── common.schema.json       #   所有工件的公共契约（$defs: artifact / measurement）
-    │   ├── project.schema.json      #   11 步链的核心 11 个
+    ├── schemas/                     # 20 个工件 JSON Schema (Draft 2020-12)
+    │   ├── common.schema.json       #   所有工件的公共契约（$defs: artifact / measurement / evidence_item.claim_class）
+    │   ├── project.schema.json      #   13 步链的核心工件契约
     │   ├── duty / challenge / failure_ctq / test_method / design_space
     │   ├── experiment_design / experiment / model / optimization / gate
-    │   └── benchmark / evidence_qualification / design_freeze / knowledge_asset
-    ├── skills/                      # 13 个技能目录
-    │   ├── project-definition/      #   Stage 0
-    │   ├── duty-definition/         #   Stage 1
-    │   ├── duty-challenge-analysis/ #   Stage 1
-    │   ├── failure-ctq-analysis/    #   Stage 2
+    │   ├── process / bench / interface                  # 工艺窗口 / 台架 / 接口契约
+    │   └── application / benchmark / evidence_qualification / design_freeze / knowledge_asset
+    ├── skills/                      # 19 个技能目录（18 个可经 installer 部署）
+    │   ├── project-definition/      #   PROJECT_DEFINED
+    │   ├── duty-definition/         #   DUTY_DEFINED
+    │   ├── duty-challenge-analysis/ #   CHALLENGES_DEFINED
+    │   ├── failure-ctq-analysis/    #   FAILURE_CTQ_DEFINED
     │   ├── test-method-qualification/
-    │   ├── formulation-design/      #   Stage 3
-    │   ├── doe-design/
+    │   ├── formulation-design/      #   DESIGN_SPACE_DEFINED
+    │   ├── process-definition/      #   工艺过程记录（process.json）
+    │   ├── doe-design/              #   EXPERIMENT_DESIGNED
     │   ├── experiment-import/
-    │   ├── statistical-analysis/    #   Stage 4
+    │   ├── statistical-analysis/    #   MODEL_BUILT
     │   ├── optimization/
-    │   ├── gate-review/             #   门禁终审
-    │   ├── lubricant-rd-agent/      #   元路由器（阶段流转仲裁）
-    │   └── hello-lubricant/         #   环境自检
+    │   ├── process-scale-up/        #   PROCESS_WINDOW_DEFINED
+    │   ├── application-definition/  #   应用工件构建
+    │   ├── application-validation/  #   APPLIED
+    │   ├── bench-registration/      #   台架登记
+    │   ├── interface-definition/    #   接口契约与兼容性判定
+    │   ├── gate-review/             #   VERIFIED
+    │   ├── lubricant-rd-agent/      #   元路由器（阶段流转仲裁 + REVISE）
+    │   └── hello-lubricant/         #   环境自检（不在 SKILLS 安装表内）
     ├── domains/lubricant/           # 领域计算引擎与数据层
     │   ├── compute/{cost,doe,statistics,optimization,validation}/
     │   ├── schemas/                 #   Phase 4 引擎信封契约
     │   └── db.py                    #   SQLite 五表数据层
-    ├── tests/                       # 自动化测试套件（13 个可执行测试）
-    │   ├── lubricant_e2e/           #   端到端链条测试
+    ├── tests/                       # 自动化测试套件（36 个可执行测试文件）
+    │   ├── lubricant_e2e/           #   端到端链条测试（15 个）
+    │   ├── compute/                 #   引擎测试（9 个，含 SHA256 黄金锁）
+    │   ├── statistics/              #   统计数值验证
     │   └── upstream_compat/         #   上游技能安装兼容性
     ├── scripts/                     # 安装、校验、打包、仪表盘生成
     ├── templates/project-workspace/ # 新项目工作区模板（AGENTS.md + 活报告模板）
