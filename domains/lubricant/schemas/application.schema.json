@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/application.schema.json",
+  "title": "Lubricant R&D application (field / machine) validation record",
+  "description": "Application object (WP-05). Records whether a formula+process demonstrated under a fixed process window meets the application acceptance criteria. `result` is narrowed from the common free-text result to a controlled verdict (PASS / FAIL / INCONCLUSIVE / GAP). Fail-Closed, encoded in if/then: a PASS verdict requires at least one acceptance criterion that carries a numeric threshold with OBSERVED status, a life_claim_boundary whose status is OBSERVED with at least one validated condition, and no counterexamples. A criterion whose threshold is not determined must be recorded with status GAP (never silently omitted); an empty acceptance_criteria list forces result GAP. This never asserts a physical, commercial, or life conclusion on its own.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "if": { "properties": { "result": { "const": "PASS" } }, "required": ["result"] },
+      "then": {
+        "properties": {
+          "acceptance_criteria": {
+            "minItems": 1,
+            "items": {
+              "properties": { "status": { "const": "OBSERVED" } },
+              "required": ["threshold"]
+            }
+          },
+          "counterexamples": { "maxItems": 0 },
+          "life_claim_boundary": { "$ref": "#/$defs/observed_life_claim_boundary" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "acceptance_criteria": { "maxItems": 0 } },
+        "required": ["acceptance_criteria"]
+      },
+      "then": { "properties": { "result": { "const": "GAP" } } }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "application" },
+    "application_id": { "type": "string", "minLength": 1 },
+    "project_reference": { "type": "string", "minLength": 1 },
+    "formula_reference": {
+      "description": "The formulation / design under test this application record belongs to.",
+      "type": "string",
+      "minLength": 1
+    },
+    "process_window_reference": {
+      "description": "The fixed process window this application was demonstrated under, as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record.",
+      "type": "string",
+      "pattern": "^PROCESS-WINDOW:"
+    },
+    "bench_references": {
+      "description": "Bench ids (bench.schema.json bench_id) that produced this record. Consumed by WP-06 stage=APPLIED evidence aggregation.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "acceptance_criteria": {
+      "description": "Acceptance criteria for the application. May be empty, but then result must be GAP; a criterion with no determined threshold must carry status GAP.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/acceptance_criterion" }
+    },
+    "result": {
+      "description": "Controlled verdict (narrows the common artifact result to an enum). PASS is only reachable with determined, OBSERVED criteria and a non-empty life_claim_boundary.",
+      "enum": ["PASS", "FAIL", "INCONCLUSIVE", "GAP"]
+    },
+    "counterexamples": {
+      "description": "Observed counterexamples to the acceptance criteria. Any entry blocks a PASS verdict.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/counterexample" }
+    },
+    "life_claim_boundary": {
+      "description": "Boundary of the life/durability claim this record supports. Empty (no validated_conditions, or status GAP) can never support a PASS verdict.",
+      "$ref": "#/$defs/life_claim_boundary"
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "application_id",
+    "project_reference",
+    "formula_reference",
+    "process_window_reference",
+    "acceptance_criteria",
+    "result",
+    "counterexamples",
+    "life_claim_boundary",
+    "source",
+    "evidence_id",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "acceptance_criterion": {
+      "type": "object",
+      "description": "One acceptance criterion. A criterion whose threshold is not determined must declare status GAP; a determined threshold must declare status OBSERVED or ASSUMED and carry operator/unit/source/evidence_id.",
+      "properties": {
+        "criterion_id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "threshold": { "type": "number" },
+        "operator": { "enum": ["<", "<=", "==", ">=", ">"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+      },
+      "required": ["criterion_id", "statement", "status"],
+      "additionalProperties": false,
+      "if": { "not": { "required": ["threshold"] } },
+      "then": { "properties": { "status": { "const": "GAP" } } },
+      "else": {
+        "required": ["threshold", "operator", "unit", "source", "evidence_id"],
+        "properties": { "status": { "enum": ["OBSERVED", "ASSUMED"] } }
+      }
+    },
+    "counterexample": {
+      "type": "object",
+      "properties": {
+        "counterexample_id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "observation": { "type": "string", "minLength": 1 },
+        "evidence_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": ["counterexample_id", "statement", "observation", "evidence_reference"],
+      "additionalProperties": false
+    },
+    "claim_condition": {
+      "type": "object",
+      "properties": {
+        "condition_id": { "type": "string", "minLength": 1 },
+        "parameter": { "type": "string", "minLength": 1 },
+        "lower_bound": { "type": "number" },
+        "upper_bound": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 }
+      },
+      "required": ["condition_id", "parameter", "lower_bound", "upper_bound", "unit"],
+      "additionalProperties": false
+    },
+    "life_claim_boundary": {
+      "type": "object",
+      "description": "The conditions under which the stated life/durability claim holds, plus its extrapolation basis. An empty validated_conditions list is an explicit 'no validated boundary'.",
+      "properties": {
+        "claim_scope": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] },
+        "validated_conditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/claim_condition" }
+        },
+        "extrapolation_basis": { "type": "string", "minLength": 1 },
+        "evidence_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": ["claim_scope", "status", "validated_conditions"],
+      "additionalProperties": false
+    },
+    "observed_life_claim_boundary": {
+      "description": "life_claim_boundary strengthened for a PASS verdict: status OBSERVED with at least one validated condition.",
+      "allOf": [
+        { "$ref": "#/$defs/life_claim_boundary" },
+        {
+          "properties": {
+            "status": { "const": "OBSERVED" },
+            "validated_conditions": { "minItems": 1 }
+          }
+        }
+      ]
+    }
+  }
+}

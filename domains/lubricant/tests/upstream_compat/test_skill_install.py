@@ -21,6 +21,8 @@ from scripts.install_domain_skill import ENGINE_ROOT, ENGINE_SKILLS, SKILLS, con
 PREFLIGHT_BY_SKILL = {
     "formulation-design": "preflight_formulation_design.py",
     "process-definition": "preflight_process_definition.py",
+    "application-definition": "preflight_application_definition.py",
+    "bench-registration": "preflight_bench_registration.py",
 }
 
 
