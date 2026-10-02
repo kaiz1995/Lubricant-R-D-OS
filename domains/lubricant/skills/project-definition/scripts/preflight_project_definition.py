@@ -12,7 +12,7 @@ TEXT_FIELDS = (
     "project_id", "project_name", "project_type", "product_family", "business_objective",
     "technical_objective", "risk_class", "owner",
 )
-LIST_FIELDS = ("hard_constraints", "benchmark_products", "success_criteria")
+LIST_FIELDS = ("hard_constraints", "success_criteria")
 PROJECT_TYPES = {"NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"}
 RISK_CLASSES = {"LOW", "MEDIUM", "HIGH", "STRATEGIC"}
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
@@ -39,6 +39,17 @@ def errors_for(data: object) -> list[str]:
         value = data.get(field)
         if not isinstance(value, list) or not value or not all(has_text(item) for item in value):
             errors.append(field)
+
+    # benchmark_products is optional: a benchmark is only mandatory when one exists.
+    # Without it, an explicit, recorded waiver reason is required (no silent skip).
+    benchmarks = data.get("benchmark_products")
+    benchmarks_valid = (
+        isinstance(benchmarks, list)
+        and bool(benchmarks)
+        and all(has_text(item) for item in benchmarks)
+    )
+    if not benchmarks_valid and not has_text(data.get("benchmark_waiver_reason")):
+        errors.append("benchmark_products (or benchmark_waiver_reason when no benchmark applies)")
 
     target_cost = data.get("target_cost")
     if not isinstance(target_cost, dict):

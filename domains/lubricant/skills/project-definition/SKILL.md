@@ -30,6 +30,16 @@ Supported Development Project Types:
 - **Mode B (主动提示用户选择)**: 若无足够背景，展示 6 种类型让用户选择后再索取输入。
 - **No Form Dumping**: 禁止一次性堆叠索取全部 10+ 字段或工况参数，仅按确认的项目类型逐步索取核心输入。
 
+### Benchmark Sourcing Rule（基准产品提问纪律）
+
+向用户提问"目标成本与基准产品"时：
+
+0. **对标不是必选项**：提问必须包含"无对标/暂缓对标"选项（全新品类、机理探索、无可比产品等情形）。用户选择无对标时，直接索取留痕理由（写入 `benchmark_waiver_reason`），**不推送任何对标选项**。
+1. **先判应用域与产品形态**（油/脂/干膜/固体润滑），再生成对标选项。谐波减速器、丝杠导轨等精密传动应用以**润滑脂**为主，不得默认按"润滑油"框架提问。
+2. **对标选项只能来自** `references/application-ecosystems.md` 中该应用域的生态图（随机配套标杆、专业供应商、确有产品线的国产厂家）。
+3. **生态图未覆盖的应用域**：请用户直接提供基准产品，或明确授权调研后再提问，禁止用行业通用品牌兜底。
+4. **禁止默认把长城/昆仑/统一等综合润滑油品牌列为"国产一线对标"**——仅当其在该应用域确有专用产品线时才可列入；否则等同于编造基准产品（见第 5 节黑名单）。
+
 ---
 
 ## 2. Input Specification
@@ -38,7 +48,8 @@ A valid input JSON requires:
 - `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the 6 valid types), `product_family`.
 - `business_objective`, `technical_objective`, non-empty `hard_constraints`, and non-empty `success_criteria`.
 - `target_cost` containing complete measurement metadata (`value`, `unit`, `source`, `method_version`, `material_batch`, `formula_version`).
-- Non-empty `benchmark_products`, `risk_class` (`LOW`, `MEDIUM`, `HIGH`, `STRATEGIC`), and `owner`.
+- `benchmark_products` is **optional**: only fill it when a comparable benchmark genuinely exists. When absent, a non-empty `benchmark_waiver_reason` is mandatory (e.g. 全新品类无可比产品、机理探索不设商业对标、用户明确暂缓对标) — silent omission is not allowed.
+- Non-empty `risk_class` (`LOW`, `MEDIUM`, `HIGH`, `STRATEGIC`) and `owner`.
 - Non-empty `source_evidence` with status `OBSERVED`.
 
 ---
@@ -77,6 +88,7 @@ Atomically copy/move `<temporary-file.json>` to `<output.json>` (defaults to `pr
 |---|---|---|
 | `HOLD: missing required fields: project_type` | 未确认项目性质 | **STOP**。暂停并启动 Mode A/B 协议向用户确认项目分类。 |
 | `HOLD: missing measurement metadata for target_cost` | 目标成本缺乏量化依据/版本 | **STOP**。要求用户提供明确成本上限数值与货币单位，不推测默认值。 |
+| `HOLD: ... benchmark_waiver_reason` | 无对标产品但未留痕豁免理由 | **STOP**。要求用户写明无对标的理由（全新品类/机理探索/暂缓），写入 `benchmark_waiver_reason` 后重跑。 |
 | `HOLD: source_evidence contains GAP or missing` | 缺少输入证据或立项依据不足 | **STOP**。要求提供立项技术简报或客户协议编号，不伪造证据条目。 |
 | `FAIL: cannot read artifact or schemas` | JSON 损坏或 schema 路径错误 | 校验文件编码与 JSON 语法，修复后重新运行校验。 |
 
@@ -85,7 +97,7 @@ Atomically copy/move `<temporary-file.json>` to `<output.json>` (defaults to `pr
 ## 5. Strict Blacklist (Prohibitions)
 
 1. **NO Downstream Artifact Generation**: DO NOT create Duty, Challenge, Failure CTQ, Test Method, Formulation, DOE, or Optimization artifacts in Stage 0.
-2. **NO Synthetic Assumptions**: DO NOT invent benchmark products, performance values, target costs, or evidence sources.
+2. **NO Synthetic Assumptions**: DO NOT invent benchmark products, performance values, target costs, or evidence sources. 此约束同样覆盖**交互提问阶段**：向用户展示的对标选项若与应用域生态不符（如对无产品线品牌套用"国产一线"），视同编造。
 3. **NO Dirty Overwrites**: DO NOT overwrite existing non-project files or files with mismatched `project_id`.
 4. **NO Silent Advance**: DO NOT proceed to Stage 1 without user confirmation of the Project Charter.
 
