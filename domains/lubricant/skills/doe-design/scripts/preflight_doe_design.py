@@ -50,10 +50,13 @@ SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.j
 INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space_artifact", "experiment_design"}
 # mixture_total is only meaningful for the mixture channels, so it is optional at
 # the envelope level and required/forbidden per family by the bridge below.
+# resource_envelope (WP-04b) is the same: optional in the request shape, required on
+# the factor channels and forbidden on the mixture-only channels.
 REQUEST_REQUIRED_FIELDS = {"experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "evidence"}
-REQUEST_OPTIONAL_FIELDS = {"mixture_total"}
+REQUEST_OPTIONAL_FIELDS = {"mixture_total", "resource_envelope"}
 REQUEST_ALLOWED_FIELDS = REQUEST_REQUIRED_FIELDS | REQUEST_OPTIONAL_FIELDS
 MEASUREMENT_FIELDS = {"value", "unit", "source", "method_version", "material_batch", "formula_version"}
+RESOURCE_ENVELOPE_FIELDS = ("bench_slots", "lot_capacity", "cycle_days", "cost_cap", "external_test_lead_time")
 
 # WP-04a bridge: which constraint role each channel routes where. MIXTURE_CLOSED
 # variables feed the engine's ``components`` (mixture_total applies); INDEPENDENT
@@ -113,6 +116,31 @@ def measurement_errors(value: object, label: str) -> list[str]:
     for field in MEASUREMENT_FIELDS - {"value"}:
         if not has_text(value.get(field)):
             errors.append(f"{label}.{field}")
+    return errors
+
+
+def resource_envelope_errors(value: object) -> list[str]:
+    """Structural + semantic checks for the WP-04b resource envelope."""
+    label = "experiment_design.resource_envelope"
+    if not isinstance(value, dict) or set(value) != set(RESOURCE_ENVELOPE_FIELDS):
+        return [f"{label} must contain exactly {list(RESOURCE_ENVELOPE_FIELDS)}"]
+    errors = []
+    for field in RESOURCE_ENVELOPE_FIELDS:
+        number = value.get(field)
+        if not isinstance(number, (int, float)) or isinstance(number, bool) or not math.isfinite(number):
+            errors.append(f"{label}.{field}")
+    if errors:
+        return errors
+    if value["bench_slots"] < 1:
+        errors.append(f"{label}.bench_slots must be >= 1, got {value['bench_slots']}")
+    if value["lot_capacity"] < 1:
+        errors.append(f"{label}.lot_capacity must be >= 1, got {value['lot_capacity']}")
+    if value["cycle_days"] <= 0:
+        errors.append(f"{label}.cycle_days must be > 0, got {value['cycle_days']}")
+    if value["cost_cap"] < 0:
+        errors.append(f"{label}.cost_cap must be >= 0, got {value['cost_cap']}")
+    if value["external_test_lead_time"] < 0:
+        errors.append(f"{label}.external_test_lead_time must be >= 0, got {value['external_test_lead_time']}")
     return errors
 
 
@@ -218,6 +246,19 @@ def request_errors(request: object, design_space: dict | None, failure: dict | N
                 errors.append("experiment_design.mixture_total must be within the sum of selected factor bounds")
     elif channel is not None and total is not None:
         errors.append("experiment_design.mixture_total must be absent for a factor-only family")
+    # WP-04b: the resource envelope is required exactly where the engine consumes it
+    # (the factor / process channels) and forbidden on the mixture-only channels.
+    envelope = request.get("resource_envelope")
+    if channel == CHANNEL_MIXTURE:
+        if envelope is not None:
+            errors.append("experiment_design.resource_envelope must be absent for a mixture family")
+    elif channel in (CHANNEL_FACTOR, CHANNEL_BOTH):
+        if envelope is None:
+            errors.append(
+                f"experiment_design.resource_envelope is required for family {family}: "
+                "the next round is bounded by bench_slots, lot_capacity and cycle_days")
+        else:
+            errors.extend(resource_envelope_errors(envelope))
     ctqs = {item.get("ctq_id"): item for item in failure.get("ctqs", []) if isinstance(item, dict)} if failure else {}
     allowed_ctqs = set(design_space.get("ctq_references", [])) if design_space else set()
     method_id = method.get("method_id") if method else None

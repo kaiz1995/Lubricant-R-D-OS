@@ -8,8 +8,10 @@ from __future__ import annotations
 # engine's ``components``; factor families route INDEPENDENT variables into
 # ``factors``; MIXTURE_PROCESS accepts both. TAGUCHI_ROBUST and the pre-WP-04a
 # screening/RSM families are not solvable and are deliberately not offered here.
+# WP-04b upgrades BAYESIAN_SEQUENTIAL from a bare enum label to a runnable
+# resource-constrained sequential path, so it joins the factor families.
 MIXTURE_FAMILIES = ("MIXTURE", "CONSTRAINED_MIXTURE")
-FACTOR_FAMILIES = ("FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT")
+FACTOR_FAMILIES = ("FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL")
 COMBINED_FAMILIES = ("MIXTURE_PROCESS",)
 SUPPORTED_FAMILIES = MIXTURE_FAMILIES + FACTOR_FAMILIES + COMBINED_FAMILIES
 

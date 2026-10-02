@@ -10,7 +10,7 @@ from doe_design_policy import expected_decision_fields
 from preflight_doe_design import errors_for, resolved_path
 
 
-REQUEST_FIELDS = ("experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "mixture_total")
+REQUEST_FIELDS = ("experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "mixture_total", "resource_envelope")
 
 
 def main() -> int:

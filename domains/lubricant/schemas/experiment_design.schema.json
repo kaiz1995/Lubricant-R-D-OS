@@ -23,7 +23,35 @@
         "properties": {
           "design": {
             "properties": {
-              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT"] }
+              "family": { "enum": ["MIXTURE", "CONSTRAINED_MIXTURE"] }
+            },
+            "required": ["family"]
+          }
+        },
+        "required": ["design"]
+      },
+      "then": { "properties": { "resource_envelope": false } }
+    },
+    {
+      "if": {
+        "properties": {
+          "design": {
+            "properties": {
+              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL", "MIXTURE_PROCESS"] }
+            },
+            "required": ["family"]
+          }
+        },
+        "required": ["design"]
+      },
+      "then": { "required": ["resource_envelope"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "design": {
+            "properties": {
+              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL"] }
             },
             "required": ["family"]
           }
@@ -44,7 +72,7 @@
     "design": {
       "type": "object",
       "properties": {
-        "family": { "enum": ["MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT"] },
+        "family": { "enum": ["MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL"] },
         "rationale": { "type": "string", "minLength": 1 },
         "effects_to_estimate": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
       },
@@ -64,6 +92,19 @@
       "additionalProperties": false
     },
     "mixture_total": { "$ref": "common.schema.json#/$defs/measurement" },
+    "resource_envelope": {
+      "$comment": "WP-04b. Required for the factor / process / sequential families and forbidden for the mixture families, because the engine only consumes it on the factor channel; scoping it this way keeps every pre-WP-04b mixture plan (fixtures/valid, gate-review, optimization, statistical-analysis, doe-design) valid without edits. bench_slots is the number of concurrent bench positions for the next round; its conversion basis references bench.availability_window (WP-05) and is documented rather than enforced until the bench object exists.",
+      "type": "object",
+      "properties": {
+        "bench_slots": { "type": "integer" },
+        "lot_capacity": { "type": "integer" },
+        "cycle_days": { "type": "number" },
+        "cost_cap": { "type": "number" },
+        "external_test_lead_time": { "type": "number" }
+      },
+      "required": ["bench_slots", "lot_capacity", "cycle_days", "cost_cap", "external_test_lead_time"],
+      "additionalProperties": false
+    },
     "responses": {
       "type": "array",
       "minItems": 1,
