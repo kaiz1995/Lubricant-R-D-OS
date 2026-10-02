@@ -8,12 +8,14 @@ Two-step acceptance (plan §WP-03):
     (c) `--list-stages PROCESS_ROBUSTNESS` prints the 9 planned stages, item by item.
     (d) The illegal MODEL_BUILT -> VERIFIED jump is DENIED by route_step AND
         rejected by validate_state_machine.
-  Step 2 (WP-06, TODO placeholder below): PROCESS_WINDOW_DEFINED -> APPLIED -> ...
+  Step 2 (WP-06, formalised here): PROCESS_WINDOW_DEFINED -> APPLIED is a legal
+    routed GO step (route_step AND validate_state_machine), APPLIED -> FROZEN is
+    the only FREEZE entry, and the WP-03 placeholder assertions (APPLIED was
+    deterministically rejected as an unknown stage) are flipped accordingly.
 
-The route's final stage APPLIED is deliberately published before WP-06 adds it to
-the stage universe (plan: two-step design). This test proves the partial state is
-safe: the route-adjacent APPLIED edge is rejected deterministically ("unknown
-stage") instead of raising, and no other branch breaks.
+The route's final stage APPLIED was deliberately published before WP-06 adds it to
+the stage universe (plan: two-step design). The step-2 assertions below prove
+the joined state: the APPLIED edge is legal, and no other branch breaks.
 """
 
 from __future__ import annotations
@@ -104,11 +106,13 @@ def main() -> int:
     validator = load_validator()
     contract = read_json(CONTRACT_PATH)
 
-    # 0. The published route is the planned 9-stage sequence and APPLIED is not yet
-    #    a stage (WP-06 owns that half).
+    # 0. The published route is the planned 9-stage sequence and WP-06 has added
+    #    APPLIED to the stage universe (between VERIFIED and FROZEN).
     assert tuple(contract["type_routes"][PROJECT_TYPE]) == EXPECTED_ROUTE, contract["type_routes"][PROJECT_TYPE]
     assert len(contract["type_routes"]) == 6, sorted(contract["type_routes"])
-    assert "APPLIED" not in contract["stages"], contract["stages"]
+    assert "APPLIED" in contract["stages"], contract["stages"]
+    assert contract["stages"].index("APPLIED") == contract["stages"].index("VERIFIED") + 1, contract["stages"]
+    assert contract["stages"].index("FROZEN") == contract["stages"].index("APPLIED") + 1, contract["stages"]
     assert "PROCESS_WINDOW_DEFINED" in contract["stages"], contract["stages"]
 
     # (a) route_step: the plan's exact probe, MODEL_BUILT -> PROCESS_WINDOW_DEFINED.
@@ -188,23 +192,29 @@ def main() -> int:
         "kind": "FREEZE",
         "gate_status": "FREEZE",
         "project_type": PROJECT_TYPE,
-        "before": state("VERIFIED"),
+        "before": state("APPLIED"),
         "after": state("FROZEN", status="FROZEN"),
-        "freeze_record": {"reason": "verified", "evidence_package": ["E-PR-001"]},
+        "freeze_record": {"reason": "applied", "evidence_package": ["E-PR-001"]},
     }
     assert validator.validate(freeze) is None, validator.validate(freeze)
+    # FREEZE cannot skip APPLIED: VERIFIED -> FROZEN is deterministically rejected
+    # (WP-06: application and machine validation must happen before freezing).
+    skipped_freeze = {
+        "kind": "FREEZE",
+        "gate_status": "FREEZE",
+        "project_type": PROJECT_TYPE,
+        "before": state("VERIFIED"),
+        "after": state("FROZEN", status="FROZEN"),
+        "freeze_record": {"reason": "verified only", "evidence_package": ["E-PR-001"]},
+    }
+    assert validator.validate(skipped_freeze) == "FREEZE requires APPLIED to FROZEN", validator.validate(skipped_freeze)
 
-    # The APPLIED edge is route-adjacent but APPLIED is not a stage until WP-06, so
-    # today it is rejected deterministically (a clean "unknown stage", not a crash).
+    # Step 2 (WP-06): the APPLIED edge is now a legal routed GO step for BOTH
+    # consumers, flipping the WP-03 placeholder ("unknown stage" rejection).
     applied_route = run_route_json({**probe, "project_state": {**probe["project_state"], "stage": "PROCESS_WINDOW_DEFINED"}, "requested_stage": "APPLIED"})
-    assert applied_route.returncode == 1 and "is not a known stage" in applied_route.stdout, applied_route.stdout
+    assert applied_route.returncode == 0 and applied_route.stdout.startswith("ALLOW:") and "application-validation" in applied_route.stdout, applied_route.stdout
     applied_reason = validator.validate(go_event("PROCESS_WINDOW_DEFINED", "APPLIED"))
-    assert applied_reason == "state has an unknown stage", applied_reason
-
-    # TODO (WP-06 step 2): once contracts/state-machine.json adds APPLIED between
-    # PROCESS_WINDOW_DEFINED and FROZEN, extend this file so
-    # PROCESS_WINDOW_DEFINED -> APPLIED (GO) is ALLOW and APPLIED -> FROZEN is the
-    # only FREEZE entry. Both assertions above must be flipped at that point.
+    assert applied_reason is None, applied_reason
 
     print("PASS: PROCESS_ROBUSTNESS route reachable and validated (route_step + validate_state_machine)")
     return 0

@@ -11,14 +11,12 @@ Covers:
    a GAP criterion can never back a PASS.
 5. Both new skills are registered for install (14 -> 16 keys) and their deployed
    preflights run standalone.
-
-TODO (merge-time, WP-04b): the bench-side conversion here
-(`bench_policy.available_bench_slots`) and the DOE resource envelope
-(`domains/lubricant/schemas/doe_input.schema.json` `resource_envelope.bench_slots`,
-added by WP-04b in the main worktree) live in separate worktrees. Once merged,
-assert `resource_envelope.bench_slots == available_bench_slots(bench_artifact)`
-using the `resource_envelope_slots()` helper below, which mirrors the planned
-cross-check. This file deliberately asserts only the bench side today.
+6. Merge cross-check (WP-04b x WP-05, formalised by WP-06): the bench-side
+   conversion `bench_policy.available_bench_slots` is the single source of
+   truth for `doe_input.resource_envelope.bench_slots` — the folded value is
+   fed into the DOE engine input and the engine recommends exactly that many
+   runs (bounded by the hypothesis count). The conversion is only ever *called*
+   here, never re-implemented.
 """
 
 from __future__ import annotations
@@ -249,6 +247,8 @@ def main() -> int:
         assert application["artifact_type"] == "application"
         assert application["result"] == "PASS"
         assert application["decision"] == "GO"
+        # WP-06: the application record materialises the APPLIED stage token.
+        assert application["stage"] == "APPLIED", application["stage"]
         # The interface WP-06 consumes: bench linkage survives into the artifact.
         assert application["bench_references"] == [bench["bench_id"]]
         assert validate_against("application", application) == [], validate_against("application", application)
@@ -343,16 +343,108 @@ def main() -> int:
             assert probe_result.returncode != 0 and probe_result.stdout.startswith("HOLD:"), probe_result.stdout
             assert "ModuleNotFoundError" not in probe_result.stderr, probe_result.stderr
 
-        # TODO (merge-time, WP-04b): uncomment once doe_input.resource_envelope
-        # exists in the merged tree.
-        #     assert resource_envelope_slots(doe_input) == available_bench_slots(bench)
+        # 6. Merge cross-check (WP-04b x WP-05, formalised by WP-06):
+        #    bench availability -> available_bench_slots -> doe_input
+        #    resource_envelope.bench_slots -> the engine recommends exactly N runs.
+        #    The conversion is only ever CALLED (single source of truth:
+        #    bench_policy.available_bench_slots), never re-implemented here.
+        from domains.lubricant.compute.doe.engine import generate_doe
+        from jsonschema import Draft202012Validator
+        from referencing import Registry, Resource
 
-    # The two new skills are registered for installation with their real schema sets.
+        # The nested engine input contract (doe_input.schema.json) carries the
+        # resource_envelope; the artifact schemas carry the bench/application.
+        doe_registry = Registry()
+        for path in sorted(SCHEMAS.glob("*.schema.json")):
+            schema = read_json(path)
+            doe_registry = doe_registry.with_resource(schema["$id"], Resource.from_contents(schema))
+        doe_input_schema = read_json(ROOT / "domains/lubricant/schemas/doe_input.schema.json")
+        doe_registry = doe_registry.with_resource(doe_input_schema["$id"], Resource.from_contents(doe_input_schema))
+
+        def validate_against_schema(schema: dict, registry: Registry, instance: dict) -> list[str]:
+            return [error.message for error in Draft202012Validator(schema, registry=registry).iter_errors(instance)]
+
+        def make_doe_engine_input(bench_slots: int) -> dict:
+            # WP-04b口径提示: engine inputs must declare a split-plot role per
+            # changing factor (factors[].role or process_factor_role).
+            return {
+                "input_type": "FACTORIAL_DOE_DESIGN",
+                "design_type": "FULL_FACTORIAL",
+                "model_order": "LINEAR",
+                "target_runs": 0,
+                "design_space_reference": "DS-PROC-BENCH-001",
+                "process_factor_role": "WHOLE_PLOT",
+                "factors": [
+                    {"factor_id": "PROC-TEMP", "factor_type": "CONTINUOUS", "range": {"lower": 90, "upper": 110}, "unit": "degC"},
+                    {"factor_id": "PROC-VACUUM", "factor_type": "CONTINUOUS", "range": {"lower": 1, "upper": 10}, "unit": "kPa"},
+                ],
+                "responses": [{"ctq_reference": "KV40", "test_method_reference": "ASTM D445", "role": "OPTIMIZATION_RESPONSE"}],
+                "experiment_card": {
+                    "decision_question": "Which process hypothesis gets the folded bench slots?",
+                    "hypothesis": "Vessel change shifts the temperature/vacuum response.",
+                    "variables_note": "Process factors only.",
+                    "constraints_note": "Independent process bounds, no mixture closure.",
+                    "responses_note": "KV40 OPTIMIZATION_RESPONSE.",
+                    "doe_selection_reason": "Two-level factorial resolves the main effects first.",
+                    "expected_information_value": "Orthogonal columns isolate each effect.",
+                    "decision_rule": "Spend the folded bench slots on the least-resolved hypothesis.",
+                },
+                "resource_envelope": {
+                    "bench_slots": bench_slots,
+                    "lot_capacity": 16,
+                    "cycle_days": 3.0,
+                    "cost_cap": 0.0,
+                    "external_test_lead_time": 0.0,
+                },
+            }
+
+        def check_folded_slots(bench_artifact: dict) -> int:
+            # (a) fold ONLY through the bench_policy function (single source).
+            slots = available_bench_slots(bench_artifact)
+            assert slots == bench_artifact["available_bench_slots"], (slots, bench_artifact)
+            # (b) the folded value fills the DOE input envelope, contract-valid.
+            engine_input = make_doe_engine_input(slots)
+            assert validate_against_schema(doe_input_schema, doe_registry, engine_input) == [], "doe_input envelope invalid"
+            # (c) the engine recommends exactly the folded number of runs
+            #     (bounded by the hypothesis count the design can resolve).
+            env = generate_doe(engine_input)
+            assert env["status"] == "OK", env.get("rejection_reasons")
+            result = env["result"]
+            hypotheses = len(result["columns"])
+            expected_runs = min(slots, hypotheses)
+            assert len(result["recommended_next_runs"]) == expected_runs, (slots, hypotheses, result["recommended_next_runs"])
+            assert result["resource_feasible"] is True, result["resource_feasible"]
+            assert resource_envelope_slots(engine_input) == slots
+            return expected_runs
+
+        # Bench A (the fixture bench): 7 usable slots; the 2-factor linear
+        # design resolves 3 hypotheses, so exactly min(7, 3) = 3 runs.
+        folded_a = check_folded_slots(bench)
+        # Bench B: one 6-day window, cycle 3 -> 2 usable slots -> exactly 2 runs
+        # (2 hypotheses to resolve), proving the recommendation count tracks the
+        # bench fold, not a constant.
+        small_bench_path = inputs / "bench-small.json"
+        small_bench = bench_input("BENCH-SZ-02")
+        small_bench["bench"]["availability_window"] = [
+            {"window_id": "W-1", "start": "2026-03-01", "end": "2026-03-06"},
+        ]
+        write_json(small_bench_path, small_bench)
+        small_readied = run_ok(BENCH_PREFLIGHT, small_bench_path)
+        assert "DERIVED: available_bench_slots=2" in small_readied.stdout, small_readied.stdout
+        small_bench_artifact_path = artifacts / "bench-small.json"
+        run_ok(BENCH_BUILDER, small_bench_path, small_bench_artifact_path)
+        small_bench_artifact = read_json(small_bench_artifact_path)
+        folded_b = check_folded_slots(small_bench_artifact)
+        assert folded_a == 3 and folded_b == 2, (folded_a, folded_b)
+
+    # The three application/bench/validation skills are registered for
+    # installation with their real schema sets.
     sys.path.insert(0, str(ROOT))
     from scripts.install_domain_skill import SKILLS
 
-    assert len(SKILLS) == 16, sorted(SKILLS)
+    assert len(SKILLS) == 17, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
+    assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
     assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]
 
     print("PASS: WP-05 application + bench objects, fail-closed verdict, and bench slot conversion")

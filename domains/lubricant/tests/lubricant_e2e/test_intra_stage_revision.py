@@ -170,12 +170,19 @@ def main() -> int:
         "after": state(10, ["E-PW-001"], stage="VERIFIED"),
     }
     assert validator.validate(go) is None, validator.validate(go)
-    # FREEZE: only from VERIFIED, version preserved, with a freeze record.
+    # FREEZE (WP-06): only from APPLIED, version preserved, with a freeze record;
+    # a VERIFIED project must first pass application validation (GO to APPLIED).
+    go_applied = {
+        "kind": "GO", "gate_status": "GO", "project_type": "NEW_PRODUCT",
+        "before": state(10, ["E-PW-001"], stage="VERIFIED"),
+        "after": state(10, ["E-PW-001"], stage="APPLIED"),
+    }
+    assert validator.validate(go_applied) is None, validator.validate(go_applied)
     freeze = {
         "kind": "FREEZE", "gate_status": "FREEZE",
-        "before": state(10, ["E-PW-001"], stage="VERIFIED"),
+        "before": state(10, ["E-PW-001"], stage="APPLIED"),
         "after": state(10, ["E-PW-001"], stage="FROZEN", status="FROZEN"),
-        "freeze_record": {"reason": "verified", "evidence_package": ["E-PW-001"]},
+        "freeze_record": {"reason": "applied", "evidence_package": ["E-PW-001"]},
     }
     assert validator.validate(freeze) is None, validator.validate(freeze)
 
