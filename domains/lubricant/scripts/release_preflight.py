@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from integrations.open_science import install_skill  # noqa: E402
+from scripts.check_double_list import run_check as run_double_list_check  # noqa: E402
 from scripts.install_domain_skill import (  # noqa: E402
     ENGINE_ROOT,
     ENGINE_SKILLS,
@@ -37,6 +38,14 @@ def _fail(checks: list[dict], name: str, reason: str) -> None:
 
 def run_preflight(pack_root: Path = ROOT) -> dict:
     checks: list[dict] = []
+
+    # §9.5 leftover: installer SKILLS list vs preflight schema usage.
+    double_list = run_double_list_check(pack_root)
+    if double_list["status"] != "PASS":
+        _fail(checks, "double-list:installer-vs-preflight", json.dumps(double_list["problems"], ensure_ascii=False))
+    else:
+        checks.append({"check": "double-list:installer-vs-preflight", "status": "PASS",
+                       "detail": f"{double_list['skills_consistent']}/{double_list['skills_total']} skills consistent"})
 
     for test in ("tests/test_workspace_bundle.py", "tests/test_lubricant_db.py", "tests/upstream_compat/test_skill_install.py"):
         result = subprocess.run(
