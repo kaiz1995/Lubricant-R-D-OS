@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from preflight_experiment_import import candidate, doe_output, errors_for, resolve
+from preflight_experiment_import import DEFAULT_EVIDENCE_CLASS, candidate, doe_output, errors_for, resolve
 
 
 def main() -> int:
@@ -21,8 +21,10 @@ def main() -> int:
     method = json.loads(resolve(data["test_method_artifact"], input_path).read_text(encoding="utf-8"))
     design_space = json.loads(resolve(data["design_space_artifact"], input_path).read_text(encoding="utf-8"))
     design = json.loads(resolve(data["experiment_design_artifact"], input_path).read_text(encoding="utf-8"))
-    _, doe, output_digest = doe_output(resolve(data["doe_output_artifact"], input_path))
-    assert doe is not None and output_digest is not None
+    doe, output_digest = None, None
+    if data.get("experiment", {}).get("evidence_class", DEFAULT_EVIDENCE_CLASS) == DEFAULT_EVIDENCE_CLASS:
+        _, doe, output_digest = doe_output(resolve(data["doe_output_artifact"], input_path))
+        assert doe is not None and output_digest is not None
     artifact = candidate(data, project, method, design_space, design, doe, output_digest)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

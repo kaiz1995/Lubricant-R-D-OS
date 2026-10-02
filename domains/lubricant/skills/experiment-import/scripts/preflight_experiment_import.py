@@ -1,4 +1,12 @@
-"""Hold incomplete PHYSICAL experiment imports before any artifact is written."""
+"""Hold incomplete experiment imports before any artifact is written.
+
+WP-07: the import is classified by `evidence_class`. A record without an
+explicit `evidence_class` is treated as DOE_POINT (backward compatible: every
+pre-existing record keeps its contract). Only DOE_POINT imports consume a DOE
+output and its points; APPLICATION_FIELD and CONFIRMATORY_NON_DOE records are
+held to their own declared minimal input sets (module docstring constants
+below) and are still provenance-bound (test method + execution provenance).
+"""
 
 from __future__ import annotations
 
@@ -14,8 +22,13 @@ from referencing import Registry, Resource
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json")
-INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space_artifact", "experiment_design_artifact", "doe_output_artifact", "doe_output_digest", "experiment"}
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"))
+DOE_INPUT_FIELDS = {"doe_output_artifact", "doe_output_digest"}
+INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"experiment"} | DOE_INPUT_FIELDS
+RECORD_FIELDS = {"experiment_id", "runs", "evidence"}
+RECORD_OPTIONAL_FIELDS = {"evidence_class", "application_reference", "bench_reference"}
+EVIDENCE_CLASSES = ("DOE_POINT", "APPLICATION_FIELD", "CONFIRMATORY_NON_DOE")
+DEFAULT_EVIDENCE_CLASS = "DOE_POINT"
 
 
 def has_text(value: object) -> bool:
@@ -80,28 +93,52 @@ def doe_output(path: Path | None) -> tuple[list[str], dict | None, str | None]:
     return errors, value if not errors else None, hashlib.sha256(raw).hexdigest()
 
 
-def candidate(data: dict, project: dict, method: dict, design_space: dict, design: dict, doe: dict, output_digest: str) -> dict:
+def candidate(data: dict, project: dict, method: dict, design_space: dict, design: dict, doe: dict | None, output_digest: str | None) -> dict:
     record = data.get("experiment", {})
-    return {
+    evidence_class = record.get("evidence_class", DEFAULT_EVIDENCE_CLASS)
+    artifact: dict = {
         "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": project["project_id"], "stage": "EXPERIMENT_RUNNING", "evidence_scope": design["evidence_scope"],
         "decision_question": "Does the supplied PHYSICAL execution record satisfy the import provenance contract?",
         "hypothesis": "The import records supplied execution provenance only.",
         "uncertainty": "No owner approval, method qualification, product-performance, or release conclusion is established by import.",
-        "decision_rule": "Import only complete PHYSICAL records linked to one supplied DOE output and qualified method.",
+        "decision_rule": "Import only complete PHYSICAL records linked to one supplied DOE output and qualified method." if evidence_class == "DOE_POINT" else "Import only complete PHYSICAL non-DOE records with qualified method, full execution provenance, and their declared non-DOE anchors; they never enter the modeling entry.",
         "result": "Physical execution record imported from supplied records only; not owner approval, method qualification, product performance, or release approval.",
         "decision": "GO", "next_action": "Retain the supplied raw records for existing downstream validation without inferring performance.",
-        "experiment_id": record.get("experiment_id"), "experiment_design_reference": design["experiment_design_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]],
-        "doe_output_reference": {"engine_name": doe["engine_name"], "engine_version": doe["engine_version"], "input_digest": doe["input_digest"], "output_digest": output_digest},
+        "experiment_id": record.get("experiment_id"), "evidence_class": evidence_class, "experiment_design_reference": design["experiment_design_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]],
         "runs": record.get("runs"), "evidence": record.get("evidence"),
     }
+    if evidence_class == "DOE_POINT":
+        artifact["doe_output_reference"] = {"engine_name": doe["engine_name"], "engine_version": doe["engine_version"], "input_digest": doe["input_digest"], "output_digest": output_digest}
+    for field in ("application_reference", "bench_reference"):
+        if has_text(record.get(field)):
+            artifact[field] = record[field]
+    return artifact
 
 
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors: list[str] = []
-    if set(data) != INPUT_FIELDS:
-        errors.append("input must contain only experiment-import fields")
+    record = data.get("experiment")
+    if not isinstance(record, dict) or not set(record) <= RECORD_FIELDS | RECORD_OPTIONAL_FIELDS or not RECORD_FIELDS <= set(record):
+        if isinstance(record, dict):
+            extra = sorted(set(record) - RECORD_FIELDS - RECORD_OPTIONAL_FIELDS)
+            missing = sorted(RECORD_FIELDS - set(record))
+            return ["experiment must contain only experiment_id, runs, evidence, and the optional WP-07 fields (evidence_class, application_reference, bench_reference)"
+                    + f"; unexpected={extra or 'none'} missing={missing or 'none'}"]
+        return ["experiment must contain only experiment_id, runs, evidence, and the optional WP-07 fields"]
+    evidence_class = record.get("evidence_class", DEFAULT_EVIDENCE_CLASS)
+    if evidence_class not in EVIDENCE_CLASSES:
+        return [f"experiment.evidence_class must be one of {list(EVIDENCE_CLASSES)}; got {evidence_class!r}"]
+    doe_required = evidence_class == DEFAULT_EVIDENCE_CLASS
+    expected_input_fields = INPUT_FIELDS if doe_required else INPUT_FIELDS - DOE_INPUT_FIELDS
+    if set(data) != expected_input_fields:
+        extra = sorted(set(data) - expected_input_fields)
+        missing = sorted(expected_input_fields - set(data))
+        errors.append("input must contain only experiment-import fields"
+                      + ("" if doe_required else " (non-DOE_POINT imports do not consume a DOE output)")
+                      + f"; unexpected={extra or 'none'} missing={missing or 'none'}")
+        return errors
     loaded: dict[str, dict | None] = {}
     for key, schema_name, stage in UPSTREAM:
         item_errors, value = artifact(resolve(data.get(key), input_path), schema_name, key)
@@ -123,25 +160,32 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if design.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_design_artifact design-space link is invalid")
     if design_space.get("qualified_test_method_references") != [method.get("method_id")]: errors.append("design_space_artifact qualified method link is invalid")
     if design.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_design_artifact method link is invalid")
-    doe_errors, doe, output_digest = doe_output(resolve(data.get("doe_output_artifact"), input_path)); errors.extend(doe_errors)
-    if doe is None or output_digest is None: return errors
-    if data.get("doe_output_digest") != output_digest:
-        errors.append("doe_output_digest must equal the supplied DOE output bytes SHA-256")
-    record = data.get("experiment")
-    if not isinstance(record, dict) or set(record) != {"experiment_id", "runs", "evidence"}:
-        return errors + ["experiment must contain only experiment_id, runs, and evidence"]
+    doe = None
+    output_digest = None
+    point_ids: set[object] = set()
+    if doe_required:
+        doe_errors, doe, output_digest = doe_output(resolve(data.get("doe_output_artifact"), input_path)); errors.extend(doe_errors)
+        if doe is None or output_digest is None: return errors
+        if data.get("doe_output_digest") != output_digest:
+            errors.append("doe_output_digest must equal the supplied DOE output bytes SHA-256")
+        points = doe.get("result", {}).get("runs", []) if isinstance(doe.get("result"), dict) else []
+        point_ids = {item.get("run_index") for item in points if isinstance(item, dict)}
+    if not doe_required and evidence_class == "CONFIRMATORY_NON_DOE" and not (has_text(record.get("application_reference")) or has_text(record.get("bench_reference"))):
+        errors.append("CONFIRMATORY_NON_DOE records must cite an application_reference or bench_reference anchor")
     if has_gap(record): errors.append("experiment evidence contains GAP")
-    points = doe.get("result", {}).get("runs", []) if isinstance(doe.get("result"), dict) else []
-    point_ids = {item.get("run_index") for item in points if isinstance(item, dict)}
     seen: set[object] = set()
     expected_ctqs = {item.get("ctq_reference") for item in design.get("responses", []) if isinstance(item, dict)}
     for index, run in enumerate(record.get("runs", []) if isinstance(record.get("runs"), list) else []):
         label = f"experiment.runs[{index}]"
         if not isinstance(run, dict): errors.append(label); continue
         if not all(has_text(run.get(field)) for field in ("run_id", "material_batch", "formula_reference", "formula_version")): errors.append(f"{label} formula/batch reference is incomplete")
-        point = run.get("doe_point_reference", {}).get("run_index") if isinstance(run.get("doe_point_reference"), dict) else None
-        if point not in point_ids or point in seen: errors.append(f"{label} DOE point reference is missing, invalid, or duplicated")
-        seen.add(point)
+        if not doe_required:
+            if "doe_point_reference" in run:
+                errors.append(f"{label} carries doe_point_reference; only DOE_POINT records consume DOE points")
+        else:
+            point = run.get("doe_point_reference", {}).get("run_index") if isinstance(run.get("doe_point_reference"), dict) else None
+            if point not in point_ids or point in seen: errors.append(f"{label} DOE point reference is missing, invalid, or duplicated")
+            seen.add(point)
         execution = run.get("execution_provenance")
         if not isinstance(execution, dict) or not timestamp_ok(execution.get("executed_at")) or not all(has_text(execution.get(field)) for field in ("operator_reference", "instrument_reference", "calibration_reference", "raw_record_reference")):
             errors.append(f"{label} execution provenance is incomplete")
@@ -168,7 +212,7 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as error: print(f"HOLD: cannot read input: {error}; no artifact generated"); return 1
     errors = errors_for(data, path)
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
-    print("READY: PHYSICAL execution record can be imported without approval or performance inference"); return 0
+    print("READY: execution record can be imported without approval or performance inference"); return 0
 
 
 if __name__ == "__main__": raise SystemExit(main())

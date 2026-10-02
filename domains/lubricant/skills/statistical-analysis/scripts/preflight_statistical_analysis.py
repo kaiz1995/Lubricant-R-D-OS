@@ -87,6 +87,16 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if experiment and experiment_design and experiment.get("experiment_design_reference") != experiment_design.get("experiment_design_id"): errors.append("experiment_artifact design link is invalid")
     if experiment and design_space and experiment.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_artifact design-space link is invalid")
     if experiment and method and experiment.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_artifact method link is invalid")
+    # WP-07: the modeling entry stays DOE-only. Non-DOE experiment records
+    # (APPLICATION_FIELD / CONFIRMATORY_NON_DOE) are legitimate imports but are
+    # explicitly excluded here, naming the record and the reason. A record
+    # without an explicit evidence_class is DOE_POINT by contract default.
+    if experiment and experiment.get("evidence_class", "DOE_POINT") != "DOE_POINT":
+        errors.append(
+            f"experiment_artifact {experiment.get('experiment_id')} has evidence_class "
+            f"{experiment.get('evidence_class')} and is excluded from the modeling entry; "
+            "only DOE_POINT records may be modeled (non-DOE evidence never enters statistical analysis)"
+        )
     request = data.get("analysis")
     errors.extend(request_errors(request, project.get("project_id", "") if project else "", experiment.get("evidence_scope") if experiment else None))
     if not isinstance(request, dict): return errors
