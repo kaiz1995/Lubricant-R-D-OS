@@ -35,3 +35,5 @@ bench-registration	Resource registration	NEW	n/a	n/a	n/a	WP-05 new skill: fail-c
 
 application-validation	APPLIED entry gate	NEW	n/a	n/a	n/a	WP-06 new skill: fail-closed APPLIED entry gate (INCONCLUSIVE/FAIL/GAP can never enter APPLIED; PASS re-checked via single-source application_policy), VERIFIED-only stage gating, explicit checkpoint, bench linkage required; Darwin score not measured yet
 
+interface-definition	interface / coating / material record with fail-closed compatibility verdict	NEW	n/a	n/a	n/a	WP-09 new skill: resource-object interface record (counterpart a/b, optional coating by declaration, per-condition compatibility evidence); PASS only with non-empty all-OBSERVED all-PASS evidence, empty evidence forces GAP; COMPATIBILITY_PASSED freeze condition gated by interface_policy.freeze_compatibility_errors (INTERFACE:<id> citation, existing artifact, PASS verdict); Darwin score not measured yet
+
