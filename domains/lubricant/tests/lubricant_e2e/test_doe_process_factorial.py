@@ -38,6 +38,13 @@ CONSTRAINT_ROLE = ROOT / "scripts/constraint_role.py"
 PROJECT_ID = "WGO-DOE-001"
 SIMULATED = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
 
+# WP-04b: every factor/process/sequential family request must declare the resource
+# envelope that bounds its next bench round. The mixture family must not carry one.
+RESOURCE_ENVELOPE = {
+    "bench_slots": 2, "lot_capacity": 16, "cycle_days": 3.0,
+    "cost_cap": 0.0, "external_test_lead_time": 0.0,
+}
+
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -94,7 +101,8 @@ def process_design_space() -> dict:
 
 
 def experiment_request(family: str, factor_references: list[str], *, mixture_total: dict | None = None,
-                       design_id: str = "DOE-PR-001") -> dict:
+                       design_id: str = "DOE-PR-001",
+                       resource_envelope: dict | None = None) -> dict:
     request = {
         "experiment_design_id": design_id,
         "factor_references": factor_references,
@@ -124,6 +132,10 @@ def experiment_request(family: str, factor_references: list[str], *, mixture_tot
     }
     if mixture_total is not None:
         request["mixture_total"] = mixture_total
+    if resource_envelope is not None:
+        # WP-04b: a factor-family request must bound its next round; the mixture family
+        # must not carry one at all (see the conditional rule in experiment_design.schema.json).
+        request["resource_envelope"] = resource_envelope
     return request
 
 
@@ -162,7 +174,8 @@ def main() -> int:
         print("PASS: implicit constraint_role derivation agrees with the shared WP-01 resolver")
 
         # --- 2. Factorial family (process axis) is READY and builds an artifact. ---
-        request = experiment_request("FRACTIONAL_FACTORIAL", ["PROC-TEMP", "PROC-VACUUM"])
+        request = experiment_request("FRACTIONAL_FACTORIAL", ["PROC-TEMP", "PROC-VACUUM"],
+                                     resource_envelope=RESOURCE_ENVELOPE)
         envelope = input_envelope(workspace, design_space, request)
         preflight_result = run(PREFLIGHT, envelope)
         assert preflight_result.returncode == 0, preflight_result.stdout + preflight_result.stderr
@@ -178,7 +191,37 @@ def main() -> int:
         assert "mixture_total" not in artifact, "a factor family must not carry a mixture_total"
         validate_result = run(VALIDATOR, artifact_path)
         assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
+        assert artifact["resource_envelope"] == RESOURCE_ENVELOPE, artifact.get("resource_envelope")
         print("PASS: process-axis design space -> EXPERIMENT_DESIGNED artifact (factor family)")
+
+        # --- WP-04b conditional rule: a factor family without an envelope is refused, while
+        #     the mixture family fixtures stay untouched (backward-compatibility decision). ---
+        missing = experiment_request("FRACTIONAL_FACTORIAL", ["PROC-TEMP", "PROC-VACUUM"])
+        result = run(PREFLIGHT, input_envelope(workspace, design_space, missing))
+        assert result.returncode != 0 and "HOLD" in result.stdout, result.stdout
+        assert "resource_envelope" in result.stdout, result.stdout
+        print("PASS: factor family without a resource envelope is refused by name")
+
+        # --- The combined family carries BOTH the frozen formula and the envelope: the
+        #     engine consumes the envelope on the MIXTURE_PROCESS input type as well. ---
+        combined = experiment_request(
+            "MIXTURE_PROCESS", ["PROC-TEMP", "MIX-BASE"],
+            mixture_total={"value": 0.8, "unit": "wt%", "source": SIMULATED, "method_version": "design-v1",
+                           "material_batch": "not_applicable", "formula_version": "not_applicable"},
+            resource_envelope=RESOURCE_ENVELOPE, design_id="DOE-PR-002",
+        )
+        envelope = input_envelope(workspace, design_space, combined)
+        preflight_result = run(PREFLIGHT, envelope)
+        assert preflight_result.returncode == 0 and preflight_result.stdout.startswith("READY:"), preflight_result.stdout
+        combined_path = workspace / "experiment-design-combined.json"
+        build_result = run(BUILDER, envelope, combined_path)
+        assert build_result.returncode == 0, build_result.stdout + build_result.stderr
+        combined_artifact = read_json(combined_path)
+        assert combined_artifact["design"]["family"] == "MIXTURE_PROCESS"
+        assert combined_artifact["mixture_total"]["value"] == 0.8
+        assert combined_artifact["resource_envelope"] == RESOURCE_ENVELOPE
+        assert run(VALIDATOR, combined_path).returncode == 0
+        print("PASS: combined family carries both mixture_total and resource_envelope")
 
         # --- 1. The same axis drives a pure-process FACTORIAL_DOE_DESIGN engine run. ---
         doe_input = {
@@ -220,7 +263,8 @@ def main() -> int:
         print("PASS: pure-process split-plot engine run behind the evidence-scope boundary")
 
         # --- 5a. MIXTURE_CLOSED variable in a factor family is rejected by name. ---
-        mixed_request = experiment_request("FRACTIONAL_FACTORIAL", ["PROC-TEMP", "MIX-BASE"])
+        mixed_request = experiment_request("FRACTIONAL_FACTORIAL", ["PROC-TEMP", "MIX-BASE"],
+                                           resource_envelope=RESOURCE_ENVELOPE)
         result = run(PREFLIGHT, input_envelope(workspace, design_space, mixed_request))
         assert result.returncode != 0 and "HOLD" in result.stdout, result.stdout
         assert "MIX-BASE" in result.stdout and "belongs in DOE components" in result.stdout, result.stdout
@@ -242,6 +286,7 @@ def main() -> int:
             "FRACTIONAL_FACTORIAL", ["PROC-TEMP", "PROC-VACUUM"],
             mixture_total={"value": 1.0, "unit": "wt%", "source": SIMULATED, "method_version": "design-v1",
                            "material_batch": "not_applicable", "formula_version": "not_applicable"},
+            resource_envelope=RESOURCE_ENVELOPE,
         )
         result = run(PREFLIGHT, input_envelope(workspace, design_space, stray))
         assert result.returncode != 0 and "HOLD" in result.stdout, result.stdout

@@ -1,0 +1,76 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "design_space",
+  "project_id": "WGO-DOE-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "decision_question": "What mixture range may be tested?",
+  "hypothesis": "Bounded mixture variables can be evaluated.",
+  "uncertainty": "No formula is selected.",
+  "evidence": [
+    {
+      "evidence_id": "E-DS-001",
+      "statement": "Synthetic bounded variable evidence.",
+      "source": "synthetic",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Stay inside supplied boundaries.",
+  "result": "Synthetic process-axis design space recorded.",
+  "decision": "GO",
+  "next_action": "Design experiments.",
+  "design_space_id": "DS-DOE-PROC-001",
+  "scope": "Synthetic PROCESS_ROBUSTNESS design space: process axis with independent bounds",
+  "variables": [
+    {
+      "variable_id": "PROC-TEMP",
+      "variable_type": "PROCESS_VARIABLE",
+      "lower_bound": {
+        "value": 90,
+        "unit": "degC",
+        "source": "synthetic",
+        "method_version": "design-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "upper_bound": {
+        "value": 110,
+        "unit": "degC",
+        "source": "synthetic",
+        "method_version": "design-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "constraint_rationale": "Synthetic saponification temperature window."
+    },
+    {
+      "variable_id": "PROC-VACUUM",
+      "variable_type": "PROCESS_VARIABLE",
+      "lower_bound": {
+        "value": 1,
+        "unit": "kPa",
+        "source": "synthetic",
+        "method_version": "design-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "upper_bound": {
+        "value": 10,
+        "unit": "kPa",
+        "source": "synthetic",
+        "method_version": "design-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "constraint_rationale": "Synthetic vacuum deaeration window."
+    }
+  ],
+  "ctq_references": [
+    "CTQ-DOE-001"
+  ],
+  "qualified_test_method_references": [
+    "TM-DOE-001"
+  ],
+  "constraints": [
+    "Synthetic process bounds; no mixture closure on this axis."
+  ]
+}
