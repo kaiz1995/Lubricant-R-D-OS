@@ -58,6 +58,26 @@ def required_record(event: dict, key: str, fields: list[str], reason: str) -> st
     return None
 
 
+REVISION_SOFT_CAP = 3
+
+
+def warn_revision_cap(revision: dict) -> None:
+    """Soft warning for the "≤3 revisions per stage" process convention.
+
+    The cap is a convention (§7.1 trigger 2), not a hard state-machine rule, so
+    it never fails a transition. A single-event validator has no revision
+    history, so the count is carried by the caller in the optional
+    `revision.revision_index` field; only warn when it exceeds the cap.
+    """
+    index = revision.get("revision_index")
+    if isinstance(index, int) and index > REVISION_SOFT_CAP:
+        print(
+            f"WARNING: intra-stage revision #{index} exceeds the "
+            f"<= {REVISION_SOFT_CAP} convention; re-evaluate the design space "
+            "(plan §7.1 trigger 2)"
+        )
+
+
 def lifecycle_error(kind: object, gate: object, before: dict, after: dict) -> str | None:
     rule = CONTRACT["actions"].get(kind)
     if not rule:
@@ -187,6 +207,49 @@ def validate(event: object) -> str | None:
             return "CLOSE requires FROZEN to CLOSED"
         if not same(before, after, immutable + ("version",)):
             return "CLOSE cannot modify a frozen project"
+        return None
+
+    if kind == "REVISE":
+        # Intra-stage revision: the stage pointer never moves, so repeated
+        # rework inside one stage never forces a full-chain ROLLBACK.
+        if after["stage"] != before["stage"]:
+            return "REVISE must not change the stage"
+        accepted = event.get("accepted_stages")
+        if not isinstance(accepted, list) or accepted != stages[: before_index + 1]:
+            return "REVISE must keep the accepted-stage prefix unchanged"
+        if after["version"] <= before["version"]:
+            return "REVISE must create a new revision version"
+        if not same(before, after, ("project_id", "decision_question")):
+            return "REVISE must preserve the project and decision question"
+        if not retains_evidence(before, after):
+            return "REVISE must retain prior evidence"
+        record_error = required_record(
+            event, "revision", CONTRACT["revision_fields"],
+            "REVISE requires reason, operator, and impact",
+        )
+        if record_error:
+            return record_error
+        revision = event["revision"]
+        impact = revision.get("impact")
+        if impact not in CONTRACT["revision_impact_values"]:
+            return "REVISE impact must be PROCESS_ONLY or FORMULA_OR_CTQ"
+        if impact == "PROCESS_ONLY":
+            # Reuse the signoff that already covers the current formula version.
+            reuse = revision.get(CONTRACT["revision_reuse_field"])
+            if not isinstance(reuse, int) or reuse < 1 or reuse > before["version"]:
+                return "REVISE PROCESS_ONLY impact must reuse an existing reviewed version"
+            warn_revision_cap(revision)
+            return None
+        # FORMULA_OR_CTQ: the formula or its CTQ changed, so the segment must be
+        # re-reviewed before the revision is accepted.
+        re_review = revision.get("re_review")
+        if not isinstance(re_review, dict) or any(
+            not re_review.get(field) for field in CONTRACT["re_review_fields"]
+        ):
+            return "REVISE FORMULA_OR_CTQ impact requires a fresh technical review"
+        if re_review.get("reviewed_version") != after["version"]:
+            return "REVISE FORMULA_OR_CTQ review must cover the new version"
+        warn_revision_cap(revision)
         return None
 
     return "event kind is not supported"
