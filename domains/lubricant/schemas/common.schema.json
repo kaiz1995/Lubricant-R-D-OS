@@ -36,12 +36,21 @@
       ]
     },
     "evidence_item": {
+      "description": "WP-12: optional claim_class grades an evidence item on two dimensions at once — provenance (who produced the claim: manufacturer / own lab / independent lab / standard body) and certainty (how much it can be trusted before verification). The four values form an ordinal ladder from lowest to highest decision weight: MANUFACTURER_DATASHEET (vendor-published, unverified) < THIRD_PARTY_LAB (independent measurement, method may be unknown to us) < INTERNAL_TEST (own controlled measurement, method qualified in-project) < REGULATORY_OR_STANDARD (codified limit or accepted standard). Optional: absence means ungraded, so all existing artifacts stay valid.",
       "type": "object",
       "properties": {
         "evidence_id": { "type": "string", "minLength": 1 },
         "statement": { "type": "string", "minLength": 1 },
         "source": { "type": "string", "minLength": 1 },
-        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] },
+        "claim_class": {
+          "enum": [
+            "MANUFACTURER_DATASHEET",
+            "THIRD_PARTY_LAB",
+            "INTERNAL_TEST",
+            "REGULATORY_OR_STANDARD"
+          ]
+        }
       },
       "required": ["evidence_id", "statement", "source", "status"],
       "additionalProperties": false

@@ -1,0 +1,69 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "project",
+  "status": "ACTIVE",
+  "project_id": "WGO-001",
+  "stage": "PROJECT_DEFINED",
+  "decision_question": "Can the cost-down project proceed to duty definition?",
+  "hypothesis": "A constrained project charter can frame the decision.",
+  "uncertainty": "Duty conditions are not yet complete.",
+  "evidence": [
+    {
+      "evidence_id": "E-P-001",
+      "statement": "Business brief received.",
+      "source": "approved project brief",
+      "status": "OBSERVED",
+      "claim_class": "MANUFACTURER_DATASHEET"
+    },
+    {
+      "evidence_id": "E-P-002",
+      "statement": "Competing product friction data from an external lab report.",
+      "source": "external lab report LAB-2026-117",
+      "status": "ASSUMED",
+      "claim_class": "THIRD_PARTY_LAB"
+    },
+    {
+      "evidence_id": "E-P-003",
+      "statement": "Baseline bench friction screening run in-house.",
+      "source": "in-house bench rig B-02, method TM-011",
+      "status": "OBSERVED",
+      "claim_class": "INTERNAL_TEST"
+    },
+    {
+      "evidence_id": "E-P-004",
+      "statement": "Target viscosity grade follows the wind gear oil specification.",
+      "source": "ISO 12925-1 CKC grade table",
+      "status": "OBSERVED",
+      "claim_class": "REGULATORY_OR_STANDARD"
+    }
+  ],
+  "decision_rule": "Advance only after project constraints are recorded.",
+  "result": "Charter is recorded; no product conclusion is made.",
+  "decision": "GO",
+  "next_action": "Define duty conditions.",
+  "project_name": "Wind gear oil cost-down",
+  "project_type": "COST_DOWN",
+  "product_family": "ISO VG 320 wind gear oil",
+  "business_objective": "Reduce cost within the approved business range.",
+  "technical_objective": "Maintain required CTQ and risk boundaries.",
+  "hard_constraints": [
+    "local data only",
+    "compatibility evidence required"
+  ],
+  "target_cost": {
+    "value": 100,
+    "unit": "CNY/t",
+    "source": "approved cost baseline",
+    "method_version": "cost-baseline-v1",
+    "material_batch": "not_applicable",
+    "formula_version": "baseline-v1"
+  },
+  "benchmark_products": [
+    "Mobilgear SHC Gear 320 WT"
+  ],
+  "success_criteria": [
+    "critical CTQs have evidence"
+  ],
+  "risk_class": "STRATEGIC",
+  "owner": "R&D owner"
+}
