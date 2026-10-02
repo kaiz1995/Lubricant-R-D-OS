@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/bench.schema.json",
+  "title": "Lubricant R&D bench (test stand) registration",
+  "description": "Bench resource object (WP-05). A bench is shared test-stand capacity, not a chain stage: it records when it is available, how long one run occupies it, and what one run costs. `available_bench_slots` is DERIVED from availability_window and cycle_days by the single conversion in skills/bench-registration/scripts/bench_policy.py (`available_bench_slots`); the WP-04b/doe_input.resource_envelope.bench_slots must be cross-checked against this same figure (end-to-end linkage recorded as a TODO in tests/lubricant_e2e/test_application_bench.py).",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "bench" },
+    "bench_id": { "type": "string", "minLength": 1 },
+    "project_reference": {
+      "description": "Project this registration is made for; also used as the artifact project_id by the builder.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bench_name": { "type": "string", "minLength": 1 },
+    "location": { "type": "string", "minLength": 1 },
+    "availability_window": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/availability_window" }
+    },
+    "cycle_days": {
+      "description": "Wall-clock days one run occupies the bench (changeover included). Strictly positive.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "cost_per_run": { "$ref": "#/$defs/cost_per_run" },
+    "available_bench_slots": {
+      "description": "DERIVED, never hand-set: floor(usable_days(window) / cycle_days) summed over availability_window, where usable_days = (end - start).days + 1 - reserved_days (clamped at 0). Recomputed and asserted by validate_bench_artifact.py.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "bench_id",
+    "project_reference",
+    "bench_name",
+    "location",
+    "availability_window",
+    "cycle_days",
+    "cost_per_run",
+    "available_bench_slots",
+    "source",
+    "evidence_id",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "availability_window": {
+      "type": "object",
+      "properties": {
+        "window_id": { "type": "string", "minLength": 1 },
+        "start": { "description": "Inclusive first available day (ISO date).", "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "end": { "description": "Inclusive last available day (ISO date).", "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "reserved_days": {
+          "description": "Maintenance/blackout days inside the window that cannot host a run. Optional; treated as 0 when absent.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["window_id", "start", "end"],
+      "additionalProperties": false
+    },
+    "cost_per_run": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
+      },
+      "required": ["value", "unit", "source"],
+      "additionalProperties": false
+    }
+  }
+}
