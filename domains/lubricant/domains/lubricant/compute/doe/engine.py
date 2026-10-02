@@ -35,6 +35,16 @@ DEFERRED_DESIGN_TYPES = ("TAGUCHI_ROBUST",)
 MAX_FULL_FACTORIAL_FACTORS = 8
 HALF_FRACTION_MIN_FACTORS, HALF_FRACTION_MAX_FACTORS = 3, 7
 
+# WP-04b resource-constrained channel. BAYESIAN_SEQUENTIAL stops being a bare enum
+# label and becomes a runnable (deterministic, non-probabilistic) greedy path: it
+# picks the batch that maximises accumulated information per bench slot instead of
+# returning a fixed matrix. The plan's downgrade clause ("只做资源可行性过滤 +
+# 人工排序") is why there is no posterior sampling here.
+SEQUENTIAL_DESIGN_TYPES = ("BAYESIAN_SEQUENTIAL",)
+FACTOR_CHANNEL_DESIGN_TYPES = FACTORIAL_DESIGN_TYPES + SEQUENTIAL_DESIGN_TYPES
+RESOURCE_ENVELOPE_FIELDS = ("bench_slots", "lot_capacity", "cycle_days", "cost_cap", "external_test_lead_time")
+FACTOR_ROLES = ("WHOLE_PLOT", "SUB_PLOT")
+
 
 def _load_schemas():
     from jsonschema import Draft202012Validator
@@ -382,10 +392,22 @@ def _factor_levels(factor):
     return float(factor["range"]["lower"]), float(factor["range"]["upper"])
 
 
+def _factor_role(factor, default_role):
+    """Resolve a factor's split-plot role from the data, never from a hardcoded list.
+
+    An explicit per-factor `role` wins; otherwise the process-level
+    `process_factor_role` (mirroring process.factor_role) applies. Returns None when
+    neither is supplied, so the caller can reject while naming the factor.
+    """
+    role = factor.get("role", default_role)
+    return role if role in FACTOR_ROLES else None
+
+
 def _factor_reasons(input_dict):
     """Fail-closed checks for the factor channel; also returns the varying factors by role."""
     design_type = input_dict["design_type"]
     factors = input_dict["factors"]
+    default_role = input_dict.get("process_factor_role")
     reasons = []
     ids = [factor["factor_id"] for factor in factors]
     if len(ids) != len(set(ids)):
@@ -396,14 +418,22 @@ def _factor_reasons(input_dict):
         if levels is None:
             continue
         varying.append(factor)
-        (whole if factor["role"] == "WHOLE_PLOT" else sub).append(factor)
+        role = _factor_role(factor, default_role)
+        if role is None:
+            reasons.append(
+                f"factor {factor['factor_id']} has no split-plot role: declare factors[].role "
+                "or the process-level process_factor_role (mirror of process.factor_role)")
+        elif role == "WHOLE_PLOT":
+            whole.append(factor)
+        else:
+            sub.append(factor)
         if not levels[0] < levels[1]:
             reasons.append(f"factor {factor['factor_id']} levels must be strictly increasing ({levels[0]} >= {levels[1]})")
     if not varying:
         reasons.append("at least one factor must vary (levels or range); a design with only held factors has nothing to estimate")
     if design_type in DEFERRED_DESIGN_TYPES:
         reasons.append(f"design_type {design_type} is deferred beyond WP-04a and is not implemented")
-    elif design_type not in FACTORIAL_DESIGN_TYPES:
+    elif design_type not in FACTOR_CHANNEL_DESIGN_TYPES:
         reasons.append(f"design_type {design_type} is not a supported factorial design type")
     elif design_type == "SPLIT_PLOT":
         if not whole:
@@ -421,6 +451,147 @@ def _factor_reasons(input_dict):
     if input_dict["target_runs"] != 0:
         reasons.append(f"target_runs must be 0 for {design_type}: the run count is structure-determined")
     return reasons, whole, sub
+
+
+def _resource_reasons(input_dict):
+    """Fail-closed checks for the resource envelope (WP-04b)."""
+    envelope = input_dict.get("resource_envelope")
+    if envelope is None:
+        return []
+    reasons = []
+    if set(envelope) != set(RESOURCE_ENVELOPE_FIELDS):
+        reasons.append(f"resource_envelope must declare exactly {list(RESOURCE_ENVELOPE_FIELDS)}")
+        return reasons
+    for field in RESOURCE_ENVELOPE_FIELDS:
+        value = envelope[field]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            reasons.append(f"resource_envelope.{field} must be a number")
+    if reasons:
+        return reasons
+    if envelope["bench_slots"] < 1:
+        reasons.append(f"resource_envelope.bench_slots must be >= 1, got {envelope['bench_slots']}")
+    if envelope["lot_capacity"] < 1:
+        reasons.append(f"resource_envelope.lot_capacity must be >= 1, got {envelope['lot_capacity']}")
+    if envelope["cycle_days"] <= 0:
+        reasons.append(f"resource_envelope.cycle_days must be > 0, got {envelope['cycle_days']}")
+    if envelope["cost_cap"] < 0:
+        reasons.append(f"resource_envelope.cost_cap must be >= 0, got {envelope['cost_cap']}")
+    if envelope["external_test_lead_time"] < 0:
+        reasons.append(
+            f"resource_envelope.external_test_lead_time must be >= 0, got {envelope['external_test_lead_time']}")
+    return reasons
+
+
+def _effect_hypotheses(columns, runs, model_order):
+    """Deterministic hypothesis list derived from the estimable effect columns.
+
+    Hypothesis ids H1..Hk are assigned in the engine's canonical column order, so an
+    id is stable for a given design regardless of the resource envelope. `gain` is the
+    information a fully-observed contrast carries: aliased columns are discounted by
+    their alias group size, and interaction columns that a LINEAR model pools into
+    error are discounted further.
+    """
+    high_level = {}
+    for column in columns:
+        for factor_id in column["factors"]:
+            if factor_id in high_level:
+                continue
+            # the high level is the largest value this factor actually takes in the runs
+            values = sorted({run["settings"][factor_id] for run in runs if factor_id in run["settings"]})
+            high_level[factor_id] = values[-1] if values else None
+    hypotheses = []
+    for index, column in enumerate(columns, start=1):
+        aliases = column.get("aliases", [])
+        gain = 1.0 / (1.0 + len(aliases))
+        pooled = model_order == "LINEAR" and column["kind"] == "INTERACTION"
+        if pooled:
+            gain *= 0.5
+        run_index = None
+        for run in runs:
+            if all(run["settings"].get(factor_id) == high_level[factor_id] for factor_id in column["factors"]):
+                run_index = run["run_index"]
+                break
+        hypotheses.append({
+            "hypothesis_reference": f"H{index}",
+            "hypothesis_statement": f"effect {column['column_id']} is non-zero",
+            "effect_reference": column["column_id"],
+            "kind": column["kind"],
+            "order": len(column["factors"]),
+            "aliases": list(aliases),
+            "pooled": pooled,
+            "gain": gain,
+            "run_index": run_index,
+            # the corner that would resolve the effect when no run in the batch sits there
+            "high_settings": {factor_id: high_level[factor_id] for factor_id in column["factors"]},
+        })
+    return hypotheses
+
+
+def _recommended_runs(hypotheses, runs, envelope):
+    """Rank hypotheses by information gain per bench slot and take what the next round allows."""
+    by_index = {run["run_index"]: run for run in runs}
+    ranked = sorted(hypotheses, key=lambda item: (-item["gain"], item["order"], item["effect_reference"]))
+    limit = min(int(envelope["bench_slots"]), len(ranked))
+    recommended = []
+    for rank, hypothesis in enumerate(ranked[:limit], start=1):
+        run_index = hypothesis["run_index"]
+        run = by_index.get(run_index)
+        if run is None:
+            # no run in the batch isolates this effect: the recommendation is one extra run
+            # at the all-high corner of the effect, which is the cheapest single run that
+            # moves every factor of the effect away from its low level.
+            run = {"settings": hypothesis["high_settings"]}
+        reason = (
+            f"tests {hypothesis['kind'].lower()} {hypothesis['effect_reference']} "
+            f"({hypothesis['order']} factor(s), 1 contrast df)")
+        if hypothesis["aliases"]:
+            reason += f"; aliased with {', '.join(hypothesis['aliases'])}, so its estimate is confounded"
+        if hypothesis["pooled"]:
+            reason += "; a LINEAR model pools this interaction into error, so it is scheduled last"
+        if run_index is None:
+            reason += (
+                "; no run in the current batch sets every factor of this effect to its high level, "
+                "so this recommendation is one extra run at that corner")
+        reason += "; one bench slot buys this contrast at the highest gain per slot still available"
+        entry = {
+            "rank": rank,
+            "hypothesis_reference": hypothesis["hypothesis_reference"],
+            "hypothesis_statement": hypothesis["hypothesis_statement"],
+            "effect_reference": hypothesis["effect_reference"],
+            "run_index": run_index,
+            "settings": run["settings"],
+            "slots_used": 1,
+            "information_gain_per_slot": hypothesis["gain"],
+            "discriminative_power_reason": reason,
+        }
+        if "whole_plot_index" in run:
+            # split-plot scheduling hook: the caller executes the batch grouped by
+            # whole plot, so a costly whole-plot change is paid once, not per run.
+            entry["whole_plot_index"] = run["whole_plot_index"]
+            entry["discriminative_power_reason"] += (
+                f"; execute inside whole plot {run['whole_plot_index']} so the whole-plot level is set once")
+        recommended.append(entry)
+    return recommended
+
+
+def _apply_resource_plan(result, input_dict, model_order):
+    """Attach the WP-04b resource annotations to a factor-channel result.
+
+    Runs nothing when the input declares no resource_envelope, which is what keeps
+    every pre-WP-04b envelope (the mixture gold fixture included) byte-identical.
+    """
+    envelope = input_dict.get("resource_envelope")
+    if envelope is None:
+        return result
+    runs = result["runs"]
+    hypotheses = _effect_hypotheses(result["columns"], runs, model_order)
+    recommended = _recommended_runs(hypotheses, runs, envelope)
+    slots = sum(item["slots_used"] for item in recommended)
+    result["resource_feasible"] = bool(runs) and len(runs) <= int(envelope["lot_capacity"]) and int(envelope["bench_slots"]) >= 1
+    total_gain = math.fsum(item["information_gain_per_slot"] for item in recommended)
+    result["information_gain_per_slot"] = total_gain / slots if slots else 0.0
+    result["recommended_next_runs"] = recommended
+    return result
 
 
 def _frozen_formula_reasons(input_dict):
@@ -443,6 +614,31 @@ def _frozen_formula_reasons(input_dict):
     return reasons
 
 
+def _sequential_batch(factor_ids, candidates, limit):
+    """Greedy D-optimal sequential batch: add the candidate that maximises det(X'X).
+
+    Deterministic and free of posterior sampling: this is the plan's downgrade-level
+    stand-in for a Bayesian sequential design ("只做资源可行性过滤 + 人工排序" was the
+    floor; a greedy information criterion stays well above it while remaining pure
+    stdlib and reproducible to the byte). Ties resolve to the lowest candidate index.
+    """
+    ordered = [tuple(run[factor_id] for factor_id in factor_ids) for run in candidates]
+    selected = []
+    while len(selected) < limit and len(selected) < len(ordered):
+        best_index, best_det = None, -1.0
+        for index in range(len(ordered)):
+            if index in selected:
+                continue
+            rows = [ordered[k] for k in (*selected, index)]
+            determinant = _lu_det(_xtx_info_matrix(rows, len(factor_ids)))
+            if determinant > best_det:
+                best_index, best_det = index, determinant
+        if best_index is None:
+            break
+        selected.append(best_index)
+    return [candidates[index] for index in sorted(selected)]
+
+
 def _generate_factors(input_dict, input_bytes):
     """Two-level factorial / split-plot channel added by WP-04a."""
     input_type = input_dict["input_type"]
@@ -451,6 +647,9 @@ def _generate_factors(input_dict, input_bytes):
     reasons = _frozen_formula_reasons(input_dict) if input_type == "MIXTURE_PROCESS_DOE_DESIGN" else []
     factor_reasons, whole, sub = _factor_reasons(input_dict)
     reasons += factor_reasons
+    reasons += _resource_reasons(input_dict)
+    if design_type in SEQUENTIAL_DESIGN_TYPES and input_dict.get("resource_envelope") is None:
+        reasons.append("BAYESIAN_SEQUENTIAL requires resource_envelope: the next batch must be bounded by bench_slots")
     if reasons:
         return _build_rejected(input_dict, input_bytes, reasons)
 
@@ -469,6 +668,14 @@ def _generate_factors(input_dict, input_bytes):
         method = "SPLIT_PLOT_2LEVEL_V1"
         structure = (f"split-plot 2^{len(whole_ids)} whole-plot x 2^{len(sub_ids)} sub-plot design "
                      f"with {replicates} whole-plot replicate(s)")
+    elif design_type in SEQUENTIAL_DESIGN_TYPES:
+        pool = two_level_runs(varying_ids)
+        batch = _sequential_batch(varying_ids, pool, int(input_dict["resource_envelope"]["bench_slots"]))
+        coded = batch
+        replicates = 1
+        method = "BAYESIAN_SEQUENTIAL_GREEDY_V1"
+        structure = (f"sequential greedy batch of {len(batch)} run(s) drawn from the 2^{len(varying_ids)} candidate "
+                     "lattice to maximise accumulated det(X'X) per bench slot (deterministic; no posterior sampling)")
     elif design_type == "FRACTIONAL_FACTORIAL":
         base = half_fraction_runs(varying_ids)
         coded = [run for _ in range(replicates) for run in base]
@@ -504,6 +711,10 @@ def _generate_factors(input_dict, input_bytes):
     total_df = run_count - 1
     replicate_df = replicates - 1
     model_df = sum(1 for column in columns if column["kind"] == "MAIN_EFFECT") if model_order == "LINEAR" else len(columns)
+    if design_type in SEQUENTIAL_DESIGN_TYPES:
+        # A sequential batch is a partial step, not a completed model estimate: it
+        # can never be "not estimable", the remaining df is simply what is still open.
+        model_df = min(model_df, max(total_df - replicate_df, 0))
     remaining = total_df - replicate_df - model_df
     if remaining < 0:
         return _build_rejected(input_dict, input_bytes,
@@ -537,22 +748,54 @@ def _generate_factors(input_dict, input_bytes):
         digest = _digest_bytes(input_bytes)
     else:
         digest = _digest_bytes(json.dumps(input_dict, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    parameters = {
+        "design_type": design_type,
+        "model_order": model_order,
+        "target_runs": input_dict["target_runs"],
+        "whole_plot_replicates": replicates,
+        "factor_count": len(varying_ids),
+        "whole_plot_factor_count": len(whole_ids),
+        "sub_plot_factor_count": len(sub_ids),
+        "run_count": run_count,
+        "design_space_reference": input_dict.get("design_space_reference"),
+    }
+    envelope_resource = input_dict.get("resource_envelope")
+    if envelope_resource is not None:
+        parameters["resource_envelope"] = envelope_resource
+    result = {
+        "design_type": design_type,
+        "model_order": model_order,
+        "runs": runs,
+        "run_count": run_count,
+        "columns": columns,
+        "error_terms": error_terms,
+        "degrees_of_freedom": degrees,
+        "selection_reason": selection_reason,
+    }
+    result = _apply_resource_plan(result, input_dict, model_order)
+    evidence = [{
+        "evidence_id": "doe-generation",
+        "statement": f"deterministic factorial point generation: {method}, {run_count} structure-determined runs, coded levels -1/+1 mapped onto each factor's two levels; {len(columns)} effect column(s) and {len(error_terms)} error term(s) are reported without estimating any measurement",
+        "source": "engine internal deterministic algorithm",
+        "status": "OBSERVED",
+    }]
+    if envelope_resource is not None:
+        evidence.append({
+            "evidence_id": "doe-resource-plan",
+            "statement": (
+                f"resource-constrained next round under bench_slots={envelope_resource['bench_slots']} and "
+                f"lot_capacity={envelope_resource['lot_capacity']}: {len(result['recommended_next_runs'])} recommended "
+                "run(s) ranked by information gain per bench slot; this is a deterministic planning ordering, not a "
+                "measurement, statistical-sufficiency, cost or performance conclusion"),
+            "source": "engine internal deterministic algorithm",
+            "status": "OBSERVED",
+        })
     return {
         "schema_version": "0.1.0",
         "engine_name": ENGINE_NAME,
         "engine_version": ENGINE_VERSION,
         "method": method,
-        "parameters": {
-            "design_type": design_type,
-            "model_order": model_order,
-            "target_runs": input_dict["target_runs"],
-            "whole_plot_replicates": replicates,
-            "factor_count": len(varying_ids),
-            "whole_plot_factor_count": len(whole_ids),
-            "sub_plot_factor_count": len(sub_ids),
-            "run_count": run_count,
-            "design_space_reference": input_dict.get("design_space_reference"),
-        },
+        "parameters": parameters,
         "input_digest": digest,
         "status": "OK",
         "rejection_reasons": [],
@@ -564,22 +807,8 @@ def _generate_factors(input_dict, input_bytes):
         "constraints_note": card["constraints_note"],
         "responses_note": card["responses_note"],
         "doe_selection_reason": card["doe_selection_reason"],
-        "result": {
-            "design_type": design_type,
-            "model_order": model_order,
-            "runs": runs,
-            "run_count": run_count,
-            "columns": columns,
-            "error_terms": error_terms,
-            "degrees_of_freedom": degrees,
-            "selection_reason": selection_reason,
-        },
-        "evidence": [{
-            "evidence_id": "doe-generation",
-            "statement": f"deterministic factorial point generation: {method}, {run_count} structure-determined runs, coded levels -1/+1 mapped onto each factor's two levels; {len(columns)} effect column(s) and {len(error_terms)} error term(s) are reported without estimating any measurement",
-            "source": "engine internal deterministic algorithm",
-            "status": "OBSERVED",
-        }],
+        "result": result,
+        "evidence": evidence,
     }
 
 
