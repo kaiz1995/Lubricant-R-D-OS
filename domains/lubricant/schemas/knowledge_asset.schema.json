@@ -8,6 +8,30 @@
     "artifact_type": { "const": "knowledge_asset" },
     "asset_status": { "enum": ["DRAFT_KNOWLEDGE", "CLOSED_KNOWLEDGE"] },
     "synthetic_marker": { "const": "SYNTHETIC_DEMO_ONLY" },
+    "reuse_index": {
+      "description": "WP-11 optional retrieval provenance: what the local BM25 search over CLOSED knowledge assets and FROZEN design freezes returned when this asset was reused. Optional so existing artifacts stay valid.",
+      "type": "object",
+      "properties": {
+        "backend": { "const": "local_bm25" },
+        "query": { "type": "string", "minLength": 1 },
+        "hits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_artifact": { "type": "string", "minLength": 1 },
+              "artifact_type": { "enum": ["knowledge_asset", "design_freeze"] },
+              "project_id": { "type": "string", "minLength": 1 },
+              "score": { "type": "number" }
+            },
+            "required": ["source_artifact", "artifact_type", "score"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["backend", "hits"],
+      "additionalProperties": false
+    },
     "knowledge_assets": {
       "type": "object",
       "properties": {

@@ -19,6 +19,28 @@ CONFIRMED_CAUSE_MARKERS = ("confirmed root cause", "confirmed cause", "proven ca
 CONFIRMED_ROOT_CAUSE_MARKERS = ("confirmed root cause", "proven", "established", "direct cause", "root cause is", "已确认", "已证实", "已证明", "根因是", "确定为")
 
 
+def _ensure_knowledge_retrieval_importable() -> bool:
+    """Probe the shared retrieval module in both layouts (constraint_role precedent).
+
+    Repository layout: the module lives in the pack-level ``scripts/`` tree.
+    Deployed layout: the installer copies it beside this skill's scripts. If
+    neither candidate holds the file the preflight still runs; retrieval is
+    advisory and its absence must not block the gate.
+    """
+    for candidate in (SKILL_ROOT / "scripts", SKILL_ROOT.parents[1] / "scripts"):
+        if (candidate / "knowledge_retrieval.py").is_file():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            return True
+    return False
+
+
+_RETRIEVAL_AVAILABLE = _ensure_knowledge_retrieval_importable()
+
+if _RETRIEVAL_AVAILABLE:
+    import knowledge_retrieval  # noqa: E402
+
+
 def has_text(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
@@ -187,6 +209,51 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     return errors
 
 
+def failure_query(data: object) -> str:
+    """Free-text query for reuse retrieval: failure mode, mechanism, hypotheses."""
+    if not isinstance(data, dict) or not isinstance(data.get("failure_ctq"), dict):
+        return ""
+    failure_ctq = data["failure_ctq"]
+    parts: list[str] = []
+    for field in ("failure_mode", "mechanism"):
+        value = failure_ctq.get(field)
+        if isinstance(value, str) and value.strip():
+            parts.append(value.strip())
+    hypotheses = failure_ctq.get("root_cause_hypotheses")
+    if isinstance(hypotheses, list):
+        for hypothesis in hypotheses:
+            if isinstance(hypothesis, str) and hypothesis.strip():
+                parts.append(hypothesis.strip())
+    return " ".join(parts)
+
+
+def history_lines(data: object, input_path: Path) -> list[str]:
+    """WP-11 historical hits. Empty index (the normal state) stays silent.
+
+    Fail-open boundary: retrieval problems or an empty corpus return no lines
+    and never block the preflight; a non-empty hit list is summarized.
+    """
+    if not _RETRIEVAL_AVAILABLE:
+        return []
+    query = failure_query(data)
+    if not query:
+        return []
+    roots = knowledge_retrieval.history_roots(data.get("history_roots") if isinstance(data, dict) else None, input_path)
+    roots = roots or knowledge_retrieval.history_roots_from_env()
+    if not roots:
+        return []
+    hits = knowledge_retrieval.search_history(query, roots, top_k=knowledge_retrieval.TOP_K_DEFAULT)
+    if not hits:
+        return []
+    lines = [f"history_hits={len(hits)} backend={knowledge_retrieval.describe_backend()}"]
+    for index, hit in enumerate(hits, start=1):
+        lines.append(
+            f"HISTORY_HIT[{index}] score={hit['score']:.3f} artifact_type={hit['artifact_type']} "
+            f"project_id={hit['project_id']} source={hit['source']} snippet={hit['snippet']}"
+        )
+    return lines
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python preflight_failure_ctq.py <input.json>")
@@ -202,6 +269,8 @@ def main() -> int:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
     print("READY: input can form one FAILURE_CTQ_DEFINED record only")
+    for line in history_lines(data, input_path):
+        print(line)
     return 0
 
 
