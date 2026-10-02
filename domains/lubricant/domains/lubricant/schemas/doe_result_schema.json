@@ -143,71 +143,281 @@
           },
           "result": {
             "type": "object",
-            "properties": {
-              "design_type": {
-                "enum": [
-                  "SIMPLEX_MIXTURE",
-                  "D_OPTIMAL_MIXTURE"
-                ]
-              },
-              "model_order": {
-                "enum": [
-                  "LINEAR",
-                  "QUADRATIC"
-                ]
-              },
-              "runs": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "run_index": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "proportions": {
+            "oneOf": [
+              {
+                "title": "Mixture result (unchanged Phase 4.2 shape)",
+                "type": "object",
+                "properties": {
+                  "design_type": {
+                    "enum": [
+                      "SIMPLEX_MIXTURE",
+                      "D_OPTIMAL_MIXTURE"
+                    ]
+                  },
+                  "model_order": {
+                    "enum": [
+                      "LINEAR",
+                      "QUADRATIC"
+                    ]
+                  },
+                  "runs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
                       "type": "object",
-                      "minProperties": 1,
-                      "propertyNames": {
-                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      "properties": {
+                        "run_index": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "proportions": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "propertyNames": {
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                          },
+                          "additionalProperties": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          }
+                        }
                       },
-                      "additionalProperties": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
-                      }
+                      "required": [
+                        "run_index",
+                        "proportions"
+                      ],
+                      "additionalProperties": false
                     }
                   },
-                  "required": [
-                    "run_index",
-                    "proportions"
-                  ],
-                  "additionalProperties": false
-                }
+                  "run_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "candidates_considered": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "selection_reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "design_type",
+                  "model_order",
+                  "runs",
+                  "run_count",
+                  "candidates_considered",
+                  "selection_reason"
+                ],
+                "additionalProperties": false
               },
-              "run_count": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "candidates_considered": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "selection_reason": {
-                "type": "string",
-                "minLength": 1
+              {
+                "title": "Factorial / split-plot result (WP-04a): factor settings, effect columns and whole/sub-plot error terms",
+                "type": "object",
+                "properties": {
+                  "design_type": {
+                    "enum": [
+                      "FULL_FACTORIAL",
+                      "FRACTIONAL_FACTORIAL",
+                      "SPLIT_PLOT",
+                      "TAGUCHI_ROBUST"
+                    ]
+                  },
+                  "model_order": {
+                    "enum": [
+                      "LINEAR",
+                      "QUADRATIC"
+                    ]
+                  },
+                  "runs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "run_index": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "settings": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "propertyNames": {
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                          },
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        },
+                        "whole_plot_index": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "fixed_proportions": {
+                          "description": "MIXTURE_PROCESS_DOE_DESIGN only: the frozen formulation proportions carried by every run.",
+                          "type": "object",
+                          "minProperties": 1,
+                          "propertyNames": {
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                          },
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "required": [
+                        "run_index",
+                        "settings"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "run_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "columns": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "column_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "kind": {
+                          "enum": [
+                            "MAIN_EFFECT",
+                            "INTERACTION"
+                          ]
+                        },
+                        "factors": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "coded_levels": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "enum": [
+                              -1,
+                              1
+                            ]
+                          }
+                        },
+                        "aliases": {
+                          "description": "Effects sharing this exact contrast vector (fractional factorials); omitted for full factorials.",
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "required": [
+                        "column_id",
+                        "kind",
+                        "factors",
+                        "coded_levels"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "error_terms": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "term_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "scope": {
+                          "enum": [
+                            "WHOLE_PLOT",
+                            "SUB_PLOT",
+                            "PLOT"
+                          ]
+                        },
+                        "degrees_of_freedom": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "source": {
+                          "enum": [
+                            "RESIDUAL",
+                            "BLOCK"
+                          ]
+                        },
+                        "pooling": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "term_id",
+                        "scope",
+                        "degrees_of_freedom",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "degrees_of_freedom": {
+                    "type": "object",
+                    "properties": {
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "replicate": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "model": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "error": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "total",
+                      "replicate",
+                      "model",
+                      "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "selection_reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "design_type",
+                  "model_order",
+                  "runs",
+                  "run_count",
+                  "columns",
+                  "error_terms",
+                  "degrees_of_freedom",
+                  "selection_reason"
+                ],
+                "additionalProperties": false
               }
-            },
-            "required": [
-              "design_type",
-              "model_order",
-              "runs",
-              "run_count",
-              "candidates_considered",
-              "selection_reason"
-            ],
-            "additionalProperties": false
+            ]
           }
         },
         "required": [

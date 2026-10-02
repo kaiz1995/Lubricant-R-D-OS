@@ -4,7 +4,8 @@
   "title": "DOE input",
   "type": "object",
   "properties": {
-    "input_type": { "const": "MIXTURE_DOE_DESIGN" },
+    "input_type": { "enum": ["MIXTURE_DOE_DESIGN", "FACTORIAL_DOE_DESIGN", "MIXTURE_PROCESS_DOE_DESIGN"] },
+    "design_space_reference": { "type": "string", "minLength": 1 },
     "components": {
       "type": "array",
       "minItems": 3,
@@ -21,7 +22,38 @@
       }
     },
     "mixture_total": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
-    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE"] },
+    "factors": {
+      "description": "Independent (not mixture-closed) design dimensions. WP-04a supports two-level factors only: a factor varies between exactly two levels (explicit levels[] or a range[low,high]) or is held constant at hold_at and contributes no column. role records the split-plot structure: WHOLE_PLOT factors are hard to change, SUB_PLOT factors are reset per run. This role is orthogonal to design_space.constraint_role.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "factor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "factor_type": { "enum": ["CONTINUOUS", "DISCRETE"] },
+          "role": { "enum": ["WHOLE_PLOT", "SUB_PLOT"] },
+          "levels": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" }, "uniqueItems": true },
+          "range": {
+            "type": "object",
+            "properties": { "lower": { "type": "number" }, "upper": { "type": "number" } },
+            "required": ["lower", "upper"],
+            "additionalProperties": false
+          },
+          "hold_at": { "type": "number" },
+          "unit": { "type": "string", "minLength": 1 }
+        },
+        "required": ["factor_id", "factor_type", "role"],
+        "additionalProperties": false,
+        "oneOf": [
+          { "required": ["levels"], "properties": { "range": false, "hold_at": false } },
+          { "required": ["range"], "properties": { "levels": false, "hold_at": false } },
+          { "required": ["hold_at"], "properties": { "levels": false, "range": false } }
+        ]
+      }
+    },
+    "whole_plot_replicates": { "type": "integer", "minimum": 1 },
+    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "TAGUCHI_ROBUST"] },
     "model_order": { "enum": ["LINEAR", "QUADRATIC"] },
     "target_runs": { "type": "integer", "minimum": 0 },
     "responses": {
@@ -54,6 +86,26 @@
       "additionalProperties": false
     }
   },
-  "required": ["input_type", "components", "mixture_total", "design_type", "model_order", "target_runs", "responses", "experiment_card"],
-  "additionalProperties": false
+  "required": ["input_type", "design_type", "model_order", "target_runs", "responses", "experiment_card"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "input_type": { "const": "MIXTURE_DOE_DESIGN" } }, "required": ["input_type"] },
+      "then": {
+        "required": ["components", "mixture_total"],
+        "properties": { "factors": false, "whole_plot_replicates": false }
+      }
+    },
+    {
+      "if": { "properties": { "input_type": { "const": "FACTORIAL_DOE_DESIGN" } }, "required": ["input_type"] },
+      "then": {
+        "required": ["factors", "design_space_reference"],
+        "properties": { "components": false, "mixture_total": false }
+      }
+    },
+    {
+      "if": { "properties": { "input_type": { "const": "MIXTURE_PROCESS_DOE_DESIGN" } }, "required": ["input_type"] },
+      "then": { "required": ["components", "mixture_total", "factors", "design_space_reference"] }
+    }
+  ]
 }
