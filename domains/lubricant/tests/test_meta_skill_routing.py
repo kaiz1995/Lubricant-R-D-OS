@@ -81,8 +81,8 @@ def main() -> int:
     result = router.decide(physical_state("OPTIMIZED", status="FROZEN"), "VERIFIED")
     assert result["decision"] == "DENY" and "terminal" in result["reason"], result
 
-    # 6. Last routed stage has no further step.
-    result = router.decide(physical_state("VERIFIED"), "FROZEN")
+    # 6. Last routed stage has no further step: APPLIED is the NEW_PRODUCT tail.
+    result = router.decide(physical_state("APPLIED"), "FROZEN")
     assert result["decision"] == "DENY", result
 
     # 7. DRAFT -> PROJECT_DEFINED is the single allowed first step.
@@ -126,16 +126,21 @@ def main() -> int:
     assert router.TYPE_ROUTES == contract["type_routes"], router.TYPE_ROUTES
     assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.STAGES), router.STAGES
     assert tuple(router.KNOWN_STAGES) == tuple(contract["stages"]), router.KNOWN_STAGES
-    assert len(router.KNOWN_STAGES) == 15, router.KNOWN_STAGES
+    assert len(router.KNOWN_STAGES) == 16, router.KNOWN_STAGES
     assert router.STAGES == ROUTE_TABLE_REF, router.STAGES
     assert router.SKILL_FOR_STAGE["PROCESS_WINDOW_DEFINED"] == "process-scale-up", router.SKILL_FOR_STAGE
+    assert router.SKILL_FOR_STAGE["APPLIED"] == "application-validation", router.SKILL_FOR_STAGE
     assert router.NEXT_STAGE["OPTIMIZED"] == "PROCESS_WINDOW_DEFINED", router.NEXT_STAGE
 
-    # 12. OPTIMIZED now advances to PROCESS_WINDOW_DEFINED, then to VERIFIED.
+    # 12. OPTIMIZED now advances to PROCESS_WINDOW_DEFINED, then VERIFIED, then
+    #     APPLIED (WP-06: gate-review judges VERIFIED, application-validation
+    #     judges APPLIED; FROZEN is not a routed stage).
     result = router.decide(physical_state("OPTIMIZED"), "PROCESS_WINDOW_DEFINED")
     assert result["decision"] == "ALLOW" and result["skill"] == "process-scale-up", result
     result = router.decide(physical_state("PROCESS_WINDOW_DEFINED"), "VERIFIED")
     assert result["decision"] == "ALLOW" and result["skill"] == "gate-review", result
+    result = router.decide(physical_state("VERIFIED"), "APPLIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
 
     # 13. Route-aware jumps: the same request is legal in COST_DOWN and illegal in
     #     NEW_PRODUCT, because the chains differ per project type.
@@ -150,8 +155,8 @@ def main() -> int:
 
     # 15. WP-03 sixth route: PROCESS_ROBUSTNESS is published by the contract and
     #     reaches PROCESS_WINDOW_DEFINED straight off MODEL_BUILT (no OPTIMIZED).
-    #     The route's final stage APPLIED is not a router stage until WP-06, so it
-    #     appears in the printed sequence but cannot be requested yet.
+    #     WP-06 added APPLIED to the stage universe, so the route's final edge
+    #     PROCESS_WINDOW_DEFINED -> APPLIED is now a legal routed step.
     assert len(router.TYPE_ROUTES) == 6, router.TYPE_ROUTES
     assert tuple(router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]) == PROCESS_ROBUSTNESS_REF, router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]
     assert tuple(router.TYPE_ROUTES) == ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"), tuple(router.TYPE_ROUTES)
@@ -160,8 +165,10 @@ def main() -> int:
     # The skip is route-local: the same MODEL_BUILT -> VERIFIED jump is DENIED.
     result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "VERIFIED")
     assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
-    # APPLIED is not yet a known router stage (WP-06 adds it).
-    assert "APPLIED" not in router.KNOWN_STAGES, router.KNOWN_STAGES
+    # WP-06 flipped the WP-03 placeholder: APPLIED is a known routed stage now.
+    assert "APPLIED" in router.KNOWN_STAGES, router.KNOWN_STAGES
+    result = router.decide(physical_state("PROCESS_WINDOW_DEFINED", project_type="PROCESS_ROBUSTNESS"), "APPLIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
 
     # 16. `--list-stages <TYPE>` prints the contract sequence verbatim for every
     #     project type and fails closed on an unknown type.
@@ -179,7 +186,7 @@ def main() -> int:
 PROCESS_ROBUSTNESS_REF = ("PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "PROCESS_WINDOW_DEFINED", "APPLIED")
 
 
-ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED")
+ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED")
 
 
 if __name__ == "__main__":

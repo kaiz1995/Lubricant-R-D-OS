@@ -58,6 +58,7 @@ ROUTE_TABLE = (
     ("optimization", "OPTIMIZED"),
     ("process-scale-up", "PROCESS_WINDOW_DEFINED"),
     ("gate-review", "VERIFIED"),
+    ("application-validation", "APPLIED"),
 )
 
 STAGES = tuple(stage for _, stage in ROUTE_TABLE)
@@ -67,8 +68,9 @@ TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 
 # Differentiated workflows for the 6 project types, published by the contract.
 TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
-# Stage universe = the contract's 15 stages. A contract that cannot be read
-# leaves the universe empty so decide() denies every request instead of guessing.
+# Stage universe = the contract's stages (16 since WP-06 added APPLIED). A
+# contract that cannot be read leaves the universe empty so decide() denies
+# every request instead of guessing.
 KNOWN_STAGES = tuple(CONTRACT["stages"]) if CONTRACT else ()
 NEXT_STAGE = dict(zip(KNOWN_STAGES, KNOWN_STAGES[1:]))
 
