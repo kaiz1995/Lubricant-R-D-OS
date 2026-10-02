@@ -24,6 +24,7 @@ PREFLIGHT_BY_SKILL = {
     "application-definition": "preflight_application_definition.py",
     "application-validation": "preflight_application_validation.py",
     "bench-registration": "preflight_bench_registration.py",
+    "interface-definition": "preflight_interface_definition.py",
 }
 
 

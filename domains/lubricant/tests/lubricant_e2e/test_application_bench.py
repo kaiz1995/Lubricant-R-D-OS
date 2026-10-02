@@ -39,10 +39,11 @@ APP_PREFLIGHT = ROOT / "skills/application-definition/scripts/preflight_applicat
 APP_BUILDER = ROOT / "skills/application-definition/scripts/build_application_artifact.py"
 APP_VALIDATOR = ROOT / "skills/application-definition/scripts/validate_application_artifact.py"
 
-# Recorded inventory just before WP-05. WP-05 adds exactly application + bench.
+# Recorded inventory just before WP-05 (17). WP-05 adds application + bench,
+# WP-09 adds interface; the arithmetic assertion below still holds.
 SCHEMA_COUNT_BEFORE = 17
-SCHEMA_COUNT_AFTER = 19
-NEW_SCHEMAS = ("application.schema.json", "bench.schema.json")
+SCHEMA_COUNT_AFTER = 20
+NEW_SCHEMAS = ("application.schema.json", "bench.schema.json", "interface.schema.json")
 
 
 def read_json(path: Path) -> dict:
@@ -442,7 +443,7 @@ def main() -> int:
     sys.path.insert(0, str(ROOT))
     from scripts.install_domain_skill import SKILLS
 
-    assert len(SKILLS) == 17, sorted(SKILLS)
+    assert len(SKILLS) == 18, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
     assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
     assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]

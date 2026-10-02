@@ -10,7 +10,7 @@ Covers:
 4. Identity: the record's project_reference must match the gating request.
 5. The gate consumes REAL built application artifacts (application-definition
    builder output), not hand-crafted stand-ins.
-6. The skill is registered for install (16 -> 17 keys), its deployed preflight
+6. The skill is registered for install (now 18 keys), its deployed preflight
    runs standalone, and the single-source PASS rule (application_policy.py) is
    deployed beside it rather than re-implemented.
 """
@@ -174,13 +174,13 @@ def main() -> int:
         blocked_empty = gate(empty_artifact)
         assert blocked_empty.returncode != 0 and "must be PASS to enter APPLIED (got GAP)" in blocked_empty.stdout, blocked_empty.stdout
 
-        # 7. Installation: 17 keys, real schema set, deployed preflight standalone,
+        # 7. Installation: 18 keys, real schema set, deployed preflight standalone,
         #    and the single-source PASS rule is deployed beside the scripts.
         sys.path.insert(0, str(ROOT))
         from integrations.open_science import install_skill
         from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-        assert len(SKILLS) == 17, sorted(SKILLS)
+        assert len(SKILLS) == 18, sorted(SKILLS)
         assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
 
         deploy_ws = workspace / "deploy"
