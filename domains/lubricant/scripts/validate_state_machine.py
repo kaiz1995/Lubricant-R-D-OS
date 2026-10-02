@@ -203,7 +203,23 @@ def validate(event: object) -> str | None:
             return "FREEZE requires APPLIED to FROZEN"
         if not same(before, after, immutable + ("version",)):
             return "FREEZE must preserve the applied project evidence"
-        return required_record(event, "freeze_record", CONTRACT["freeze_record_fields"], "FREEZE requires a freeze record and evidence package")
+        record_error = required_record(event, "freeze_record", CONTRACT["freeze_record_fields"], "FREEZE requires a freeze record and evidence package")
+        if record_error:
+            return record_error
+        # WP-08 signoff precondition (V3: "who reviewed and who approved this
+        # formula?"). The signoff is a record only — no authority or permission
+        # is checked anywhere; the gate here is purely "a reviewer is named and
+        # no dissent is left open".
+        signoff = CONTRACT["actions"]["FREEZE"].get("requires_signoff")
+        if signoff:
+            if not has_text(after.get(signoff["reviewer_field"])):
+                return f"FREEZE requires a {signoff['reviewer_field']} signoff on the after state"
+            dissent = after.get(signoff["dissent_field"])
+            if isinstance(dissent, list):
+                for item in dissent:
+                    if isinstance(item, dict) and item.get("status") == signoff["open_dissent_status"]:
+                        return "FREEZE is blocked by an unresolved dissent"
+        return None
 
     if kind == "CLOSE":
         if before["stage"] != "FROZEN" or after["stage"] != "CLOSED":
@@ -238,17 +254,39 @@ def validate(event: object) -> str | None:
             return "REVISE impact must be PROCESS_ONLY or FORMULA_OR_CTQ"
         if impact == "PROCESS_ONLY":
             # Reuse the signoff that already covers the current formula version.
+            # WP-08/WP-13 migration: `reuses_review_of` is either the legacy
+            # reviewed-version integer (1..before.version) or a gate reference
+            # (`revision_reuse_reference_form`), so V3 "who approved this?" can
+            # be answered by resolving the cited gate artifact's signoff. Both
+            # forms coexist; legacy events never regress.
             reuse = revision.get(CONTRACT["revision_reuse_field"])
-            if not isinstance(reuse, int) or reuse < 1 or reuse > before["version"]:
+            reference_form = CONTRACT.get("revision_reuse_reference_form")
+            if isinstance(reuse, int) and not isinstance(reuse, bool):
+                if reuse < 1 or reuse > before["version"]:
+                    return "REVISE PROCESS_ONLY impact must reuse an existing reviewed version"
+            elif reference_form and isinstance(reuse, str) and has_text(reuse):
+                pass  # gate reference: the reused signoff is resolved via the cited gate artifact
+            else:
                 return "REVISE PROCESS_ONLY impact must reuse an existing reviewed version"
             warn_revision_cap(revision)
             return None
         # FORMULA_OR_CTQ: the formula or its CTQ changed, so the segment must be
-        # re-reviewed before the revision is accepted.
+        # re-reviewed before the revision is accepted. WP-08/WP-13 migration:
+        # the review is either the legacy embedded minimal record
+        # (`re_review_fields`) or a reference to the real re-review gate
+        # artifact (`re_review_reference_field`); in the referenced form the
+        # technical_reviewer is resolved from the cited gate's signoff, so only
+        # the covered version is checked here. The legacy embedded form stays
+        # accepted so historical events do not regress.
         re_review = revision.get("re_review")
-        if not isinstance(re_review, dict) or any(
-            not re_review.get(field) for field in CONTRACT["re_review_fields"]
-        ):
+        if not isinstance(re_review, dict):
+            return "REVISE FORMULA_OR_CTQ impact requires a fresh technical review"
+        reference_field = CONTRACT.get("re_review_reference_field")
+        gate_review_id = re_review.get(reference_field) if reference_field else None
+        if gate_review_id is not None:
+            if not has_text(gate_review_id):
+                return "REVISE FORMULA_OR_CTQ impact requires a fresh technical review"
+        elif any(not re_review.get(field) for field in CONTRACT["re_review_fields"]):
             return "REVISE FORMULA_OR_CTQ impact requires a fresh technical review"
         if re_review.get("reviewed_version") != after["version"]:
             return "REVISE FORMULA_OR_CTQ review must cover the new version"

@@ -1,5 +1,5 @@
 {
-  "contract_version": "0.5.0",
+  "contract_version": "0.6.0",
   "gate_statuses": ["GO", "HOLD", "PIVOT", "KILL", "FREEZE"],
   "project_statuses": ["DRAFT", "ACTIVE", "HOLD", "PIVOTED", "KILLED", "FROZEN", "CLOSED"],
   "stages": [
@@ -39,7 +39,16 @@
     "PIVOT": { "gate_status": "PIVOT", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "ACTIVE", "preserved_status": "PIVOTED" },
     "KILL": { "gate_status": "KILL", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "KILLED" },
     "ROLLBACK": { "gate_status": "HOLD", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "HOLD" },
-    "FREEZE": { "gate_status": "FREEZE", "before_statuses": ["ACTIVE"], "after_status": "FROZEN" },
+    "FREEZE": {
+      "gate_status": "FREEZE",
+      "before_statuses": ["ACTIVE"],
+      "after_status": "FROZEN",
+      "requires_signoff": {
+        "reviewer_field": "technical_reviewer",
+        "dissent_field": "dissent",
+        "open_dissent_status": "OPEN"
+      }
+    },
     "CLOSE": { "gate_status": "GO", "before_statuses": ["FROZEN"], "after_status": "CLOSED" },
     "REVISE": { "gate_status": "GO", "before_statuses": ["ACTIVE"], "after_status": "ACTIVE" }
   },
@@ -50,6 +59,8 @@
   "revision_impact_values": ["PROCESS_ONLY", "FORMULA_OR_CTQ"],
   "revision_reuse_field": "reuses_review_of",
   "re_review_fields": ["technical_reviewer", "reviewed_version"],
+  "re_review_reference_field": "gate_review_id",
+  "revision_reuse_reference_form": "gate_id",
   "freeze_record_fields": ["reason", "evidence_package"],
   "termination_fields": ["reason", "evidence"]
 }
