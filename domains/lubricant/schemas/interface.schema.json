@@ -53,6 +53,11 @@
       "type": "array",
       "items": { "$ref": "#/$defs/compatibility_item" }
     },
+    "external_record_reference": {
+      "description": "WP-10: optional citation of an external_record artifact as EXTERNAL:<external_id> when compatibility observations were produced by an outsourced lab; the cited record carries the mandatory data_usage_rights_reference.",
+      "type": "string",
+      "minLength": 1
+    },
     "verdict": { "enum": ["PASS", "FAIL", "INCONCLUSIVE", "GAP"] },
     "source": { "type": "string", "minLength": 1 },
     "evidence_id": { "type": "string", "minLength": 1 }

@@ -16,6 +16,7 @@ FIXTURES = ROOT / "fixtures"
 EXPECTED_ERRORS = {
     "project--missing-formula-version.json": "'formula_version' is a required property",
     "project--illegal-claim-class.json": "'VENDOR_BROCHURE' is not one of",
+    "external_record--missing-usage-rights.json": "'data_usage_rights_reference' is a required property",
     "duty--missing-source.json": "'source' is a required property",
     "challenge--missing-schema-version.json": "'schema_version' is a required property",
     "failure_ctq--missing-unit.json": "'unit' is a required property",

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/external_record.schema.json",
+  "title": "Lubricant R&D external collaboration record (outsourced test / fabrication / datasheet)",
+  "description": "External collaboration record (WP-10): one batch of data obtained outside the project boundary — an outsourced test (外检), an outsourced fabrication/service (外协), or a vendor-published datasheet. A resource object like bench (WP-05) and interface (WP-09), not a chain stage. Fail-closed rule (plan acceptance): an external record MUST carry data_usage_rights_reference naming the contract / data-usage agreement that authorises our use of the data; a record without it cannot be imported (enforced at preflight, never defaulted). Provenance alignment with WP-12 claim_class: evidence items carried on an external record are naturally THIRD_PARTY_LAB (independent lab measurement) or MANUFACTURER_DATASHEET (vendor-published, unverified) — never INTERNAL_TEST (own controlled measurement is recorded by its own producing skill) — and stay ungraded when omitted. experiment.schema.json and interface.schema.json carry an optional external_record_reference citing this artifact as EXTERNAL:<external_id>.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "external_record" },
+    "external_id": {
+      "description": "Identifier referenced elsewhere as EXTERNAL:<external_id>.",
+      "type": "string",
+      "minLength": 1
+    },
+    "project_reference": {
+      "description": "Project this record is made for; also used as the artifact project_id by the builder.",
+      "type": "string",
+      "minLength": 1
+    },
+    "record_type": {
+      "description": "EXTERNAL_TEST = outsourced test (外检); EXTERNAL_SERVICE = outsourced fabrication/service (外协); MANUFACTURER_DATASHEET = vendor-published data.",
+      "enum": ["EXTERNAL_TEST", "EXTERNAL_SERVICE", "MANUFACTURER_DATASHEET"]
+    },
+    "provider": {
+      "description": "Name of the external party that produced the data (lab, fabrication house, or vendor).",
+      "type": "string",
+      "minLength": 1
+    },
+    "data_usage_rights_reference": {
+      "description": "Mandatory (plan WP-10 acceptance): reference to the contract / NDA / data-usage agreement that grants the right to use this data. Missing or empty is rejected — external data without a usage-rights anchor never enters the project evidence base.",
+      "type": "string",
+      "minLength": 1
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "evidence_id": { "type": "string", "minLength": 1 }
+  },
+  "required": [
+    "artifact_type",
+    "external_id",
+    "project_reference",
+    "record_type",
+    "provider",
+    "data_usage_rights_reference",
+    "source",
+    "evidence_id"
+  ],
+  "unevaluatedProperties": false
+}

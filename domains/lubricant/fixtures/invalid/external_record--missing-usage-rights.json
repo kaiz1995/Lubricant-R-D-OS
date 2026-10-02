@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "external_record", "project_id": "WGO-001", "stage": "DRAFT",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the outsourced four-ball test data be used as project evidence?",
+  "hypothesis": "EXT-002 records the outsourced four-ball wear test but omits the data-usage agreement reference.",
+  "uncertainty": "Without a usage-rights anchor the data may not be legally usable inside the project.",
+  "evidence": [{ "evidence_id": "E-EXT-002", "statement": "Outsourced report without a recorded data-usage agreement.", "source": "External lab report EXT-2026-015", "status": "ASSUMED", "claim_class": "THIRD_PARTY_LAB" }],
+  "decision_rule": "Import the external record only when provider, record_type, and a non-empty data_usage_rights_reference are supplied.",
+  "result": "EXT-002 is not importable: the mandatory data_usage_rights_reference is missing.",
+  "decision": "HOLD", "next_action": "Obtain and reference the data-usage agreement before importing this record.",
+  "external_id": "EXT-002",
+  "project_reference": "WGO-001",
+  "record_type": "EXTERNAL_TEST",
+  "provider": "National tribology test center",
+  "source": "External lab report EXT-2026-015",
+  "evidence_id": "E-EXT-002"
+}

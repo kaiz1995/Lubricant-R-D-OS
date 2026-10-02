@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "external_record", "project_id": "WGO-001", "stage": "DRAFT",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the outsourced four-ball test data be used as project evidence?",
+  "hypothesis": "EXT-001 records the outsourced four-ball wear test with its provider and the data-usage agreement that authorises internal use.",
+  "uncertainty": "The external lab's method qualification is not visible to this project; the data stays THIRD_PARTY_LAB until cross-checked.",
+  "evidence": [{ "evidence_id": "E-EXT-001", "statement": "Outsourced four-ball wear test report received for contract validation only.", "source": "External lab report EXT-2026-014", "status": "ASSUMED", "claim_class": "THIRD_PARTY_LAB" }],
+  "decision_rule": "Import the external record only when provider, record_type, and a non-empty data_usage_rights_reference are supplied and the evidence carries no GAP.",
+  "result": "EXT-001 is sufficient to import as an external collaboration record; usage rights are anchored to DUA-2026-014.",
+  "decision": "GO", "next_action": "Retain EXT-001 as an external record; cite it as EXTERNAL:EXT-001 from experiment or interface artifacts.",
+  "external_id": "EXT-001",
+  "project_reference": "WGO-001",
+  "record_type": "EXTERNAL_TEST",
+  "provider": "National tribology test center",
+  "data_usage_rights_reference": "DUA-2026-014",
+  "source": "External lab report EXT-2026-014",
+  "evidence_id": "E-EXT-001"
+}

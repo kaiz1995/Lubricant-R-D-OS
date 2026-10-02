@@ -48,6 +48,11 @@
     "evidence_class": { "enum": ["DOE_POINT", "APPLICATION_FIELD", "CONFIRMATORY_NON_DOE"] },
     "application_reference": { "type": "string", "minLength": 1 },
     "bench_reference": { "type": "string", "minLength": 1 },
+    "external_record_reference": {
+      "description": "WP-10: optional citation of an external_record artifact as EXTERNAL:<external_id> when runs (or part of them) were produced by an outsourced lab/service; the cited record carries the mandatory data_usage_rights_reference.",
+      "type": "string",
+      "minLength": 1
+    },
     "experiment_design_reference": { "type": "string", "minLength": 1 },
     "design_space_reference": { "type": "string", "minLength": 1 },
     "test_method_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
