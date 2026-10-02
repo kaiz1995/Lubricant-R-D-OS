@@ -230,7 +230,8 @@ def main() -> int:
         assert vsm.validate(go) is None, vsm.validate(go)
         freeze = {
             "kind": "FREEZE", "gate_status": "FREEZE",
-            "before": state("APPLIED"), "after": state("FROZEN", status="FROZEN"),
+            # WP-08: freezing also requires a named technical_reviewer on the after state.
+            "before": state("APPLIED"), "after": state("FROZEN", status="FROZEN", technical_reviewer="Lead tribologist"),
             "freeze_record": {"reason": "applied", "evidence_package": ["E-APP-001"]},
         }
         assert vsm.validate(freeze) is None, vsm.validate(freeze)

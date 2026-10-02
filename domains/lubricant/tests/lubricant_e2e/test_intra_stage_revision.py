@@ -94,6 +94,12 @@ def main() -> int:
     assert contract["actions"]["REVISE"] == {
         "gate_status": "GO", "before_statuses": ["ACTIVE"], "after_status": "ACTIVE",
     }, contract["actions"]["REVISE"]
+    # WP-08: FREEZE now carries a signoff precondition in the contract.
+    assert contract["actions"]["FREEZE"]["requires_signoff"] == {
+        "reviewer_field": "technical_reviewer", "dissent_field": "dissent", "open_dissent_status": "OPEN",
+    }, contract["actions"]["FREEZE"]
+    assert contract["re_review_reference_field"] == "gate_review_id", contract["re_review_reference_field"]
+    assert contract["revision_reuse_reference_form"] == "gate_id", contract["revision_reuse_reference_form"]
 
     # --- Acceptance 1 + 4: three reproductions inside PROCESS_WINDOW_DEFINED ----
     prefix = accepted_prefix(stages)
@@ -181,10 +187,18 @@ def main() -> int:
     freeze = {
         "kind": "FREEZE", "gate_status": "FREEZE",
         "before": state(10, ["E-PW-001"], stage="APPLIED"),
-        "after": state(10, ["E-PW-001"], stage="FROZEN", status="FROZEN"),
+        # WP-08: freezing now also requires a named technical_reviewer on the
+        # after state; the approver fields are records only.
+        "after": state(10, ["E-PW-001"], stage="FROZEN", status="FROZEN",
+                       technical_reviewer="Lead tribologist"),
         "freeze_record": {"reason": "applied", "evidence_package": ["E-PW-001"]},
     }
     assert validator.validate(freeze) is None, validator.validate(freeze)
+    # WP-08: without the technical_reviewer the same FREEZE is rejected.
+    unsigned = json.loads(json.dumps(freeze))
+    unsigned["after"].pop("technical_reviewer")
+    assert validator.validate(unsigned) == "FREEZE requires a technical_reviewer signoff on the after state", \
+        validator.validate(unsigned)
 
     # --- The ≤3 cap is a soft, non-blocking convention -------------------------
     over_cap = revise_event(stages, 10, "PROCESS_ONLY", reuses_review_of=7, revision_index=4)
@@ -198,8 +212,8 @@ def main() -> int:
     invalid = read_json(FIXTURES / "invalid.json")
     revise_valid = [case for case in valid if case["event"]["kind"] == "REVISE"]
     revise_invalid = [case for case in invalid if case["event"]["kind"] == "REVISE"]
-    assert len(revise_valid) == 4, [case["name"] for case in revise_valid]
-    assert len(revise_invalid) == 5, [case["name"] for case in revise_invalid]
+    assert len(revise_valid) == 6, [case["name"] for case in revise_valid]
+    assert len(revise_invalid) == 7, [case["name"] for case in revise_invalid]
     for case in revise_valid:
         assert validator.validate(case["event"]) is None, case["name"]
     for case in revise_invalid:
