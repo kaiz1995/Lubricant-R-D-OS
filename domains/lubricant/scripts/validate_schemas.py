@@ -22,6 +22,8 @@ EXPECTED_ERRORS = {
     "design_space--missing-method-version.json": "'method_version' is a required property",
     "experiment--designed-stage.json": "'EXPERIMENT_RUNNING' was expected",
     "experiment--missing-material-batch.json": "'material_batch' is a required property",
+    "experiment--unknown-evidence-class.json": "'FIELD_NOTE' is not one of",
+    "experiment--confirmatory-without-anchor.json": "is not valid under any of the given schemas",
     "experiment_design--missing-point-generation.json": "'point_generation' is a required property",
     "experiment_design--missing-mixture-total.json": "'mixture_total' is a required property",
     "gate--illegal-status.json": "'APPROVED' is not one of",

@@ -1,0 +1,11 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_RUNNING",
+  "evidence_scope": "PHYSICAL", "evidence_class": "CONFIRMATORY_NON_DOE",
+  "decision_question": "Invalid fixture: a CONFIRMATORY_NON_DOE record without an application or bench anchor.", "hypothesis": "This invalid fixture evaluates no product hypothesis.", "uncertainty": "Fixture only.",
+  "evidence": [{ "evidence_id": "E-X-905", "statement": "This is a schema-validation fixture, not product evidence.", "source": "fixture only", "status": "ASSUMED" }],
+  "decision_rule": "CONFIRMATORY_NON_DOE records must cite an application_reference or bench_reference.", "result": "Rejected.", "decision": "UNDECIDED", "next_action": "Do not use this fixture for R&D decisions.",
+  "experiment_id": "EXP-CONF-NO-ANCHOR", "experiment_design_reference": "ED-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"],
+  "runs": [{ "run_id": "RUN-CONF-NO-ANCHOR", "material_batch": "pilot-batch-1", "formula_reference": "FORMULA-001", "formula_version": "trial-v1",
+    "execution_provenance": { "executed_at": "2026-09-04T09:30:00+08:00", "operator_reference": "OP-001", "instrument_reference": "INS-001", "calibration_reference": "CAL-001", "raw_record_reference": "RAW-004" },
+    "response_measurements": [{ "ctq_reference": "CTQ-001", "method_reference": { "method_id": "TM-001", "qualification_reference": "QUAL-001" }, "measurement": { "value": 39.5, "unit": "min", "source": "fixture measurement for schema validation only", "method_version": "D1401-2024", "material_batch": "pilot-batch-1", "formula_version": "trial-v1" } }] }]
+}

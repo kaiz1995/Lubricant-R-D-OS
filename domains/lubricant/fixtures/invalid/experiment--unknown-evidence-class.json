@@ -1,0 +1,11 @@
+{
+  "schema_version": "0.1.0", "artifact_type": "experiment", "project_id": "WGO-001", "stage": "EXPERIMENT_RUNNING",
+  "evidence_scope": "PHYSICAL", "evidence_class": "FIELD_NOTE",
+  "decision_question": "Invalid fixture: evidence_class is not one of the WP-07 enumerated values.", "hypothesis": "This invalid fixture evaluates no product hypothesis.", "uncertainty": "Fixture only.",
+  "evidence": [{ "evidence_id": "E-X-904", "statement": "This is a schema-validation fixture, not product evidence.", "source": "fixture only", "status": "ASSUMED" }],
+  "decision_rule": "Unknown evidence_class values are rejected, never silently defaulted.", "result": "Rejected.", "decision": "UNDECIDED", "next_action": "Do not use this fixture for R&D decisions.",
+  "experiment_id": "EXP-BAD-CLASS", "experiment_design_reference": "ED-001", "design_space_reference": "DS-001", "test_method_references": ["TM-001"],
+  "runs": [{ "run_id": "RUN-BAD-CLASS", "material_batch": "pilot-batch-1", "formula_reference": "FORMULA-001", "formula_version": "trial-v1",
+    "execution_provenance": { "executed_at": "2026-09-03T09:30:00+08:00", "operator_reference": "OP-001", "instrument_reference": "INS-001", "calibration_reference": "CAL-001", "raw_record_reference": "RAW-003" },
+    "response_measurements": [{ "ctq_reference": "CTQ-001", "method_reference": { "method_id": "TM-001", "qualification_reference": "QUAL-001" }, "measurement": { "value": 40.0, "unit": "min", "source": "fixture measurement for schema validation only", "method_version": "D1401-2024", "material_batch": "pilot-batch-1", "formula_version": "trial-v1" } }] }]
+}
