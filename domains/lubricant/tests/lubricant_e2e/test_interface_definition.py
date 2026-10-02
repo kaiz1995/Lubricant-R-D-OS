@@ -126,7 +126,7 @@ def main() -> int:
     #    is asserted in test_application_bench.py; 19 -> 20 with interface).
     schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.schema.json"))
     assert "interface.schema.json" in schema_names, schema_names
-    assert len(schema_names) == 20, (len(schema_names), schema_names)
+    assert len(schema_names) == 21, (len(schema_names), schema_names)
     validated = subprocess.run(
         [sys.executable, "-B", "scripts/validate_schemas.py"], cwd=ROOT, capture_output=True, text=True
     )
@@ -228,7 +228,7 @@ def main() -> int:
             from integrations.open_science import install_skill
             from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-            assert len(SKILLS) == 18, sorted(SKILLS)
+            assert len(SKILLS) == 19, sorted(SKILLS)
             assert SKILLS["interface-definition"] == ("common.schema.json", "interface.schema.json"), SKILLS["interface-definition"]
 
             deploy_ws = workspace / "deploy"

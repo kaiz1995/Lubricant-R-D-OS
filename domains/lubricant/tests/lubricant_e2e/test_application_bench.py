@@ -42,8 +42,8 @@ APP_VALIDATOR = ROOT / "skills/application-definition/scripts/validate_applicati
 # Recorded inventory just before WP-05 (17). WP-05 adds application + bench,
 # WP-09 adds interface; the arithmetic assertion below still holds.
 SCHEMA_COUNT_BEFORE = 17
-SCHEMA_COUNT_AFTER = 20
-NEW_SCHEMAS = ("application.schema.json", "bench.schema.json", "interface.schema.json")
+SCHEMA_COUNT_AFTER = 21
+NEW_SCHEMAS = ("application.schema.json", "bench.schema.json", "interface.schema.json", "external_record.schema.json")
 
 
 def read_json(path: Path) -> dict:
@@ -443,7 +443,7 @@ def main() -> int:
     sys.path.insert(0, str(ROOT))
     from scripts.install_domain_skill import SKILLS
 
-    assert len(SKILLS) == 18, sorted(SKILLS)
+    assert len(SKILLS) == 19, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
     assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
     assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]

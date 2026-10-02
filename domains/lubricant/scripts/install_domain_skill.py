@@ -30,6 +30,7 @@ SKILLS = {
     "application-validation": ("common.schema.json", "application.schema.json"),
     "bench-registration": ("common.schema.json", "bench.schema.json"),
     "interface-definition": ("common.schema.json", "interface.schema.json"),
+    "external-record-import": ("common.schema.json", "external_record.schema.json"),
     "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json"),
     "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json", "knowledge_asset.schema.json"),
 }
