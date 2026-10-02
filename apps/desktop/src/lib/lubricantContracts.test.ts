@@ -18,8 +18,10 @@ import {
 } from "./lubricantContracts";
 
 describe("lubricant 契约映射", () => {
-  it("11 步链的 chainIndex 连续且唯一", () => {
-    expect(STAGE_CHAIN.map((c) => c.chainIndex)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  it("13 步链的 chainIndex 连续且唯一", () => {
+    expect(STAGE_CHAIN.map((c) => c.chainIndex)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+    ]);
   });
 
   it("文件名唯一、形如 x.json、无复合串", () => {
@@ -34,7 +36,7 @@ describe("lubricant 契约映射", () => {
     expect(files).not.toContain("doe_design.json");
   });
 
-  it("每个 project_type 的路由都是 11 步链的子序列，首步为 PROJECT_DEFINED", () => {
+  it("每个 project_type 的路由都是 13 步链的子序列，首步为 PROJECT_DEFINED", () => {
     const order = STAGE_CHAIN.map((c) => c.stage);
     for (const stages of Object.values(TYPE_ROUTES)) {
       expect(stages[0]).toBe("PROJECT_DEFINED");
@@ -48,21 +50,25 @@ describe("lubricant 契约映射", () => {
   });
 
   it("各类型步数符合领域包定义", () => {
-    expect(routeFor("NEW_PRODUCT")).toHaveLength(11);
-    expect(routeFor("IMPROVEMENT")).toHaveLength(9);
-    expect(routeFor("COST_DOWN")).toHaveLength(7);
-    expect(routeFor("CUSTOMIZATION")).toHaveLength(7);
-    expect(routeFor("EXPLORATION")).toHaveLength(6);
-    expect(routeFor("UNKNOWN_TYPE")).toHaveLength(11);
-    expect(routeFor(null)).toHaveLength(11);
+    expect(routeFor("NEW_PRODUCT")).toHaveLength(13);
+    expect(routeFor("IMPROVEMENT")).toHaveLength(11);
+    expect(routeFor("COST_DOWN")).toHaveLength(9);
+    expect(routeFor("CUSTOMIZATION")).toHaveLength(8);
+    expect(routeFor("EXPLORATION")).toHaveLength(7);
+    // 工艺稳健性开发：9 步，且不带 VERIFIED（PROCESS_WINDOW_DEFINED 直接到 APPLIED）。
+    expect(routeFor("PROCESS_ROBUSTNESS")).toHaveLength(9);
+    expect(routeFor("PROCESS_ROBUSTNESS").map((c) => c.stage)).not.toContain("VERIFIED");
+    expect(routeFor("UNKNOWN_TYPE")).toHaveLength(13);
+    expect(routeFor(null)).toHaveLength(13);
   });
 
-  it("PROJECT_TYPES 覆盖全部 5 类，且拒绝非枚举值", () => {
-    // The pack documents exactly five workflows and project.schema.json
-    // enumerates the same five. CORRECTIVE_ACTION used to sit in the enum with
+  it("PROJECT_TYPES 覆盖全部 6 类，且拒绝非枚举值", () => {
+    // The pack documents exactly six workflows and project.schema.json
+    // enumerates the same six. CORRECTIVE_ACTION used to sit in the enum with
     // no route and no documentation — vestigial, removed 2026-09-20.
     expect([...PROJECT_TYPES].sort()).toEqual([
       "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "IMPROVEMENT", "NEW_PRODUCT",
+      "PROCESS_ROBUSTNESS",
     ]);
     expect(isProjectType("CORRECTIVE_ACTION")).toBe(false);
     expect(isProjectType("NOT_A_TYPE")).toBe(false);
@@ -111,22 +117,22 @@ describe("validateArtifactLite", () => {
 /* ------------------------------------------------------------------ *
  * 与领域包的一致性守护
  *
- * 领域包与 open-science 是同级目录（非子模块），所以这段检查在找不到
- * 领域包时会整块跳过 —— 换一台只有 open-science 的机器 clone 不会红。
- * 在本工作区里它会真正读到 route_step.py / schemas / fixtures / skills。
+ * 领域包就在本仓库内（domains/lubricant，非子模块），所以这段检查直接读它：
+ * contracts/state-machine.json 是 stages / type_routes 的唯一真源。找不到时
+ * 整块跳过，避免在裁剪过的 checkout 上误红。
  * ------------------------------------------------------------------ */
 
 const PACK = [
-  resolve(process.cwd(), "../../../lubricant-rd-domain-pack"),
-  resolve(process.cwd(), "../../lubricant-rd-domain-pack"),
+  resolve(process.cwd(), "../../domains/lubricant"),
+  resolve(process.cwd(), "domains/lubricant"),
 ].find((p) => existsSync(join(p, "contracts/state-machine.json")));
 
 const describePack = PACK ? describe : describe.skip;
 
-describePack("与 lubricant-rd-domain-pack 的一致性", () => {
+describePack("与 domains/lubricant 领域包的一致性", () => {
   // Every pack read happens inside a test body: `describe.skip` still runs the
   // suite callback to collect tests, so module-level reads would throw on a
-  // checkout that has no domain pack beside it.
+  // checkout that has no domain pack.
   const read = (rel: string): string => readFileSync(join(PACK as string, rel), "utf8");
   const readJson = <T,>(rel: string): T => JSON.parse(read(rel)) as T;
 
@@ -138,30 +144,26 @@ describePack("与 lubricant-rd-domain-pack 的一致性", () => {
     return from < 0 || to < 0 ? "" : src.slice(from, to);
   };
 
-  /** route_step.py 的 ROUTE_TABLE：11 组 (skill, stage)。 */
+  /** route_step.py 的 ROUTE_TABLE：13 组 (skill, stage)。 */
   const routeTable = () =>
     [...slice("ROUTE_TABLE = (", "\n)").matchAll(/\(\s*"([^"]+)",\s*"([^"]+)"\s*\)/g)].map((m) => ({
       skill: m[1],
       stage: m[2],
     }));
 
-  /** route_step.py 的 TYPE_ROUTES：project_type -> 有序 stage 列表。 */
-  const typeRoutes = (): Record<string, string[]> => {
-    const stagesFromTable = routeTable().map((r) => r.stage);
-    const out: Record<string, string[]> = {};
-    for (const m of slice("TYPE_ROUTES = {", "\n}").matchAll(/"(\w+)":\s*(\([^)]*\)|\w+),/g)) {
-      out[m[1]] = m[2].startsWith("(")
-        ? [...m[2].matchAll(/"(\w+)"/g)].map((x) => x[1])
-        : stagesFromTable;
-    }
-    return out;
-  };
-
-  it("ROUTE_TABLE 有 11 组，且 skill / stage 顺序与本模块逐一对应", () => {
+  it("ROUTE_TABLE 有 13 组，且 skill / stage 顺序与本模块逐一对应", () => {
     const table = routeTable();
-    expect(table).toHaveLength(11);
+    expect(table).toHaveLength(13);
     expect(table.map((r) => r.skill)).toEqual(STAGE_CHAIN.map((c) => c.skill));
     expect(table.map((r) => r.stage)).toEqual(STAGE_CHAIN.map((c) => c.stage));
+  });
+
+  it("STAGE_CHAIN 的 stage 是 state-machine.json 的 stages 子集，且来自契约", () => {
+    const machine = readJson<{ stages: string[] }>("contracts/state-machine.json");
+    const known = new Set(machine.stages);
+    for (const c of STAGE_CHAIN) {
+      expect(known.has(c.stage), `state-machine.json 未定义 ${c.stage}`).toBe(true);
+    }
   });
 
   it("每个 artifact_type 都有 schema，且其 artifact_type const 与本模块一致", () => {
@@ -175,7 +177,12 @@ describePack("与 lubricant-rd-domain-pack 的一致性", () => {
 
   it("每个 file 都存在于 fixtures/valid/", () => {
     const validFixtures = new Set(readdirSync(join(PACK as string, "fixtures/valid")));
+    // process.json / application.json 是 WP 新增的两步工件：领域包用 schema +
+    // skill 内 build 脚本的测试覆盖它们，尚未在 fixtures/valid 落样例。除这两者
+    // 外，链上每个 file 都必须有可用 fixture，防止再出现旧版虚构文件名。
+    const noFixtureShipped = new Set(["process.json", "application.json"]);
     for (const c of STAGE_CHAIN) {
+      if (noFixtureShipped.has(c.file)) continue;
       expect(validFixtures.has(c.file), `fixtures/valid 缺 ${c.file}`).toBe(true);
     }
   });
@@ -186,8 +193,10 @@ describePack("与 lubricant-rd-domain-pack 的一致性", () => {
     }
   });
 
-  it("TYPE_ROUTES 与 route_step.py 完全一致", () => {
-    const routes = typeRoutes();
+  it("TYPE_ROUTES 与 state-machine.json 的 type_routes 逐项一致（直接读契约，防漂移）", () => {
+    const routes = readJson<{ type_routes: Record<string, string[]> }>(
+      "contracts/state-machine.json",
+    ).type_routes;
     expect(Object.keys(routes).sort()).toEqual([...PROJECT_TYPES].sort());
     for (const [key, stages] of Object.entries(routes)) {
       expect(TYPE_ROUTES[key as keyof typeof TYPE_ROUTES], `TYPE_ROUTES[${key}]`).toEqual(stages);
@@ -195,8 +204,9 @@ describePack("与 lubricant-rd-domain-pack 的一致性", () => {
   });
 
   it("project.schema.json 的 project_type 枚举与 PROJECT_TYPES 完全一致", () => {
-    // 三处必须同源：schema 枚举、route_step.py 的 TYPE_ROUTES、本模块的 PROJECT_TYPES。
-    // 2026-09-20 之前 schema 多了一个无路由的 CORRECTIVE_ACTION，正是这条检查要防的漂移。
+    // 三处必须同源：state-machine.json 的 type_routes、project.schema.json 的枚举、
+    // 本模块的 PROJECT_TYPES。2026-09-20 之前 schema 多了一个无路由的
+    // CORRECTIVE_ACTION，正是这条检查要防的漂移。
     const schema = readJson<{ properties: { project_type: { enum: string[] } } }>(
       "schemas/project.schema.json",
     );

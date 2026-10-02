@@ -142,12 +142,12 @@ describe("probeWorkspace", () => {
     await probeWorkspace();
     const asked = readArtifact.mock.calls.map((c) => c[0]);
     expect(asked).toEqual(["project.json", "docs/duty.json"]);
-    // 11 个链上工件里只有这两个存在
+    // 13 个链上工件里只有这两个存在
     expect(asked).not.toContain("gate.json");
     expect(asked).not.toContain("experiment_design.json");
   });
 
-  it("探测整条 11 步链（project_type 本身就在工件里，鸡生蛋）", async () => {
+  it("探测整条 13 步链（project_type 本身就在工件里，鸡生蛋）", async () => {
     const snap = await probeWorkspace();
     expect(Object.keys(snap.probes).sort()).toEqual(
       STAGE_CHAIN.map((c) => c.artifactType).sort(),
@@ -158,24 +158,24 @@ describe("probeWorkspace", () => {
 describe("deriveSteps", () => {
   it("首次探测尚未返回时不假装有进度：全部 pending", () => {
     const steps = deriveSteps("NEW_PRODUCT", null);
-    expect(steps).toHaveLength(11);
+    expect(steps).toHaveLength(13);
     expect(steps.every((s) => s.status === "pending")).toBe(true);
     expect(steps.every((s) => s.probe === null)).toBe(true);
   });
 
   it("离线时返回静态 Mock 状态，仅用于 UI 冒烟", () => {
     const steps = deriveSteps("NEW_PRODUCT", emptySnapshot());
-    expect(steps).toHaveLength(11);
+    expect(steps).toHaveLength(13);
     expect(steps[0].status).toBe("completed");
     expect(steps[1].status).toBe("active");
     expect(steps[2].status).toBe("pending");
     expect(steps[0].probe).toBeNull();
   });
 
-  it("按 project_type 取路由：COST_DOWN 是 7 步", () => {
-    expect(deriveSteps("COST_DOWN", emptySnapshot())).toHaveLength(7);
-    expect(deriveSteps("EXPLORATION", emptySnapshot())).toHaveLength(6);
-    expect(deriveSteps("IMPROVEMENT", emptySnapshot())).toHaveLength(9);
+  it("按 project_type 取路由：COST_DOWN 是 9 步", () => {
+    expect(deriveSteps("COST_DOWN", emptySnapshot())).toHaveLength(9);
+    expect(deriveSteps("EXPLORATION", emptySnapshot())).toHaveLength(7);
+    expect(deriveSteps("IMPROVEMENT", emptySnapshot())).toHaveLength(11);
   });
 
   it("合法工件点亮该步，第一个缺口成为进行中", async () => {

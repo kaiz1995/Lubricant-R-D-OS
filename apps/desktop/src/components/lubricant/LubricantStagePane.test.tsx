@@ -211,9 +211,11 @@ describe("LubricantStagePane — 主题色 token", () => {
 });
 
 describe("LubricantStagePane — 契约驱动渲染", () => {
-  it("类型选择器是 5 个 domain pack 里的 project_type", async () => {
+  it("类型选择器是 6 个 domain pack 里的 project_type", async () => {
     renderPane();
-    for (const label of ["正向开发", "性能优化", "配方降本", "客户定制", "机理探索"]) {
+    for (const label of [
+      "正向开发", "性能优化", "配方降本", "客户定制", "机理探索", "工艺稳健",
+    ]) {
       expect(await screen.findByRole("button", { name: label })).toBeInTheDocument();
     }
     // 旧版的两个虚构流程不应出现
@@ -223,9 +225,9 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
 
   it("project.json 存在时锁定类型选择器为 NEW_PRODUCT", async () => {
     renderPane();
-    // NEW_PRODUCT 的 11 步
+    // NEW_PRODUCT 的 13 步
     await waitFor(() =>
-      expect(screen.getByText(/工件链阶段步骤（11 步独立推进）/)).toBeInTheDocument(),
+      expect(screen.getByText(/工件链阶段步骤（13 步独立推进）/)).toBeInTheDocument(),
     );
     expect(screen.getByText(/类型由 project\.json 的 project_type 锁定/)).toBeInTheDocument();
   });
