@@ -58,6 +58,24 @@ A single JSON input object providing the complete 9 upstream stage artifacts thr
    - `PIVOT`, `KILL`, and `FREEZE` require an explicit non-empty `reason` and valid evidence without `GAP`.
 3. **Stage Horizon**: This skill stops at `stage: "VERIFIED"`. It never writes `FROZEN` or `CLOSED`.
 
+### Signoff Role Mapping (WP-08)
+
+The gate artifact may additionally RECORD the following optional signoff fields (schema: `gate.schema.json`; `dissent` items follow `common.schema.json#/$defs/dissent_item`):
+
+| Field | Role semantics | Recorded meaning |
+|---|---|---|
+| `technical_reviewer` | Named technical reviewer of this gate | The person who performed the technical review that this gate records (answers V3 "谁复核的"). |
+| `reviewed_at` | Time of the technical review | ISO-8601 timestamp of that review. |
+| `approver` | Named approver of this gate | The person who accepted the gate disposition (answers V3 "谁批准的"). |
+| `approved_at` | Time of the approval | ISO-8601 timestamp of that approval. |
+| `dissent[]` | Recorded dissents | Each item is `{reviewer, comment, status: OPEN\|RESOLVED}`; an `OPEN` item is an unresolved dissent. |
+
+**Record-only, no authentication**: these fields are *records only*. No script in this skill (or in the domain) checks authority, identity, or permission — naming a reviewer/approver confers no capability and validates no identity (计划 §7 第 2 条：签批只记录不鉴权). The FREEZE precondition ("a `technical_reviewer` is named AND no unresolved dissent exists") is adjudicated **solely** by `scripts/validate_state_machine.py` at the state-machine FREEZE branch, never by this skill: this skill still stops at `VERIFIED` and never decides FREEZE.
+
+`build_gate_artifact.py` carries these fields through to the artifact verbatim when present in the input `gate` object; omitting them leaves the artifact schema-valid (they are optional).
+
+REVISE interplay (WP-08/WP-13 migration): a `PROCESS_ONLY` intra-stage revision may cite this gate's `gate_id` in `revision.reuses_review_of` to reuse the signoff recorded here; a `FORMULA_OR_CTQ` revision must re-review and may cite the fresh re-review gate via `revision.re_review.gate_review_id`, which lets V3 resolve the original/fresh signoff through the gate artifact instead of trusting an embedded note.
+
 ---
 
 ## 2. Deterministic Execution Workflow

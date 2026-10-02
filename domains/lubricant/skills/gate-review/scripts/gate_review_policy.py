@@ -9,6 +9,15 @@ from __future__ import annotations
 # APPLIED advancement, and FREEZE is reachable only from APPLIED, never here.
 GATED_STAGE = "VERIFIED"
 
+# WP-08 signoff role mapping. The gate artifact can RECORD who technically
+# reviewed it and who approved it, plus any recorded dissent. These fields are
+# records only: NO code path in this skill (or anywhere in the domain) checks
+# authority, identity, or permission — "签批只记录不鉴权" (plan §7 rule 2).
+# The FREEZE preconditions (technical_reviewer present, no unresolved dissent)
+# are adjudicated solely by scripts/validate_state_machine.py, never here.
+SIGNOFF_FIELDS = ("technical_reviewer", "reviewed_at", "approver", "approved_at")
+DISSENT_FIELD = "dissent"
+
 
 def has_gap(value: dict) -> bool:
     return any(isinstance(item, dict) and item.get("status") == "GAP" for item in value.get("evidence", []))
