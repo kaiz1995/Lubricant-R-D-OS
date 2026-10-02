@@ -152,5 +152,59 @@
       "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a new-product route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] },
       "after": { "project_id": "WGO-001", "stage": "FAILURE_CTQ_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can a new-product route start?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] }
     }
+  },
+  {
+    "name": "revise-cannot-change-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "REVISE must not change the stage",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Pretends to advance while revising.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 7 }
+    }
+  },
+  {
+    "name": "revise-must-keep-the-accepted-prefix", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "REVISE must keep the accepted-stage prefix unchanged",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED"],
+      "revision": { "reason": "Truncated accepted-stage history.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 7 }
+    }
+  },
+  {
+    "name": "revise-process-only-cannot-cite-a-future-review", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "REVISE PROCESS_ONLY impact must reuse an existing reviewed version",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Cites a review version that does not exist yet.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 99 }
+    }
+  },
+  {
+    "name": "revise-formula-change-must-be-re-reviewed", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "REVISE FORMULA_OR_CTQ impact requires a fresh technical review",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Formulation changed but no re-review was recorded.", "operator": "R&D owner", "impact": "FORMULA_OR_CTQ" }
+    }
+  },
+  {
+    "name": "revise-requires-a-revision-record", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "REVISE requires reason, operator, and impact",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"]
+    }
   }
 ]

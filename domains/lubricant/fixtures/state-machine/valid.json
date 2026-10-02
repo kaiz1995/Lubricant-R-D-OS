@@ -125,5 +125,45 @@
       "before": { "project_id": "WGO-001", "stage": "PROJECT_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] },
       "after": { "project_id": "WGO-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the project define duty?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-001"] }
     }
+  },
+  {
+    "name": "revise-process-only-reuses-the-original-review", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Re-ran the frozen recipe on production kettle #2; no formula change.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 7, "revision_index": 1 }
+    }
+  },
+  {
+    "name": "revise-second-bench-swap-reproduction", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 9, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Second kettle reproduction; still process-only.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 7, "revision_index": 2 }
+    }
+  },
+  {
+    "name": "revise-third-bench-swap-reproduction", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 9, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 10, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Third kettle reproduction; still process-only.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": 7, "revision_index": 3 }
+    }
+  },
+  {
+    "name": "revise-formula-change-requires-a-fresh-review", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 10, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 11, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Added an anti-wear additive tweak, which touches the formulation.", "operator": "R&D owner", "impact": "FORMULA_OR_CTQ", "re_review": { "technical_reviewer": "Lead tribologist", "reviewed_version": 11 }, "revision_index": 4 }
+    }
   }
 ]
