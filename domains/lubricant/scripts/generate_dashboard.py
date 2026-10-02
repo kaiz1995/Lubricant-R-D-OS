@@ -81,7 +81,7 @@ def build_html(result: dict, gates_hold: list[str], artifact_count: int | None =
 <body>
 <div class="banner">{BANNER}</div>
 <header>
-  <h1>润滑油研发 OS — 项目仪表盘</h1>
+  <h1>润滑材料研发 OS — 项目仪表盘</h1>
   <div class="meta">{esc(result["gate"])} · {esc(result["date"])} · scope: {esc(result["scope"])}</div>
 </header>
 <main>

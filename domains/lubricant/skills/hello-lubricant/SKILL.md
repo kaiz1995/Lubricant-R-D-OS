@@ -1,6 +1,6 @@
 ---
 name: hello-lubricant
-description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 11 R&D stages, and guides project setup. Use when user mentions "hello-lubricant", "润滑油开发帮助", "研发体系导引", "环境检查", "润滑油流程说明", or wants an overview of the lubricant R&D pipeline.
+description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 11 R&D stages, and guides project setup. Use when user mentions "hello-lubricant", "润滑材料开发帮助", "研发体系导引", "环境检查", "润滑材料流程说明", or wants an overview of the lubricant R&D pipeline.
 ---
 
 # Hello Lubricant (Orientation & Diagnostic Smoke Skill)

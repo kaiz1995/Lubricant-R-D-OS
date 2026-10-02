@@ -39,9 +39,9 @@ runs, and review into one auditable desktop workflow.
 ---
 
 > [!IMPORTANT]
-> **本仓库是 Lubricant R&D OS —— 工业润滑油研发分支，不是上游原版。**
+> **本仓库是 Lubricant R&D OS —— 工业润滑材料研发分支，不是上游原版。**
 >
-> 它是 [ai4s-research/open-science](https://github.com/ai4s-research/open-science) 的长期下游分支，在其上叠加了**工业润滑油产品开发**领域层与三栏研发工作台：
+> 它是 [ai4s-research/open-science](https://github.com/ai4s-research/open-science) 的长期下游分支，在其上叠加了**工业润滑材料产品开发**领域层与三栏研发工作台：
 >
 > - **领域层** → [`domains/lubricant/`](./domains/lubricant/)：19 个可部署研发技能（20 个技能目录）、21 个工件 JSON Schema、阶段状态机（contract 0.6.0：16 段 / 6 条研发路线 / REVISE 段内迭代）、Phase 4 计算引擎（成本 / DOE（混料 + 因子双通道）/ 统计 / 多目标优化 / 结果互证）、37 个自动化测试文件（含 16 个端到端）。详见[领域包文档](./domains/lubricant/README.md)。
 > - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Lubricant Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 13 步工件链（6 条路线 7–13 步）、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
@@ -55,7 +55,7 @@ runs, and review into one auditable desktop workflow.
 
 > 本节为本分支新增内容，概述产品定位与核心设计。完整技术细节（系统架构、快速开始、离线验证、桌面端使用指引、项目状态、许可证）见 [`domains/lubricant/README.md`](./domains/lubricant/README.md)。
 >
-> **名词说明：** 上游项目 GitHub 名为 [Open Science](https://github.com/ai4s-research/open-science)，桌面产品品牌为 **Lubricant Science Desktop**，内置 Agent 运行时为 **OpenCode**。本分支在此基础上叠加工业润滑油领域层。
+> **名词说明：** 上游项目 GitHub 名为 [Open Science](https://github.com/ai4s-research/open-science)，桌面产品品牌为 **Lubricant Science Desktop**，内置 Agent 运行时为 **OpenCode**。本分支在此基础上叠加工业润滑材料领域层。
 
 > **本轮落地（实施计划 V1.4 · WP-01–WP13，2026-10-02，contract 0.6.0）：**
 > - **6 条研发路线全量发布** —— 新增第六条 `PROCESS_ROBUSTNESS`（换釜/放大复现，以工艺窗口收尾）。
@@ -69,16 +69,16 @@ runs, and review into one auditable desktop workflow.
 
 ### 1. 产品定位
 
-**Lubricant R&D OS** 是一套运行在 Lubricant Science 科研工作台上的**工业润滑油产品开发决策助手（R&D Copilot & Operating System）**。
+**Lubricant R&D OS** 是一套运行在 Lubricant Science 科研工作台上的**工业润滑材料产品开发决策助手（R&D Copilot & Operating System）**。
 
 它**不是**"输入技术指标，AI 自动吐出配方"的黑盒生成器。核心使命是：
 
-> **把润滑油研发从"经验试错与逆向仿制"升级为"科学决策与证据闭环"**。
+> **把润滑材料研发从"经验试错与逆向仿制"升级为"科学决策与证据闭环"**。
 > 让每一个配方决策都有工况证据支撑，每一次实验设计都最大化信息增益，每一个阶段流转都可追溯、可审计、可复用。
 
 ### 2. 核心优势
 
-工业润滑油配方属于核心商业机密，研发决策依赖严谨的物理实验与数据溯源。基于 Lubricant Science 底座开发，具备四大不可替代的优势：
+工业润滑材料配方属于核心商业机密，研发决策依赖严谨的物理实验与数据溯源。基于 Lubricant Science 底座开发，具备四大不可替代的优势：
 
 | 优势 | 一句话 | 关键机制 |
 |---|---|---|
@@ -91,7 +91,7 @@ runs, and review into one auditable desktop workflow.
 
 ### 3. 研发背景与行业痛点
 
-传统工业润滑油研发长期受五个痼疾困扰：
+传统工业润滑材料研发长期受五个痼疾困扰：
 
 1. **重逆向、轻正向** —— 高度依赖"找竞品 → 剖析 → 仿制 → 试错"，工况变化或原料断供时无法自主应对。
 2. **实验碎片化（OFAT 陷阱）** —— 一次只改一个变量，缺少统一的设计空间与假设检验框架。
@@ -101,7 +101,7 @@ runs, and review into one auditable desktop workflow.
 
 ### 4. 核心研发哲学（Decision-Driven R&D）
 
-* **关注工况而非标准** —— 润滑油在具体摩擦副、温度谱、载荷谱下承受挑战，不只是"通过标准"。
+* **关注工况而非标准** —— 润滑材料在具体摩擦副、温度谱、载荷谱下承受挑战，不只是"通过标准"。
 * **风险控制 + 商业价值优化** —— 约束满足型产品追求 Minimize Cost s.t. CTQᵢ ≥ Limitᵢ；综合价值型产品追求安全余量与长期可靠性。
 * **先证明尺子可靠** —— 研发早期对评价方法做资格确认（Method Qualification），验证区分性与工况相关性。
 * **正向为主、逆向为辅** —— 逆向分析仅作边界核对与对比基线（Benchmark Calibration）。
