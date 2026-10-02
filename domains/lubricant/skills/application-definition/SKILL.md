@@ -87,7 +87,7 @@ python skills/application-definition/scripts/preflight_application_definition.py
 ```bash
 python skills/application-definition/scripts/build_application_artifact.py <input.json> <temporary-file.json>
 ```
-The builder sets `project_id = project_reference`, generates the canonical decision fields (`decision = GO` iff `result = PASS`, else `HOLD`), and sets `stage = "VERIFIED"` (WP-06 rebinds to `APPLIED`).
+The builder sets `project_id = project_reference`, generates the canonical decision fields (`decision = GO` iff `result = PASS`, else `HOLD`), and sets `stage = "APPLIED"` (the WP-06 Stage 13 token; entry into the stage is gated by `application-validation`).
 
 ### Step 3: Validate Artifact
 ```bash
@@ -100,7 +100,7 @@ python skills/application-definition/scripts/validate_application_artifact.py <t
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
 # 🔴 CHECKPOINT · STOP: the application record stops here.
-# Do NOT advance the state machine to APPLIED, freeze, or claim a field / life / release conclusion.
+# Do NOT gate the APPLIED entry (application-validation), freeze, or claim a field / life / release conclusion.
 ```
 
 ---

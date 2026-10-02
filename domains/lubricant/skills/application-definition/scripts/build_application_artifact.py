@@ -29,9 +29,9 @@ def main() -> int:
         "schema_version": "0.1.0",
         "artifact_type": "application",
         "project_id": application["project_reference"],
-        # WP-06 rebinds this to the new Stage 13 token APPLIED once it exists in
-        # the contract; WP-05 stops at the last token available in this tree.
-        "stage": "VERIFIED",
+        # WP-06: the application record materialises the APPLIED stage; the
+        # VERIFIED->APPLIED entry is gated by skills/application-validation.
+        "stage": "APPLIED",
         "evidence_scope": application["evidence_scope"],
         "source": application["source"],
         "evidence_id": application["evidence_id"],
