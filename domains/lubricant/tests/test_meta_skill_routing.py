@@ -25,13 +25,17 @@ def run_cli(payload: dict) -> tuple[int, str]:
     with tempfile.TemporaryDirectory() as temporary:
         path = Path(temporary) / "input.json"
         path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, "-B", str(ROUTE_SCRIPT), str(path)],
-            cwd=ROUTE_SCRIPT.parent,
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode, result.stdout.strip()
+        return run_cli_args(str(path))
+
+
+def run_cli_args(*arguments: str) -> tuple[int, str]:
+    result = subprocess.run(
+        [sys.executable, "-B", str(ROUTE_SCRIPT), *arguments],
+        cwd=ROUTE_SCRIPT.parent,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode, result.stdout.strip()
 
 
 def physical_state(stage: str, **overrides) -> dict:
@@ -102,8 +106,8 @@ def main() -> int:
 
     # 10. A DECLARED project_type with no routed chain is DENIED (fail-closed),
     #     never silently handed the full NEW_PRODUCT chain. The pack documents
-    #     exactly five workflows (README §5, project-definition/SKILL.md) and
-    #     project.schema.json enumerates the same five, so anything else is a
+    #     exactly six workflows (README §5, project-definition/SKILL.md) and
+    #     project.schema.json enumerates the same six, so anything else is a
     #     contract violation. A missing project_type still runs the full chain
     #     for pre-existing state.
     result = router.decide(physical_state("PROJECT_DEFINED", project_type="CORRECTIVE_ACTION"), "DUTY_DEFINED")
@@ -144,8 +148,35 @@ def main() -> int:
     result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="CUSTOMIZATION"), "PROCESS_WINDOW_DEFINED")
     assert result["decision"] == "DENY" and "VERIFIED" in result["reason"], result
 
-    print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages)")
+    # 15. WP-03 sixth route: PROCESS_ROBUSTNESS is published by the contract and
+    #     reaches PROCESS_WINDOW_DEFINED straight off MODEL_BUILT (no OPTIMIZED).
+    #     The route's final stage APPLIED is not a router stage until WP-06, so it
+    #     appears in the printed sequence but cannot be requested yet.
+    assert len(router.TYPE_ROUTES) == 6, router.TYPE_ROUTES
+    assert tuple(router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]) == PROCESS_ROBUSTNESS_REF, router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]
+    assert tuple(router.TYPE_ROUTES) == ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"), tuple(router.TYPE_ROUTES)
+    result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "PROCESS_WINDOW_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "process-scale-up", result
+    # The skip is route-local: the same MODEL_BUILT -> VERIFIED jump is DENIED.
+    result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "VERIFIED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+    # APPLIED is not yet a known router stage (WP-06 adds it).
+    assert "APPLIED" not in router.KNOWN_STAGES, router.KNOWN_STAGES
+
+    # 16. `--list-stages <TYPE>` prints the contract sequence verbatim for every
+    #     project type and fails closed on an unknown type.
+    for project_type, expected in ((t, tuple(router.TYPE_ROUTES[t])) for t in router.TYPE_ROUTES):
+        returncode, stdout = run_cli_args("--list-stages", project_type)
+        assert returncode == 0, (project_type, returncode, stdout)
+        assert tuple(stdout.splitlines()) == expected, (project_type, stdout)
+    returncode, stdout = run_cli_args("--list-stages", "NOT_A_TYPE")
+    assert returncode == 1 and "no routed stage chain" in stdout, (returncode, stdout)
+
+    print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages, {len(router.TYPE_ROUTES)} project types)")
     return 0
+
+
+PROCESS_ROBUSTNESS_REF = ("PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "PROCESS_WINDOW_DEFINED", "APPLIED")
 
 
 ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED")
