@@ -193,7 +193,8 @@ def main() -> int:
         "gate_status": "FREEZE",
         "project_type": PROJECT_TYPE,
         "before": state("APPLIED"),
-        "after": state("FROZEN", status="FROZEN"),
+        # WP-08: freezing also requires a named technical_reviewer on the after state.
+        "after": state("FROZEN", status="FROZEN", technical_reviewer="Lead tribologist"),
         "freeze_record": {"reason": "applied", "evidence_package": ["E-PR-001"]},
     }
     assert validator.validate(freeze) is None, validator.validate(freeze)

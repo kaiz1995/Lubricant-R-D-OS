@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/gate.schema.json",
   "title": "Gate review",
+  "description": "WP-08 signoff fields (technical_reviewer / reviewed_at / approver / approved_at / dissent) are optional records only: they record who reviewed and who approved, and no code path checks authority or permission. FREEZE preconditions (technical_reviewer present, no unresolved dissent) are adjudicated by scripts/validate_state_machine.py, not by this schema.",
   "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
   "type": "object",
   "properties": {
@@ -13,7 +14,12 @@
     "satisfied_conditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "unsatisfied_conditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "risks": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "risks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "technical_reviewer": { "type": "string", "minLength": 1 },
+    "reviewed_at": { "type": "string", "format": "date-time" },
+    "approver": { "type": "string", "minLength": 1 },
+    "approved_at": { "type": "string", "format": "date-time" },
+    "dissent": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/dissent_item" } }
   },
   "required": ["artifact_type", "evidence_scope", "gate_id", "experiment_reference", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks"],
   "unevaluatedProperties": false

@@ -216,5 +216,47 @@
       "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002"] },
       "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"]
     }
+  },
+  {
+    "name": "freeze-without-technical-reviewer-is-rejected", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08: an APPLIED->FROZEN FREEZE without a named technical_reviewer is rejected (V3: nobody signed off, so nobody can be asked who reviewed this formula).",
+    "expected_reason": "FREEZE requires a technical_reviewer signoff on the after state",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"], "approver": "R&D section manager", "approved_at": "2026-09-28T10:15:00Z" },
+      "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "freeze-with-unresolved-dissent-is-rejected", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08: an OPEN (unresolved) dissent on the after state blocks the FREEZE even though a technical_reviewer is named.",
+    "expected_reason": "FREEZE is blocked by an unresolved dissent",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"], "technical_reviewer": "Lead tribologist", "reviewed_at": "2026-09-28T09:30:00Z", "approver": "R&D section manager", "approved_at": "2026-09-28T10:15:00Z", "dissent": [ { "reviewer": "Process engineer", "comment": "Kettle-swap reproducibility has not been demonstrated.", "status": "OPEN" } ] },
+      "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "revise-formula-change-gate-reference-cannot-be-empty", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08/WP-13 migration: an empty gate_review_id reference is not a real re-review artifact, so the FORMULA_OR_CTQ revision is rejected.",
+    "expected_reason": "REVISE FORMULA_OR_CTQ impact requires a fresh technical review",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 11, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 12, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Formulation changed; cites an empty gate reference.", "operator": "R&D owner", "impact": "FORMULA_OR_CTQ", "re_review": { "gate_review_id": "", "reviewed_version": 12 } }
+    }
+  },
+  {
+    "name": "revise-process-only-gate-reference-cannot-be-empty", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08/WP-13 migration: a blank gate reference is neither a reviewed-version integer nor a usable gate_id, so the PROCESS_ONLY reuse is rejected.",
+    "expected_reason": "REVISE PROCESS_ONLY impact must reuse an existing reviewed version",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 12, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 13, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006", "E-PW-007"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Process-only change; cites a blank gate reference.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": "   " }
+    }
   }
 ]

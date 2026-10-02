@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from gate_review_policy import expected_decision_fields, final_status
+from gate_review_policy import DISSENT_FIELD, SIGNOFF_FIELDS, expected_decision_fields, final_status
 from preflight_gate_review import errors_for
 
 
@@ -18,7 +18,10 @@ def main() -> int:
     errors = errors_for(data, input_path)
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
     project = json.loads((input_path.parent / data["project_artifact"]).read_text(encoding="utf-8")); experiment = json.loads((input_path.parent / data["experiment_artifact"]).read_text(encoding="utf-8")); optimization = json.loads((input_path.parent / data["optimization_artifact"]).read_text(encoding="utf-8")); request = {**data["gate"], "evidence_scope": optimization["evidence_scope"]}
-    artifact = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project["project_id"], "stage": "VERIFIED", "evidence_scope": optimization["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], **{key: request[key] for key in ("gate_id", "scope", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks")}, "gate_status": final_status(request, optimization["evidence_scope"])}
+    # WP-08: optional signoff fields are carried through as records only — no
+    # authority check happens here (the disposition below stays deterministic).
+    signoff = {key: request[key] for key in SIGNOFF_FIELDS + (DISSENT_FIELD,) if key in request}
+    artifact = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project["project_id"], "stage": "VERIFIED", "evidence_scope": optimization["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], **{key: request[key] for key in ("gate_id", "scope", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks")}, "gate_status": final_status(request, optimization["evidence_scope"]), **signoff}
     output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}"); return 0
 

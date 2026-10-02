@@ -17,6 +17,9 @@ SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json",
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("model_artifact", "model.schema.json", "MODEL_BUILT"), ("optimization_artifact", "optimization.schema.json", "OPTIMIZED"))
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"gate"}
 REQUEST_FIELDS = {"gate_id", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks", "reason", "evidence"}
+# WP-08: the request may also carry the optional signoff record. It stays a
+# record only — no authority check happens here or downstream.
+OPTIONAL_REQUEST_FIELDS = {"technical_reviewer", "reviewed_at", "approver", "approved_at", "dissent"}
 
 
 def schema_dir() -> Path:
@@ -40,7 +43,7 @@ def artifact(value: object, input_path: Path, schema_name: str, label: str) -> t
 
 
 def gate_request_errors(request: object, project_id: str, experiment_id: str, evidence_scope: str | None = None) -> list[str]:
-    if not isinstance(request, dict) or set(request) != REQUEST_FIELDS: return ["gate must contain only the required review fields"]
+    if not isinstance(request, dict) or not REQUEST_FIELDS <= set(request) or set(request) - REQUEST_FIELDS - OPTIONAL_REQUEST_FIELDS: return ["gate must contain only the required review fields"]
     candidate = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project_id or "input-project", "stage": "VERIFIED", "evidence_scope": evidence_scope, "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": request.get("gate_status"), "next_action": "input", "experiment_reference": experiment_id or "input-experiment", **{key: value for key, value in request.items() if key != "reason"}}
     loaded, registry = schemas()
     return [f"gate: {error.message}" for error in Draft202012Validator(loaded["gate.schema.json"], registry=registry).iter_errors(candidate)]

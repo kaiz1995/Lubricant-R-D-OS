@@ -62,12 +62,21 @@
     }
   },
   {
-    "name": "freeze-locks-the-applied-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "name": "freeze-locks-the-applied-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08: the after state records the signoff (who reviewed and who approved); the record is advisory, the FREEZE precondition adjudicates it.",
     "event": {
       "kind": "FREEZE", "gate_status": "FREEZE",
       "before": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
-      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"], "technical_reviewer": "Lead tribologist", "reviewed_at": "2026-09-28T09:30:00Z", "approver": "R&D section manager", "approved_at": "2026-09-28T10:15:00Z" },
       "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "freeze-records-signoff-with-resolved-dissent", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08: a dissent that has been RESOLVED is not an unresolved dissent, so the FREEZE passes while the disagreement stays on record for V3 traceability.",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 6, "decision_question": "May the applied project be frozen after the dissent round?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702", "E-703"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 6, "decision_question": "May the applied project be frozen after the dissent round?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702", "E-703"], "technical_reviewer": "Lead tribologist", "reviewed_at": "2026-09-29T08:00:00Z", "approver": "R&D section manager", "approved_at": "2026-09-29T09:00:00Z", "dissent": [ { "reviewer": "Process engineer", "comment": "Kettle-swap reproducibility was not shown; addressed by E-703.", "status": "RESOLVED" } ] },
+      "freeze_record": { "reason": "All stated freeze conditions are met; the raised dissent was resolved.", "evidence_package": "EP-002" }
     }
   },
   {
@@ -172,6 +181,26 @@
       "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 11, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005"] },
       "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
       "revision": { "reason": "Added an anti-wear additive tweak, which touches the formulation.", "operator": "R&D owner", "impact": "FORMULA_OR_CTQ", "re_review": { "technical_reviewer": "Lead tribologist", "reviewed_version": 11 }, "revision_index": 4 }
+    }
+  },
+  {
+    "name": "revise-formula-change-can-cite-a-gate-review", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08/WP-13 migration: the FORMULA_OR_CTQ re-review may reference the real re-review gate artifact (gate_review_id); the technical_reviewer is then resolved from that gate's signoff, so the embedded minimal record is no longer required.",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 11, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 12, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Thickener concentration corrected, which touches the formulation.", "operator": "R&D owner", "impact": "FORMULA_OR_CTQ", "re_review": { "gate_review_id": "GATE-RE-012", "reviewed_version": 12 }, "revision_index": 1 }
+    }
+  },
+  {
+    "name": "revise-process-only-can-cite-the-original-gate-review", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. WP-08/WP-13 migration: PROCESS_ONLY may cite the reused signoff as a gate reference string, so V3 'who approved this?' resolves to the original gate artifact's technical_reviewer. The legacy integer form stays accepted alongside.",
+    "event": {
+      "kind": "REVISE", "gate_status": "GO",
+      "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 12, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006"] },
+      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 13, "decision_question": "Does the process window survive a bench swap?", "evidence_scope": "PHYSICAL", "evidence": ["E-PW-001", "E-PW-002", "E-PW-003", "E-PW-004", "E-PW-005", "E-PW-006", "E-PW-007"] },
+      "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
+      "revision": { "reason": "Fourth kettle reproduction; same formulation, process-only change.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": "GATE-PW-007", "revision_index": 1 }
     }
   }
 ]

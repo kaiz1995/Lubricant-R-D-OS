@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/design_freeze.schema.json",
   "title": "Design freeze record",
-  "description": "Stage 7 contract. Freeze requires every one of the eight freeze conditions to be satisfied with retained evidence. SYNTHETIC evidence can never freeze a design; the artifact scope is PHYSICAL only.",
+  "description": "Stage 7 contract. Freeze requires every one of the eight freeze conditions to be satisfied with retained evidence. SYNTHETIC evidence can never freeze a design; the artifact scope is PHYSICAL only. WP-08: the freeze_record may also record the signoff (technical_reviewer / reviewed_at / approver / approved_at / dissent); these are records only, no authority is checked, and the FREEZE state transition precondition is adjudicated by scripts/validate_state_machine.py.",
   "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
   "type": "object",
   "properties": {
@@ -15,6 +15,11 @@
         "evidence_package": { "type": "string", "minLength": 1 },
         "evidence_scope": { "const": "PHYSICAL" },
         "evidence_status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] },
+        "technical_reviewer": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "format": "date-time" },
+        "approver": { "type": "string", "minLength": 1 },
+        "approved_at": { "type": "string", "format": "date-time" },
+        "dissent": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/dissent_item" } },
         "freeze_conditions": {
           "type": "array",
           "minItems": 8,
