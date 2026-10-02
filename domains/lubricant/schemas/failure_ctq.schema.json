@@ -31,7 +31,22 @@
         "additionalProperties": false
       }
     },
-    "test_chain": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+    "test_chain": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "interface_failure_modes": {
+      "description": "WP-09: failure modes that originate at a material/coating interface. Optional; each entry cites the interface artifact (INTERFACE:<interface_id>) that carries the compatibility evidence.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "interface_reference": { "type": "string", "minLength": 1 },
+          "failure_mode": { "type": "string", "minLength": 1 },
+          "mechanism": { "type": "string", "minLength": 1 }
+        },
+        "required": ["interface_reference", "failure_mode"],
+        "additionalProperties": false
+      }
+    }
   },
   "required": ["artifact_type", "challenge_reference", "failure_id", "failure_mode", "mechanism", "failure_diagnosis", "root_cause_hypotheses", "lubricant_contribution", "ctqs", "test_chain"],
   "unevaluatedProperties": false

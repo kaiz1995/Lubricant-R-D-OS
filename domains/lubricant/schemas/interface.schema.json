@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/interface.schema.json",
+  "title": "Lubricant R&D material / coating / interface record",
+  "description": "Interface object (WP-09): one material / coating / tribological contact pair and the compatibility evidence collected for it. A resource object like bench (WP-05), not a chain stage: it records who meets whom (counterpart a/b), the coating system when one side is coated, and per-condition compatibility observations. The fail-closed verdict rule mirrors application.schema.json: a PASS verdict is only admissible with non-empty, all-OBSERVED, all-PASS compatibility evidence and no GAP evidence; an empty evidence list forces verdict GAP. design_freeze's COMPATIBILITY_PASSED freeze condition must cite this artifact as INTERFACE:<interface_id> and the cited record must carry a PASS verdict (enforced by skills/interface-definition/scripts/interface_policy.freeze_compatibility_errors and the e2e contract; the schema-level pattern on design_freeze is deferred while tests/test_r25_contracts.py is owned by the parallel WP-12).",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "if": { "properties": { "verdict": { "const": "PASS" } }, "required": ["verdict"] },
+      "then": { "properties": { "compatibility_evidence": { "minItems": 1 } } }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "PASS" } }, "required": ["verdict"] },
+      "then": {
+        "properties": {
+          "compatibility_evidence": {
+            "items": {
+              "allOf": [
+                { "not": { "properties": { "result": { "enum": ["FAIL", "INCONCLUSIVE", "GAP"] } }, "required": ["result"] } },
+                { "not": { "properties": { "status": { "const": "GAP" } }, "required": ["status"] } }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "interface" },
+    "interface_id": {
+      "description": "Identifier referenced elsewhere as INTERFACE:<interface_id>.",
+      "type": "string",
+      "minLength": 1
+    },
+    "project_reference": {
+      "description": "Project this record is made for; also used as the artifact project_id by the builder.",
+      "type": "string",
+      "minLength": 1
+    },
+    "interface_type": { "enum": ["COATING_SUBSTRATE", "LUBRICANT_SURFACE", "MATERIAL_PAIR"] },
+    "counterpart_a": { "$ref": "#/$defs/counterpart" },
+    "counterpart_b": { "$ref": "#/$defs/counterpart" },
+    "coating": {
+      "description": "Optional coating-system parameters. External dependency (DLC coating parameters, supplier batches) is handled by declaration: either the whole object is present with its provenance, or it is omitted entirely — never partially guessed.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/coating" }
+      ]
+    },
+    "compatibility_evidence": {
+      "description": "Per-condition compatibility observations; may be empty, which forces verdict GAP.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/compatibility_item" }
+    },
+    "verdict": { "enum": ["PASS", "FAIL", "INCONCLUSIVE", "GAP"] },
+    "source": { "type": "string", "minLength": 1 },
+    "evidence_id": { "type": "string", "minLength": 1 }
+  },
+  "required": [
+    "artifact_type",
+    "interface_id",
+    "project_reference",
+    "interface_type",
+    "counterpart_a",
+    "counterpart_b",
+    "compatibility_evidence",
+    "verdict",
+    "source",
+    "evidence_id"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "counterpart": {
+      "type": "object",
+      "properties": {
+        "role": { "enum": ["COATING", "SUBSTRATE", "LUBRICANT", "COUNTERFACE", "SEAL", "OTHER"] },
+        "designation": { "description": "Trade name, grade, or coating system designation.", "type": "string", "minLength": 1 },
+        "material_reference": { "description": "Optional internal material/batch reference.", "type": "string", "minLength": 1 },
+        "supplier": { "type": "string", "minLength": 1 },
+        "supplier_batch_reference": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
+      },
+      "required": ["role", "designation", "source"],
+      "additionalProperties": false
+    },
+    "coating": {
+      "type": "object",
+      "properties": {
+        "coating_system": { "type": "string", "minLength": 1 },
+        "coating_reference": { "description": "DLC coating-parameter sheet or equivalent external reference.", "type": "string", "minLength": 1 },
+        "deposition_process": { "type": "string", "minLength": 1 },
+        "supplier": { "type": "string", "minLength": 1 },
+        "supplier_batch_reference": { "type": "string", "minLength": 1 },
+        "thickness_um": { "type": "number", "exclusiveMinimum": 0 },
+        "surface_hardness": { "description": "Positive value; unit carried in the sibling hardness_unit.", "type": "number", "exclusiveMinimum": 0 },
+        "hardness_unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
+      },
+      "required": ["coating_system", "coating_reference", "supplier", "supplier_batch_reference", "source"],
+      "additionalProperties": false
+    },
+    "compatibility_item": {
+      "type": "object",
+      "properties": {
+        "compatibility_id": { "type": "string", "minLength": 1 },
+        "method_reference": { "description": "Qualified test method that produced the observation.", "type": "string", "minLength": 1 },
+        "condition": { "description": "Human-readable test condition (load, temperature, duration, media).", "type": "string", "minLength": 1 },
+        "result": { "enum": ["PASS", "FAIL", "INCONCLUSIVE", "GAP"] },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+      },
+      "required": ["compatibility_id", "method_reference", "condition", "result", "evidence_id", "status"],
+      "additionalProperties": false
+    }
+  }
+}
