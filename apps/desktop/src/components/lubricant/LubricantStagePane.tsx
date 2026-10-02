@@ -53,6 +53,7 @@ const TYPE_META: Record<ProjectType, { label: string; shortLabel: string }> = {
   COST_DOWN: { label: "降本替代", shortLabel: "配方降本" },
   CUSTOMIZATION: { label: "客户定制", shortLabel: "客户定制" },
   EXPLORATION: { label: "机理 / 平台型探索", shortLabel: "机理探索" },
+  PROCESS_ROBUSTNESS: { label: "工艺稳健性开发", shortLabel: "工艺稳健" },
 };
 
 const GATE_TONE: Record<GateStatus, string> = {
@@ -393,7 +394,7 @@ export function LubricantStagePane({
             </div>
             <div className="flex justify-between text-[10px] text-muted">
               <span>起步：立项与定义</span>
-              <span>终点：门禁终审</span>
+              <span>终点：应用与整机验证</span>
             </div>
           </div>
 

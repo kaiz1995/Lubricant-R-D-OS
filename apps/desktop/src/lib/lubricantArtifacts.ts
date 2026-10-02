@@ -1,5 +1,5 @@
 /**
- * 润滑油研发工作区工件探测。
+ * 润滑材料研发工作区工件探测。
  *
  * 设计约束（勿违反）：
  *  1. 不使用 resolveArtifactPath —— 其 miss 缓存（artifactFile.ts 的
@@ -141,9 +141,9 @@ async function probeOne(
 }
 
 /**
- * 探测当前活动工作区中的全部 11 个链上工件。
+ * 探测当前活动工作区中的全部 13 个链上工件。
  *
- * 探测的是整条 11 步链而不是某个 project_type 的子集：project_type 本身就
+ * 探测的是整条 13 步链而不是某个 project_type 的子集：project_type 本身就
  * 存放在 project.json 里，必须先读到它才能确定路由（鸡生蛋问题）。
  */
 export async function probeWorkspace(): Promise<WorkspaceSnapshot> {

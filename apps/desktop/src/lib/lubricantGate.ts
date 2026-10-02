@@ -1,5 +1,5 @@
 /**
- * 润滑油研发门禁（Gate）判定与落盘。
+ * 润滑材料研发门禁（Gate）判定与落盘。
  *
  * 本模块是领域包 gate-review 技能的**镜像实现**，三处权威来源：
  *   - skills/gate-review/scripts/preflight_gate_review.py  → 前置校验规则与 UPSTREAM
@@ -12,7 +12,7 @@
  * unsatisfied_conditions / evidence_gaps 是否为空、evidence 里有无 status=="GAP"。
  * 数值达标属于 Phase 4 计算引擎的职责（optimization_result 的
  * result.recommended_candidates[].total_cost / predicted_ctq），那些信封不在
- * 11 步工件链上，因此面板**不**做数值判定 —— 不假装能判。
+ * 13 步工件链上，因此面板**不**做数值判定 —— 不假装能判。
  */
 import { readArtifact, writeWorkspaceFile } from "./artifactFile";
 import { isGateStatus, validateArtifactLite, type GateStatus } from "./lubricantContracts";

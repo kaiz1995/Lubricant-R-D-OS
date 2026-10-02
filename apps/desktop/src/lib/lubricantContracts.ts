@@ -1,9 +1,10 @@
 /**
- * 润滑油研发领域包权威契约映射 —— 唯一真源：lubricant-rd-domain-pack。
+ * 润滑材料研发领域包权威契约映射 —— 唯一真源：domains/lubricant（领域包）。
  *
  * 派生自：
- *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE / TYPE_ROUTES
- *   - schemas/<artifact_type>.schema.json 的 artifact_type const
+ *   - contracts/state-machine.json 的 stages / type_routes（16 段、6 类路由）
+ *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE（skill → stage 顺序）
+ *   - schemas/<artifact_type>.schema.json 的 artifact_type const 与 required
  *   - fixtures/valid/*.json 的文件名
  *
  * 修改本文件前请先改领域包；lubricantContracts.test.ts 会守护二者一致性。
@@ -14,9 +15,10 @@ export type ProjectType =
   | "IMPROVEMENT"
   | "COST_DOWN"
   | "CUSTOMIZATION"
-  | "EXPLORATION";
+  | "EXPLORATION"
+  | "PROCESS_ROBUSTNESS";
 
-/** state-machine.json 中 11 步链所覆盖的 stage 子集。 */
+/** state-machine.json 中 13 步链所覆盖的 stage 子集。 */
 export type ChainStage =
   | "PROJECT_DEFINED"
   | "DUTY_DEFINED"
@@ -28,11 +30,13 @@ export type ChainStage =
   | "EXPERIMENT_RUNNING"
   | "MODEL_BUILT"
   | "OPTIMIZED"
-  | "VERIFIED";
+  | "PROCESS_WINDOW_DEFINED"
+  | "VERIFIED"
+  | "APPLIED";
 
 /** 契约绑定部分：与领域包一一对应，不得随意改动。 */
 export interface StageContract {
-  /** 11 步链中的固定序号，1-based。 */
+  /** 13 步链中的固定序号，1-based。 */
   readonly chainIndex: number;
   /** 领域包技能目录名，用于提示词路由。 */
   readonly skill: string;
@@ -69,7 +73,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     artifactType: "duty",
     file: "duty.json",
     titleZh: "严苛工况与指标定义",
-    description: "将机械运转环境转化为润滑油理化与台架指标规格清单。",
+    description: "将机械运转环境转化为润滑材料理化与台架指标规格清单。",
     criteria: [
       "七类 duty_item 齐备（equipment/operating_conditions/maintenance/temperature/load/contamination/life）",
       "每项含 value / source / evidence_id / statement / status",
@@ -190,6 +194,21 @@ export const STAGE_CHAIN: readonly StageContract[] = [
   },
   {
     chainIndex: 11,
+    skill: "process-scale-up",
+    stage: "PROCESS_WINDOW_DEFINED",
+    artifactType: "process",
+    file: "process.json",
+    titleZh: "工艺窗口与放大",
+    description: "在 OPTIMIZED 结论之上放大批次规模，固化唯一工艺窗口；窗口是定论而非范围。",
+    criteria: [
+      "工艺窗口 evidence_reference 已挂（PROCESS-WINDOW:<window_id> 且 process_window.validated=true）",
+      "amplification_factor 有来源，且严格大于上游工艺记录",
+      "放大批次换釜复现一致，scale_class 沿 LAB→PILOT→PRODUCTION 前进",
+      "证据非空、无 GAP，evidence_scope 与上游工艺记录一致",
+    ],
+  },
+  {
+    chainIndex: 12,
     skill: "gate-review",
     stage: "VERIFIED",
     artifactType: "gate",
@@ -202,35 +221,57 @@ export const STAGE_CHAIN: readonly StageContract[] = [
       "gate_status 取值合法（GO/HOLD/PIVOT/KILL/FREEZE）",
     ],
   },
+  {
+    chainIndex: 13,
+    skill: "application-validation",
+    stage: "APPLIED",
+    artifactType: "application",
+    file: "application.json",
+    titleZh: "应用与整机验证（APPLIED）",
+    description: "在 VERIFIED 之上聚合应用记录，门禁项目进入应用与整机验证阶段。",
+    criteria: [
+      "INCONCLUSIVE 不得进入 APPLIED（FAIL / GAP 同样阻断）",
+      "life_claim_boundary 非空且 status=OBSERVED，至少一条 validated_condition",
+      "acceptance_criteria 全部 OBSERVED 且带确定阈值，counterexamples 为空",
+      "bench_references 至少引用一个已登记台架",
+    ],
+  },
 ];
 
 const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
   STAGE_CHAIN.map((c) => [c.stage, c] as const),
 );
 
-/** 镜像 route_step.py 的 TYPE_ROUTES。 */
+/** 镜像 state-machine.json 的 type_routes（6 类）。 */
 export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
   NEW_PRODUCT: [
     "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED",
     "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED",
-    "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED",
+    "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED",
+    "VERIFIED", "APPLIED",
   ],
   IMPROVEMENT: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
-    "MODEL_BUILT", "OPTIMIZED", "VERIFIED",
+    "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED",
   ],
   COST_DOWN: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "DESIGN_SPACE_DEFINED",
-    "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED", "VERIFIED",
+    "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED",
+    "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED",
   ],
   CUSTOMIZATION: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
-    "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "VERIFIED",
+    "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "VERIFIED", "APPLIED",
   ],
   EXPLORATION: [
     "PROJECT_DEFINED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED",
-    "EXPERIMENT_RUNNING", "MODEL_BUILT", "VERIFIED",
+    "EXPERIMENT_RUNNING", "MODEL_BUILT", "VERIFIED", "APPLIED",
+  ],
+  PROCESS_ROBUSTNESS: [
+    "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
+    "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
+    "MODEL_BUILT", "PROCESS_WINDOW_DEFINED", "APPLIED",
   ],
 };
 
@@ -254,7 +295,7 @@ export function routeFor(projectType: string | null | undefined): StageContract[
 /* ------------------------------------------------------------------ *
  * 轻量结构校验（lite）
  * 完整校验由领域包 Python 侧负责：
- *   python lubricant-rd-domain-pack/scripts/validate_schemas.py
+ *   python domains/lubricant/scripts/validate_schemas.py
  * UI 只做「必填键存在 + artifact_type 匹配 + schema_version 匹配」，
  * 避免把 jsonschema 及其 $ref 解析器打进前端包。
  * ------------------------------------------------------------------ */
@@ -295,6 +336,12 @@ const OWN_REQUIRED: Record<string, readonly string[]> = {
     "model_reference", "objective_type", "objectives", "methods", "engine_handoff"],
   gate: ["artifact_type", "evidence_scope", "gate_id", "experiment_reference", "scope",
     "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks"],
+  process: ["artifact_type", "process_id", "project_reference", "process_step", "batch_scale",
+    "amplification_factor", "process_window", "control_points", "cpk", "material_batch_reference",
+    "factor_role"],
+  application: ["artifact_type", "application_id", "project_reference", "formula_reference",
+    "process_window_reference", "acceptance_criteria", "result", "counterexamples",
+    "life_claim_boundary", "source", "evidence_id", "evidence_scope"],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
