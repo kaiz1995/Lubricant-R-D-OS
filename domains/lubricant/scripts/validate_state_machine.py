@@ -196,10 +196,13 @@ def validate(event: object) -> str | None:
         return required_record(event, "revision", CONTRACT["revision_fields"], "ROLLBACK requires reason, operator, and impact")
 
     if kind == "FREEZE":
-        if before["stage"] != "VERIFIED" or after["stage"] != "FROZEN":
-            return "FREEZE requires VERIFIED to FROZEN"
+        # WP-06: freezing requires application & machine validation first. The
+        # only FREEZE entry is APPLIED -> FROZEN; VERIFIED alone (evidence
+        # sufficiency) is no longer sufficient to freeze.
+        if before["stage"] != "APPLIED" or after["stage"] != "FROZEN":
+            return "FREEZE requires APPLIED to FROZEN"
         if not same(before, after, immutable + ("version",)):
-            return "FREEZE must preserve the verified project evidence"
+            return "FREEZE must preserve the applied project evidence"
         return required_record(event, "freeze_record", CONTRACT["freeze_record_fields"], "FREEZE requires a freeze record and evidence package")
 
     if kind == "CLOSE":

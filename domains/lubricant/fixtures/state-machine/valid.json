@@ -54,11 +54,19 @@
     }
   },
   {
-    "name": "freeze-locks-the-verified-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "name": "go-applies-the-verified-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "NEW_PRODUCT",
+      "before": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 5, "decision_question": "Does application and machine validation confirm the verified result?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 5, "decision_question": "Does application and machine validation confirm the verified result?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] }
+    }
+  },
+  {
+    "name": "freeze-locks-the-applied-project", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
     "event": {
       "kind": "FREEZE", "gate_status": "FREEZE",
-      "before": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
-      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "before": { "project_id": "WGO-001", "stage": "APPLIED", "status": "ACTIVE", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the applied project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701", "E-702"] },
       "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
     }
   },

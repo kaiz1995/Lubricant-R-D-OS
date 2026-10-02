@@ -117,12 +117,22 @@
     }
   },
   {
-    "name": "freeze-requires-verified-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
-    "expected_reason": "FREEZE requires VERIFIED to FROZEN",
+    "name": "freeze-requires-applied-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "FREEZE requires APPLIED to FROZEN",
     "event": {
       "kind": "FREEZE", "gate_status": "FREEZE",
       "before": { "project_id": "WGO-001", "stage": "OPTIMIZED", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701"] },
       "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen?", "evidence_scope": "PHYSICAL", "evidence": ["E-701"] },
+      "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
+    }
+  },
+  {
+    "name": "freeze-cannot-skip-applied-from-verified", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "FREEZE requires APPLIED to FROZEN",
+    "event": {
+      "kind": "FREEZE", "gate_status": "FREEZE",
+      "before": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 5, "decision_question": "May the verified project be frozen before application validation?", "evidence_scope": "PHYSICAL", "evidence": ["E-701"] },
+      "after": { "project_id": "WGO-001", "stage": "FROZEN", "status": "FROZEN", "version": 5, "decision_question": "May the verified project be frozen before application validation?", "evidence_scope": "PHYSICAL", "evidence": ["E-701"] },
       "freeze_record": { "reason": "All stated freeze conditions are met.", "evidence_package": "EP-001" }
     }
   },
