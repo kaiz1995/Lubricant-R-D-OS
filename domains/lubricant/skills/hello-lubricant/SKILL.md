@@ -15,7 +15,7 @@ Provides a comprehensive roadmap of the 11-stage forward development lifecycle a
 The Lubricant R&D Domain Pack implements evidence-bound, scientific lubricant engineering across 11 stages:
 
 ```
-[Stage 0: project-definition]      -> 立项与 5 类研发性质确认 (PROJECT_DEFINED)
+[Stage 0: project-definition]      -> 立项与 6 类研发性质确认 (PROJECT_DEFINED)
   ↓
 [Stage 1: duty-definition]         -> 7 项工况剖面录入与声明 (DUTY_DEFINED)
   ↓
@@ -40,13 +40,19 @@ The Lubricant R&D Domain Pack implements evidence-bound, scientific lubricant en
 
 ---
 
-## 2. Supported Development Routes (5 Project Types)
+## 2. Supported Development Routes (6 Project Types)
 
 1. **NEW_PRODUCT** (新产品正向开发): 完整经历 11 步研发全链条。
 2. **IMPROVEMENT** (已有产品性能优化): 跳过工况定义，由失效分析切入瓶颈指标。
 3. **COST_DOWN** (降本替代): 聚焦非劣效性 (Non-inferiority)，保留 CTQ 红线等效验证。
 4. **CUSTOMIZATION** (客户定制): 客户专属工况驱动，对齐技术协议与指定台架。
 5. **EXPLORATION** (机理/平台型探索): 科学假设驱动，允许失败，探究组分响应规律。
+6. **PROCESS_ROBUSTNESS** (工艺稳健性): 配方已定，只考工艺——跳过工况定义与挑战推导，不做多目标优化，以工艺窗口为主输出，末尾经 `APPLIED` 证明批次一致性。
+
+用 `--list-stages <TYPE>` 可打印任一路线的完整段序列，例如：
+```bash
+python skills/lubricant-rd-agent/scripts/route_step.py --list-stages PROCESS_ROBUSTNESS
+```
 
 ---
 

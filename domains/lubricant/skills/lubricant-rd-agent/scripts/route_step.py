@@ -4,6 +4,10 @@ Pure stdlib. Reads one JSON object with project_state + requested_stage and
 prints ALLOW (exit 0) or DENY/HOLD with reasons (exit 1). Never writes
 artifacts and never performs business calculation.
 
+A second form, `--list-stages <PROJECT_TYPE>`, prints the full stage sequence of
+one declared project type (one stage per line) so callers can read the route
+without duplicating it. Both forms fail closed when the contract is unreadable.
+
 The differentiated per-project_type stage chains are NOT hardcoded here: they
 are read from the shared contract `contracts/state-machine.json` (`type_routes`),
 the same list `scripts/validate_state_machine.py` uses for its GO adjacency
@@ -61,7 +65,7 @@ SKILL_FOR_STAGE = dict((stage, skill) for skill, stage in ROUTE_TABLE)
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 
-# Differentiated workflows for the 5 project types, published by the contract.
+# Differentiated workflows for the 6 project types, published by the contract.
 TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
 # Stage universe = the contract's 15 stages. A contract that cannot be read
 # leaves the universe empty so decide() denies every request instead of guessing.
@@ -92,8 +96,8 @@ def decide(project_state: object, requested_stage: str) -> dict:
 
     ptype = project_state.get("project_type")
     # A declared project_type must be one the contract routes. The pack documents
-    # exactly five workflows (README §5, project-definition/SKILL.md) and
-    # `project.schema.json` enumerates the same five, so an unrouted value is a
+    # exactly six workflows (README §5, project-definition/SKILL.md) and
+    # `project.schema.json` enumerates the same six, so an unrouted value is a
     # contract violation — DENY it rather than silently handing it the full
     # NEW_PRODUCT chain. A missing project_type stays on the full chain for
     # pre-existing state.
@@ -142,9 +146,29 @@ def decide(project_state: object, requested_stage: str) -> dict:
     return {"decision": "ALLOW", "reason": "single-step advancement permitted", "skill": SKILL_FOR_STAGE[requested_stage]}
 
 
+def list_stages(project_type: str) -> int:
+    """Print the stage sequence of one declared project type, one stage per line."""
+    if CONTRACT is None:
+        print(f"DENY: routing contract unavailable: {'; '.join(CONTRACT_ERRORS)}")
+        return 1
+    route = TYPE_ROUTES.get(project_type)
+    if route is None:
+        print(f"DENY: project_type {project_type!r} has no routed stage chain; publish type_routes[{project_type!r}] in contracts/state-machine.json")
+        return 1
+    for stage in route:
+        print(stage)
+    return 0
+
+
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--list-stages":
+        if len(sys.argv) != 3:
+            print("Usage: python route_step.py --list-stages <PROJECT_TYPE>")
+            return 1
+        return list_stages(sys.argv[2])
     if len(sys.argv) != 2:
         print("Usage: python route_step.py <input.json>")
+        print("       python route_step.py --list-stages <PROJECT_TYPE>")
         return 1
     path = Path(sys.argv[1]).resolve()
     try:

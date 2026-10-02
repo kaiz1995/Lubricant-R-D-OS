@@ -22,11 +22,12 @@ Supported Development Project Types:
 3. `COST_DOWN` (降本替代): 非劣效性驱动 (Non-inferiority)，基于现有配方与成本基线，重点划定 CTQ 不劣化红线、原材料属性匹配与等效验证。
 4. `CUSTOMIZATION` (客户定制): 客户技术协议与OEM专属工况驱动，对齐协议技术指标与指定台架，匹配现有成熟平台并微调。
 5. `EXPLORATION` (机理/平台型探索): 科学假设驱动，允许失败，重点考察变量影响规律与机理模型，不以单一商业量产目标为死限。
+6. `PROCESS_ROBUSTNESS` (工艺稳健性): 配方已定，只考工艺。跳过工况定义与挑战推导，直接由失效/CTQ 与已评定方法切入设计空间；强化工艺空间（不做多目标优化，故不含 `OPTIMIZED`），以工艺窗口为主输出，末尾经 `APPLIED`（应用与整机验证）证明批次一致性。
 
 ### Interaction Rule
 - **Mode A (自然语言预判与确认)**: 若用户已有初步描述，分析背景后推荐最可能类型并请用户确认：
-  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索）"
-- **Mode B (主动提示用户选择)**: 若无足够背景，展示 5 种类型让用户选择后再索取输入。
+  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索 6. 工艺稳健性）"
+- **Mode B (主动提示用户选择)**: 若无足够背景，展示 6 种类型让用户选择后再索取输入。
 - **No Form Dumping**: 禁止一次性堆叠索取全部 10+ 字段或工况参数，仅按确认的项目类型逐步索取核心输入。
 
 ---
@@ -34,7 +35,7 @@ Supported Development Project Types:
 ## 2. Input Specification
 
 A valid input JSON requires:
-- `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the 5 valid types), `product_family`.
+- `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the 6 valid types), `product_family`.
 - `business_objective`, `technical_objective`, non-empty `hard_constraints`, and non-empty `success_criteria`.
 - `target_cost` containing complete measurement metadata (`value`, `unit`, `source`, `method_version`, `material_batch`, `formula_version`).
 - Non-empty `benchmark_products`, `risk_class` (`LOW`, `MEDIUM`, `HIGH`, `STRATEGIC`), and `owner`.
