@@ -32,6 +32,33 @@ def run(script: Path, *arguments: Path) -> None:
     assert result.returncode == 0, f"{script.name}\n{result.stdout}{result.stderr}"
 
 
+def run_with_output(script: Path, *arguments: Path) -> str:
+    result = subprocess.run(
+        [sys.executable, "-B", script.name, *map(str, arguments)],
+        cwd=script.parent,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"{script.name}\n{result.stdout}{result.stderr}"
+    return result.stdout
+
+
+def write_closed_history(directory: Path) -> None:
+    """Seed a WP-11 closed-history directory with query-matching artifacts.
+
+    The knowledge asset carries a decision_question that shares terms with the
+    duty and failure queries so BM25 produces strictly positive scores; the
+    untouched design_freeze fixture may score zero and be correctly filtered.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    knowledge = read_json(FIXTURES / "valid" / "knowledge_asset.json")
+    knowledge["decision_question"] = (
+        "Which closed-project knowledge applies to a wind turbine gearbox duty with water-induced corrosion risk?"
+    )
+    write_json(directory / "knowledge_asset.json", knowledge)
+    shutil.copyfile(FIXTURES / "valid" / "design_freeze.json", directory / "design_freeze.json")
+
+
 def assert_artifact(path: Path, artifact_type: str, stage: str) -> dict:
     artifact = read_json(path)
     assert artifact["artifact_type"] == artifact_type
@@ -46,6 +73,8 @@ def main() -> int:
         inputs, artifacts = workspace / "inputs", workspace / "artifacts"
         inputs.mkdir()
         artifacts.mkdir()
+        history = workspace / "closed-history"
+        write_closed_history(history)
 
         project_input = read_json(FIXTURES / "project-definition" / "valid-input.json")
         project_input["business_objective"] = "Synthetic E2E scope: evaluate a supplied 10-20% approved-product cost-reduction range."
@@ -75,9 +104,13 @@ def main() -> int:
 
         duty_definition_input = read_json(FIXTURES / "duty-definition" / "valid-input.json")
         duty_definition_input["project_artifact"] = str(project_path)
+        duty_definition_input["history_roots"] = [str(history)]
         duty_definition_input_path, duty_path = inputs / "duty-definition-input.json", artifacts / "duty.json"
         write_json(duty_definition_input_path, duty_definition_input)
-        run(ROOT / "skills/duty-definition/scripts/preflight_duty_definition.py", duty_definition_input_path)
+        duty_ready = run_with_output(ROOT / "skills/duty-definition/scripts/preflight_duty_definition.py", duty_definition_input_path)
+        assert "READY:" in duty_ready
+        assert "history_hits=" in duty_ready and "HISTORY_HIT[" in duty_ready
+        assert "backend=local_bm25" in duty_ready
         run(ROOT / "skills/duty-definition/scripts/build_duty_artifact.py", duty_definition_input_path, duty_path)
         run(ROOT / "skills/duty-definition/scripts/validate_duty_artifact.py", duty_path)
         duty = assert_artifact(duty_path, "duty", "DUTY_DEFINED")
@@ -96,9 +129,13 @@ def main() -> int:
         failure_input = read_json(FIXTURES / "failure-ctq" / "valid-input.json")
         failure_input["project_artifact"] = str(project_path)
         failure_input["challenge_artifact"] = str(challenge_path)
+        failure_input["history_roots"] = [str(history)]
         failure_input_path = inputs / "failure-input.json"
         write_json(failure_input_path, failure_input)
-        run(ROOT / "skills/failure-ctq-analysis/scripts/preflight_failure_ctq.py", failure_input_path)
+        failure_ready = run_with_output(ROOT / "skills/failure-ctq-analysis/scripts/preflight_failure_ctq.py", failure_input_path)
+        assert "READY:" in failure_ready
+        assert "history_hits=" in failure_ready and "HISTORY_HIT[" in failure_ready
+        assert "backend=local_bm25" in failure_ready
         failure_path = artifacts / "failure-ctq.json"
         shutil.copyfile(FIXTURES / "failure-ctq" / "valid-artifact.json", failure_path)
         run(ROOT / "skills/failure-ctq-analysis/scripts/validate_failure_ctq_artifact.py", failure_path)

@@ -33,6 +33,17 @@ def run(script: Path, *arguments: Path) -> None:
     assert result.returncode == 0, f"{script.name}\n{result.stdout}{result.stderr}"
 
 
+def run_with_output(script: Path, *arguments: Path) -> str:
+    result = subprocess.run(
+        [sys.executable, "-B", script.name, *map(str, arguments)],
+        cwd=script.parent,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"{script.name}\n{result.stdout}{result.stderr}"
+    return result.stdout
+
+
 def assert_artifact(path: Path, artifact_type: str, stage: str) -> dict:
     artifact = read_json(path)
     assert artifact["artifact_type"] == artifact_type
@@ -246,6 +257,43 @@ def main() -> int:
         forbidden = {"freeze", "closed"}
         assert not (forbidden & {item["artifact_type"] for item in outputs})
         assert not ({"FROZEN", "CLOSED"} & {item["stage"] for item in outputs})
+
+        # WP-11: Stage 1 / Stage 3 preflights surface historical hits from a
+        # closed history and stay silent (exit 0) over an empty one.
+        history = workspace / "closed-history"
+        history.mkdir()
+        knowledge = read_json(FIXTURES / "valid" / "knowledge_asset.json")
+        knowledge["decision_question"] = (
+            "Which closed-project knowledge applies to a wind turbine gearbox duty with water-induced corrosion risk?"
+        )
+        write_json(history / "knowledge_asset.json", knowledge)
+        shutil.copyfile(FIXTURES / "valid" / "design_freeze.json", history / "design_freeze.json")
+
+        duty_input = read_json(FIXTURES / "duty-definition" / "valid-input.json")
+        duty_input["project_artifact"] = str(upstream_paths["project_artifact"])
+        duty_input["history_roots"] = [str(history)]
+        duty_input_path = inputs / "wp11-duty-input.json"
+        write_json(duty_input_path, duty_input)
+        duty_ready = run_with_output(ROOT / "skills/duty-definition/scripts/preflight_duty_definition.py", duty_input_path)
+        assert "READY:" in duty_ready and "history_hits=" in duty_ready and "HISTORY_HIT[" in duty_ready
+
+        failure_input = read_json(FIXTURES / "failure-ctq" / "valid-input.json")
+        failure_input["project_artifact"] = str(upstream_paths["project_artifact"])
+        failure_input["challenge_artifact"] = str(upstream_paths["challenge_artifact"])
+        failure_input["failure_ctq"]["challenge_reference"] = read_json(upstream_paths["challenge_artifact"])["challenge_id"]
+        failure_input["history_roots"] = [str(history)]
+        failure_input_path = inputs / "wp11-failure-input.json"
+        write_json(failure_input_path, failure_input)
+        failure_ready = run_with_output(ROOT / "skills/failure-ctq-analysis/scripts/preflight_failure_ctq.py", failure_input_path)
+        assert "READY:" in failure_ready and "history_hits=" in failure_ready and "HISTORY_HIT[" in failure_ready
+
+        empty_history = workspace / "empty-history"
+        empty_history.mkdir()
+        duty_input["history_roots"] = [str(empty_history)]
+        write_json(duty_input_path, duty_input)
+        empty_ready = run_with_output(ROOT / "skills/duty-definition/scripts/preflight_duty_definition.py", duty_input_path)
+        assert "READY:" in empty_ready
+        assert "history_hits" not in empty_ready and "HISTORY_HIT" not in empty_ready
 
     print("PASS: WGO-DOE-001 ISO VG 320 chain through VERIFIED (Phase 3, incl. PROCESS_WINDOW_DEFINED)")
     return 0

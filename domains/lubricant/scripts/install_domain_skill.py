@@ -44,6 +44,11 @@ SHARED_MODULE_ROOT = PACK_ROOT / "scripts"
 SHARED_MODULES = {
     "formulation-design": ("constraint_role.py",),
     "doe-design": ("constraint_role.py",),
+    # WP-11: both Stage 1 and Stage 3 preflights search CLOSED knowledge
+    # assets and FROZEN design freezes through the one pack-level retrieval
+    # module; it is deployed beside each consuming skill's scripts.
+    "duty-definition": ("knowledge_retrieval.py",),
+    "failure-ctq-analysis": ("knowledge_retrieval.py",),
     # WP-06: application-validation imports the producing skill's PASS rule
     # (application_policy.py) as the single source of truth for the APPLIED
     # entry gate; the file is deployed beside this skill's scripts so a

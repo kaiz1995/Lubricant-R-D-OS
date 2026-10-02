@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +17,35 @@ from domains.lubricant.compute.optimization.engine import optimize
 from domains.lubricant.compute.statistics.engine import analyze_statistics
 from domains.lubricant.compute.validation.common import canonical_digest
 from domains.lubricant.compute.validation.engine import validate_request
+
+
+def wp11_retrieval_smoke() -> None:
+    """WP-11: the local retrieval module runs offline and fails open on an empty index.
+
+    Kept inside the deepest acceptance test on purpose: the closed loop must
+    not depend on retrieval, and retrieval must not depend on the network.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import knowledge_retrieval
+
+    assert knowledge_retrieval.search_history("wind turbine gearbox", []) == []
+    with tempfile.TemporaryDirectory() as temporary:
+        history = Path(temporary)
+        knowledge = json.loads((ROOT / "fixtures" / "valid" / "knowledge_asset.json").read_text(encoding="utf-8"))
+        knowledge["decision_question"] = (
+            "Which closed-project knowledge applies to a wind turbine gearbox with water-induced corrosion risk?"
+        )
+        (history / "knowledge_asset.json").write_text(json.dumps(knowledge, ensure_ascii=False), encoding="utf-8")
+        (history / "design_freeze.json").write_text(
+            (ROOT / "fixtures" / "valid" / "design_freeze.json").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        hits = knowledge_retrieval.search_history(
+            "wind turbine gearbox corrosion", history, top_k=knowledge_retrieval.TOP_K_DEFAULT
+        )
+        assert hits, "closed history must produce at least one positive-score hit"
+        assert all(hit["score"] > 0.0 for hit in hits)
+        assert all(hit["artifact_type"] in ("knowledge_asset", "design_freeze") for hit in hits)
+        assert knowledge_retrieval.describe_backend() == "local_bm25"
 
 IDS = ("ANTIWEAR_ADDITIVE", "ESTER", "PAO_BASE")
 BASELINE = {"PAO_BASE": 0.70, "ESTER": 0.25, "ANTIWEAR_ADDITIVE": 0.05}
@@ -228,6 +258,7 @@ def run_chain():
 
 
 def main():
+    wp11_retrieval_smoke()
     first_bytes, gate = run_chain()
     second_bytes, second_gate = run_chain()
     final_hash = hashlib.sha256(first_bytes).hexdigest()

@@ -34,6 +34,10 @@ KNOWLEDGE_ASSETS = {
     "model",
 }
 
+# WP-11: the top-level field set is also pinned exactly. reuse_index is the
+# only optional addition; any further change must update this set consciously.
+KNOWLEDGE_TOP_LEVEL = {"artifact_type", "asset_status", "synthetic_marker", "knowledge_assets", "reuse_index"}
+
 
 def load_registry() -> Registry:
     registry = Registry()
@@ -154,6 +158,7 @@ def main() -> int:
 
     knowledge_schema = json.loads((SCHEMAS / "knowledge_asset.schema.json").read_text(encoding="utf-8"))
     assert set(knowledge_schema["properties"]["knowledge_assets"]["properties"]) == KNOWLEDGE_ASSETS
+    assert set(knowledge_schema["properties"]) == KNOWLEDGE_TOP_LEVEL
 
     # Valid fixtures: full freeze, closed knowledge package, draft knowledge package.
     valid_freezes = [design_freeze(), fixture("design_freeze", "")]
@@ -213,6 +218,29 @@ def main() -> int:
     unqualified = knowledge()
     unqualified["knowledge_assets"]["evidence_package"]["qualification"] = "PROVISIONAL"
     assert errors(knowledge_validator, unqualified), "CLOSED_KNOWLEDGE without QUALIFIED must be rejected"
+
+    # WP-11: reuse_index is optional but, when present, strictly shaped.
+    reuse = {
+        "backend": "local_bm25",
+        "query": "wind turbine gearbox corrosion",
+        "hits": [{
+            "source_artifact": "history/WGO-000/knowledge_asset.json",
+            "artifact_type": "knowledge_asset",
+            "project_id": "WGO-000",
+            "score": 3.676128,
+        }],
+    }
+    with_reuse = knowledge(reuse_index=reuse)
+    assert errors(knowledge_validator, with_reuse) == [], errors(knowledge_validator, with_reuse)
+
+    offline_only = knowledge(reuse_index={**reuse, "backend": "online_api"})
+    assert errors(knowledge_validator, offline_only), "reuse_index backend is pinned to local_bm25 (no online API)"
+
+    malformed_hit = knowledge(reuse_index={**reuse, "hits": [{"artifact_type": "design_freeze", "score": 1.0}]})
+    assert errors(knowledge_validator, malformed_hit), "reuse_index hits require source_artifact"
+
+    unknown_field = knowledge(reuse_index={**reuse, "vector": "dense"})
+    assert errors(knowledge_validator, unknown_field), "reuse_index rejects unknown fields"
 
     # MANUFACTURABILITY_ACCEPTABLE must cite the fixed process window as
     # PROCESS-WINDOW:<window_id>, never a free-form verification record.
