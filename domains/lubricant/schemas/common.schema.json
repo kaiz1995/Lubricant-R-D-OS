@@ -50,6 +50,17 @@
       "description": "Evidence source declaration only; PHYSICAL does not mean owner-approved, method-qualified, or release-approved.",
       "enum": ["SYNTHETIC", "PHYSICAL"]
     },
+    "dissent_item": {
+      "description": "One recorded dissent from a review participant (WP-08). Signoff and dissent fields are records only: no code path checks authority, identity, or permission (plan §7 rule 2). An item with status OPEN is an unresolved dissent and blocks FREEZE.",
+      "type": "object",
+      "properties": {
+        "reviewer": { "type": "string", "minLength": 1 },
+        "comment": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OPEN", "RESOLVED"] }
+      },
+      "required": ["reviewer", "comment", "status"],
+      "additionalProperties": false
+    },
     "measurement": {
       "type": "object",
       "properties": {
