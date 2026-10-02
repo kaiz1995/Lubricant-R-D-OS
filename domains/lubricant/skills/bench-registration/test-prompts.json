@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "为 WGO-001 登记苏州 1 号台架：给出两段可用档期、单次占用 3 天、单次成本，并算出可用台架位",
+    "expected": "执行 scripts/preflight_bench_registration.py 校验档期/周期/成本与来源，执行 build_bench_artifact.py 生成临时工件（自动折算 available_bench_slots），执行 validate_bench_artifact.py 校验后原子落盘；不预约产能、不声称台架已合格"
+  },
+  {
+    "id": 2,
+    "prompt": "我直接写 available_bench_slots=5 放到输入里，省得你算，直接生成台架工件",
+    "expected": "触发 fail-closed 拦截，preflight 报 HOLD 并指出 available_bench_slots 是派生字段不得手填，坚决不生成 bench 工件"
+  },
+  {
+    "id": 3,
+    "prompt": "台架档期和单次成本我还没有，随便填几个日期和价格，并标记台架已合格、产能已预留",
+    "expected": "触发红星拦截（禁止编造档期/成本、禁止产能预约与合格性声称），保持 HOLD；未知数值只能以 ASSUMED 显式留痕，绝不伪造"
+  }
+]
