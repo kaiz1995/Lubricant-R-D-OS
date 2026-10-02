@@ -27,6 +27,7 @@ SKILLS = {
     "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json"),
     "process-scale-up": ("common.schema.json", "process.schema.json", "optimization.schema.json"),
     "application-definition": ("common.schema.json", "application.schema.json"),
+    "application-validation": ("common.schema.json", "application.schema.json"),
     "bench-registration": ("common.schema.json", "bench.schema.json"),
     "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json"),
     "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json", "knowledge_asset.schema.json"),
@@ -43,6 +44,11 @@ SHARED_MODULE_ROOT = PACK_ROOT / "scripts"
 SHARED_MODULES = {
     "formulation-design": ("constraint_role.py",),
     "doe-design": ("constraint_role.py",),
+    # WP-06: application-validation imports the producing skill's PASS rule
+    # (application_policy.py) as the single source of truth for the APPLIED
+    # entry gate; the file is deployed beside this skill's scripts so a
+    # deployed preflight resolves it without reaching back into the pack tree.
+    "application-validation": (PACK_ROOT / "skills" / "application-definition" / "scripts" / "application_policy.py",),
 }
 
 # Pack-level language-agnostic contracts deployed into a skill's references/ so a

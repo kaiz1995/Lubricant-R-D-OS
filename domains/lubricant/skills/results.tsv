@@ -33,3 +33,5 @@ application-definition	APPLIED-stage companion	NEW	n/a	n/a	n/a	WP-05 new skill: 
 
 bench-registration	Resource registration	NEW	n/a	n/a	n/a	WP-05 new skill: fail-closed bench registration (availability_window/cycle_days/cost_per_run with provenance), derived available_bench_slots conversion shared with doe_input.resource_envelope, explicit checkpoint; Darwin score not measured yet
 
+application-validation	APPLIED entry gate	NEW	n/a	n/a	n/a	WP-06 new skill: fail-closed APPLIED entry gate (INCONCLUSIVE/FAIL/GAP can never enter APPLIED; PASS re-checked via single-source application_policy), VERIFIED-only stage gating, explicit checkpoint, bench linkage required; Darwin score not measured yet
+

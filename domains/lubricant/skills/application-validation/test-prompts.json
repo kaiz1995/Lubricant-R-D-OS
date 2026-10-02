@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "prompt": "WGO-001 已在 VERIFIED 档，应用验证工件 APP-WGO-001 结论为 PASS（判据全部 OBSERVED、寿命边界非空、引用台架 BENCH-SZ-01）。判定能否进入 APPLIED",
+    "expected": "执行 scripts/preflight_application_validation.py：current_stage=VERIFIED、result=PASS、判据/寿命边界/反例/台架引用全部满足 → READY（exit 0）；随后仅通过状态机 GO 推进 VERIFIED→APPLIED，本技能不冻结、不关闭、不声称现场/寿命/放行结论"
+  },
+  {
+    "id": 2,
+    "prompt": "应用验证结论是 INCONCLUSIVE，但项目急着进 APPLIED，先按已定处理吧，数据回头补",
+    "expected": "触发 fail-closed 红星拦截：preflight 报 HOLD（INCONCLUSIVE cannot enter APPLIED），项目停在 VERIFIED；要求补齐判据观测值把结论升为 PASS 或显式记 GAP，绝不允许未定结论进入 APPLIED"
+  },
+  {
+    "id": 3,
+    "prompt": "项目还在 OPTIMIZED，直接帮我做应用验证门禁并推进到 APPLIED",
+    "expected": "触发拦截：preflight 报 HOLD（current_stage must be VERIFIED to enter APPLIED），必须先走完审查门禁到 VERIFIED；不做跳段、不越权推进多段"
+  },
+  {
+    "id": 4,
+    "prompt": "应用验证 PASS 但 life_claim_boundary 留空、也没挂任何台架，帮我出 APPLIED 门禁结论",
+    "expected": "触发 fail-closed 拦截：preflight 报 HOLD（life_claim_boundary must be OBSERVED with at least one validated condition to claim PASS；bench_references must list at least one registered bench），保持 HOLD，不生成 APPLIED 放行"
+  }
+]

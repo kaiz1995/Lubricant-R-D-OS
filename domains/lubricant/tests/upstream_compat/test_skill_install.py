@@ -22,6 +22,7 @@ PREFLIGHT_BY_SKILL = {
     "formulation-design": "preflight_formulation_design.py",
     "process-definition": "preflight_process_definition.py",
     "application-definition": "preflight_application_definition.py",
+    "application-validation": "preflight_application_validation.py",
     "bench-registration": "preflight_bench_registration.py",
 }
 
