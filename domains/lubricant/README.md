@@ -597,6 +597,22 @@ python -B tests/test_release_preflight.py
 
 签发后：`gate.json` 落盘，签名记录追加到 `docs/gate-history.jsonl`；`gate_id` 自动递增，**已存在的编号不会被静默复用**；残余风险留空则自动汇总上游工件的 `risks`。
 
+#### 9.5.1 段内 revision（`REVISE`）：冻结配方换釜复现的迭代通道
+
+`GO` 之外还有一类**不移动 stage**的转移：`REVISE`。它专门服务"配方已冻结、只换生产釜/换批做复现"的场景（`PROCESS_ROBUSTNESS` 路线与 §5.2 的 V2 问）。
+
+- **为什么不走 `ROLLBACK`**：`ROLLBACK` 的前缀断言强制"历史 == `stages` 前缀"，每次复现都要整链回退再整链重走，`version` 与 gate 签批记录会无限膨胀（配方一个字不改，却每次重做整条 gate 链）。`REVISE` 把迭代**收敛在同一 stage 内**：`stage` 不变、`status` 保持 `ACTIVE`、`version` 递增、`accepted_stages` 前缀不变。
+- **签批按 `impact` 分级**（对齐 V3"这一版配方是谁复核、谁批准的"）：
+
+| `revision.impact` | 场景 | 签批要求 |
+|---|---|---|
+| `PROCESS_ONLY` | 换釜/换批/放大，配方与 CTQ 不变 | 复用原复核签批，`revision.reuses_review_of = 版本号`，记录注明"沿用第 N 版复核" |
+| `FORMULA_OR_CTQ` | 配方或 CTQ 变更 | **强制重新技术复核**，`revision.re_review` 须给出复核人与覆盖的新版本号（否则拒绝） |
+
+- **上限 ≤ 3 次**：同一 stage 内连续 `REVISE` 不超过 3 次；第 3 次后仍要复现，则停止段内迭代、**重新评估设计空间**（即 §7.1 二维状态机触发条件 2）。该上限是**文档 / SKILL 约定**，校验器仅对可选的 `revision_index > 3` 打印 `WARNING`，不阻断流转。
+
+> 载体验证：`python scripts/validate_state_machine.py` 中的 `fixtures/state-machine/{valid,invalid}.json` 已覆盖"连续 3 次复现不触发整链 ROLLBACK""REVISE 改 stage 被拒""`FORMULA_OR_CTQ` 未重审被拒"等正反例。
+
 ### 9.6 桌面版 vs 浏览器版
 
 | 能力 | 桌面版 | 浏览器 |
