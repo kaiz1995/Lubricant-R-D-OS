@@ -73,3 +73,6 @@ runtime/acp-server/
 
 # osd release archives (built by scripts/release/package-osd.sh)
 dist-osd/
+
+# 桌面端构建残留快照（勿入库）
+apps/desktop/dist_stale_*/
