@@ -22,8 +22,25 @@
       }
     },
     "mixture_total": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+    "resource_envelope": {
+      "description": "WP-04b resource envelope for the factor / process channels. bench_slots is the number of concurrent bench positions available for the NEXT round; its conversion basis references `bench.availability_window` (WP-05) and is documented rather than enforced here because the bench object does not exist yet. Fields are declared, not silently defaulted: the engine reports whatever it cannot yet consume. Optional in the compute contract (backward compatible with pre-WP-04b inputs); required on the experiment_design request for the factor families.",
+      "type": "object",
+      "properties": {
+        "bench_slots": { "type": "integer" },
+        "lot_capacity": { "type": "integer" },
+        "cycle_days": { "type": "number" },
+        "cost_cap": { "type": "number" },
+        "external_test_lead_time": { "type": "number" }
+      },
+      "required": ["bench_slots", "lot_capacity", "cycle_days", "cost_cap", "external_test_lead_time"],
+      "additionalProperties": false
+    },
+    "process_factor_role": {
+      "description": "WP-04b: process-level split-plot role, mirroring process.schema.json factor_role. A factor that omits its own `role` inherits this value, so the whole/sub-plot direction is decided by process data and never hardcoded in the engine.",
+      "enum": ["WHOLE_PLOT", "SUB_PLOT"]
+    },
     "factors": {
-      "description": "Independent (not mixture-closed) design dimensions. WP-04a supports two-level factors only: a factor varies between exactly two levels (explicit levels[] or a range[low,high]) or is held constant at hold_at and contributes no column. role records the split-plot structure: WHOLE_PLOT factors are hard to change, SUB_PLOT factors are reset per run. This role is orthogonal to design_space.constraint_role.",
+      "description": "Independent (not mixture-closed) design dimensions. WP-04a supports two-level factors only: a factor varies between exactly two levels (explicit levels[] or a range[low,high]) or is held constant at hold_at and contributes no column. role records the split-plot structure: WHOLE_PLOT factors are hard to change, SUB_PLOT factors are reset per run. This role is orthogonal to design_space.constraint_role. WP-04b: role is optional per factor and falls back to process_factor_role.",
       "type": "array",
       "minItems": 1,
       "maxItems": 12,
@@ -43,7 +60,7 @@
           "hold_at": { "type": "number" },
           "unit": { "type": "string", "minLength": 1 }
         },
-        "required": ["factor_id", "factor_type", "role"],
+        "required": ["factor_id", "factor_type"],
         "additionalProperties": false,
         "oneOf": [
           { "required": ["levels"], "properties": { "range": false, "hold_at": false } },
@@ -53,7 +70,7 @@
       }
     },
     "whole_plot_replicates": { "type": "integer", "minimum": 1 },
-    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "TAGUCHI_ROBUST"] },
+    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "TAGUCHI_ROBUST", "BAYESIAN_SEQUENTIAL"] },
     "model_order": { "enum": ["LINEAR", "QUADRATIC"] },
     "target_runs": { "type": "integer", "minimum": 0 },
     "responses": {
@@ -93,7 +110,7 @@
       "if": { "properties": { "input_type": { "const": "MIXTURE_DOE_DESIGN" } }, "required": ["input_type"] },
       "then": {
         "required": ["components", "mixture_total"],
-        "properties": { "factors": false, "whole_plot_replicates": false }
+        "properties": { "factors": false, "whole_plot_replicates": false, "resource_envelope": false, "process_factor_role": false }
       }
     },
     {

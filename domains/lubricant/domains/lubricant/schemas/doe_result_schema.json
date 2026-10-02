@@ -222,7 +222,8 @@
                       "FULL_FACTORIAL",
                       "FRACTIONAL_FACTORIAL",
                       "SPLIT_PLOT",
-                      "TAGUCHI_ROBUST"
+                      "TAGUCHI_ROBUST",
+                      "BAYESIAN_SEQUENTIAL"
                     ]
                   },
                   "model_order": {
@@ -403,6 +404,54 @@
                   "selection_reason": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "resource_feasible": {
+                    "description": "WP-04b: true when the whole design fits the supplied resource_envelope (at least one bench slot and run_count <= lot_capacity). Omitted entirely when the input carries no resource_envelope, so pre-WP-04b envelopes stay byte-identical.",
+                    "type": "boolean"
+                  },
+                  "information_gain_per_slot": {
+                    "description": "WP-04b: total information gain of the recommended batch divided by the bench slots it consumes. Bench slot = one run.",
+                    "type": "number"
+                  },
+                  "recommended_next_runs": {
+                    "description": "WP-04b: the next round the resource envelope allows, ranked by information gain per bench slot. Each entry carries the hypothesis it discriminates and why.",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "rank": { "type": "integer", "minimum": 1 },
+                        "hypothesis_reference": { "type": "string", "minLength": 1 },
+                        "hypothesis_statement": { "type": "string", "minLength": 1 },
+                        "effect_reference": { "type": "string", "minLength": 1 },
+                        "run_index": {
+                          "description": "Index into runs[] of the run that resolves this hypothesis, or null when no run in the current batch sets every factor of the effect to its high level - the recommendation is then one extra run at the all-high corner given by settings.",
+                          "type": ["integer", "null"]
+                        },
+                        "settings": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+                          "additionalProperties": { "type": "number" }
+                        },
+                        "whole_plot_index": { "type": "integer", "minimum": 1 },
+                        "slots_used": { "type": "integer", "minimum": 1 },
+                        "information_gain_per_slot": { "type": "number" },
+                        "discriminative_power_reason": { "type": "string", "minLength": 1 }
+                      },
+                      "required": [
+                        "rank",
+                        "hypothesis_reference",
+                        "hypothesis_statement",
+                        "effect_reference",
+                        "run_index",
+                        "settings",
+                        "slots_used",
+                        "information_gain_per_slot",
+                        "discriminative_power_reason"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [
