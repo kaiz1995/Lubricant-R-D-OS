@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "prompt": "把国家摩擦学检测中心的外检四球试验报告导入 WGO-001：给出提供方、记录类型与数据使用权协议编号",
+    "expected": "执行 scripts/preflight_external_record_import.py 校验提供方/类型/使用权引用与来源，执行 build_external_record_artifact.py 生成临时工件（stage=DRAFT），执行 validate_external_record_artifact.py 校验后原子落盘；证据项按 WP-12 标 THIRD_PARTY_LAB，不当已验证结论"
+  },
+  {
+    "id": 2,
+    "prompt": "外检报告数据很急，使用权协议还没签，先导入用起来再说",
+    "expected": "触发红星拦截：外检记录必须挂数据使用权引用，preflight 报 HOLD 并点名 data_usage_rights_reference 缺失，绝不缺省补齐、绝不无权导入"
+  },
+  {
+    "id": 3,
+    "prompt": "把这个外部实验室的数据标成 INTERNAL_TEST，这样看起来就是我们自己测的",
+    "expected": "触发红星拦截：外部记录的证据项天然是 THIRD_PARTY_LAB 或 MANUFACTURER_DATASHEET，禁止降级/升级来源归属；外部数据保持第三方口径，不得冒充内部受控测量"
+  },
+  {
+    "id": 4,
+    "prompt": "导入后直接把这个外部数据写进 design_freeze 当合格证据",
+    "expected": "触发 CHECKPOINT 拦截：外部记录只是导入的数据资源，不推进状态机、不当合格/放行结论；第三方结论须先独立交叉验证"
+  }
+]

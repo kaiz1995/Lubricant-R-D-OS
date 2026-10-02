@@ -37,3 +37,5 @@ application-validation	APPLIED entry gate	NEW	n/a	n/a	n/a	WP-06 new skill: fail-
 
 interface-definition	interface / coating / material record with fail-closed compatibility verdict	NEW	n/a	n/a	n/a	WP-09 new skill: resource-object interface record (counterpart a/b, optional coating by declaration, per-condition compatibility evidence); PASS only with non-empty all-OBSERVED all-PASS evidence, empty evidence forces GAP; COMPATIBILITY_PASSED freeze condition gated by interface_policy.freeze_compatibility_errors (INTERFACE:<id> citation, existing artifact, PASS verdict); Darwin score not measured yet
 
+external-record-import	external collaboration data import with mandatory usage-rights anchor	NEW	n/a	n/a	n/a	WP-10 new skill: resource-object external record (outsourced test/service/datasheet); fail-closed data_usage_rights_reference (missing or blank is rejected, never defaulted, plan WP-10 acceptance); claim_class semantics aligned to WP-12 (THIRD_PARTY_LAB / MANUFACTURER_DATASHEET only); downstream experiment/interface cite it as EXTERNAL:<external_id>; Darwin score not measured yet
+
