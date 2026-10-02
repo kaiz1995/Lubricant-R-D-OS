@@ -10,14 +10,62 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from doe_design_policy import has_gap
+from doe_design_policy import (
+    COMBINED_FAMILIES,
+    FACTOR_FAMILIES,
+    MIXTURE_FAMILIES,
+    SUPPORTED_FAMILIES,
+    has_gap,
+)
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ensure_constraint_role_importable() -> None:
+    """Make the shared role resolver importable in both layouts.
+
+    Repository layout: the module lives in the pack-level ``scripts/`` tree.
+    Deployed layout: the installer copies it beside the skill's own scripts, so
+    it is already on the script directory's path. Probe both candidates and pin
+    the first that actually contains the file; never inline a second copy — the
+    plan forbids recreating the double-list drift of the role mapping.
+    """
+    for candidate in (SKILL_ROOT / "scripts", SKILL_ROOT.parents[1] / "scripts"):
+        if (candidate / "constraint_role.py").is_file():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            return
+    raise ImportError(
+        "constraint_role.py not found beside the skill scripts or in the pack scripts/ directory"
+    )
+
+
+_ensure_constraint_role_importable()
+
+from constraint_role import CONSTRAINT_ROLES, ConstraintRoleError, resolve_constraint_role  # noqa: E402
+
+
 SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json")
 INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space_artifact", "experiment_design"}
-REQUEST_FIELDS = {"experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "mixture_total", "evidence"}
+# mixture_total is only meaningful for the mixture channels, so it is optional at
+# the envelope level and required/forbidden per family by the bridge below.
+REQUEST_REQUIRED_FIELDS = {"experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "evidence"}
+REQUEST_OPTIONAL_FIELDS = {"mixture_total"}
+REQUEST_ALLOWED_FIELDS = REQUEST_REQUIRED_FIELDS | REQUEST_OPTIONAL_FIELDS
 MEASUREMENT_FIELDS = {"value", "unit", "source", "method_version", "material_batch", "formula_version"}
+
+# WP-04a bridge: which constraint role each channel routes where. MIXTURE_CLOSED
+# variables feed the engine's ``components`` (mixture_total applies); INDEPENDENT
+# variables feed ``factors`` (no mixture_total). MIXTURE_PROCESS carries both.
+CHANNEL_MIXTURE = "MIXTURE"
+CHANNEL_FACTOR = "FACTOR"
+CHANNEL_BOTH = "BOTH"
+FAMILY_CHANNEL = {
+    **{family: CHANNEL_MIXTURE for family in MIXTURE_FAMILIES},
+    **{family: CHANNEL_FACTOR for family in FACTOR_FAMILIES},
+    **{family: CHANNEL_BOTH for family in COMBINED_FAMILIES},
+}
 
 
 def has_text(value: object) -> bool:
@@ -69,7 +117,7 @@ def measurement_errors(value: object, label: str) -> list[str]:
 
 
 def request_schema_errors(request: object, project_id: str, evidence_scope: str | None = None) -> list[str]:
-    if not isinstance(request, dict) or set(request) != REQUEST_FIELDS:
+    if not isinstance(request, dict) or not REQUEST_REQUIRED_FIELDS <= set(request) or not set(request) <= REQUEST_ALLOWED_FIELDS:
         return ["experiment_design must contain only the required request fields"]
     candidate = {
         "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project_id or "input-project", "stage": "EXPERIMENT_DESIGNED", "evidence_scope": evidence_scope,
@@ -83,53 +131,93 @@ def request_schema_errors(request: object, project_id: str, evidence_scope: str 
     return [f"experiment_design: {error.message}" for error in Draft202012Validator(loaded["experiment_design.schema.json"], registry=registry).iter_errors(candidate)]
 
 
+def resolved_variable_roles(design_space: dict | None) -> tuple[dict[str, str], list[str]]:
+    """Resolve every design-space variable to its WP-01 constraint role.
+
+    ``roles`` maps ``variable_id`` to the role returned by the shared
+    ``constraint_role`` module (declared value when consistent, otherwise the
+    ``variable_type``-derived value). A declared ``constraint_role`` that
+    contradicts the derived role is reported, never silently coerced — exactly the
+    Stage 4 formulation-preflight rule, because this is the same implementation.
+    """
+    roles: dict[str, str] = {}
+    errors: list[str] = []
+    for item in design_space.get("variables", []) if isinstance(design_space, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        variable_id = item.get("variable_id")
+        try:
+            roles[variable_id] = resolve_constraint_role(item.get("variable_type"), item.get("constraint_role"))
+        except ConstraintRoleError as error:
+            errors.append(f"design_space_artifact.variables[{variable_id}].constraint_role: {error}")
+    return roles, errors
+
+
 def request_errors(request: object, design_space: dict | None, failure: dict | None, method: dict | None, project_id: str) -> list[str]:
     errors = request_schema_errors(request, project_id, method.get("evidence_scope") if method else None)
     if not isinstance(request, dict):
         return errors
     design = request.get("design") if isinstance(request.get("design"), dict) else {}
-    if design.get("family") != "CONSTRAINED_MIXTURE":
-        errors.append("experiment_design.design.family is not supported for GO; only CONSTRAINED_MIXTURE is available")
+    family = design.get("family")
+    channel = FAMILY_CHANNEL.get(family)
+    if channel is None:
+        errors.append(f"experiment_design.design.family is not supported for GO; supported families are {list(SUPPORTED_FAMILIES)}")
     if has_gap(request):
         errors.append("experiment_design.evidence contains GAP; current input is insufficient")
-    factors = request.get("factor_references")
     variables = {item.get("variable_id"): item for item in design_space.get("variables", []) if isinstance(item, dict)} if design_space else {}
-    if isinstance(factors, list):
-        if len(factors) < 2:
-            errors.append("experiment_design.factor_references requires at least two factors")
-        for factor in factors:
-            variable = variables.get(factor) if isinstance(factor, str) else None
-            if variable is None:
-                errors.append(f"experiment_design.factor_references: {factor} does not exist in design_space_artifact")
-                continue
-            if variable.get("variable_type") != "FORMULATION_VARIABLE":
-                errors.append(f"experiment_design.factor_references: {factor} must be FORMULATION_VARIABLE")
-    selected = [variables.get(factor) if isinstance(factor, str) else None for factor in factors] if isinstance(factors, list) else []
-    units, lower_sum, upper_sum = set(), 0.0, 0.0
-    for factor, variable in zip(factors if isinstance(factors, list) else [], selected):
-        if not isinstance(variable, dict):
+    roles, role_errors = resolved_variable_roles(design_space)
+    errors.extend(role_errors)
+    # WP-04a bridge: MIXTURE_CLOSED variables belong in the engine's ``components``
+    # (mixture_total applies); INDEPENDENT variables belong in ``factors``. A
+    # variable placed on the wrong side of the declared family's channel is
+    # rejected by name instead of being silently re-routed.
+    mixture_channel = channel in (CHANNEL_MIXTURE, CHANNEL_BOTH)
+    factor_channel = channel in (CHANNEL_FACTOR, CHANNEL_BOTH)
+    factors = request.get("factor_references")
+    factor_list = factors if isinstance(factors, list) else []
+    if isinstance(factors, list) and len(factors) < 2:
+        errors.append("experiment_design.factor_references requires at least two factors")
+    units, lower_sum, upper_sum, mixture_factors = set(), 0.0, 0.0, 0
+    for factor in factor_list:
+        variable = variables.get(factor) if isinstance(factor, str) else None
+        if variable is None:
+            errors.append(f"experiment_design.factor_references: {factor} does not exist in design_space_artifact")
             continue
+        role = roles.get(factor)
+        if channel is not None and role in CONSTRAINT_ROLES:
+            if role == "MIXTURE_CLOSED" and not mixture_channel:
+                errors.append(f"experiment_design.factor_references: {factor} resolves to MIXTURE_CLOSED and belongs in DOE components, but family {family} routes INDEPENDENT variables into DOE factors")
+                continue
+            if role == "INDEPENDENT" and not factor_channel:
+                errors.append(f"experiment_design.factor_references: {factor} resolves to INDEPENDENT and belongs in DOE factors, but family {family} routes MIXTURE_CLOSED variables into DOE components")
+                continue
         label = f"design_space_artifact.variables[{factor}]"
         lower, upper = variable.get("lower_bound"), variable.get("upper_bound")
         errors.extend(measurement_errors(lower, f"{label}.lower_bound"))
         errors.extend(measurement_errors(upper, f"{label}.upper_bound"))
-        if not measurement_errors(lower, "") and not measurement_errors(upper, ""):
-            if lower["value"] > upper["value"]:
-                errors.append(f"{label}.lower_bound.value must be <= upper_bound.value")
+        if measurement_errors(lower, "") or measurement_errors(upper, ""):
+            continue
+        if lower["value"] > upper["value"]:
+            errors.append(f"{label}.lower_bound.value must be <= upper_bound.value")
+        if role == "MIXTURE_CLOSED" or channel is None:
             units.update((lower["unit"], upper["unit"]))
             lower_sum += lower["value"]
             upper_sum += upper["value"]
-    if len(units) > 1:
-        errors.append("selected factor bounds must use the same unit")
+            mixture_factors += 1
     total = request.get("mixture_total")
-    errors.extend(measurement_errors(total, "experiment_design.mixture_total"))
-    if not measurement_errors(total, ""):
-        if total["value"] <= 0:
-            errors.append("experiment_design.mixture_total.value must be > 0")
-        if units and total["unit"] not in units:
-            errors.append("experiment_design.mixture_total.unit must equal selected factor bounds")
-        if len(selected) == len(factors or []) and not (lower_sum <= total["value"] <= upper_sum):
-            errors.append("experiment_design.mixture_total must be within the sum of selected factor bounds")
+    if mixture_channel:
+        if len(units) > 1:
+            errors.append("selected factor bounds must use the same unit")
+        errors.extend(measurement_errors(total, "experiment_design.mixture_total"))
+        if not measurement_errors(total, ""):
+            if total["value"] <= 0:
+                errors.append("experiment_design.mixture_total.value must be > 0")
+            if units and total["unit"] not in units:
+                errors.append("experiment_design.mixture_total.unit must equal selected factor bounds")
+            if mixture_factors and not (lower_sum <= total["value"] <= upper_sum):
+                errors.append("experiment_design.mixture_total must be within the sum of selected factor bounds")
+    elif channel is not None and total is not None:
+        errors.append("experiment_design.mixture_total must be absent for a factor-only family")
     ctqs = {item.get("ctq_id"): item for item in failure.get("ctqs", []) if isinstance(item, dict)} if failure else {}
     allowed_ctqs = set(design_space.get("ctq_references", [])) if design_space else set()
     method_id = method.get("method_id") if method else None

@@ -35,10 +35,12 @@ ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "op
 # Pack-level shared modules deployed beside a skill's own scripts so the deployed
 # preflight resolves them without reaching back into the pack tree. Single source
 # of truth lives in PACK_ROOT/scripts; this only declares which skills consume
-# which module (WP-04a doe-design will reuse constraint_role.py).
+# which module (WP-04a: both formulation-design and doe-design consume
+# constraint_role.py through this one deployment path).
 SHARED_MODULE_ROOT = PACK_ROOT / "scripts"
 SHARED_MODULES = {
     "formulation-design": ("constraint_role.py",),
+    "doe-design": ("constraint_role.py",),
 }
 
 # Pack-level language-agnostic contracts deployed into a skill's references/ so a

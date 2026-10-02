@@ -1,18 +1,18 @@
 ---
 name: doe-design
-description: Record one evidence-bound constrained-mixture experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, mixture feasibility, and bound constraints before building the artifact. Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "CONSTRAINED_MIXTURE", or advancing to Stage 5 in lubricant R&D.
+description: Record one evidence-bound experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, the mixture↔factor bridge (constraint_role routes variables to components or factors), and bound constraints before building the artifact. Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "因子设计", "裂区", "CONSTRAINED_MIXTURE", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", or advancing to Stage 5 in lubricant R&D.
 ---
 
 # DOE Design (Stage 5)
 
-Record an evidence-bound constrained-mixture experiment design request at `EXPERIMENT_DESIGNED` for the Lubricant R&D Domain Pack.
+Record an evidence-bound experiment design request at `EXPERIMENT_DESIGNED` for the Lubricant R&D Domain Pack.
 This is an experiment design specification and handoff record, NOT an executed test run, measurement result, or statistical regression.
 
 Authority schema: `../../schemas/experiment_design.schema.json` (or local `references/experiment_design.schema.json` in deployed bundle).
 
 ---
 
-## 1. Input Specification & Mixture Feasibility
+## 1. Input Specification, Supported Families & the Mixing/Factor Bridge
 
 A single JSON input object providing the 5 upstream artifacts and the `experiment_design` request:
 
@@ -48,13 +48,34 @@ A single JSON input object providing the 5 upstream artifacts and the `experimen
 }
 ```
 
+### Supported families (aligned to what the Phase 4 engine can actually solve)
+
+| `design.family` | Channel | Needs `mixture_total`? | Referenced variables must resolve to |
+|---|---|---|---|
+| `MIXTURE`, `CONSTRAINED_MIXTURE` | mixture (`components`) | yes | `MIXTURE_CLOSED` |
+| `FULL_FACTORIAL`, `FRACTIONAL_FACTORIAL`, `SPLIT_PLOT` | factor (`factors`) | **no** (forbidden) | `INDEPENDENT` |
+| `MIXTURE_PROCESS` | both | yes | either |
+
+Families outside this table (e.g. `BAYESIAN_SEQUENTIAL`, `RSM`, `TAGUCHI_ROBUST`) are rejected: either the schema enum does not offer them or the engine does not implement them yet.
+
+### Bridge rule (single source of truth: `../../scripts/constraint_role.py`)
+
+`design_space.variables[].constraint_role` decides where a variable goes. When the field is absent it is **derived** from `variable_type` — `FORMULATION_VARIABLE` → `MIXTURE_CLOSED`, `MATERIAL_FAMILY` / `PROCESS_VARIABLE` → `INDEPENDENT` — by the same shared module the Stage 4 formulation preflight uses.
+
+- `MIXTURE_CLOSED` → the engine's `components[]` (participates in the mixture closure and `mixture_total`).
+- `INDEPENDENT` → the engine's `factors[]` (its own independent bounds, no closure).
+- A variable placed on the wrong side of the declared family's channel is **rejected by name**.
+- `factors[].role` (`WHOLE_PLOT` / `SUB_PLOT`) in the compute contract is a *different, orthogonal* axis: it is the split-plot whole/sub-plot role, not the mixing role.
+
 ### Feasibility Invariants
 1. **Upstream Alignment (5 Artifacts)**: All 5 upstream artifacts must share `project_id`, `decision: "GO"`, and status `ACTIVE`.
 2. **Method Role Requirement**: Linked `test_method_artifact` must be `QUALIFIED` and contain role `"D"` (Discrimination) or `"P"` (Prediction). A C-only method is strictly rejected with `HOLD`.
-3. **Mixture Feasibility**:
-   - `family` must be `"CONSTRAINED_MIXTURE"`.
-   - `sum(factor.lower_bounds) <= mixture_total <= sum(factor.upper_bounds)`.
-   - Factors must reference valid `variable_id` entries in the design space.
+3. **Channel Feasibility**:
+   - `family` must be one of the supported families above.
+   - Mixture families: `sum(factor.lower_bounds) <= mixture_total <= sum(factor.upper_bounds)`; factors must reference valid `variable_id` entries in the design space.
+   - Factor families: no `mixture_total`; every referenced variable must resolve to `INDEPENDENT`.
+   - Every `variable_id` must exist in the design space, and a declared `constraint_role` must agree with the `variable_type`-derived role.
+
 
 ---
 
@@ -94,7 +115,9 @@ Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 
 |---|---|---|
 | `HOLD: method does not have role D or P` | 评定方法仅有合规性 (C)，无区分或预测能力 | **STOP**。退回 Stage 3.5 重新评定具有区分度 (D) 的试验台架。 |
 | `HOLD: mixture_total is infeasible` | 因子上下界之和无法覆盖目标总量 (如100 wt%) | **STOP**。检查各组分上下限范围，修复输入文件中的配比界限。 |
-| `HOLD: unsupported design family` | 选择了非 CONSTRAINED_MIXTURE 算法族 | **STOP**。调整为标准受限混料设计（CONSTRAINED_MIXTURE）。 |
+| `HOLD: unsupported design family` | 选择了未实现的算法族 | **STOP**。改用受支持家族（混料族 / 因子族 / MIXTURE_PROCESS）。 |
+| `HOLD: <VAR> ... belongs in DOE components / DOE factors` | 变量错位：`MIXTURE_CLOSED` 变量放进了因子族，或 `INDEPENDENT` 变量放进了混料族 | **STOP**。按 `constraint_role` 将变量归位：参与混料闭合的进 `components`，独立因子进 `factors`。 |
+| `HOLD: mixture_total must be absent for a factor-only family` | 因子族里多填了 `mixture_total` | **STOP**。因子设计无混料闭合，删除 `mixture_total`。 |
 | `FAIL: cannot read artifact or schemas` | 输入损坏或 Schema 错误 | 检查输入文件与 `../../schemas/experiment_design.schema.json`。 |
 
 ---

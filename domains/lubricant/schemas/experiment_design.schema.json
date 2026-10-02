@@ -17,6 +17,20 @@
         "required": ["design"]
       },
       "then": { "required": ["mixture_total"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "design": {
+            "properties": {
+              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT"] }
+            },
+            "required": ["family"]
+          }
+        },
+        "required": ["design"]
+      },
+      "then": { "properties": { "mixture_total": false } }
     }
   ],
   "type": "object",
@@ -30,7 +44,7 @@
     "design": {
       "type": "object",
       "properties": {
-        "family": { "enum": ["FEASIBILITY_SCREENING", "SCREENING", "FRACTIONAL_FACTORIAL", "MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "RSM", "D_OPTIMAL", "ROBUST", "BAYESIAN_SEQUENTIAL"] },
+        "family": { "enum": ["MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT"] },
         "rationale": { "type": "string", "minLength": 1 },
         "effects_to_estimate": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
       },
