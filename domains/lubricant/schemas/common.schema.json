@@ -71,17 +71,33 @@
       "additionalProperties": false
     },
     "measurement": {
+      "description": "WP-measurement-channel: a measured or target quantity is either SET (value is a number, optionally with status \"SET\") or NOT SET (value is null with status \"DEFERRED\" or \"PENDING_CLIENT\"). status stays out of required so all pre-existing artifacts without status remain valid. Sentinel numbers such as -1 remain schema-legal for legacy artifacts but are detected by scripts/check_measurement_sentinels.py.",
       "type": "object",
       "properties": {
-        "value": { "type": "number" },
+        "value": { "type": ["number", "null"] },
         "unit": { "type": "string", "minLength": 1 },
         "source": { "type": "string", "minLength": 1 },
         "method_version": { "type": "string", "minLength": 1 },
         "material_batch": { "type": "string", "minLength": 1 },
-        "formula_version": { "type": "string", "minLength": 1 }
+        "formula_version": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["SET", "DEFERRED", "PENDING_CLIENT"] },
+        "deferral_reason": { "type": "string", "minLength": 1 }
       },
       "required": ["value", "unit", "source", "method_version", "material_batch", "formula_version"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "null" } }, "required": ["value"] },
+          "then": {
+            "required": ["status"],
+            "properties": { "status": { "enum": ["DEFERRED", "PENDING_CLIENT"] } }
+          }
+        },
+        {
+          "if": { "properties": { "value": { "type": "number" } }, "required": ["value"] },
+          "then": { "properties": { "status": { "enum": ["SET"] } } }
+        }
+      ]
     }
   }
 }

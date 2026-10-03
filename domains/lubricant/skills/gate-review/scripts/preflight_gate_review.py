@@ -13,6 +13,50 @@ from gate_review_policy import has_gap
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ensure_naming_checker_importable() -> bool:
+    """Probe the shared naming checker in both layouts (knowledge_retrieval precedent).
+
+    Repository layout: the module lives in the pack-level ``scripts/`` tree.
+    Deployed layout: the installer copies it beside this skill's scripts
+    (install_domain_skill.py maps gate-review -> check_artifact_naming.py).
+    If neither candidate holds the file the preflight still runs; the naming
+    contract is then unenforced here, exactly like knowledge_retrieval.
+    """
+    for candidate in (ROOT / "scripts", ROOT.parents[1] / "scripts"):
+        if (candidate / "check_artifact_naming.py").is_file():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            return True
+    return False
+
+
+_NAMING_AVAILABLE = _ensure_naming_checker_importable()
+
+if _NAMING_AVAILABLE:
+    import check_artifact_naming  # noqa: E402
+
+
+def workspace_naming_errors(input_path: Path) -> list[str]:
+    """Enforce the canonical-name contract on the workspace holding the input.
+
+    The input request file lives in the workspace root, so ``input_path.parent``
+    is the workspace. A bare staging directory without ``project.json`` is not
+    treated as a workspace (keeps ad-hoc preflight invocations working). Every
+    violation here is a HOLD: a mangled artifact name is invisible to the
+    stage-gate panel, so a GO must not be issued over it.
+    """
+    if not _NAMING_AVAILABLE:
+        return []
+    workspace = input_path.parent
+    if not (workspace / "project.json").is_file():
+        return []
+    try:
+        _, violations = check_artifact_naming.check_workspace(str(workspace))
+    except OSError:
+        return []
+    return [f"workspace naming: {violation}" for violation in violations]
 SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json")
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("model_artifact", "model.schema.json", "MODEL_BUILT"), ("optimization_artifact", "optimization.schema.json", "OPTIMIZED"))
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"gate"}
@@ -86,6 +130,7 @@ def main() -> int:
     try: data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error: print(f"HOLD: cannot read input: {error}; no artifact generated"); return 1
     errors = errors_for(data, path)
+    errors.extend(workspace_naming_errors(path))
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
     print("READY: input can form one VERIFIED Gate artifact only"); return 0
 

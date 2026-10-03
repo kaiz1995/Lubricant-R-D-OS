@@ -44,18 +44,29 @@ ENGINE_SKILLS = {"formulation-design", "doe-design", "statistical-analysis", "op
 # constraint_role.py through this one deployment path).
 SHARED_MODULE_ROOT = PACK_ROOT / "scripts"
 SHARED_MODULES = {
-    "formulation-design": ("constraint_role.py",),
-    "doe-design": ("constraint_role.py",),
     # WP-11: both Stage 1 and Stage 3 preflights search CLOSED knowledge
     # assets and FROZEN design freezes through the one pack-level retrieval
     # module; it is deployed beside each consuming skill's scripts.
     "duty-definition": ("knowledge_retrieval.py",),
-    "failure-ctq-analysis": ("knowledge_retrieval.py",),
     # WP-06: application-validation imports the producing skill's PASS rule
     # (application_policy.py) as the single source of truth for the APPLIED
     # entry gate; the file is deployed beside this skill's scripts so a
     # deployed preflight resolves it without reaching back into the pack tree.
     "application-validation": (PACK_ROOT / "skills" / "application-definition" / "scripts" / "application_policy.py",),
+    # WP-04a: both formulation-design and doe-design consume constraint_role.py
+    # through this one deployment path.
+    #
+    # 2026-10-03: 工件命名校验器。工作台面板按规范名 <type>.json 判定阶段完成
+    # （apps/desktop .../lubricantArtifacts.ts 的 probeOne），而本领域包多个技能
+    # 的默认输出名与之一致性无强制校验，导致严格按文档执行的 agent 产出面板认不出
+    # 的文件名、面板进度落后于真实进度。故把校验器部署到每个会落盘工件的技能旁，
+    # 并在各 SKILL.md 的落盘步骤里要求运行。
+    "duty-challenge-analysis": ("knowledge_retrieval.py", "check_artifact_naming.py"),
+    "failure-ctq-analysis": ("knowledge_retrieval.py", "check_artifact_naming.py"),
+    "test-method-qualification": ("check_artifact_naming.py",),
+    "formulation-design": ("constraint_role.py", "check_artifact_naming.py"),
+    "doe-design": ("constraint_role.py", "check_artifact_naming.py"),
+    "gate-review": ("check_artifact_naming.py",),
 }
 
 # Pack-level language-agnostic contracts deployed into a skill's references/ so a
