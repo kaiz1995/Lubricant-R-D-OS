@@ -163,8 +163,9 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
     method_references = value.get("qualified_test_method_references")
     if not isinstance(method_references, list) or not method_references or not all(has_text(item) for item in method_references):
         errors.append("design_space.qualified_test_method_references")
-    elif method is not None and method_references != [method.get("method_id")]:
-        errors.append("design_space.qualified_test_method_references must equal the supplied qualified method_id")
+    elif method is not None and method.get("method_id") not in method_references:
+        # Defect 1 fix: membership instead of single-element equality.
+        errors.append("design_space.qualified_test_method_references must contain the supplied qualified method_id")
     constraints = value.get("constraints")
     if not isinstance(constraints, list) or not constraints or not all(has_text(item) for item in constraints):
         errors.append("design_space.constraints")

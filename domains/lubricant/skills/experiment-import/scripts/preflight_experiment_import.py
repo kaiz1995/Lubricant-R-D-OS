@@ -158,8 +158,12 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
     if method.get("target_failure_reference") != failure.get("failure_id"): errors.append("test_method_artifact failure link is invalid")
     if design.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_design_artifact design-space link is invalid")
-    if design_space.get("qualified_test_method_references") != [method.get("method_id")]: errors.append("design_space_artifact qualified method link is invalid")
-    if design.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_design_artifact method link is invalid")
+    # Defect 1 fix: membership replaces equality so a design space may declare
+    # several qualified methods, one per CTQ. The per-CTQ cross-check below
+    # still rejects a method that is not qualified or not linked to its CTQ.
+    declared_methods = design_space.get("qualified_test_method_references")
+    if method is not None and (not isinstance(declared_methods, list) or method.get("method_id") not in declared_methods): errors.append("design_space_artifact qualified method link is invalid")
+    if method.get("method_id") not in (design.get("test_method_references") or []): errors.append("experiment_design_artifact method link is invalid")
     doe = None
     output_digest = None
     point_ids: set[object] = set()

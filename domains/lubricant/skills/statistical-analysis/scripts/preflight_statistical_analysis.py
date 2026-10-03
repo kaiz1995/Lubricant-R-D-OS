@@ -81,12 +81,12 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if challenge and failure and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
     if failure and method and method.get("target_failure_reference") != failure.get("failure_id"): errors.append("test_method_artifact failure link is invalid")
     if method and (method.get("qualification_status") != "QUALIFIED" or not ({"D", "P"} & set(method.get("role", [])))): errors.append("test_method_artifact must be qualified D or P")
-    if design_space and method and design_space.get("qualified_test_method_references") != [method.get("method_id")]: errors.append("design_space_artifact method link is invalid")
+    if design_space and method and method.get("method_id") not in (design_space.get("qualified_test_method_references") or []): errors.append("design_space_artifact method link is invalid")
     if experiment_design and design_space and experiment_design.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_design_artifact design-space link is invalid")
-    if experiment_design and method and experiment_design.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_design_artifact method link is invalid")
+    if experiment_design and method and method.get("method_id") not in (experiment_design.get("test_method_references") or []): errors.append("experiment_design_artifact method link is invalid")
     if experiment and experiment_design and experiment.get("experiment_design_reference") != experiment_design.get("experiment_design_id"): errors.append("experiment_artifact design link is invalid")
     if experiment and design_space and experiment.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_artifact design-space link is invalid")
-    if experiment and method and experiment.get("test_method_references") != [method.get("method_id")]: errors.append("experiment_artifact method link is invalid")
+    if experiment and method and method.get("method_id") not in (experiment.get("test_method_references") or []): errors.append("experiment_artifact method link is invalid")
     # WP-07: the modeling entry stays DOE-only. Non-DOE experiment records
     # (APPLICATION_FIELD / CONFIRMATORY_NON_DOE) are legitimate imports but are
     # explicitly excluded here, naming the record and the reason. A record

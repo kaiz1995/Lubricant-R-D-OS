@@ -110,7 +110,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if len(present) == 9 and len({value.get("project_id") for value in present}) != 1: errors.append("all upstream artifact project_id values must match")
     if failure and challenge and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
     if method and failure and (method.get("target_failure_reference") != failure.get("failure_id") or method.get("qualification_status") != "QUALIFIED"): errors.append("test_method_artifact must be linked and qualified")
-    if design_space and method and design_space.get("qualified_test_method_references") != [method.get("method_id")]: errors.append("design_space_artifact method link is invalid")
+    if design_space and method and method.get("method_id") not in (design_space.get("qualified_test_method_references") or []): errors.append("design_space_artifact method link is invalid")
     if experiment_design and design_space and experiment_design.get("design_space_reference") != design_space.get("design_space_id"): errors.append("experiment_design_artifact design-space link is invalid")
     if experiment and experiment_design and experiment.get("experiment_design_reference") != experiment_design.get("experiment_design_id"): errors.append("experiment_artifact design link is invalid")
     if model and experiment and model.get("experiment_reference") != experiment.get("experiment_id"): errors.append("model_artifact experiment link is invalid")

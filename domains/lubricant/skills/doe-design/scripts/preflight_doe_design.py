@@ -314,8 +314,10 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if method is not None and not ({"D", "P"} & set(method.get("role", []))):
         errors.append("test_method_artifact must have role D or P")
     if design_space is not None and method is not None:
-        if design_space.get("qualified_test_method_references") != [method.get("method_id")]:
-            errors.append("design_space_artifact qualified method references must equal the supplied method_id")
+        # Defect 1 fix: membership, not single-element equality, so a multi-CTQ
+        # design space can declare one qualified method per CTQ.
+        if method.get("method_id") not in (design_space.get("qualified_test_method_references") or []):
+            errors.append("design_space_artifact qualified method references must contain the supplied method_id")
         ctqs = {item.get("ctq_id"): item for item in failure.get("ctqs", []) if isinstance(item, dict)} if failure else {}
         for ctq_id in design_space.get("ctq_references", []):
             ctq = ctqs.get(ctq_id)
