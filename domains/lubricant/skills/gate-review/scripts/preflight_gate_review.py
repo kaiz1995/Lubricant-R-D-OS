@@ -9,7 +9,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from gate_review_policy import has_gap
+from gate_review_policy import aggregate_scope, has_gap, process_window_synthetic
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,9 +57,16 @@ def workspace_naming_errors(input_path: Path) -> list[str]:
     except OSError:
         return []
     return [f"workspace naming: {violation}" for violation in violations]
-SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json")
+SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "process.schema.json")
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("model_artifact", "model.schema.json", "MODEL_BUILT"), ("optimization_artifact", "optimization.schema.json", "OPTIMIZED"))
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"gate"}
+# Defect 4 (2026-10-03): the process pair used to be structurally unreachable
+# from this gate. They are OPTIONAL here (a gate may review a non-process
+# project), but when submitted they are validated and their evidence_scope is
+# aggregated with the rest, so a SYNTHETIC process window can no longer slip
+# through on an optimization artifact's PHYSICAL label.
+PROCESS_UPSTREAM = (("process_artifact", "process.schema.json", "DESIGN_SPACE_DEFINED"), ("process_window_artifact", "process.schema.json", "PROCESS_WINDOW_DEFINED"))
+OPTIONAL_INPUT_FIELDS = {key for key, _, _ in PROCESS_UPSTREAM}
 REQUEST_FIELDS = {"gate_id", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks", "reason", "evidence"}
 # WP-08: the request may also carry the optional signoff record. It stays a
 # record only — no authority check happens here or downstream.
@@ -96,12 +103,27 @@ def gate_request_errors(request: object, project_id: str, experiment_id: str, ev
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict): return ["input must be a JSON object"]
     errors, items = [], {}
-    if set(data) != INPUT_FIELDS: errors.append("input must contain only required upstream artifact paths and gate")
+    unexpected = set(data) - INPUT_FIELDS - OPTIONAL_INPUT_FIELDS
+    missing = INPUT_FIELDS - set(data)
+    if unexpected or missing:
+        errors.append("input must contain only required upstream artifact paths and gate (process artifacts optional but permitted)")
     for key, schema, stage in UPSTREAM:
         item_errors, value = artifact(data.get(key), input_path, schema, key); errors.extend(item_errors); items[key] = value
         if value and value.get("stage") != stage: errors.append(f"{key} must be stage {stage}")
         if value and value.get("decision") != "GO": errors.append(f"{key} must have decision GO")
+    for key, schema, stage in PROCESS_UPSTREAM:
+        if key not in data: continue
+        item_errors, value = artifact(data.get(key), input_path, schema, key); errors.extend(item_errors); items[key] = value
+        if value and value.get("stage") != stage: errors.append(f"{key} must be stage {stage}")
+        if value and value.get("decision") != "GO": errors.append(f"{key} must have decision GO")
+    if ("process_artifact" in data) != ("process_window_artifact" in data):
+        errors.append("process_artifact and process_window_artifact must be submitted together")
     project, challenge, failure, method, design_space, experiment_design, experiment, model, optimization = (items[key] for key, _, _ in UPSTREAM)
+    process, process_window = items.get("process_artifact"), items.get("process_window_artifact")
+    if process and project and process.get("project_reference") != project.get("project_id"):
+        errors.append("process_artifact project link is invalid")
+    if process_window and process and process_window.get("process_id") != process.get("process_id"):
+        errors.append("process_window_artifact process link is invalid")
     present = [value for value in (project, challenge, failure, method, design_space, experiment_design, experiment, model, optimization) if value]
     scopes = {value.get("evidence_scope") for value in (method, experiment_design, experiment, model, optimization) if value is not None}
     if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:
@@ -115,10 +137,20 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if experiment and experiment_design and experiment.get("experiment_design_reference") != experiment_design.get("experiment_design_id"): errors.append("experiment_artifact design link is invalid")
     if model and experiment and model.get("experiment_reference") != experiment.get("experiment_id"): errors.append("model_artifact experiment link is invalid")
     if optimization and model and optimization.get("model_reference") != model.get("model_id"): errors.append("optimization_artifact model link is invalid")
-    request = data.get("gate"); errors.extend(gate_request_errors(request, project.get("project_id", "") if project else "", experiment.get("experiment_id", "") if experiment else "", optimization.get("evidence_scope") if optimization else None))
+    # Defect 4 fix: the weakest declared scope across every submitted upstream
+    # governs the disposition, so a SYNTHETIC process window cannot inherit
+    # PHYSICAL from the optimization artifact.
+    scope_values = [value.get("evidence_scope") for value in (method, experiment_design, experiment, model, optimization) if value is not None]
+    scope_values += [value.get("evidence_scope") for value in (process, process_window) if value is not None]
+    effective_scope = aggregate_scope(scope_values)
+    if process is not None and process_window is not None:
+        nested = process_window.get("process_window") if isinstance(process_window.get("process_window"), dict) else {}
+        if aggregate_scope(scope_values) == "SYNTHETIC" or process_window_synthetic(nested) or process_window_synthetic(process_window):
+            errors.append("SYNTHETIC process evidence_scope permits Gate HOLD workflow validation only; a validated window declared SYNTHETIC cannot authorize a state transition")
+    request = data.get("gate"); errors.extend(gate_request_errors(request, project.get("project_id", "") if project else "", experiment.get("experiment_id") if experiment else "", effective_scope))
     if not isinstance(request, dict): return errors
     status = request.get("gate_status")
-    if scopes == {"SYNTHETIC"} and status != "HOLD": errors.append("SYNTHETIC evidence_scope permits Gate HOLD workflow validation only")
+    if effective_scope == "SYNTHETIC" and status != "HOLD": errors.append("SYNTHETIC evidence_scope permits Gate HOLD workflow validation only")
     if status == "GO" and has_gap(request): errors.append("GO cannot use GAP evidence")
     if status in {"PIVOT", "KILL", "FREEZE"} and (not isinstance(request.get("reason"), str) or not request["reason"].strip() or has_gap(request)): errors.append(f"{status} requires explicit reason and evidence without GAP")
     return errors

@@ -23,6 +23,35 @@ def has_gap(value: dict) -> bool:
     return any(isinstance(item, dict) and item.get("status") == "GAP" for item in value.get("evidence", []))
 
 
+# Defect 4 (2026-10-03): process / process-window artifacts were structurally
+# unreachable from this gate, and evidence_scope came from the optimization
+# artifact alone. A purely synthetic process window therefore never reached the
+# SYNTHETIC -> HOLD branch. Two fixes:
+#   1. aggregate_scope() takes the weakest scope across every submitted upstream
+#      so a SYNTHETIC process window forces HOLD;
+#   2. process_window_synthetic() additionally treats a validated=true window
+#      declared SYNTHETIC as blocking, because "format valid" != "evidence
+#      sufficient" for the downstream design_freeze MANUFACTURABILITY_ACCEPTABLE
+#      citation.
+SCOPE_RANK = {"SYNTHETIC": 0, "PHYSICAL": 1}
+
+
+def aggregate_scope(scopes: "list[str | None]") -> str | None:
+    """Return the weakest declared scope; None when no scope was supplied."""
+    present = [value for value in scopes if isinstance(value, str) and value in SCOPE_RANK]
+    if not present: return None
+    return min(present, key=lambda value: SCOPE_RANK[value])
+
+
+def process_window_synthetic(process_window: object) -> bool:
+    """True when a process window is validated yet only SYNTHETIC-scoped."""
+    if not isinstance(process_window, dict): return False
+    if process_window.get("validated") is not True: return False
+    scope = process_window.get("evidence_scope")
+    if not isinstance(scope, str): return False
+    return scope == "SYNTHETIC"
+
+
 def final_status(value: dict, evidence_scope: str | None = None) -> str:
     if evidence_scope == "SYNTHETIC":
         return "HOLD"
