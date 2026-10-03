@@ -194,26 +194,32 @@ def main():
         if found:
             break
     if not found:
-        # fallback: use unconstrained q=3 linear with target 3 where candidates=10 > p but we set target == candidates to force all selected? Actually target max is caps at candidates, so we test with target == candidates that output size == candidates
+        # fallback: unconstrained q=3 linear, target 10 (candidates 28 > p 6, so
+        # n_sel = 10 < 28 exercises the exhaustive-scan + grow path). The pool
+        # count 28 is the real _build_doe_candidates output post-fix (lattice +
+        # bound probes + grid sweep), previously 10 under the defect engine.
         inp9 = make_input(comps_uniform(3,0,1), "D_OPTIMAL_MIXTURE","LINEAR",10)
         raw9=json.dumps(inp9, ensure_ascii=False, sort_keys=True).encode()
         env9=generate_doe(inp9, raw9)
         assert env9["status"]=="OK"
-        assert env9["result"]["candidates_considered"]==10
+        assert env9["result"]["candidates_considered"]==28
         assert env9["result"]["run_count"]==10
-        print("PASS: D-optimal full selection fallback (10 candidates)")
+        print("PASS: D-optimal full selection fallback (28 candidates, 10 runs)")
     else:
         print("PASS: D-optimal candidate==p full selection")
 
-    # 10. D-optimal convergence + audit candidates_considered
+    # 10. D-optimal convergence + audit candidates_considered. Post-fix the
+    # unconstrained q=4 pool is 39 candidates (was 15 under the defect engine):
+    # C(39, 10) = 635,745,396 > MAX_COMBINATIONS, so this case also exercises the
+    # tiered-degradation greedy seed on top of the exchange + grow loops.
     inp10 = make_input(comps_uniform(4,0,1), "D_OPTIMAL_MIXTURE","QUADRATIC",12)
     env10 = generate_doe(inp10, json.dumps(inp10, ensure_ascii=False, sort_keys=True).encode())
     assert env10["status"]=="OK", env10
-    assert env10["result"]["candidates_considered"]==15
+    assert env10["result"]["candidates_considered"]==39
     assert env10["method"]=="D_OPTIMAL_GREEDY_DET_V1"
     assert env10["parameters"]["convergence_threshold"]==1e-12
     # selection_reason contains candidate count
-    assert "candidates=15" in env10["result"]["selection_reason"]
+    assert "candidates=39" in env10["result"]["selection_reason"]
     # evidence OBSERVED
     assert any(e["status"]=="OBSERVED" for e in env10["evidence"])
     print("PASS: D-optimal convergence and audit")

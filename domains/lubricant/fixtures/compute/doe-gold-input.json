@@ -42,7 +42,7 @@
     "decision_question": "What is the optimal PAO6/AN/Ester/Additive proportion to maximize KV40 within cost constraints?",
     "hypothesis": "Increasing ester content improves KV40 up to a quadratic optimum while AN moderates viscosity.",
     "variables_note": "Mixture variables: PAO6, AN, Ester, Additive constrained to sum to 1.0.",
-    "constraints_note": "Bounds: PAO6 [0,1], AN [0,1], Ester [0,1], Additive [0,1] (wide feasible range for gold reference). Note: spec example PAO6[0.3,0.6]/AN[0.1,0.4]/Ester[0.05,0.3]/Additive[0.05,0.15] yields only 1 feasible candidate, and even unconstrained q=4 max candidates=15, so target 16 infeasible; gold uses target 15 closest feasible.",
+    "constraints_note": "Bounds: PAO6 [0,1], AN [0,1], Ester [0,1], Additive [0,1] (wide feasible range for gold reference). Note: spec example PAO6[0.3,0.6]/AN[0.1,0.4]/Ester[0.05,0.3]/Additive[0.05,0.15] yields only 1 feasible candidate; unconstrained q=4 yields 39 feasible candidates with the current engine, so gold uses target 15 (>= the 10 quadratic Scheffe parameters).",
     "responses_note": "Responses: KV40 OPTIMIZATION_RESPONSE, TAN GUARDRAIL per ASTM methods.",
     "doe_selection_reason": "D-optimal mixture design maximizes determinant of Scheffe quadratic model information matrix.",
     "expected_information_value": "Information matrix determinant quantifies parameter precision for quadratic Scheffe model.",

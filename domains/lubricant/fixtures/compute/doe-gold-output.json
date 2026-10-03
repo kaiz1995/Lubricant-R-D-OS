@@ -9,7 +9,7 @@
     "target_runs": 15,
     "convergence_threshold": 1e-12
   },
-  "input_digest": "fcf5cd8a0c764f28ce7fbdbc8568fd3fd6b0a3229a0e7ef257a77572b672e9a8",
+  "input_digest": "88ec9349aec0e43182f993c342110f3c87293381fb24f11bc9b7558de2f44b60",
   "status": "OK",
   "rejection_reasons": [],
   "decision_question": "What is the optimal PAO6/AN/Ester/Additive proportion to maximize KV40 within cost constraints?",
@@ -17,7 +17,7 @@
   "decision_rule": "Select next formulation at highest predicted KV40 within 95 pct CI that passes TAN guardrail.",
   "expected_information_value": "Information matrix determinant quantifies parameter precision for quadratic Scheffe model.",
   "variables_note": "Mixture variables: PAO6, AN, Ester, Additive constrained to sum to 1.0.",
-  "constraints_note": "Bounds: PAO6 [0,1], AN [0,1], Ester [0,1], Additive [0,1] (wide feasible range for gold reference). Note: spec example PAO6[0.3,0.6]/AN[0.1,0.4]/Ester[0.05,0.3]/Additive[0.05,0.15] yields only 1 feasible candidate, and even unconstrained q=4 max candidates=15, so target 16 infeasible; gold uses target 15 closest feasible.",
+  "constraints_note": "Bounds: PAO6 [0,1], AN [0,1], Ester [0,1], Additive [0,1] (wide feasible range for gold reference). Note: spec example PAO6[0.3,0.6]/AN[0.1,0.4]/Ester[0.05,0.3]/Additive[0.05,0.15] yields only 1 feasible candidate; unconstrained q=4 yields 39 feasible candidates with the current engine, so gold uses target 15 (>= the 10 quadratic Scheffe parameters).",
   "responses_note": "Responses: KV40 OPTIMIZATION_RESPONSE, TAN GUARDRAIL per ASTM methods.",
   "doe_selection_reason": "D-optimal mixture design maximizes determinant of Scheffe quadratic model information matrix.",
   "result": {
@@ -55,13 +55,22 @@
         "run_index": 4,
         "proportions": {
           "AN": 0.0,
+          "Additive": 0.33333333333399995,
+          "Ester": 0.333333333333,
+          "PAO6": 0.333333333333
+        }
+      },
+      {
+        "run_index": 5,
+        "proportions": {
+          "AN": 0.0,
           "Additive": 0.5,
           "Ester": 0.0,
           "PAO6": 0.5
         }
       },
       {
-        "run_index": 5,
+        "run_index": 6,
         "proportions": {
           "AN": 0.0,
           "Additive": 0.5,
@@ -70,7 +79,7 @@
         }
       },
       {
-        "run_index": 6,
+        "run_index": 7,
         "proportions": {
           "AN": 0.0,
           "Additive": 1.0,
@@ -79,43 +88,43 @@
         }
       },
       {
-        "run_index": 7,
-        "proportions": {
-          "AN": 0.166666666667,
-          "Additive": 0.166666666667,
-          "Ester": 0.166666666667,
-          "PAO6": 0.5
-        }
-      },
-      {
         "run_index": 8,
         "proportions": {
-          "AN": 0.166666666667,
-          "Additive": 0.166666666667,
-          "Ester": 0.5,
-          "PAO6": 0.166666666667
+          "AN": 0.041666666667,
+          "Additive": 0.041666666667,
+          "Ester": 0.041666666667,
+          "PAO6": 0.874999999999
         }
       },
       {
         "run_index": 9,
         "proportions": {
-          "AN": 0.166666666667,
-          "Additive": 0.5,
-          "Ester": 0.166666666667,
-          "PAO6": 0.166666666667
+          "AN": 0.33333333333399995,
+          "Additive": 0.0,
+          "Ester": 0.333333333333,
+          "PAO6": 0.333333333333
         }
       },
       {
         "run_index": 10,
         "proportions": {
-          "AN": 0.25,
-          "Additive": 0.25,
-          "Ester": 0.25,
-          "PAO6": 0.25
+          "AN": 0.33333333333399995,
+          "Additive": 0.333333333333,
+          "Ester": 0.0,
+          "PAO6": 0.333333333333
         }
       },
       {
         "run_index": 11,
+        "proportions": {
+          "AN": 0.33333333333399995,
+          "Additive": 0.333333333333,
+          "Ester": 0.333333333333,
+          "PAO6": 0.0
+        }
+      },
+      {
+        "run_index": 12,
         "proportions": {
           "AN": 0.5,
           "Additive": 0.0,
@@ -124,21 +133,12 @@
         }
       },
       {
-        "run_index": 12,
+        "run_index": 13,
         "proportions": {
           "AN": 0.5,
           "Additive": 0.0,
           "Ester": 0.5,
           "PAO6": 0.0
-        }
-      },
-      {
-        "run_index": 13,
-        "proportions": {
-          "AN": 0.5,
-          "Additive": 0.166666666667,
-          "Ester": 0.166666666667,
-          "PAO6": 0.166666666667
         }
       },
       {
@@ -161,8 +161,8 @@
       }
     ],
     "run_count": 15,
-    "candidates_considered": 15,
-    "selection_reason": "D-optimal greedy determinant maximization over candidates=15 target=15 quadratic Scheffe model"
+    "candidates_considered": 39,
+    "selection_reason": "D-optimal greedy determinant maximization over candidates=39 target=15 quadratic Scheffe model"
   },
   "evidence": [
     {

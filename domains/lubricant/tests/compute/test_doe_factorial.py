@@ -235,7 +235,10 @@ def main():
     assert legacy["status"] == "OK"
     mine = (json.dumps(legacy, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     assert mine.replace(b"\r\n", b"\n") == gold_out.read_bytes().replace(b"\r\n", b"\n"), "mixture envelope regressed"
-    assert legacy["input_digest"] == "fcf5cd8a0c764f28ce7fbdbc8568fd3fd6b0a3229a0e7ef257a77572b672e9a8"
+    # digest updated with the fixture: the stale "max candidates=15" note in
+    # constraints_note was corrected to the real post-fix pool (39 candidates),
+    # which changes the raw input bytes and hence the digest.
+    assert legacy["input_digest"] == "88ec9349aec0e43182f993c342110f3c87293381fb24f11bc9b7558de2f44b60"
     print("PASS: legacy mixture envelope non-regression")
 
     # 8. Fail-closed rejections.

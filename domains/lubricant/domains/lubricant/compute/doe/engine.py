@@ -26,6 +26,18 @@ from .factorial import (
 ENGINE_NAME = "doe"
 ENGINE_VERSION = "0.1.0"
 CONVERGENCE_THRESHOLD = 1e-12
+# Grid resolution for the per-component feasible-range sweep in
+# _build_doe_candidates; 8 gives >= 17 feasible candidates per component
+# before de-duplication.
+GRID_STEPS = 8
+TOL = 1e-9
+# Tiered-degradation guardrail for the exhaustive first p-subset scan in the
+# D-optimal channel: C(n, p) grows factorially. Up to this many combinations the
+# scan runs exhaustively (still the best seed quality); beyond it the engine
+# degrades deterministically to a greedy max-volume seed (_greedy_max_volume_seed)
+# instead of refusing, so large-q designs stay runnable. The downstream
+# single-point-exchange and grow-to-n_sel loops are full-candidate scans either way.
+MAX_COMBINATIONS = 500000
 
 # WP-04a factorial channel. Two-level factors only; TAGUCHI_ROBUST is declared in the
 # input contract but deliberately deferred (plan: "TAGUCHI_ROBUST 可后置"), so it is
@@ -96,6 +108,59 @@ def _lu_det(matrix):
     return det_sign * det
 
 
+def _greedy_max_volume_seed(rows, p):
+    """Deterministic greedy max-volume seed for the D-optimal channel.
+
+    Replaces the exhaustive first-p-subset scan when C(n, p) exceeds
+    MAX_COMBINATIONS: instead of refusing, the engine starts the downstream
+    single-point exchange from this seed. Selection maximises the spanned volume
+    step by step via incremental orthogonalization (modified Gram-Schmidt): at
+    each step the candidate with the largest orthogonal-residual norm against the
+    orthonormal basis of the already-selected rows is added. The residual norm is
+    exactly the factor by which the spanned volume would grow, which is why this
+    stands in for det(X'X) here: before p rows are selected the information
+    matrix is singular (det identically 0) and at this scale determinants
+    underflow, while residual norms stay numerically well-behaved.
+
+    Determinism: sums use math.fsum (project style, cf. _xtx_info_matrix), ties
+    resolve strictly to the lowest candidate index (strict > comparison), no
+    randomness anywhere. rows is n x p (row length may differ from n); the loop
+    below walks each row by its own length. Stops early once the best residual
+    norm is <= 0.0 (rank exhausted) so a rank-deficient pool can never spin.
+
+    Returns the set of selected row indices.
+    """
+    n = len(rows)
+    dim = len(rows[0])
+    selected = []
+    basis = []  # orthonormal vectors spanning the selected rows
+    while len(selected) < p:
+        best_idx, best_norm = None, 0.0
+        for idx in range(n):
+            if idx in selected:
+                continue
+            residual = list(rows[idx])
+            for b in basis:
+                proj = math.fsum(residual[k] * b[k] for k in range(dim))
+                for k in range(dim):
+                    residual[k] -= proj * b[k]
+            norm = math.sqrt(math.fsum(v * v for v in residual))
+            if norm > best_norm:
+                best_idx, best_norm = idx, norm
+        if best_idx is None or best_norm <= 0.0:
+            break
+        # orthogonalize the winner against the basis and append it normalized
+        residual = list(rows[best_idx])
+        for b in basis:
+            proj = math.fsum(residual[k] * b[k] for k in range(dim))
+            for k in range(dim):
+                residual[k] -= proj * b[k]
+        norm = math.sqrt(math.fsum(v * v for v in residual))
+        basis.append([v / norm for v in residual])
+        selected.append(best_idx)
+    return set(selected)
+
+
 def _model_matrix(candidates, model_order):
     q = len(candidates[0])
     pairs = list(itertools.combinations(range(q), 2))
@@ -145,6 +210,81 @@ def _simplex_lattice(m, q, lowers, uppers, total):
     return points, structural
 
 
+def _feasible_range(i, lowers, uppers, total):
+    """Range of x_i that can be hit while the others absorb the remainder."""
+    others_lo = math.fsum(lowers[j] for j in range(len(lowers)) if j != i)
+    others_hi = math.fsum(uppers[j] for j in range(len(uppers)) if j != i)
+    return max(lowers[i], total - others_hi), min(uppers[i], total - others_lo)
+
+
+def _allocate(remaining, idxs, lowers, uppers):
+    """Split `remaining` over `idxs` proportionally to slack, inside bounds.
+
+    Water-filling over the AVAILABLE amount: the active components' lower bounds
+    are consumed first, then the remainder is split in proportion to headroom. A
+    component that overshoots is pinned at its bound and the residual is re-split
+    among the rest. Iteration order is fixed, so the result is deterministic.
+
+    This replaces equal splitting, which cannot allocate a small remainder across
+    components whose caps are much smaller than remainder / (q - 1).
+    """
+    n = len(idxs)
+    if n == 0:
+        return [] if abs(remaining) <= TOL else None
+    lo = [lowers[j] for j in idxs]
+    hi = [uppers[j] for j in idxs]
+    base = math.fsum(lo)
+    cap = math.fsum(hi)
+    if remaining < base - TOL or remaining > cap + TOL:
+        return None
+
+    x = [0.0] * n
+    rem = float(remaining)
+    active = list(range(n))
+    while active:
+        act_lo = math.fsum(lo[k] for k in active)
+        head = math.fsum(hi[k] - lo[k] for k in active)
+        avail = rem - act_lo
+        if avail < -TOL or avail > head + TOL:
+            return None
+        if head <= TOL:
+            trial = {k: lo[k] + avail / len(active) for k in active}
+        else:
+            trial = {k: lo[k] + avail * (hi[k] - lo[k]) / head for k in active}
+        bad = [k for k, v in trial.items() if v > hi[k] + TOL or v < lo[k] - TOL]
+        if not bad:
+            for k, v in trial.items():
+                x[k] = v
+            break
+        k = max(bad, key=lambda k: max(trial[k] - hi[k], lo[k] - trial[k]))
+        x[k] = min(max(trial[k], lo[k]), hi[k])
+        rem -= x[k]
+        active.remove(k)
+    if abs(math.fsum(x) - remaining) > 1e-9:
+        return None
+    return x
+
+
+def _snap_proportions(pt, total):
+    """Nudge components so math.fsum(pt) == total exactly.
+
+    Grid-sweep candidates are rounded to 12 decimals, which can leave their fsum
+    off the mixture total by ~1e-12, while the envelope (and the tests) promise
+    mass fractions that sum to exactly 1.0. Iteratively re-deriving the largest
+    component from the fsum of the others converges within a few passes: after
+    the first correction the residual is ulp-scale. Returns None when it cannot
+    converge, so the caller can fall back to the unsnapped point.
+    """
+    out = list(pt)
+    for _ in range(8):
+        if math.fsum(out) == total:
+            return out
+        k = max(range(len(out)), key=lambda i: abs(out[i]))
+        others = [out[i] for i in range(len(out)) if i != k]
+        out[k] = total - math.fsum(others)
+    return out if math.fsum(out) == total else None
+
+
 def _build_doe_candidates(params_or_total, *args):
     # Accept both dict-style and float-style total for test compatibility
     total = params_or_total["mixture_total"] if isinstance(params_or_total, dict) else params_or_total
@@ -174,10 +314,19 @@ def _build_doe_candidates(params_or_total, *args):
             other_up_sum = math.fsum(uppers[j] for j in range(q) if j != i)
             if remaining < other_low_sum - tol or remaining > other_up_sum + tol:
                 continue
-            share = remaining / (q - 1)
+            # allocate the remainder by slack (water-filling) instead of equally,
+            # and write the allocation into pt before the boundary check — the
+            # previous code computed `share` but never stored it, so every bound
+            # probe silently failed the sum check and was dropped.
+            others = [j for j in range(q) if j != i]
+            alloc = _allocate(remaining, others, lowers, uppers)
+            if alloc is None:
+                continue
             pt = [0.0] * q
             pt[i] = bound_val
-            if all(lowers[j] - tol <= share <= uppers[j] + tol for j in range(q) if j != i):
+            for j, v in zip(others, alloc):
+                pt[j] = v
+            if all(lowers[j] - tol <= pt[j] <= uppers[j] + tol for j in others):
                 pt_tuple = tuple(round(v, 12) for v in pt)
                 if abs(math.fsum(pt_tuple) - total) <= tol:
                     extras.append(pt_tuple)
@@ -188,32 +337,66 @@ def _build_doe_candidates(params_or_total, *args):
         cpt = tuple(round(min(max(center_raw[k] * scale, lowers[k]), uppers[k]), 12) for k in range(q))
         if abs(math.fsum(cpt) - total) <= tol:
             extras.append(cpt)
-    # axis midpoints: x_i = midpoint of its bounds, remainder split equally among others
+    # Per-component grid sweep. This is what makes a dominant-component mixture
+    # estimable: sweeping the dominant component over its feasible range and
+    # allocating the remainder by slack keeps every point feasible, where equal
+    # splitting overflowed the minor components' caps and got the probe dropped.
     for i in range(q):
-        mid = (lowers[i] + uppers[i]) / 2.0
-        remaining = total - mid
-        if q < 2 or remaining < 0:
+        lo_i, hi_i = _feasible_range(i, lowers, uppers, total)
+        others = [j for j in range(q) if j != i]
+        for step in range(GRID_STEPS + 1):
+            frac = lo_i + (hi_i - lo_i) * step / GRID_STEPS
+            alloc = _allocate(total - frac, others, lowers, uppers)
+            if alloc is None:
+                continue
+            pt = [0.0] * q
+            pt[i] = frac
+            for j, v in zip(others, alloc):
+                pt[j] = v
+            key = tuple(round(v, 12) for v in pt)
+            if key not in seen and _feasible(list(key), lowers, uppers, total):
+                seen.add(key)
+                candidates.append(key)
+
+    # Axis midpoints, remainder allocated by slack rather than equally.
+    for i in range(q):
+        lo_i, hi_i = _feasible_range(i, lowers, uppers, total)
+        others = [j for j in range(q) if j != i]
+        alloc = _allocate(total - (lo_i + hi_i) / 2, others, lowers, uppers)
+        if alloc is None:
             continue
-        other_low_sum = math.fsum(lowers[j] for j in range(q) if j != i)
-        other_up_sum = math.fsum(uppers[j] for j in range(q) if j != i)
-        if remaining < other_low_sum - tol or remaining > other_up_sum + tol:
-            continue
-        share = remaining / (q - 1)
         pt = [0.0] * q
-        pt[i] = mid
-        for j in range(q):
-            if j != i:
-                pt[j] = share
-        if all(lowers[j] - tol <= share <= uppers[j] + tol for j in range(q) if j != i):
-            pt_tuple = tuple(round(v, 12) for v in pt)
-            if abs(math.fsum(pt_tuple) - total) <= tol:
-                extras.append(pt_tuple)
+        pt[i] = (lo_i + hi_i) / 2
+        for j, v in zip(others, alloc):
+            pt[j] = v
+        key = tuple(round(v, 12) for v in pt)
+        if key not in seen and _feasible(list(key), lowers, uppers, total):
+            seen.add(key)
+            candidates.append(key)
+
     for e in extras:
         if e not in seen:
             seen.add(e)
             candidates.append(e)
-    candidates.sort(key=lambda t: t)
-    return candidates
+    # Exact-mass snap: the 12-decimal rounding in the sweeps above can leave a
+    # candidate's fsum off the total by ~1e-12. The envelope promises proportions
+    # summing to exactly 1.0, so every candidate is snapped before it is handed
+    # to the model matrix and the runs. A candidate that cannot be snapped (or
+    # would duplicate another after snapping) keeps its pre-snap form / is kept
+    # only once, exactly as the dedup semantics above.
+    snapped = []
+    snapped_keys = set()
+    for pt in candidates:
+        spt = _snap_proportions(pt, total)
+        if spt is None:
+            spt = list(pt)
+        key = tuple(round(v, 12) for v in spt)
+        if key in snapped_keys:
+            continue
+        snapped_keys.add(key)
+        snapped.append(tuple(spt))
+    snapped.sort(key=lambda t: t)
+    return snapped
 
 
 def _validate_business(input_dict):
@@ -259,7 +442,8 @@ def generate_doe(input_dict, input_bytes=None):
 
 
 def _generate_mixture(input_dict, input_bytes):
-    """Phase 4.2 constrained mixture channel — behaviour is byte-for-byte unchanged."""
+    """Phase 4.2 constrained mixture channel (bounded probes, slack allocation,
+    target_runs honoured, exhaustive scan guarded)."""
     reasons, _, _ = _validate_business(input_dict)
     if reasons:
         return _build_rejected(input_dict, input_bytes, reasons)
@@ -294,16 +478,26 @@ def _generate_mixture(input_dict, input_bytes):
         if n_sel >= len(candidates):
             selected_idx = list(range(len(candidates)))
         else:
-            # greedy start: exhaustive first p-subset scan in lex order
-            best_det = -1.0
-            best_combo = None
-            for combo in itertools.combinations(range(len(candidates)), p):
-                rows = [sel_rows_full[k] for k in combo]
-                d = _lu_det(_xtx_info_matrix(rows, p))
-                if d > best_det:
-                    best_det = d
-                    best_combo = combo
-            selected = set(best_combo)
+            # Tiered degradation instead of refusal: the exhaustive first p-subset
+            # scan is factorial in the candidate count. Up to MAX_COMBINATIONS it
+            # runs exhaustively (best seed quality); beyond it the scan would
+            # effectively hang, so the seed comes from _greedy_max_volume_seed
+            # instead. The exchange and grow loops below are full-candidate scans
+            # and run identically in both tiers.
+            n_combos = math.comb(len(candidates), p)
+            if n_combos <= MAX_COMBINATIONS:
+                # greedy start: exhaustive first p-subset scan in lex order
+                best_det = -1.0
+                best_combo = None
+                for combo in itertools.combinations(range(len(candidates)), p):
+                    rows = [sel_rows_full[k] for k in combo]
+                    d = _lu_det(_xtx_info_matrix(rows, p))
+                    if d > best_det:
+                        best_det = d
+                        best_combo = combo
+                selected = set(best_combo)
+            else:
+                selected = _greedy_max_volume_seed(sel_rows_full, p)
             # greedy single-point exchange until no improvement beyond threshold
             while True:
                 cur_rows = [sel_rows_full[k] for k in sorted(selected)]
@@ -324,6 +518,24 @@ def _generate_mixture(input_dict, input_bytes):
                         break
                 if not improved:
                     break
+            # Grow from p to n_sel. Before this, target_runs was only honoured by
+            # the n_sel >= len(candidates) shortcut, so a request for 12 points
+            # silently returned p points. Each addition maximises the det(X'X)
+            # gain; ties resolve to the lowest candidate index (strict >), which
+            # keeps the growth deterministic.
+            while len(selected) < n_sel:
+                cur_det = _lu_det(_xtx_info_matrix([sel_rows_full[k] for k in sorted(selected)], p))
+                best_add, best_gain = None, cur_det
+                for cand_i in range(len(candidates)):
+                    if cand_i in selected:
+                        continue
+                    trial = selected | {cand_i}
+                    d = _lu_det(_xtx_info_matrix([sel_rows_full[k] for k in sorted(trial)], p))
+                    if d > best_gain:
+                        best_add, best_gain = cand_i, d
+                if best_add is None:
+                    break
+                selected.add(best_add)
             selected_idx = sorted(selected)
         points = [candidates[k] for k in selected_idx]
         method = "D_OPTIMAL_GREEDY_DET_V1"
