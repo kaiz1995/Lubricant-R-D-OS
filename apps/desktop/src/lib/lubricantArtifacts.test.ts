@@ -17,6 +17,7 @@ const {
   buildGatePrompt,
   buildStepPrompt,
   deriveSteps,
+  derivedCurrentStage,
   emptySnapshot,
   probeWorkspace,
 } = await import("./lubricantArtifacts");
@@ -52,6 +53,49 @@ const validProject = (over: Record<string, unknown> = {}) => ({
 const utf8 = (obj: unknown) => ({
   path: "x", mime: "application/json", encoding: "utf8",
   data: typeof obj === "string" ? obj : JSON.stringify(obj), size: 10,
+});
+
+/** 各类型 OWN_REQUIRED 的占位值 —— lite 校验只查键存在，值不重要。 */
+const OWN_EXTRAS: Record<string, Record<string, unknown>> = {
+  duty: { duty_id: "D-1", project_reference: "P-1", duty: {} },
+  challenge: {
+    duty_reference: "D-1", challenge_id: "C-1", category: "c", description: "d",
+    severity: "HIGH", exposure: "e", lubricant_sensitivity: "s",
+    evidence_gap: "g", priority: 1,
+  },
+  failure_ctq: {
+    challenge_reference: "C-1", failure_id: "F-1", failure_mode: "m",
+    mechanism: "mech", failure_diagnosis: "diag", root_cause_hypotheses: [],
+    lubricant_contribution: "l", ctqs: [], test_chain: [],
+  },
+  test_method: {
+    evidence_scope: "PHYSICAL", method_id: "TM-1", name: "n",
+    standard: "DIN 51517-3", target_failure_reference: "F-1", role: "r",
+    qualification_metrics: [], qualification_basis: "b",
+    qualification_status: "QUALIFIED",
+  },
+  design_space: {
+    design_space_id: "DS-1", scope: "s", variables: [], ctq_references: [],
+    qualified_test_method_references: [], constraints: [],
+  },
+  experiment_design: {
+    evidence_scope: "PHYSICAL", experiment_design_id: "EXP-1",
+    design_space_reference: "DS-1", test_method_references: [],
+    factor_references: [], design: {}, run_plan: [], responses: [],
+    guardrails: [], expected_information_value: "v",
+  },
+};
+
+/** 任意链上类型的一个能通过 validateArtifactLite 的工件。 */
+const liteValid = (artifactType: string, over: Record<string, unknown> = {}) => ({
+  schema_version: "0.1.0",
+  artifact_type: artifactType,
+  project_id: "HDG-NP-001",
+  stage: "PROJECT_DEFINED",
+  decision_question: "q", hypothesis: "h", uncertainty: "u",
+  evidence: [], decision_rule: "r", result: "res", decision: "GO", next_action: "n",
+  ...OWN_EXTRAS[artifactType],
+  ...over,
 });
 
 beforeEach(() => {
@@ -97,7 +141,7 @@ describe("probeWorkspace", () => {
   it("从 project.json 提取 project_type 与 stage 作为权威", async () => {
     const snap = await probeWorkspace();
     expect(snap.projectType).toBe("NEW_PRODUCT");
-    expect(snap.projectStage).toBe("PROJECT_DEFINED");
+    expect(snap.charterStage).toBe("PROJECT_DEFINED");
   });
 
   it("结构不合规的工件 exists 但 valid=false，并给出原因", async () => {
@@ -112,7 +156,7 @@ describe("probeWorkspace", () => {
     expect(snap.probes.project.errors.some((e) => e.includes("artifact_type"))).toBe(true);
     // 坏掉的 project.json 不得充当权威：既不锁定类型，也不宣称 stage
     expect(snap.projectType).toBeNull();
-    expect(snap.projectStage).toBeNull();
+    expect(snap.charterStage).toBeNull();
   });
 
   it("坏掉的 gate.json 不宣称门禁已签署", async () => {
@@ -207,6 +251,100 @@ describe("deriveSteps", () => {
   });
 });
 
+describe("前缀名容忍解析（记录 ID 后缀）", () => {
+  /** 全部候选文件都在根目录；path 即文件名，内容按名字查表。 */
+  const mockRoot = (contents: Record<string, unknown>) => {
+    const names = Object.keys(contents);
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir !== "") throw new Error("not a directory");
+      return names.map((n) => entry(n));
+    });
+    readArtifact.mockImplementation(async (path: string) =>
+      path in contents ? utf8(contents[path]) : null,
+    );
+  };
+
+  it("T1 前缀名回退：challenge-<记录ID>.json 点亮步骤 3", async () => {
+    const name = "challenge-HDG-NP-001-HDG-CHAL-001.json";
+    mockRoot({ [name]: liteValid("challenge") });
+    const snap = await probeWorkspace();
+    expect(snap.probes.challenge.exists).toBe(true);
+    expect(snap.probes.challenge.valid).toBe(true);
+    expect(snap.probes.challenge.resolvedPath).toBe(name);
+    expect(snap.probes.challenge.matches).toEqual([name]);
+    // 无 project.json 时 projectType 为 null，路由回退 NEW_PRODUCT（13 步），
+    // 步骤 1 是唯一缺口 → active，已合法的前缀名 challenge 是步骤 3 → completed
+    const steps = deriveSteps(snap.projectType, snap);
+    expect(steps[2].artifactType).toBe("challenge");
+    expect(steps[2].status).toBe("completed");
+  });
+
+  it("T2 分隔符边界：experiment_design-X.json 不得点亮 experiment 步骤", async () => {
+    mockRoot({
+      "project.json": validProject(),
+      "duty.json": liteValid("duty"),
+      "challenge-A-1.json": liteValid("challenge"),
+      "failure_ctq-A-1.json": liteValid("failure_ctq"),
+      "test_method-A-1.json": liteValid("test_method"),
+      "design_space-A-1.json": liteValid("design_space"),
+      // 合法的 experiment_design 工件 —— 但名字与 experiment 只差一个 `_`
+      "experiment_design-X.json": liteValid("experiment_design"),
+    });
+    const snap = await probeWorkspace();
+    expect(snap.probes.experiment_design.valid).toBe(true);
+    expect(snap.probes.experiment.exists).toBe(false);
+    const steps = deriveSteps(snap.projectType, snap);
+    expect(steps[6].artifactType).toBe("experiment_design");
+    expect(steps[6].status).toBe("completed");
+    expect(steps[7].artifactType).toBe("experiment");
+    // 前 7 步齐了，experiment 是第一个缺口 → active，绝非 completed
+    expect(steps[7].status).toBe("active");
+  });
+
+  it("T3 规范名优先：challenge.json 与 challenge-A-1.json 并存时选中规范名", async () => {
+    mockRoot({
+      "challenge.json": liteValid("challenge", { challenge_id: "C-EXACT" }),
+      "challenge-A-1.json": liteValid("challenge", { challenge_id: "C-PREFIX" }),
+    });
+    const snap = await probeWorkspace();
+    expect(snap.probes.challenge.resolvedPath).toBe("challenge.json");
+    expect(snap.probes.challenge.data?.challenge_id).toBe("C-EXACT");
+    expect(snap.probes.challenge.valid).toBe(true);
+    expect(snap.probes.challenge.matches).toEqual(["challenge.json", "challenge-A-1.json"]);
+  });
+
+  it("T4 名称正确但内容不合 schema 不得误报完成", async () => {
+    mockRoot({
+      "project.json": validProject(),
+      "duty.json": liteValid("duty"),
+      // artifact_type 对、schema_version 对，但缺一大片必填字段
+      "challenge.json": { artifact_type: "challenge", schema_version: "0.1.0" },
+    });
+    const snap = await probeWorkspace();
+    expect(snap.probes.challenge.exists).toBe(true);
+    expect(snap.probes.challenge.valid).toBe(false);
+    expect(snap.probes.challenge.errors.some((e) => e.includes("缺少必填字段"))).toBe(true);
+    const steps = deriveSteps(snap.projectType, snap);
+    expect(steps[0].status).toBe("completed");
+    expect(steps[1].status).toBe("completed");
+    expect(steps[2].artifactType).toBe("challenge");
+    expect(steps[2].status).toBe("active");
+  });
+
+  it("T5 代表记录确定性：多条前缀命中按文件名升序取第一个", async () => {
+    // 故意把 002 放在前面，证明结果不依赖目录返回顺序
+    mockRoot({
+      "challenge-A-002.json": liteValid("challenge", { challenge_id: "C-002" }),
+      "challenge-A-001.json": liteValid("challenge", { challenge_id: "C-001" }),
+    });
+    const snap = await probeWorkspace();
+    expect(snap.probes.challenge.resolvedPath).toBe("challenge-A-001.json");
+    expect(snap.probes.challenge.data?.challenge_id).toBe("C-001");
+    expect(snap.probes.challenge.valid).toBe(true);
+    expect(snap.probes.challenge.matches).toEqual(["challenge-A-001.json", "challenge-A-002.json"]);
+  });
+});
+
 describe("prompt builders", () => {
   it("步骤提示词带上技能路径、真实文件名、考核标准与 PHYSICAL 要求", () => {
     const step = STAGE_CHAIN[6];
@@ -230,5 +368,70 @@ describe("prompt builders", () => {
     const prompt = buildGatePrompt(null, []);
     expect(prompt).toContain("evidence_gaps 为空");
     expect(prompt).toContain("未知");
+  });
+});
+
+describe("derivedCurrentStage 与 charterStage 的语义区分", () => {
+  /** 全部候选文件在根目录；内容按文件名查表（与前缀名 describe 同手法）。 */
+  const mockRoot = (contents: Record<string, unknown>) => {
+    const names = Object.keys(contents);
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir !== "") throw new Error("not a directory");
+      return names.map((n) => entry(n));
+    });
+    readArtifact.mockImplementation(async (path: string) =>
+      path in contents ? utf8(contents[path]) : null,
+    );
+  };
+
+  it("前 7 步完成、第 8 步未完成时推导出 EXPERIMENT_DESIGNED", async () => {
+    mockRoot({
+      "project.json": validProject(),
+      "duty.json": liteValid("duty"),
+      "challenge-A-1.json": liteValid("challenge"),
+      "failure_ctq-A-1.json": liteValid("failure_ctq"),
+      "test_method-A-1.json": liteValid("test_method"),
+      "design_space-A-1.json": liteValid("design_space"),
+      "experiment_design-A-1.json": liteValid("experiment_design"),
+    });
+    const snap = await probeWorkspace();
+    // 步骤链判定：前 7 步 completed，第 8 步（experiment）是缺口
+    const steps = deriveSteps(snap.projectType, snap);
+    expect(steps.slice(0, 7).every((s) => s.status === "completed")).toBe(true);
+    expect(steps[7].artifactType).toBe("experiment");
+    expect(steps[7].status).toBe("active");
+    expect(derivedCurrentStage(snap.projectType, snap)).toBe("EXPERIMENT_DESIGNED");
+  });
+
+  it("无任何步骤完成时返回 null", async () => {
+    mockRoot({
+      "project.json": { artifact_type: "project", schema_version: "0.1.0" },
+    });
+    const snap = await probeWorkspace();
+    expect(snap.projectType).toBeNull();
+    expect(derivedCurrentStage(snap.projectType, snap)).toBeNull();
+  });
+
+  it("snapshot 为 null 时返回 null，不抛异常", () => {
+    expect(derivedCurrentStage("NEW_PRODUCT", null)).toBeNull();
+    expect(derivedCurrentStage(null, null)).toBeNull();
+  });
+
+  it("charterStage 读 project.json 自身 stage 常量，与推导阶段语义不同", async () => {
+    mockRoot({
+      "project.json": validProject(),
+      "duty.json": liteValid("duty"),
+    });
+    const snap = await probeWorkspace();
+    // charterStage 是 project.json 自身的 stage —— 领域包 7 个 preflight
+    // 硬要求它恒为 PROJECT_DEFINED，是常量而非推进位置
+    expect(snap.charterStage).toBe("PROJECT_DEFINED");
+    // 推导阶段是最后一个完成步骤的契约 stage，二者可以不同
+    expect(derivedCurrentStage(snap.projectType, snap)).toBe("DUTY_DEFINED");
+    expect(snap.charterStage).not.toBe(derivedCurrentStage(snap.projectType, snap));
+    // 门禁提示词喂的是推导阶段，而不是 charterStage 常量
+    const prompt = buildGatePrompt(derivedCurrentStage(snap.projectType, snap), []);
+    expect(prompt).toContain("DUTY_DEFINED");
+    expect(prompt).not.toContain("PROJECT_DEFINED");
   });
 });

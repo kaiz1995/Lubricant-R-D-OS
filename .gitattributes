@@ -1,0 +1,12 @@
+# Line-ending policy
+#
+# Compute gold fixtures embed an `input_digest` = sha256 of the *input file's raw
+# bytes*. If git rewrites line endings on checkout (core.autocrlf=true), that
+# digest no longer matches what the engine computes, and the gold reproduction
+# test fails for reasons unrelated to the code. Pinning fixtures to LF keeps the
+# digest stable across machines and checkouts.
+#
+# Scope is deliberately narrow: only the compute fixtures, which are the files
+# whose bytes feed a hash. Wider rules would rewrite unrelated files.
+
+domains/lubricant/fixtures/** text eol=lf

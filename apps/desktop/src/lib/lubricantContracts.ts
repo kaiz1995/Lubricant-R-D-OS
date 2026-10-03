@@ -312,7 +312,10 @@ const COMMON_REQUIRED: readonly string[] = [
 const OWN_REQUIRED: Record<string, readonly string[]> = {
   project: ["artifact_type", "status", "project_name", "project_type", "product_family",
     "business_objective", "technical_objective", "hard_constraints", "target_cost",
-    "benchmark_products", "success_criteria", "risk_class", "owner"],
+    // benchmark_products 已由领域包改为条件必填：凭 benchmark_waiver_reason 豁免
+    // （schema 走 allOf if/then），故不列入 required。lite 校验刻意只做结构必填、
+    // 不复刻业务条件（见上方「轻量结构校验」说明，不引入 jsonschema）。
+    "success_criteria", "risk_class", "owner"],
   duty: ["artifact_type", "duty_id", "project_reference", "duty"],
   challenge: ["artifact_type", "duty_reference", "challenge_id", "category", "description",
     "severity", "exposure", "lubricant_sensitivity", "evidence_gap", "priority"],

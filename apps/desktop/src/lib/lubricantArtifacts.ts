@@ -37,6 +37,11 @@ export interface ArtifactProbe {
   readonly data: Record<string, unknown> | null;
   /** 命中时的根相对路径（用于后续 readArtifact / 打开预览）。 */
   readonly resolvedPath: string | null;
+  /**
+   * 本阶段命中的全部文件名（规范名在前，前缀名按文件名升序），供 UI 显示
+   * 「本阶段共 N 条记录」。可选：手工构造 probe 的旧代码无需补填。
+   */
+  readonly matches?: readonly string[];
 }
 
 export interface WorkspaceSnapshot {
@@ -47,8 +52,14 @@ export interface WorkspaceSnapshot {
   readonly probes: Readonly<Record<string, ArtifactProbe>>;
   /** project.json 的 project_type；存在时锁定 UI 的类型选择器。 */
   readonly projectType: string | null;
-  /** project.json 的 stage。 */
-  readonly projectStage: string | null;
+  /**
+   * project.json 自身的 stage 字段。领域包契约中它是常量：7 个 preflight
+   * 脚本（duty-definition / failure-ctq / doe-design / formulation-design /
+   * experiment-import / gate-review / optimization）硬要求
+   * stage === "PROJECT_DEFINED"，因此它**不是**「项目当前阶段」，不得用于
+   * 门禁提示词等推进语义；当前阶段请用 derivedCurrentStage 从步骤链推导。
+   */
+  readonly charterStage: string | null;
   /** gate.json 的 gate_status。 */
   readonly gateStatus: string | null;
 }
@@ -60,7 +71,7 @@ export function emptySnapshot(): WorkspaceSnapshot {
     probedAt: Date.now(),
     probes: {},
     projectType: null,
-    projectStage: null,
+    charterStage: null,
     gateStatus: null,
   };
 }
@@ -74,6 +85,7 @@ function emptyProbe(contract: StageContract): ArtifactProbe {
     errors: [],
     data: null,
     resolvedPath: null,
+    matches: [],
   };
 }
 
@@ -103,39 +115,91 @@ async function collectFileIndex(): Promise<Map<string, string>> {
   return index;
 }
 
+/**
+ * 解析某工件类型的候选文件，返回代表记录路径与全部命中文件名。
+ *
+ * 解析顺序：
+ *  1. 精确名优先 —— contract.file（如 challenge.json）；
+ *  2. 前缀名回退 —— `<artifactType>-<记录 ID>.json`。四个相关 schema 都是
+ *     单记录 object，一阶段多条记录只能一记录一文件，于是真实会话落盘的
+ *     是 challenge-HDG-NP-001-HDG-CHAL-001.json 这类带 ID 后缀的名字。
+ *
+ * 分隔符必须是 `-`：artifactType 本身可能含下划线（failure_ctq 等），整体
+ * 作前缀字符串比较、绝不按 `_` 拆词，这样才能防止 experiment 误配
+ * experiment_design-*.json、process 误配 process_*.json。
+ *
+ * 命中多条时按文件名升序取第一个作为代表记录（确定性，不依赖目录返回
+ * 顺序）；规范名永远压过前缀名。
+ */
+function resolveCandidates(
+  contract: StageContract,
+  index: ReadonlyMap<string, string>,
+): { representative: string | null; matches: readonly string[] } {
+  const matches: string[] = [];
+  if (index.has(contract.file)) matches.push(contract.file);
+  const prefix = `${contract.artifactType}-`;
+  const prefixed: string[] = [];
+  for (const name of index.keys()) {
+    if (name.startsWith(prefix) && name.endsWith(".json")) prefixed.push(name);
+  }
+  prefixed.sort();
+  matches.push(...prefixed);
+  const representativeName = matches[0] ?? null;
+  return {
+    representative: representativeName ? (index.get(representativeName) ?? null) : null,
+    matches,
+  };
+}
+
 async function probeOne(
   contract: StageContract,
   index: ReadonlyMap<string, string>,
 ): Promise<ArtifactProbe> {
   const base = emptyProbe(contract);
-  const resolvedPath = index.get(contract.file);
-  if (!resolvedPath) return base;
+  const { representative, matches } = resolveCandidates(contract, index);
+  if (!representative) return { ...base, matches };
 
   let file;
   try {
-    file = await readArtifact(resolvedPath, "workspace");
+    file = await readArtifact(representative, "workspace");
   } catch {
-    return { ...base, exists: true, resolvedPath, errors: ["读取失败"] };
+    return {
+      ...base, matches, exists: true,
+      resolvedPath: representative, errors: ["读取失败"],
+    };
   }
-  if (!file) return { ...base, exists: true, resolvedPath, errors: ["读取失败"] };
+  if (!file) {
+    return {
+      ...base, matches, exists: true,
+      resolvedPath: representative, errors: ["读取失败"],
+    };
+  }
   if (file.encoding !== "utf8") {
-    return { ...base, exists: true, resolvedPath, errors: ["非 UTF-8 文本"] };
+    return {
+      ...base, matches, exists: true,
+      resolvedPath: representative, errors: ["非 UTF-8 文本"],
+    };
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(file.data);
   } catch {
-    return { ...base, exists: true, resolvedPath, errors: ["JSON 解析失败"] };
+    return {
+      ...base, matches, exists: true,
+      resolvedPath: representative, errors: ["JSON 解析失败"],
+    };
   }
 
+  // exists / valid / resolvedPath 均针对代表记录：其余命中文件只进入 matches。
   const errors = validateArtifactLite(contract.artifactType, parsed);
   return {
     ...base,
+    matches,
     exists: true,
     valid: errors.length === 0,
     errors,
-    resolvedPath,
+    resolvedPath: representative,
     data: isRecord(parsed) ? parsed : null,
   };
 }
@@ -166,7 +230,7 @@ export async function probeWorkspace(): Promise<WorkspaceSnapshot> {
     probedAt,
     probes,
     projectType: str(project?.project_type),
-    projectStage: str(project?.stage),
+    charterStage: str(project?.stage),
     gateStatus: str(gate?.gate_status),
   };
 }
@@ -223,6 +287,28 @@ export function deriveSteps(
 }
 
 /**
+ * 从步骤链推导「项目当前阶段」：最后一个 status === "completed" 的步骤的
+ * stage；没有任何完成步骤（含 snapshot === null、首次探测未返回）时返回
+ * null。
+ *
+ * 复用 deriveSteps 的判定（同一套 completed/active/pending 逻辑），保证
+ * 面板进度显示与门禁提示词永远一致。注意与 WorkspaceSnapshot.charterStage
+ * 的语义区分：charterStage 是 project.json 自身的常量字段（领域包契约要求
+ * 恒为 "PROJECT_DEFINED"），不代表项目推进位置。
+ */
+export function derivedCurrentStage(
+  projectType: string | null | undefined,
+  snapshot: WorkspaceSnapshot | null,
+): string | null {
+  let stage: string | null = null;
+  for (const step of deriveSteps(projectType, snapshot)) {
+    if (step.status !== "completed") break;
+    stage = step.stage;
+  }
+  return stage;
+}
+
+/**
  * 生成交给中栏 Composer 的标准化提示词（Task 3）。
  *
  * 带上领域包技能名与真实文件名，避免 Agent 自创字段；显式要求 PHYSICAL
@@ -239,10 +325,10 @@ export function buildStepPrompt(step: Pick<StepView, "titleZh" | "stage" | "file
 }
 
 /** 门禁终审的提示词 —— gate 决议由 Agent 按 gate-review 技能产出。 */
-export function buildGatePrompt(projectStage: string | null, gaps: readonly string[]): string {
+export function buildGatePrompt(currentStage: string | null, gaps: readonly string[]): string {
   return [
     `请执行 skills/gate-review 门禁终审，生成 gate.json。`,
-    `当前 project stage = ${projectStage ?? "未知"}。`,
+    `当前 project stage = ${currentStage ?? "未知"}。`,
     `gate_status 只能取 GO / HOLD / PIVOT / KILL / FREEZE；不得使用 REVISE。`,
     gaps.length
       ? `以下未解项必须先写入 unsatisfied_conditions 或 evidence_gaps：${gaps.join("；")}。`

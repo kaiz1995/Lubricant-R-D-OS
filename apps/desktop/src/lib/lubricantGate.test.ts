@@ -95,7 +95,7 @@ function snapshotWith(
     probedAt: Date.now(),
     probes,
     projectType: "NEW_PRODUCT",
-    projectStage: "PROJECT_DEFINED",
+    charterStage: "PROJECT_DEFINED",
     gateStatus: null,
   };
 }
@@ -122,7 +122,7 @@ function snapshotWithNoArtifacts(): WorkspaceSnapshot {
     probedAt: Date.now(),
     probes,
     projectType: null,
-    projectStage: null,
+    charterStage: null,
     gateStatus: null,
   };
 }

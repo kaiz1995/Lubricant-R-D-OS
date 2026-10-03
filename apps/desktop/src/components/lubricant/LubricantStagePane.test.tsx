@@ -249,3 +249,39 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     }
   });
 });
+
+describe("LubricantStagePane — 门禁提示词使用推导阶段", () => {
+  it("门禁按钮注入的是步骤链推导阶段（DUTY_DEFINED），而非 project.json 的常量 stage", async () => {
+    // project + duty 两步完成。project.json 的 stage 在领域包契约里恒为
+    // PROJECT_DEFINED（charterStage），而推导出的当前阶段应是 DUTY_DEFINED。
+    const DUTY = {
+      schema_version: "0.1.0",
+      artifact_type: "duty",
+      project_id: "WGO-001",
+      stage: "PROJECT_DEFINED",
+      decision_question: "q", hypothesis: "h", uncertainty: "u",
+      evidence: [], decision_rule: "r", result: "res", decision: "GO", next_action: "n",
+      duty_id: "D-1", project_reference: "P-1", duty: {},
+    };
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir === "") return [entry("project.json"), entry("duty.json")];
+      throw new Error("not a directory");
+    });
+    readArtifact.mockImplementation(async (path: string) => {
+      if (path === "project.json") {
+        return { path, mime: "application/json", encoding: "utf8", data: JSON.stringify(PROJECT), size: 10 };
+      }
+      if (path === "duty.json") {
+        return { path, mime: "application/json", encoding: "utf8", data: JSON.stringify(DUTY), size: 10 };
+      }
+      return null;
+    });
+
+    renderPane();
+    await userEvent.click(await screen.findByRole("button", { name: /在会话中执行门禁终审/ }));
+
+    const draft = useUiStore.getState().composerDraft;
+    expect(draft).toContain("当前 project stage = DUTY_DEFINED");
+    expect(draft).not.toContain("PROJECT_DEFINED");
+  });
+});

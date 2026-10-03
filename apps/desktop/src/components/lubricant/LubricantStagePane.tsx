@@ -33,6 +33,7 @@ import {
   buildGatePrompt,
   buildStepPrompt,
   deriveSteps,
+  derivedCurrentStage,
   probeWorkspace,
   type WorkspaceSnapshot,
 } from "@/lib/lubricantArtifacts";
@@ -561,7 +562,9 @@ export function LubricantStagePane({
           <div className="flex items-center justify-end gap-1.5">
             <button
               onClick={() =>
-                injectPrompt(buildGatePrompt(snapshot?.projectStage ?? null, openGaps))
+                injectPrompt(
+                  buildGatePrompt(derivedCurrentStage(lockedType, snapshot), openGaps),
+                )
               }
               className="flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-[10px] font-medium text-accent transition-colors hover:bg-surface-2"
             >

@@ -237,4 +237,36 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
       expect(missing, `${c.artifactType} 的 OWN_REQUIRED 缺: ${missing.join(", ")}`).toEqual([]);
     }
   });
+
+  it("project 缺 benchmark_products 但带豁免理由时通过 lite 校验", () => {
+    // 2026-10-02 领域包把 benchmark_products 从 required 改为条件必填
+    // （benchmark_waiver_reason + allOf if/then），lite 只做结构必填，不复刻该
+    // 业务条件——合法的豁免 project 不得被判 invalid。
+    const schema = readJson<{ required: string[] }>("schemas/project.schema.json");
+    const obj: Record<string, unknown> = {
+      schema_version: "0.1.0",
+      artifact_type: "project",
+      project_id: "P",
+      stage: "PROJECT_DEFINED",
+      decision_question: "q", hypothesis: "h", uncertainty: "u",
+      evidence: [], decision_rule: "r", result: "res", decision: "GO", next_action: "n",
+      benchmark_waiver_reason: "无公开对标的，客户定制工况",
+    };
+    for (const key of schema.required) {
+      expect(key).not.toBe("benchmark_products");
+      obj[key] = "x";
+    }
+    const errors = validateArtifactLite("project", obj);
+    expect(errors.filter((e) => e.startsWith("缺少必填字段 benchmark_products"))).toEqual([]);
+  });
+
+  it("project.schema.json 仍保留 benchmark_products 与 benchmark_waiver_reason 字段", () => {
+    // 防漂移：两个键可以从 required 挪走，但不得从 properties 整个删掉，
+    // 否则豁免机制与正常填法都会失去落点。
+    const schema = readJson<{ properties: Record<string, unknown> }>(
+      "schemas/project.schema.json",
+    );
+    expect(schema.properties).toHaveProperty("benchmark_products");
+    expect(schema.properties).toHaveProperty("benchmark_waiver_reason");
+  });
 });
