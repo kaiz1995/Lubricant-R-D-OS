@@ -120,15 +120,15 @@
     }
   },
   {
-    "name": "go-new-product-crosses-the-process-window", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "name": "go-new-product-verifies-after-optimization", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
     "event": {
       "kind": "GO", "gate_status": "GO", "project_type": "NEW_PRODUCT",
-      "before": { "project_id": "WGO-001", "stage": "OPTIMIZED", "status": "ACTIVE", "version": 6, "decision_question": "Is the optimized process window fixed?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-201"] },
-      "after": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 6, "decision_question": "Is the optimized process window fixed?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-201"] }
+      "before": { "project_id": "WGO-001", "stage": "OPTIMIZED", "status": "ACTIVE", "version": 6, "decision_question": "Is the optimized formula ready for review?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-201"] },
+      "after": { "project_id": "WGO-001", "stage": "VERIFIED", "status": "ACTIVE", "version": 6, "decision_question": "Is the optimized formula ready for review?", "evidence_scope": "PHYSICAL", "evidence": ["E-N-201"] }
     }
   },
   {
-    "name": "go-cost-down-verifies-after-the-process-window", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "name": "go-verifies-after-an-on-demand-process-window", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
     "event": {
       "kind": "GO", "gate_status": "GO", "project_type": "COST_DOWN",
       "before": { "project_id": "WGO-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "decision_question": "Can the cost-down route be verified?", "evidence_scope": "PHYSICAL", "evidence": ["E-C-301"] },

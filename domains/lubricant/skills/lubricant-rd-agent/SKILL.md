@@ -112,14 +112,14 @@ python skills/lubricant-rd-agent/scripts/route_step.py <input.json>
 | `PROCESS_ONLY` | 只动工艺（换釜/换批/放大），配方与 CTQ 不变 | **复用**原 gate 复核签批；`revision.reuses_review_of` = 被沿用复核的版本号（≤ 当前 version），revision 记录须注明"沿用第 N 版复核" |
 | `FORMULA_OR_CTQ` | 配方或 CTQ 变更 | **强制该段重新技术复核**；`revision.re_review` 须含 `technical_reviewer` 与 `reviewed_version`（= 新版本号），否则 `REVISE` 被拒 |
 
-示例（`PROCESS_ONLY`，沿用第 7 版复核）：
+示例（`PROCESS_ONLY`，沿用第 7 版复核；换釜/换批复现场景，段内迭代不移动 stage）：
 
 ```json
 {
   "kind": "REVISE", "gate_status": "GO",
-  "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "...", "PROCESS_WINDOW_DEFINED"],
-  "before": { "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 7, "...": "..." },
-  "after":  { "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE", "version": 8, "...": "..." },
+  "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "...", "MODEL_BUILT"],
+  "before": { "stage": "MODEL_BUILT", "status": "ACTIVE", "version": 7, "...": "..." },
+  "after":  { "stage": "MODEL_BUILT", "status": "ACTIVE", "version": 8, "...": "..." },
   "revision": { "reason": "换 2 号生产釜复现，配方未变", "operator": "R&D owner",
                 "impact": "PROCESS_ONLY", "reuses_review_of": 7, "revision_index": 1 }
 }

@@ -109,15 +109,34 @@ def main() -> int:
                 "evidence_scope": "PHYSICAL", "gate_status": "GO",
                 "evidence_gaps": [], "unsatisfied_conditions": [],
             },
-            "requested_stage": "PROCESS_WINDOW_DEFINED",
+            # OPTIMIZED -> VERIFIED: the process window is an on-demand stage now
+            # (no type_route declares it), so the routed step is the gate review.
+            "requested_stage": "VERIFIED",
         }), encoding="utf-8")
         deployed_router = target / "lubricant-rd-agent" / "scripts" / "route_step.py"
         routed = subprocess.run(
             [sys.executable, "-B", str(deployed_router), str(route_input)],
             cwd=deployed_router.parent, capture_output=True, text=True,
         )
-        assert routed.returncode == 0 and routed.stdout.startswith("ALLOW") and "process-scale-up" in routed.stdout, (routed.returncode, routed.stdout, routed.stderr)
+        assert routed.returncode == 0 and routed.stdout.startswith("ALLOW") and "gate-review" in routed.stdout, (routed.returncode, routed.stdout, routed.stderr)
         assert "Traceback" not in routed.stderr and "ImportError" not in routed.stderr, routed.stderr
+
+        # The on-demand hand-off must hold in the deployed copy too: the process
+        # window stays reachable although no type_route declares it.
+        on_demand_input = workspace / "route-input-on-demand.json"
+        on_demand_input.write_text(json.dumps({
+            "project_state": {
+                "project_id": "WGO-DOE-001", "stage": "PROCESS_WINDOW_DEFINED", "status": "ACTIVE",
+                "evidence_scope": "PHYSICAL", "gate_status": "GO",
+                "evidence_gaps": [], "unsatisfied_conditions": [],
+            },
+            "requested_stage": "VERIFIED",
+        }), encoding="utf-8")
+        on_demand = subprocess.run(
+            [sys.executable, "-B", str(deployed_router), str(on_demand_input)],
+            cwd=deployed_router.parent, capture_output=True, text=True,
+        )
+        assert on_demand.returncode == 0 and on_demand.stdout.startswith("ALLOW"), (on_demand.returncode, on_demand.stdout, on_demand.stderr)
 
         stale_target = Path(temporary) / "stale-workspace" / ".opencode" / "skills"
         stale_destination = stale_target / "project-definition"

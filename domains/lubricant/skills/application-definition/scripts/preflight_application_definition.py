@@ -22,6 +22,7 @@ from application_policy import (
     EVIDENCE_SCOPES,
     INPUT_FIELDS,
     OPERATORS,
+    REQUIRED_FIELDS,
     RESULTS,
     has_gap,
     has_text,
@@ -131,21 +132,23 @@ def evidence_errors(value: object) -> list[str]:
 
 
 def application_errors(value: object) -> list[str]:
-    if not isinstance(value, dict) or set(value) != INPUT_FIELDS:
+    # process_window_reference is permitted, never demanded (see
+    # application_policy.REQUIRED_FIELDS), so a blended-oil record — which has no
+    # fixed window to cite — stays constructible.
+    if not isinstance(value, dict) or not (set(REQUIRED_FIELDS) <= set(value) <= set(INPUT_FIELDS)):
         if isinstance(value, dict):
-            extra = sorted(set(value) - INPUT_FIELDS)
-            missing = sorted(INPUT_FIELDS - set(value))
+            extra = sorted(set(value) - set(INPUT_FIELDS))
+            missing = sorted(set(REQUIRED_FIELDS) - set(value))
             return [f"application must contain only the application-definition input fields; unexpected={extra or 'none'} missing={missing or 'none'}"]
         return ["application must contain only the application-definition input fields"]
     errors: list[str] = []
     for field in ("application_id", "project_reference", "formula_reference", "source", "evidence_id"):
         if not has_text(value.get(field)):
             errors.append(f"application.{field}")
+    # Optional window citation: validated when supplied, absent otherwise.
     window = value.get("process_window_reference")
-    if not has_text(window):
-        errors.append("application.process_window_reference")
-    elif not window.startswith(PROCESS_WINDOW_PREFIX):
-        errors.append(f"application.process_window_reference must be {PROCESS_WINDOW_PREFIX}<window_id>")
+    if window is not None and (not has_text(window) or not window.startswith(PROCESS_WINDOW_PREFIX)):
+        errors.append(f"application.process_window_reference must be {PROCESS_WINDOW_PREFIX}<window_id> when supplied")
     bench_references = value.get("bench_references")
     if not isinstance(bench_references, list) or not all(has_text(item) for item in bench_references):
         errors.append("application.bench_references must be an array of bench ids")

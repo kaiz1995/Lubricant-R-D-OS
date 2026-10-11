@@ -166,7 +166,7 @@ beforeEach(() => {
 });
 
 describe("AC-4 真实会话回放（核心验收）", () => {
-  it("38 个真实文件名应让步骤 1~7 为 completed、8 为 active、9~13 为 pending", async () => {
+  it("38 个真实文件名应让步骤 1~7 为 completed、8 为 active、9~12 为 pending", async () => {
     const snapshot = await probeWorkspace();
     const steps = deriveSteps("NEW_PRODUCT", snapshot);
 
@@ -177,7 +177,7 @@ describe("AC-4 真实会话回放（核心验收）", () => {
     const expected = [
       "completed", "completed", "completed", "completed", "completed", "completed", "completed",
       "active",
-      "pending", "pending", "pending", "pending", "pending",
+      "pending", "pending", "pending", "pending",
     ];
     expect(actual, `\n实际:\n${report.join("\n")}\n`).toEqual(expected);
 

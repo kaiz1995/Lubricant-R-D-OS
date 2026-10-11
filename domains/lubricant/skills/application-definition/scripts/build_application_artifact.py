@@ -37,7 +37,10 @@ def main() -> int:
         "evidence_id": application["evidence_id"],
         **expected_decision_fields(application),
         "evidence": application["evidence"],
-        **{field: application[field] for field in ARTIFACT_FIELDS},
+        # process_window_reference is passed through only when supplied: the
+        # window is an on-demand artifact (grease only), so a blended-oil record
+        # carries none.
+        **{field: application[field] for field in ARTIFACT_FIELDS if field in application},
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

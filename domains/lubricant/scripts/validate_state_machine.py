@@ -108,9 +108,17 @@ def advances_one_routed_step(event: dict, before: dict, after: dict) -> bool:
     so a GO step is legal only when it is adjacent *inside that route*. The global
     stage order (where the router's differentiated workflows skip stages) is only a
     fallback for state that declares no routed project_type.
+
+    On-demand stages (`on_demand_stages`) sit on no route at all. They are
+    callable capabilities rather than workflow steps, so their hand-off is the
+    `next_stage` published alongside them — checked first, because `before` is
+    by definition absent from every route in that case.
     """
     project_type = go_project_type(event, before)
     route = CONTRACT["type_routes"].get(project_type) if isinstance(project_type, str) else None
+    on_demand = CONTRACT.get("on_demand_stages", {})
+    if before["stage"] in on_demand:
+        return after["stage"] == on_demand[before["stage"]]["next_stage"]
     if route is None:
         stages = CONTRACT["stages"]
         return stages.index(after["stage"]) == stages.index(before["stage"]) + 1

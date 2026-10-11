@@ -12,7 +12,7 @@ Decide whether one **VERIFIED** project may enter Stage 13 `APPLIED` (应用与�
 Authority contract: the APPLIED entry rules in `scripts/application_validation_policy.py`, which import the PASS rule from `skills/application-definition/scripts/application_policy.py` (single source of truth; the pack installer deploys it beside this skill's scripts).
 
 Upstream output contract consumed here (produced by `application-definition`):
-- `application_id`, `project_reference`, `formula_reference`, `process_window_reference`, `bench_references`, `acceptance_criteria`, `result` (PASS / FAIL / INCONCLUSIVE / GAP), `counterexamples`, `life_claim_boundary`, plus `artifact_type = "application"`.
+- `application_id`, `project_reference`, `formula_reference`, `bench_references`, `acceptance_criteria`, `result` (PASS / FAIL / INCONCLUSIVE / GAP), `counterexamples`, `life_claim_boundary`, plus `artifact_type = "application"`. `process_window_reference` is optional (on-demand window artifact; grease only).
 
 ---
 

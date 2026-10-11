@@ -8,6 +8,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   GATE_STATUSES,
+  ON_DEMAND_STAGES,
   PROJECT_TYPES,
   STAGE_CHAIN,
   TYPE_ROUTES,
@@ -18,7 +19,7 @@ import {
 } from "./lubricantContracts";
 
 describe("lubricant 契约映射", () => {
-  it("13 步链的 chainIndex 连续且唯一", () => {
+  it("STAGE_CHAIN 的 chainIndex 连续且唯一", () => {
     expect(STAGE_CHAIN.map((c) => c.chainIndex)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
     ]);
@@ -36,7 +37,7 @@ describe("lubricant 契约映射", () => {
     expect(files).not.toContain("doe_design.json");
   });
 
-  it("每个 project_type 的路由都是 13 步链的子序列，首步为 PROJECT_DEFINED", () => {
+  it("每个 project_type 的路由都是 STAGE_CHAIN 的子序列，首步为 PROJECT_DEFINED", () => {
     const order = STAGE_CHAIN.map((c) => c.stage);
     for (const stages of Object.values(TYPE_ROUTES)) {
       expect(stages[0]).toBe("PROJECT_DEFINED");
@@ -50,16 +51,31 @@ describe("lubricant 契约映射", () => {
   });
 
   it("各类型步数符合领域包定义", () => {
-    expect(routeFor("NEW_PRODUCT")).toHaveLength(13);
-    expect(routeFor("IMPROVEMENT")).toHaveLength(11);
-    expect(routeFor("COST_DOWN")).toHaveLength(9);
+    expect(routeFor("NEW_PRODUCT")).toHaveLength(12);
+    expect(routeFor("IMPROVEMENT")).toHaveLength(10);
+    expect(routeFor("COST_DOWN")).toHaveLength(8);
     expect(routeFor("CUSTOMIZATION")).toHaveLength(8);
     expect(routeFor("EXPLORATION")).toHaveLength(7);
-    // 工艺稳健性开发：9 步，且不带 VERIFIED（PROCESS_WINDOW_DEFINED 直接到 APPLIED）。
-    expect(routeFor("PROCESS_ROBUSTNESS")).toHaveLength(9);
+    // 生产复现验证：8 步，配方不重新优化，且不带 VERIFIED（MODEL_BUILT 直接到 APPLIED）。
+    expect(routeFor("PROCESS_ROBUSTNESS")).toHaveLength(8);
     expect(routeFor("PROCESS_ROBUSTNESS").map((c) => c.stage)).not.toContain("VERIFIED");
-    expect(routeFor("UNKNOWN_TYPE")).toHaveLength(13);
-    expect(routeFor(null)).toHaveLength(13);
+    expect(routeFor("UNKNOWN_TYPE")).toHaveLength(12);
+    expect(routeFor(null)).toHaveLength(12);
+  });
+
+  it("按需阶段不出现在任何路由上（工艺窗口不进调和油主链）", () => {
+    const onDemand = Object.keys(ON_DEMAND_STAGES);
+    expect(onDemand).toContain("PROCESS_WINDOW_DEFINED");
+    for (const stages of Object.values(TYPE_ROUTES)) {
+      for (const stage of onDemand) {
+        expect(stages as readonly string[]).not.toContain(stage);
+      }
+    }
+    // 按需阶段的 skill 仍可解析，且后继由契约而非路由邻接给出。
+    expect(ON_DEMAND_STAGES.PROCESS_WINDOW_DEFINED).toEqual({
+      skill: "process-scale-up",
+      nextStage: "VERIFIED",
+    });
   });
 
   it("PROJECT_TYPES 覆盖全部 6 类，且拒绝非枚举值", () => {
@@ -200,6 +216,25 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     expect(Object.keys(routes).sort()).toEqual([...PROJECT_TYPES].sort());
     for (const [key, stages] of Object.entries(routes)) {
       expect(TYPE_ROUTES[key as keyof typeof TYPE_ROUTES], `TYPE_ROUTES[${key}]`).toEqual(stages);
+    }
+  });
+
+  it("ON_DEMAND_STAGES 与 state-machine.json 的 on_demand_stages 逐项一致", () => {
+    const contract = readJson<{
+      on_demand_stages: Record<string, { skill: string; next_stage: string }>;
+    }>("contracts/state-machine.json").on_demand_stages;
+    const mapped = Object.fromEntries(
+      Object.entries(ON_DEMAND_STAGES).map(([stage, spec]) => [
+        stage,
+        { skill: spec.skill, next_stage: spec.nextStage },
+      ]),
+    );
+    // The contract may carry extra documentation keys (applicable_to / note);
+    // this module mirrors the two that drive routing.
+    expect(Object.keys(mapped).sort()).toEqual(Object.keys(contract).sort());
+    for (const [stage, spec] of Object.entries(mapped)) {
+      expect(spec.skill, `${stage}.skill`).toBe(contract[stage].skill);
+      expect(spec.next_stage, `${stage}.next_stage`).toBe(contract[stage].next_stage);
     }
   });
 

@@ -40,7 +40,7 @@
       "minLength": 1
     },
     "process_window_reference": {
-      "description": "The fixed process window this application was demonstrated under, as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record.",
+      "description": "Optional. The fixed process window this application was demonstrated under, as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record. Optional because the window is an on-demand artifact: it only exists for products whose structure is set by the manufacturing process (grease), so a blended-oil application record legitimately carries none.",
       "type": "string",
       "pattern": "^PROCESS-WINDOW:"
     },
@@ -76,7 +76,6 @@
     "application_id",
     "project_reference",
     "formula_reference",
-    "process_window_reference",
     "acceptance_criteria",
     "result",
     "counterexamples",

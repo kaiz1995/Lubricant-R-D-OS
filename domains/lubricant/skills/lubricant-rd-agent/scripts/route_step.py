@@ -63,6 +63,26 @@ ROUTE_TABLE = (
 
 STAGES = tuple(stage for _, stage in ROUTE_TABLE)
 SKILL_FOR_STAGE = dict((stage, skill) for skill, stage in ROUTE_TABLE)
+
+# On-demand stages: materialisable by a skill, but on no type_route. The list
+# is published by the same contract (one list, two consumers) so the router and
+# the state machine cannot drift apart.
+#
+# Why PROCESS_WINDOW_DEFINED sits here: it fixes a *manufacturing* window whose
+# product structure is set by saponification / phase inversion / cooling /
+# milling — i.e. it is a first-class dimension for grease, and a second-order
+# variable for blended oils (a physical mixing operation that does not create
+# product structure). Routing it on every oil project forced a meaningless
+# artifact into the chain, in direct conflict with the pack's own
+# NO Invented Process Data red line. It stays callable on demand and still
+# hands off to VERIFIED when a project does produce it.
+ON_DEMAND_STAGES = CONTRACT["on_demand_stages"] if CONTRACT else {}
+ON_DEMAND_NEXT = dict((stage, spec["next_stage"]) for stage, spec in ON_DEMAND_STAGES.items())
+
+# The undifferentiated fallback chain, used only when state declares no routed
+# project_type. On-demand stages are excluded: they are never a step of a
+# workflow, so an unrouted project must not walk through them either.
+FALLBACK_STAGES = tuple(stage for stage in STAGES if stage not in ON_DEMAND_STAGES)
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 
@@ -109,16 +129,20 @@ def decide(project_state: object, requested_stage: str) -> dict:
             "reason": f"project_type {ptype!r} has no routed stage chain; publish type_routes[{ptype!r}] in contracts/state-machine.json before advancing",
             "skill": None,
         }
-    route = TYPE_ROUTES.get(ptype, STAGES) if isinstance(ptype, str) else STAGES
+    route = TYPE_ROUTES.get(ptype, FALLBACK_STAGES) if isinstance(ptype, str) else FALLBACK_STAGES
 
     if current == START_STAGE:
         target_stage = "PROJECT_DEFINED"
     elif current in route:
         idx = route.index(current)
         target_stage = route[idx + 1] if idx + 1 < len(route) else None
-    elif current in STAGES:
-        idx = STAGES.index(current)
-        target_stage = STAGES[idx + 1] if idx + 1 < len(STAGES) else None
+    elif current in ON_DEMAND_NEXT:
+        # An on-demand stage sits on no route, so its hand-off is the next_stage
+        # published in the contract rather than a route neighbour.
+        target_stage = ON_DEMAND_NEXT[current]
+    elif current in FALLBACK_STAGES:
+        idx = FALLBACK_STAGES.index(current)
+        target_stage = FALLBACK_STAGES[idx + 1] if idx + 1 < len(FALLBACK_STAGES) else None
     else:
         target_stage = None
 

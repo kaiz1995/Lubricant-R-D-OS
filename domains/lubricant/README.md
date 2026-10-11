@@ -371,12 +371,16 @@ Local-First 给的是**选择权**：
 
 | 研发性质 | 核心驱动逻辑 | 差异化阶段路径（stage 流转，括号内为步数） | 核心关注点与输入要求 |
 |---|---|---|---|
-| **1. 新产品正向开发**<br>(`NEW_PRODUCT`) | 需求与工况驱动 | `PROJECT_DEFINED → DUTY_DEFINED → CHALLENGES_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（13 步） | 完整 7 大工况、润滑挑战映射、失效机理深度分析、混料空间、多目标优化，直至工艺窗口放大与应用验证。 |
-| **2. 已有产品性能优化**<br>(`IMPROVEMENT`) | 现场失效与痛点驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（11 步） | **跳过全套工况重推**。聚焦现场真实失效证据，先验证评价方法灵敏度，再对瓶颈指标做定向配方改良。 |
-| **3. 降本替代**<br>(`COST_DOWN`) | 非劣效性驱动<br>(Non-inferiority) | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → OPTIMIZED → PROCESS_WINDOW_DEFINED → VERIFIED → APPLIED`（9 步） | **不推新工况**。基于成熟基线配方与成本结构，划定 CTQ 不劣化底线，优化替代材料属性安全域。 |
+| **1. 新产品正向开发**<br>(`NEW_PRODUCT`) | 需求与工况驱动 | `PROJECT_DEFINED → DUTY_DEFINED → CHALLENGES_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → VERIFIED → APPLIED`（12 步） | 完整 7 大工况、润滑挑战映射、失效机理深度分析、混料空间、多目标优化，直至门禁终审与应用验证。 |
+| **2. 已有产品性能优化**<br>(`IMPROVEMENT`) | 现场失效与痛点驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → OPTIMIZED → VERIFIED → APPLIED`（10 步） | **跳过全套工况重推**。聚焦现场真实失效证据，先验证评价方法灵敏度，再对瓶颈指标做定向配方改良。 |
+| **3. 降本替代**<br>(`COST_DOWN`) | 非劣效性驱动<br>(Non-inferiority) | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → OPTIMIZED → VERIFIED → APPLIED`（8 步） | **不推新工况**。基于成熟基线配方与成本结构，划定 CTQ 不劣化底线，优化替代材料属性安全域。 |
 | **4. 客户定制**<br>(`CUSTOMIZATION`) | 技术协议/OEM规范驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → VERIFIED → APPLIED`（8 步） | 以客户技术协议和指定认证台架为准绳，快速匹配成熟平台做微调验证。 |
 | **5. 机理/平台型探索**<br>(`EXPLORATION`) | 科学假设驱动 | `PROJECT_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → VERIFIED → APPLIED`（7 步） | **不考核商业 target_cost 和量产**。允许试错，重点提取变量影响规律与知识资产沉淀。 |
-| **6. 工艺稳健性**<br>(`PROCESS_ROBUSTNESS`) | 换釜/放大复现驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → PROCESS_WINDOW_DEFINED → APPLIED`（9 步） | 配方冻结后换生产釜/换批复现。以工艺窗口（process window）为核心产物，不做重新优化，验证放大稳健性。 |
+| **6. 生产复现验证**<br>(`PROCESS_ROBUSTNESS`) | 换釜/换批复现驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → APPLIED`（8 步） | 配方冻结后换生产釜/换批复现。**不做重新优化**，以实验与建模确认新批次/新产线复现原配方（段内迭代见 §9.5.1）。 |
+
+> **关于 `PROCESS_WINDOW_DEFINED`（工艺窗口固化）** —— 它**不在任何一条路线上**，属契约的 `on_demand_stages`，由 `process-scale-up` 按需产出。
+> 原因：该窗口固化的是**由工艺生成的产品结构**（润滑脂的皂化 / 转相 / 冷却速率 / 研磨决定皂纤维骨架，同配方换釜可出不同产品），对润滑脂是一等维度；而调和油是物理混合，不生成产品结构，工艺只是二阶变量。
+> 把工艺窗口排进每条油品链，会迫使研发员为走完流程填写一个无意义的工件 —— 与 §4 的 `NO Invented Process Data` 红线直接冲突。需要时仍可单独调用该技能，产出后经 `next_stage` 推进至 `VERIFIED`。
 
 > 段内迭代不移动 stage：已冻结配方的换釜复现走 `REVISE` 动作（同 stage 内 `version` 递增），见 §9.5.1。`FROZEN` / `CLOSED` 属于终态，不属于任何路由链。
 
@@ -411,7 +415,7 @@ Local-First 给的是**选择权**：
 │  [数据契约与状态机]                                                    │
 │  - Draft 2020-12 JSON Schemas (21 个研发工件标准契约)                  │
 │  - 阶段状态机 (contracts/state-machine.json: ALLOW/DENY/HOLD 门控,    │
-│    16 stages / 6 条 type_routes / REVISE 段内迭代)                     │
+│    16 stages / 6 条 type_routes / 1 个按需阶段 / REVISE 段内迭代)      │
 │                                                                        │
 │  [数据层与计算引擎 (Phase 4)]                                          │
 │  - SQLite 五表存储 (material / formula / test_method / experiment 等) │
@@ -439,12 +443,12 @@ Local-First 给的是**选择权**：
 | `failure-ctq-analysis` | `FAILURE_CTQ_DEFINED` | `FAILURE_CTQ_DEFINED` / `failure_ctq.json` | 梳理失效机制与关键质量特性（CTQ），建立挑战到性能的映射链；支持可选接口失效模式（`interface_failure_modes`）。 |
 | `test-method-qualification` | `TEST_METHODS_QUALIFIED` | `TEST_METHODS_QUALIFIED` / `test_method.json` | 评价方法资格确认，验证测试方法与真实工况的相关性及区分能力。 |
 | `formulation-design` | `DESIGN_SPACE_DEFINED` | `DESIGN_SPACE_DEFINED` / `design_space.json` | 建立基础油与添加剂混料设计空间，设定物理与化学约束边界。 |
-| `process-definition` | 工艺过程记录 | `process.json`（`process.schema.json`） | 定义工艺过程（单元操作/工艺参数）记录，是 `process-scale-up` 评估工艺窗口的前置输入。 |
+| `process-definition` | 工艺过程记录（**按需**） | `process.json`（`process.schema.json`） | 定义工艺过程（单元操作/工艺参数）记录，是 `process-scale-up` 评估工艺窗口的前置输入。**不在任何路线上**；只对"工艺生成产品结构"的品类（润滑脂的皂化/转相/研磨）有意义。 |
 | `doe-design` | `EXPERIMENT_DESIGNED` | `EXPERIMENT_DESIGNED` / `experiment_design.json` | 结构化生成混料实验设计（D-Optimal / Extreme Vertices）评估请求，可调用确定性 DOE 引擎。 |
 | `experiment-import` | `EXPERIMENT_RUNNING` | `EXPERIMENT_RUNNING` / `experiment.json` | 录入实验测试观测结果，强制校验测试批次与物理溯源凭证；实验证据类 `evidence_class`（DOE_POINT / APPLICATION_FIELD / CONFIRMATORY_NON_DOE）。 |
 | `statistical-analysis` | `MODEL_BUILT` | `MODEL_BUILT` / `model.json` | 拟合回归与响应面模型，提供残差检验与模型解释力报告，可调用确定性统计引擎。 |
 | `optimization` | `OPTIMIZED` | `OPTIMIZED` / `optimization.json` | 基于成本与 CTQ 模型执行多目标约束优化，给出候选配方推荐，可调用确定性优化引擎。 |
-| `process-scale-up` | `PROCESS_WINDOW_DEFINED` | `PROCESS_WINDOW_DEFINED` / 工艺窗口记录 | 基于工艺记录与优化结果划定工艺窗口；`design_freeze` 的 `MANUFACTURABILITY_ACCEPTABLE` 必须引用该窗口证据。 |
+| `process-scale-up` | `PROCESS_WINDOW_DEFINED`（**按需阶段**，不在任何 `type_route` 上） | `PROCESS_WINDOW_DEFINED` / 工艺窗口记录 | 基于工艺记录与优化结果划定工艺窗口；产出后按契约 `on_demand_stages` 的 `next_stage` 推进至 `VERIFIED`。调和油的工艺是二阶变量，故不进主链。 |
 | `gate-review` | `VERIFIED` | `VERIFIED` / `gate.json` | 汇总阶段证据链，执行正式审查决策（GO / HOLD / PIVOT / KILL / FREEZE），fail-closed；记录签批与异议（signoff / dissent，仅记录字段；FREEZE 前置 —— 技术复核人在场、无未决异议 —— 由 `validate_state_machine.py` 裁决）。 |
 | `application-validation` | `APPLIED` | `APPLIED` / `application.json` 复检 | 对 `application-definition` 构建的应用工件按验收准则做准入复检（PASS / FAIL / INCONCLUSIVE / GAP），给出寿命声明边界。 |
 | `application-definition` | 应用工件构建 | `application.json` | 构建应用验证工件：`application_id`、`acceptance_criteria`、`bench_references`、`life_claim_boundary` 等。 |
@@ -488,7 +492,7 @@ foreach ($s in $skills) { python scripts/install_domain_skill.py $s --target $ta
 |---|---|---|
 | 左 | Lubricant Science 原生 | 项目 / 会话 / 技能导航 |
 | 中 | Lubricant Science 原生 | 多模型对话流 + 工具调用 + 输入框 |
-| **右** | **本领域包** | **「研发阶段与门禁」：13 步工件链 + 整体进度 + 门禁决议** |
+| **右** | **本领域包** | **「研发阶段与门禁」：12 步工件链 + 整体进度 + 门禁决议** |
 
 **进入方式**：左侧边栏点「润滑研发 Copilot」，或访问 `/lubricant` 路由。
 
@@ -499,7 +503,7 @@ foreach ($s in $skills) { python scripts/install_domain_skill.py $s --target $ta
 | 工件存在且结构合规 | 该步标记「已完成」 |
 | 第一个缺失的工件 | 自动成为「进行中」 |
 | 结构不合规（如 `artifact_type` 写错） | 该步标红「不合规」并列出原因，**不点亮** |
-| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（13 / 11 / 9 / 8 / 7 / 9，对应 6 条 `type_routes`） |
+| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（12 / 10 / 8 / 8 / 7 / 8，对应 6 条 `type_routes`） |
 
 门禁卡片汇总上游证据链并逐条展示前置校验；存在阻塞项时**禁止签发 GO**（fail-closed），决议值域严格为 `GO / HOLD / PIVOT / KILL / FREEZE`。
 
@@ -564,20 +568,20 @@ python -B tests/test_release_preflight.py
 |---|---|---|
 | **标题栏** | 标题 + 刷新 + 收起 | 「重新扫描工件」手动触发一次工作区探测 |
 | **数据源条** | 当前数据来源 | 桌面版显示工作区路径与「距上次扫描多久」；浏览器显示「离线预览 · Mock 数据」 |
-| **研发开发类型** | 6 类研发性质切换 | 正向开发 / 性能优化 / 配方降本 / 客户定制 / 机理探索 / 工艺稳健（`PROCESS_ROBUSTNESS`），右上角标注该路线的**阶段数** |
+| **研发开发类型** | 6 类研发性质切换 | 正向开发 / 性能优化 / 配方降本 / 客户定制 / 机理探索 / 生产复现（`PROCESS_ROBUSTNESS`），右上角标注该路线的**阶段数** |
 | **当前工序状态** | 整体进度总览 | 进行中的工序名 + 完成度 `N/M (X%)` + 进度条 |
 | **门禁决议** | 证据链汇总与签发 | 前置校验逐条列出，满足条件才允许签发 GO |
 | **工件链步骤** | 逐步推进 | 每步显示状态徽章与工件名，展开可见阶段目标与考核标准 |
 
 <img src="./docs/assets/stage-pane.webp" alt="研发阶段与门禁面板实机界面" width="340">
 
-> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）、13 步工件链。图中为**浏览器离线预览态**（数据源条显示「离线预览 · Mock 数据」）；桌面版布局完全一致，仅数据源换成工作区真实工件。
+> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）、12 步工件链。图中为**浏览器离线预览态**（数据源条显示「离线预览 · Mock 数据」）；桌面版布局完全一致，仅数据源换成工作区真实工件。
 
-### 9.3 工件链：13 步与 6 条路线
+### 9.3 工件链：12 步与 6 条路线
 
 面板的核心是一条**工件链**。每一步的产出是一个结构化 JSON 工件，落盘在工作区；面板**读磁盘**判断该步状态，不依赖会话记忆。
 
-**完整 13 步链**（`NEW_PRODUCT` 新产品正向开发，与 `contracts/state-machine.json` 的 `type_routes.NEW_PRODUCT` 逐一对应）：
+**完整 12 步链**（`NEW_PRODUCT` 新产品正向开发，与 `contracts/state-machine.json` 的 `type_routes.NEW_PRODUCT` 逐一对应）：
 
 | # | 工序 | 技能 | 交付工件 |
 |---|---|---|---|
@@ -591,11 +595,12 @@ python -B tests/test_release_preflight.py
 | 8 | 调配与台架实测数据 | `experiment-import` | `experiment.json` |
 | 9 | 响应面建模与统计分析 | `statistical-analysis` | `model.json` |
 | 10 | 多目标配方优化 | `optimization` | `optimization.json` |
-| 11 | 工艺窗口放大 | `process-scale-up` | 工艺窗口记录（`process.json`） |
-| 12 | 门禁终审（VERIFIED） | `gate-review` | `gate.json` |
-| 13 | 应用验证（APPLIED） | `application-validation` | `application.json` |
+| 11 | 门禁终审（VERIFIED） | `gate-review` | `gate.json` |
+| 12 | 应用验证（APPLIED） | `application-validation` | `application.json` |
 
-其余五类研发性质按 §5 的裁剪规则取子集（与 `type_routes` 逐一对应）：`IMPROVEMENT` **11 步**（跳过工况与挑战两步）、`COST_DOWN` **9 步**、`CUSTOMIZATION` **8 步**（无建模与优化步）、`EXPLORATION` **7 步**、`PROCESS_ROBUSTNESS` **9 步**（配方不重新优化，以工艺窗口收尾）。
+> **不在链上的按需能力**：`process-definition` / `process-scale-up`（工艺记录与工艺窗口固化，工件 `process.json`）。它们由 `on_demand_stages` 发布，只对"工艺生成产品结构"的品类（润滑脂）成立，见 §5 说明。
+
+其余五类研发性质按 §5 的裁剪规则取子集（与 `type_routes` 逐一对应）：`IMPROVEMENT` **10 步**（跳过工况与挑战两步）、`COST_DOWN` **8 步**、`CUSTOMIZATION` **8 步**（无建模与优化步）、`EXPLORATION` **7 步**、`PROCESS_ROBUSTNESS` **8 步**（配方不重新优化，建模后直接进入应用验证）。
 
 **每一步的四种状态**：
 
@@ -635,7 +640,7 @@ python -B tests/test_release_preflight.py
 
 #### 9.5.1 段内 revision（`REVISE`）：冻结配方换釜复现的迭代通道
 
-`GO` 之外还有一类**不移动 stage**的转移：`REVISE`。它专门服务"配方已冻结、只换生产釜/换批做复现"的场景（`PROCESS_ROBUSTNESS` 路线与 §5.2 的 V2 问）。
+`GO` 之外还有一类**不移动 stage**的转移：`REVISE`。它专门服务"配方已冻结、只换生产釜/换批做复现"的场景（`PROCESS_ROBUSTNESS` 生产复现路线与 §5.2 的 V2 问）。
 
 - **为什么不走 `ROLLBACK`**：`ROLLBACK` 的前缀断言强制"历史 == `stages` 前缀"，每次复现都要整链回退再整链重走，`version` 与 gate 签批记录会无限膨胀（配方一个字不改，却每次重做整条 gate 链）。`REVISE` 把迭代**收敛在同一 stage 内**：`stage` 不变、`status` 保持 `ACTIVE`、`version` 递增、`accepted_stages` 前缀不变。
 - **签批按 `impact` 分级**（对齐 V3"这一版配方是谁复核、谁批准的"）：
@@ -689,10 +694,10 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
     │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
     ├── schemas/                     # 21 个工件 JSON Schema (Draft 2020-12)
     │   ├── common.schema.json       #   所有工件的公共契约（$defs: artifact / measurement / evidence_item.claim_class / signoff-dissent）
-    │   ├── project.schema.json      #   13 步链的核心工件契约
+    │   ├── project.schema.json      #   12 步主链的核心工件契约
     │   ├── duty / challenge / failure_ctq / test_method / design_space
     │   ├── experiment_design / experiment / model / optimization / gate
-    │   ├── process / bench / interface                  # 工艺窗口 / 台架 / 接口契约
+    │   ├── process / bench / interface                  # 按需工艺窗口 / 台架 / 接口契约
     │   ├── application / benchmark / evidence_qualification / design_freeze / knowledge_asset
     │   └── external_record                              # 外部协作记录（usage-rights 锚点）
     ├── skills/                      # 20 个技能目录（19 个可经 installer 部署）
@@ -702,12 +707,12 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
     │   ├── failure-ctq-analysis/    #   FAILURE_CTQ_DEFINED
     │   ├── test-method-qualification/
     │   ├── formulation-design/      #   DESIGN_SPACE_DEFINED
-    │   ├── process-definition/      #   工艺过程记录（process.json）
+    │   ├── process-definition/      #   工艺过程记录（按需，process.json）
     │   ├── doe-design/              #   EXPERIMENT_DESIGNED
     │   ├── experiment-import/
     │   ├── statistical-analysis/    #   MODEL_BUILT
     │   ├── optimization/
-    │   ├── process-scale-up/        #   PROCESS_WINDOW_DEFINED
+    │   ├── process-scale-up/        #   PROCESS_WINDOW_DEFINED（按需）
     │   ├── application-definition/  #   应用工件构建
     │   ├── application-validation/  #   APPLIED
     │   ├── bench-registration/      #   台架登记

@@ -17,7 +17,7 @@ Authoritative output contract, consumed downstream:
 ## 1. Prerequisites & Gating
 
 Before requesting application inputs:
-- A fixed process window SHOULD exist; the record cites it as `process_window_reference` in the form `PROCESS-WINDOW:<window_id>`. If it is not fixed yet, record the application criterion as `GAP` — never invent a window.
+- **Optional window citation.** If the project has a fixed process window (grease, or any project that explicitly ran `process-scale-up`), cite it as `process_window_reference` in the form `PROCESS-WINDOW:<window_id>`. A blended oil has no such window — **omit the field**. Never invent one; if a window is expected but missing, leave the affected criterion with `status: "GAP"` rather than fabricating a reference.
 - **External blocker (application-判据 thresholds have no owner yet)**: this is handled by design, not by guessing. Leave the criterion with no threshold and `status: "GAP"`, and set `result` to `GAP` / `INCONCLUSIVE`. A fabricated PASS is the one thing this skill must never produce.
 - Provenance is required: `source` and `evidence_id` must be present. Unknown values are recorded as `ASSUMED` with an explicit source, never defaulted.
 
@@ -53,7 +53,8 @@ Input is a single JSON object containing only `application`:
 ```
 
 ### Field Invariants (contract in)
-- Identity: `application_id`, `project_reference`, `formula_reference` are required non-empty strings; `process_window_reference` must start with `PROCESS-WINDOW:`.
+- Identity: `application_id`, `project_reference`, `formula_reference` are required non-empty strings.
+- `process_window_reference` is **optional**: when supplied it must start with `PROCESS-WINDOW:`. The window it cites is an on-demand artifact produced by `process-scale-up` — it exists only for products whose structure is set by the manufacturing process (grease), so a blended-oil record legitimately carries none.
 - `bench_references`: array of bench ids (may be empty; WP-06 uses it for APPLIED evidence aggregation).
 - `acceptance_criteria`: array, **may be empty**. Each criterion requires `criterion_id`, `statement`, `status`. If `threshold` is absent, `status` MUST be `GAP`; if `threshold` is present it must be a number and carry `operator` (`<`, `<=`, `==`, `>=`, `>`) plus `unit`, `source`, `evidence_id`, with `status` `OBSERVED` or `ASSUMED`.
 - `result`: one of `PASS` / `FAIL` / `INCONCLUSIVE` / `GAP`. **If `acceptance_criteria` is empty, `result` MUST be `GAP`.**
@@ -115,7 +116,7 @@ Atomically copy/move `<temporary-file.json>` to the target artifact path only wh
 | `HOLD: ... life_claim_boundary must be OBSERVED with at least one validated condition to claim PASS` | `life_claim_boundary` 为空却宣称 PASS | **STOP**。补齐已验证边界条件，或把 verdict 降为非 PASS。 |
 | `HOLD: ... counterexamples must be empty to claim PASS` | 存在反例却宣称 PASS | **STOP**。verdict 改为 `FAIL`/`INCONCLUSIVE`。 |
 | `HOLD: ... application.result must be GAP when acceptance_criteria is empty` | 判据为空且 verdict 非 GAP | **STOP**。空判据只能配 `result: "GAP"`。 |
-| `HOLD: ... application.process_window_reference must be PROCESS-WINDOW:<window_id>` | 未引用已冻结工艺窗口 | **STOP**。引用固定窗口，或将该判据标 GAP，不得编造窗口。 |
+| `HOLD: ... application.process_window_reference must be PROCESS-WINDOW:<window_id> when supplied` | 提供了工艺窗口引用但格式不对 | **STOP**。按 `PROCESS-WINDOW:<window_id>` 引用；项目无固定窗口（调和油）时**整个字段省略**，不得编造窗口。 |
 | `HOLD: ... application.evidence contains GAP; a PASS verdict is not allowed` | 证据缺口却宣称 PASS | **STOP**。先解缺口，保持非 PASS。 |
 | `FAIL: cannot read artifact or schemas` | Schema 路径缺失或 JSON 语法损坏 | 检查 `../../schemas/` 与输入文件 JSON 格式。 |
 

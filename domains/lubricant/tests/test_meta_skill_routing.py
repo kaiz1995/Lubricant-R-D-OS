@@ -124,7 +124,8 @@ def main() -> int:
     contract = json.loads((ROOT / "contracts" / "state-machine.json").read_text(encoding="utf-8"))
     assert router.CONTRACT is not None, router.CONTRACT_ERRORS
     assert router.TYPE_ROUTES == contract["type_routes"], router.TYPE_ROUTES
-    assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.STAGES), router.STAGES
+    assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.FALLBACK_STAGES), router.FALLBACK_STAGES
+    assert router.ON_DEMAND_NEXT == {"PROCESS_WINDOW_DEFINED": "VERIFIED"}, router.ON_DEMAND_NEXT
     assert tuple(router.KNOWN_STAGES) == tuple(contract["stages"]), router.KNOWN_STAGES
     assert len(router.KNOWN_STAGES) == 16, router.KNOWN_STAGES
     assert router.STAGES == ROUTE_TABLE_REF, router.STAGES
@@ -132,13 +133,19 @@ def main() -> int:
     assert router.SKILL_FOR_STAGE["APPLIED"] == "application-validation", router.SKILL_FOR_STAGE
     assert router.NEXT_STAGE["OPTIMIZED"] == "PROCESS_WINDOW_DEFINED", router.NEXT_STAGE
 
-    # 12. OPTIMIZED now advances to PROCESS_WINDOW_DEFINED, then VERIFIED, then
-    #     APPLIED (WP-06: gate-review judges VERIFIED, application-validation
-    #     judges APPLIED; FROZEN is not a routed stage).
+    # 12. The main chain runs OPTIMIZED -> VERIFIED -> APPLIED. The process
+    #     window is NOT a step of it: PROCESS_WINDOW_DEFINED is on demand
+    #     (`on_demand_stages`), reachable only by calling process-scale-up
+    #     directly, and its sole published hand-off is VERIFIED.
+    result = router.decide(physical_state("OPTIMIZED"), "VERIFIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "gate-review", result
     result = router.decide(physical_state("OPTIMIZED"), "PROCESS_WINDOW_DEFINED")
-    assert result["decision"] == "ALLOW" and result["skill"] == "process-scale-up", result
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+    # An on-demand stage still hands off — but only to its published next_stage.
     result = router.decide(physical_state("PROCESS_WINDOW_DEFINED"), "VERIFIED")
     assert result["decision"] == "ALLOW" and result["skill"] == "gate-review", result
+    result = router.decide(physical_state("PROCESS_WINDOW_DEFINED"), "APPLIED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
     result = router.decide(physical_state("VERIFIED"), "APPLIED")
     assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
 
@@ -149,26 +156,29 @@ def main() -> int:
     result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="NEW_PRODUCT"), "OPTIMIZED")
     assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
 
-    # 14. A project type whose chain has no process-window stage cannot be handed it.
+    # 14. No route contains the on-demand process-window stage, so requesting it
+    #     as a workflow step is denied on every project type.
     result = router.decide(physical_state("EXPERIMENT_RUNNING", project_type="CUSTOMIZATION"), "PROCESS_WINDOW_DEFINED")
     assert result["decision"] == "DENY" and "VERIFIED" in result["reason"], result
 
-    # 15. WP-03 sixth route: PROCESS_ROBUSTNESS is published by the contract and
-    #     reaches PROCESS_WINDOW_DEFINED straight off MODEL_BUILT (no OPTIMIZED).
-    #     WP-06 added APPLIED to the stage universe, so the route's final edge
-    #     PROCESS_WINDOW_DEFINED -> APPLIED is now a legal routed step.
+    # 15. WP-03 sixth route: PROCESS_ROBUSTNESS is published by the contract.
+    #     Production-reproduction work re-runs design and modelling after a
+    #     kettle/batch swap and closes on application validation — no OPTIMIZED
+    #     (the formula is not re-optimised) and no process-window step.
     assert len(router.TYPE_ROUTES) == 6, router.TYPE_ROUTES
     assert tuple(router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]) == PROCESS_ROBUSTNESS_REF, router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]
     assert tuple(router.TYPE_ROUTES) == ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"), tuple(router.TYPE_ROUTES)
-    result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "PROCESS_WINDOW_DEFINED")
-    assert result["decision"] == "ALLOW" and result["skill"] == "process-scale-up", result
-    # The skip is route-local: the same MODEL_BUILT -> VERIFIED jump is DENIED.
+    result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "APPLIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
+    # The skip is route-local: MODEL_BUILT cannot jump straight to VERIFIED here.
     result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "VERIFIED")
     assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
     # WP-06 flipped the WP-03 placeholder: APPLIED is a known routed stage now.
     assert "APPLIED" in router.KNOWN_STAGES, router.KNOWN_STAGES
-    result = router.decide(physical_state("PROCESS_WINDOW_DEFINED", project_type="PROCESS_ROBUSTNESS"), "APPLIED")
-    assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
+    # On-demand hand-off is stage-driven, not route-driven: even inside a route
+    # that never declares it, PROCESS_WINDOW_DEFINED still offers VERIFIED.
+    result = router.decide(physical_state("PROCESS_WINDOW_DEFINED", project_type="PROCESS_ROBUSTNESS"), "VERIFIED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "gate-review", result
 
     # 16. `--list-stages <TYPE>` prints the contract sequence verbatim for every
     #     project type and fails closed on an unknown type.
@@ -183,7 +193,7 @@ def main() -> int:
     return 0
 
 
-PROCESS_ROBUSTNESS_REF = ("PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "PROCESS_WINDOW_DEFINED", "APPLIED")
+PROCESS_ROBUSTNESS_REF = ("PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "APPLIED")
 
 
 ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED")

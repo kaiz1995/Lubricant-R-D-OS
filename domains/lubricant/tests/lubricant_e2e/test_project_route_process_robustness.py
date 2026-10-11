@@ -1,21 +1,25 @@
 """End-to-end checks for the WP-03 sixth project route (PROCESS_ROBUSTNESS).
 
-Two-step acceptance (plan §WP-03):
-  Step 1 (this package):
-    (a) route_step ALLOWs the route-adjacent MODEL_BUILT -> PROCESS_WINDOW_DEFINED.
-    (b) validate_state_machine ALLOWs the *same* before/after GO event (the real
-        decision point; route_step alone would be a false green).
-    (c) `--list-stages PROCESS_ROBUSTNESS` prints the 9 planned stages, item by item.
-    (d) The illegal MODEL_BUILT -> VERIFIED jump is DENIED by route_step AND
-        rejected by validate_state_machine.
-  Step 2 (WP-06, formalised here): PROCESS_WINDOW_DEFINED -> APPLIED is a legal
-    routed GO step (route_step AND validate_state_machine), APPLIED -> FROZEN is
-    the only FREEZE entry, and the WP-03 placeholder assertions (APPLIED was
-    deterministically rejected as an unknown stage) are flipped accordingly.
+Production-reproduction work (kettle / batch swap on a frozen formula) re-runs
+design and modelling and closes on application validation. It is **no longer a
+process-window route**: PROCESS_WINDOW_DEFINED left every type_route and is now
+published as an on-demand stage (contract ``on_demand_stages``), because the
+window it fixes only exists for products whose structure is set by the
+manufacturing process — grease (saponification / phase inversion / cooling /
+milling). A blended oil is physically mixed: its process is a second-order
+variable, so routing a process-window step on every oil project forced a
+meaningless artifact into the chain.
 
-The route's final stage APPLIED was deliberately published before WP-06 adds it to
-the stage universe (plan: two-step design). The step-2 assertions below prove
-the joined state: the APPLIED edge is legal, and no other branch breaks.
+Acceptance:
+  (a) route_step ALLOWs the route-adjacent MODEL_BUILT -> APPLIED.
+  (b) validate_state_machine ALLOWs the *same* before/after GO event (the real
+      decision point; route_step alone would be a false green).
+  (c) `--list-stages PROCESS_ROBUSTNESS` prints the 8 published stages, item by item.
+  (d) The illegal MODEL_BUILT -> VERIFIED jump is DENIED by route_step AND
+      rejected by validate_state_machine.
+  (e) The on-demand stage still hands off — PROCESS_WINDOW_DEFINED -> VERIFIED
+      passes BOTH consumers, no route contains the stage, and the hand-off is
+      not a free pass (off-target successors are rejected).
 """
 
 from __future__ import annotations
@@ -34,7 +38,8 @@ VALIDATE_SCRIPT = ROOT / "scripts/validate_state_machine.py"
 CONTRACT_PATH = ROOT / "contracts" / "state-machine.json"
 
 PROJECT_TYPE = "PROCESS_ROBUSTNESS"
-# The exact 9-stage sequence from plan §WP-03 (verbatim, in order).
+# The exact 8-stage sequence published by the contract (verbatim, in order):
+# no OPTIMIZED (the formula is not re-optimised) and no process-window step.
 EXPECTED_ROUTE = (
     "PROJECT_DEFINED",
     "FAILURE_CTQ_DEFINED",
@@ -43,10 +48,13 @@ EXPECTED_ROUTE = (
     "EXPERIMENT_DESIGNED",
     "EXPERIMENT_RUNNING",
     "MODEL_BUILT",
-    "PROCESS_WINDOW_DEFINED",
     "APPLIED",
 )
 PRE_EXISTING_TYPES = ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION")
+
+# On-demand stage: materialisable by process-scale-up, on no route.
+ON_DEMAND_STAGE = "PROCESS_WINDOW_DEFINED"
+ON_DEMAND_NEXT = "VERIFIED"
 
 
 def read_json(path: Path) -> dict:
@@ -82,7 +90,7 @@ def state(stage: str, **overrides) -> dict:
         "stage": stage,
         "status": "ACTIVE",
         "version": 3,
-        "decision_question": "Is the manufacturing process window fixed for the fixed formula?",
+        "decision_question": "Does the reproduction batch reproduce the frozen formula?",
         "evidence": ["E-PR-001"],
         "evidence_scope": "PHYSICAL",
     }
@@ -106,16 +114,22 @@ def main() -> int:
     validator = load_validator()
     contract = read_json(CONTRACT_PATH)
 
-    # 0. The published route is the planned 9-stage sequence and WP-06 has added
-    #    APPLIED to the stage universe (between VERIFIED and FROZEN).
+    # 0. The published route is the 8-stage production-reproduction sequence and
+    #    WP-06 has added APPLIED to the stage universe (between VERIFIED and FROZEN).
     assert tuple(contract["type_routes"][PROJECT_TYPE]) == EXPECTED_ROUTE, contract["type_routes"][PROJECT_TYPE]
     assert len(contract["type_routes"]) == 6, sorted(contract["type_routes"])
     assert "APPLIED" in contract["stages"], contract["stages"]
     assert contract["stages"].index("APPLIED") == contract["stages"].index("VERIFIED") + 1, contract["stages"]
     assert contract["stages"].index("FROZEN") == contract["stages"].index("APPLIED") + 1, contract["stages"]
-    assert "PROCESS_WINDOW_DEFINED" in contract["stages"], contract["stages"]
+    # The on-demand stage is still known to the state machine — it is simply off
+    # every route, and its successor is published rather than implied.
+    assert ON_DEMAND_STAGE in contract["stages"], contract["stages"]
+    assert ON_DEMAND_STAGE in contract["on_demand_stages"], contract["on_demand_stages"]
+    assert contract["on_demand_stages"][ON_DEMAND_STAGE]["next_stage"] == ON_DEMAND_NEXT, contract["on_demand_stages"]
+    for published in contract["type_routes"].values():
+        assert ON_DEMAND_STAGE not in published, published
 
-    # (a) route_step: the plan's exact probe, MODEL_BUILT -> PROCESS_WINDOW_DEFINED.
+    # (a) route_step: the route-adjacent step is MODEL_BUILT -> APPLIED.
     probe = {
         "project_state": {
             "stage": "MODEL_BUILT",
@@ -123,15 +137,16 @@ def main() -> int:
             "evidence_scope": "PHYSICAL",
             "project_type": PROJECT_TYPE,
         },
-        "requested_stage": "PROCESS_WINDOW_DEFINED",
+        "requested_stage": "APPLIED",
     }
     result = run_route_json(probe)
     assert result.returncode == 0, f"{result.stdout}{result.stderr}"
-    assert result.stdout.startswith("ALLOW:") and "process-scale-up" in result.stdout, result.stdout
+    assert result.stdout.startswith("ALLOW:") and "application-validation" in result.stdout, result.stdout
 
-    # (b) validate_state_machine: the SAME legal step must also pass here — route_step
-    #     only recommends a next step; the state machine is the real decision point.
-    assert validator.validate(go_event("MODEL_BUILT", "PROCESS_WINDOW_DEFINED")) is None, "validate rejected the legal PROCESS_ROBUSTNESS step"
+    # (b) validate_state_machine: the SAME legal step must also pass here —
+    #     route_step only recommends a next step; the state machine is the real
+    #     decision point.
+    assert validator.validate(go_event("MODEL_BUILT", "APPLIED")) is None, "validate rejected the legal PROCESS_ROBUSTNESS step"
 
     # (d) The illegal cross-stage jump is rejected by BOTH consumers.
     illegal = run_route_json({**probe, "requested_stage": "VERIFIED"})
@@ -139,14 +154,14 @@ def main() -> int:
     reason = validator.validate(go_event("MODEL_BUILT", "VERIFIED"))
     assert reason == "GO must advance exactly one stage", reason
 
-    # The route-local skip is what makes (b) legal: global order also has
-    # MODEL_BUILT -> OPTIMIZED -> PROCESS_WINDOW_DEFINED, but the PROCESS_ROBUSTNESS
-    # chain does not contain OPTIMIZED, so the parser must follow the route.
+    # The route-local skip is what makes (b) legal: the global order has
+    # MODEL_BUILT -> OPTIMIZED in between, but the PROCESS_ROBUSTNESS chain does
+    # not contain OPTIMIZED, so the parser must follow the route.
     assert "OPTIMIZED" not in EXPECTED_ROUTE
 
-    # A PROJECT_ROBUSTNESS event without the declaration falls back to the global
+    # A PROCESS_ROBUSTNESS event without the declaration falls back to the global
     # order and can no longer take the skip (fail closed, no implicit routing).
-    undeclared = go_event("MODEL_BUILT", "PROCESS_WINDOW_DEFINED")
+    undeclared = go_event("MODEL_BUILT", "APPLIED")
     undeclared.pop("project_type")
     assert validator.validate(undeclared) == "GO must advance exactly one stage"
 
@@ -165,8 +180,35 @@ def main() -> int:
     unknown = run_route("--list-stages", "NOT_A_TYPE")
     assert unknown.returncode == 1 and "no routed stage chain" in unknown.stdout, unknown.stdout
 
+    # (e) On-demand hand-off. A grease project (or any project that explicitly
+    #     calls process-scale-up) may still fix a window. The stage sits on no
+    #     route, so route_step resolves its successor from the contract's
+    #     published next_stage — and validate_state_machine agrees.
+    on_demand_probe = {
+        "project_state": {
+            "stage": ON_DEMAND_STAGE,
+            "status": "ACTIVE",
+            "evidence_scope": "PHYSICAL",
+            "project_type": PROJECT_TYPE,
+        },
+        "requested_stage": ON_DEMAND_NEXT,
+    }
+    on_demand = run_route_json(on_demand_probe)
+    assert on_demand.returncode == 0, f"{on_demand.stdout}{on_demand.stderr}"
+    assert on_demand.stdout.startswith("ALLOW:") and "gate-review" in on_demand.stdout, on_demand.stdout
+    assert validator.validate(go_event(ON_DEMAND_STAGE, ON_DEMAND_NEXT)) is None, "validate rejected the on-demand hand-off"
+
+    # The hand-off is not a free pass: only the published next_stage is legal.
+    off_target = run_route_json({**on_demand_probe, "requested_stage": "APPLIED"})
+    assert off_target.returncode == 1 and off_target.stdout.startswith("DENY:"), off_target.stdout
+    assert validator.validate(go_event(ON_DEMAND_STAGE, "APPLIED")) == "GO must advance exactly one stage"
+
+    # And it cannot be adopted as a workflow step on a route.
+    adopted = run_route_json({**probe, "requested_stage": ON_DEMAND_STAGE})
+    assert adopted.returncode == 1 and adopted.stdout.startswith("DENY:"), adopted.stdout
+
     # HOLD / ROLLBACK / FREEZE branches accept a PROCESS_ROBUSTNESS declaration
-    # without raising (the missing APPLIED stage must not break unrelated actions).
+    # without raising.
     hold = {
         "kind": "HOLD",
         "gate_status": "HOLD",
@@ -181,10 +223,10 @@ def main() -> int:
         "kind": "ROLLBACK",
         "gate_status": "HOLD",
         "project_type": PROJECT_TYPE,
-        "before": state("PROCESS_WINDOW_DEFINED", version=4),
+        "before": state("APPLIED", version=4),
         "after": state("MODEL_BUILT", status="HOLD", version=5),
         "accepted_stages": stages[: stages.index("MODEL_BUILT") + 1],
-        "revision": {"reason": "window not reproducible", "operator": "owner", "impact": "re-fit window"},
+        "revision": {"reason": "reproduction batch diverged", "operator": "owner", "impact": "re-fit model"},
     }
     assert validator.validate(rollback) is None, validator.validate(rollback)
 
@@ -210,14 +252,7 @@ def main() -> int:
     }
     assert validator.validate(skipped_freeze) == "FREEZE requires APPLIED to FROZEN", validator.validate(skipped_freeze)
 
-    # Step 2 (WP-06): the APPLIED edge is now a legal routed GO step for BOTH
-    # consumers, flipping the WP-03 placeholder ("unknown stage" rejection).
-    applied_route = run_route_json({**probe, "project_state": {**probe["project_state"], "stage": "PROCESS_WINDOW_DEFINED"}, "requested_stage": "APPLIED"})
-    assert applied_route.returncode == 0 and applied_route.stdout.startswith("ALLOW:") and "application-validation" in applied_route.stdout, applied_route.stdout
-    applied_reason = validator.validate(go_event("PROCESS_WINDOW_DEFINED", "APPLIED"))
-    assert applied_reason is None, applied_reason
-
-    print("PASS: PROCESS_ROBUSTNESS route reachable and validated (route_step + validate_state_machine)")
+    print("PASS: PROCESS_ROBUSTNESS production-reproduction route validated (route_step + validate_state_machine), on-demand process window off every route")
     return 0
 
 

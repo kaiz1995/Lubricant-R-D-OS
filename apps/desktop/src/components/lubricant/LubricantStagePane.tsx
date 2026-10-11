@@ -54,7 +54,7 @@ const TYPE_META: Record<ProjectType, { label: string; shortLabel: string }> = {
   COST_DOWN: { label: "降本替代", shortLabel: "配方降本" },
   CUSTOMIZATION: { label: "客户定制", shortLabel: "客户定制" },
   EXPLORATION: { label: "机理 / 平台型探索", shortLabel: "机理探索" },
-  PROCESS_ROBUSTNESS: { label: "工艺稳健性开发", shortLabel: "工艺稳健" },
+  PROCESS_ROBUSTNESS: { label: "生产复现验证", shortLabel: "生产复现" },
 };
 
 const GATE_TONE: Record<GateStatus, string> = {

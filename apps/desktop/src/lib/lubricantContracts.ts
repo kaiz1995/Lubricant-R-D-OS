@@ -2,7 +2,8 @@
  * 润滑材料研发领域包权威契约映射 —— 唯一真源：domains/lubricant（领域包）。
  *
  * 派生自：
- *   - contracts/state-machine.json 的 stages / type_routes（16 段、6 类路由）
+ *   - contracts/state-machine.json 的 stages / type_routes / on_demand_stages
+ *     （16 段、6 类路由 + 1 个按需阶段）
  *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE（skill → stage 顺序）
  *   - schemas/<artifact_type>.schema.json 的 artifact_type const 与 required
  *   - fixtures/valid/*.json 的文件名
@@ -18,7 +19,7 @@ export type ProjectType =
   | "EXPLORATION"
   | "PROCESS_ROBUSTNESS";
 
-/** state-machine.json 中 13 步链所覆盖的 stage 子集。 */
+/** STAGE_CHAIN 覆盖的 stage 子集（含不在任何路由上的按需阶段）。 */
 export type ChainStage =
   | "PROJECT_DEFINED"
   | "DUTY_DEFINED"
@@ -36,7 +37,7 @@ export type ChainStage =
 
 /** 契约绑定部分：与领域包一一对应，不得随意改动。 */
 export interface StageContract {
-  /** 13 步链中的固定序号，1-based。 */
+  /** STAGE_CHAIN 中的固定序号，1-based（含按需阶段）。 */
   readonly chainIndex: number;
   /** 领域包技能目录名，用于提示词路由。 */
   readonly skill: string;
@@ -193,13 +194,16 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
+    // 按需阶段：可被本技能产出，但不在任何 type_route 上（见 ON_DEMAND_STAGES）。
+    // 它留在 STAGE_CHAIN 里，好让探测与契约表仍能解析产出的 process.json；
+    // routeFor() 永远不会输出它。
     chainIndex: 11,
     skill: "process-scale-up",
     stage: "PROCESS_WINDOW_DEFINED",
     artifactType: "process",
     file: "process.json",
-    titleZh: "工艺窗口与放大",
-    description: "在 OPTIMIZED 结论之上放大批次规模，固化唯一工艺窗口；窗口是定论而非范围。",
+    titleZh: "工艺窗口与放大（按需）",
+    description: "按需能力：工艺生成产品结构的品类（润滑脂的皂化/转相/研磨）用它固化唯一工艺窗口。不在任何研发路线上 —— 调和油的工艺是二阶变量。",
     criteria: [
       "工艺窗口 evidence_reference 已挂（PROCESS-WINDOW:<window_id> 且 process_window.validated=true）",
       "amplification_factor 有来源，且严格大于上游工艺记录",
@@ -242,23 +246,29 @@ const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
   STAGE_CHAIN.map((c) => [c.stage, c] as const),
 );
 
-/** 镜像 state-machine.json 的 type_routes（6 类）。 */
+/**
+ * 镜像 state-machine.json 的 type_routes（6 类）。
+ *
+ * 注意：PROCESS_WINDOW_DEFINED **不在任何一条路由上** —— 它是 on-demand
+ * 阶段（见 ON_DEMAND_STAGES）。工艺窗口固化对润滑脂是一等维度（皂化 / 转相 /
+ * 冷却速率决定皂纤维骨架，同配方换釜可出不同产品），对调和油只是二阶变量
+ * （物理混合，不生成产品结构）。把它排进每条油品链会迫使研发员为走完流程
+ * 填写一个无意义的工件 —— 与本领域包 NO Invented Process Data 红线直接冲突。
+ */
 export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
   NEW_PRODUCT: [
     "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED",
     "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED",
-    "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED",
-    "VERIFIED", "APPLIED",
+    "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED", "APPLIED",
   ],
   IMPROVEMENT: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
-    "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED",
+    "MODEL_BUILT", "OPTIMIZED", "VERIFIED", "APPLIED",
   ],
   COST_DOWN: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "DESIGN_SPACE_DEFINED",
-    "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED",
-    "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED",
+    "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "OPTIMIZED", "VERIFIED", "APPLIED",
   ],
   CUSTOMIZATION: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
@@ -271,8 +281,16 @@ export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
   PROCESS_ROBUSTNESS: [
     "PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED",
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
-    "MODEL_BUILT", "PROCESS_WINDOW_DEFINED", "APPLIED",
+    "MODEL_BUILT", "APPLIED",
   ],
+};
+
+/**
+ * 镜像 state-machine.json 的 `on_demand_stages`：可由技能产出、但不在任何
+ * 路由上的阶段。后继由契约的 next_stage 决定，不由路由邻接决定。
+ */
+export const ON_DEMAND_STAGES: Record<string, { readonly skill: string; readonly nextStage: ChainStage }> = {
+  PROCESS_WINDOW_DEFINED: { skill: "process-scale-up", nextStage: "VERIFIED" },
 };
 
 export const PROJECT_TYPES = Object.keys(TYPE_ROUTES) as ProjectType[];
@@ -342,8 +360,10 @@ const OWN_REQUIRED: Record<string, readonly string[]> = {
   process: ["artifact_type", "process_id", "project_reference", "process_step", "batch_scale",
     "amplification_factor", "process_window", "control_points", "cpk", "material_batch_reference",
     "factor_role"],
+  // process_window_reference 刻意不列入：工艺窗口是按需工件（仅润滑脂），
+  // 调和油的 application 记录天然没有窗口可引用。schema 保留该键为可选。
   application: ["artifact_type", "application_id", "project_reference", "formula_reference",
-    "process_window_reference", "acceptance_criteria", "result", "counterexamples",
+    "acceptance_criteria", "result", "counterexamples",
     "life_claim_boundary", "source", "evidence_id", "evidence_scope"],
 };
 

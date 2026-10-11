@@ -27,7 +27,7 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "description": "MANUFACTURABILITY_ACCEPTABLE must cite the fixed process-window artifact as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record.",
+            "description": "MANUFACTURABILITY_ACCEPTABLE cites the fixed process-window artifact as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record, WHEN the product has one — i.e. when its structure is set by the manufacturing process (grease). A blended oil has no such window: it establishes manufacturability through the qualified blending process instead, so the citation is not required for it.",
             "properties": {
               "condition_id": {
                 "enum": [

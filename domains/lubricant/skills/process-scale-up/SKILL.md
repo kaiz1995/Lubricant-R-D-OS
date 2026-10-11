@@ -1,6 +1,6 @@
 ---
 name: process-scale-up
-description: Fix the grease manufacturing process window at the amplified batch scale after the OPTIMIZED conclusion and emit a PROCESS_WINDOW_DEFINED process artifact carrying the 工艺窗口 evidence. Use when user mentions "process-scale-up", "工艺窗口", "放大", "scale-up", "PROCESS_WINDOW_DEFINED", "工艺窗口固化", "manufacturability", or the stage between OPTIMIZED and VERIFIED.
+description: Fix the grease manufacturing process window at the amplified batch scale and emit a PROCESS_WINDOW_DEFINED process artifact carrying the 工艺窗口 evidence. ON-DEMAND capability — it sits on no project-type route, because the window only exists for products whose structure is set by the manufacturing process (grease: saponification / phase inversion / milling); a blended oil is physically mixed and has none. Call it directly for grease projects, or when a customer explicitly demands a scale-up record; its published hand-off is VERIFIED. Use when user mentions "process-scale-up", "工艺窗口", "放大", "scale-up", "PROCESS_WINDOW_DEFINED", "工艺窗口固化", "manufacturability", "换釜复现".
 ---
 
 # Process Scale-Up (工艺窗口固化)
@@ -9,7 +9,7 @@ Fix one manufacturing window from two upstream conclusions: the evidence-bound p
 
 The window is a **fixed** conclusion, not a range of possibilities. Assigning a window from a single lab batch, or from evidence that still carries a GAP, is a hard reject.
 
-Authority schema: `../../schemas/process.schema.json` (or local `references/process.schema.json` in deployed bundle). Upstream contracts: `../../schemas/process.schema.json` and `../../schemas/optimization.schema.json`. Downstream consumer: `../../schemas/design_freeze.schema.json` — its `MANUFACTURABILITY_ACCEPTABLE` condition MUST cite this window.
+Authority schema: `../../schemas/process.schema.json` (or local `references/process.schema.json` in deployed bundle). Upstream contracts: `../../schemas/process.schema.json` and `../../schemas/optimization.schema.json`. Downstream consumer: `../../schemas/design_freeze.schema.json` — its `MANUFACTURABILITY_ACCEPTABLE` condition cites this window **when the product has one**; a blended oil establishes manufacturability through the qualified blending process instead, which is why this skill is on no route.
 
 ---
 
@@ -83,7 +83,8 @@ python skills/process-scale-up/scripts/validate_process_window_artifact.py <temp
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
 # 🔴 CHECKPOINT · STOP: the window stops here. It links DESIGN_SPACE_DEFINED (process) +
-# OPTIMIZED (optimization) → PROCESS_WINDOW_DEFINED.
+# OPTIMIZED (optimization) → PROCESS_WINDOW_DEFINED, and its ONLY published hand-off is
+# VERIFIED (contract on_demand_stages). It is not a step of any project-type route.
 # Do NOT run gate-review, mark the project VERIFIED, or claim release approval from this skill.
 ```
 

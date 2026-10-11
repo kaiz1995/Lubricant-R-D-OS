@@ -191,7 +191,7 @@ describe("probeWorkspace", () => {
     expect(asked).not.toContain("experiment_design.json");
   });
 
-  it("探测整条 13 步链（project_type 本身就在工件里，鸡生蛋）", async () => {
+  it("探测 STAGE_CHAIN 全表（含按需阶段；project_type 本身就在工件里，鸡生蛋）", async () => {
     const snap = await probeWorkspace();
     expect(Object.keys(snap.probes).sort()).toEqual(
       STAGE_CHAIN.map((c) => c.artifactType).sort(),
@@ -202,24 +202,24 @@ describe("probeWorkspace", () => {
 describe("deriveSteps", () => {
   it("首次探测尚未返回时不假装有进度：全部 pending", () => {
     const steps = deriveSteps("NEW_PRODUCT", null);
-    expect(steps).toHaveLength(13);
+    expect(steps).toHaveLength(12);
     expect(steps.every((s) => s.status === "pending")).toBe(true);
     expect(steps.every((s) => s.probe === null)).toBe(true);
   });
 
   it("离线时返回静态 Mock 状态，仅用于 UI 冒烟", () => {
     const steps = deriveSteps("NEW_PRODUCT", emptySnapshot());
-    expect(steps).toHaveLength(13);
+    expect(steps).toHaveLength(12);
     expect(steps[0].status).toBe("completed");
     expect(steps[1].status).toBe("active");
     expect(steps[2].status).toBe("pending");
     expect(steps[0].probe).toBeNull();
   });
 
-  it("按 project_type 取路由：COST_DOWN 是 9 步", () => {
-    expect(deriveSteps("COST_DOWN", emptySnapshot())).toHaveLength(9);
+  it("按 project_type 取路由：COST_DOWN 是 8 步", () => {
+    expect(deriveSteps("COST_DOWN", emptySnapshot())).toHaveLength(8);
     expect(deriveSteps("EXPLORATION", emptySnapshot())).toHaveLength(7);
-    expect(deriveSteps("IMPROVEMENT", emptySnapshot())).toHaveLength(11);
+    expect(deriveSteps("IMPROVEMENT", emptySnapshot())).toHaveLength(10);
   });
 
   it("合法工件点亮该步，第一个缺口成为进行中", async () => {
@@ -272,7 +272,7 @@ describe("前缀名容忍解析（记录 ID 后缀）", () => {
     expect(snap.probes.challenge.valid).toBe(true);
     expect(snap.probes.challenge.resolvedPath).toBe(name);
     expect(snap.probes.challenge.matches).toEqual([name]);
-    // 无 project.json 时 projectType 为 null，路由回退 NEW_PRODUCT（13 步），
+    // 无 project.json 时 projectType 为 null，路由回退 NEW_PRODUCT（12 步），
     // 步骤 1 是唯一缺口 → active，已合法的前缀名 challenge 是步骤 3 → completed
     const steps = deriveSteps(snap.projectType, snap);
     expect(steps[2].artifactType).toBe("challenge");

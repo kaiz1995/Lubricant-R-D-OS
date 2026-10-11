@@ -214,7 +214,7 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
   it("类型选择器是 6 个 domain pack 里的 project_type", async () => {
     renderPane();
     for (const label of [
-      "正向开发", "性能优化", "配方降本", "客户定制", "机理探索", "工艺稳健",
+      "正向开发", "性能优化", "配方降本", "客户定制", "机理探索", "生产复现",
     ]) {
       expect(await screen.findByRole("button", { name: label })).toBeInTheDocument();
     }
@@ -225,9 +225,9 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
 
   it("project.json 存在时锁定类型选择器为 NEW_PRODUCT", async () => {
     renderPane();
-    // NEW_PRODUCT 的 13 步
+    // NEW_PRODUCT 的 12 步（PROCESS_WINDOW_DEFINED 是按需阶段，不进主链）
     await waitFor(() =>
-      expect(screen.getByText(/工件链阶段步骤（13 步独立推进）/)).toBeInTheDocument(),
+      expect(screen.getByText(/工件链阶段步骤（12 步独立推进）/)).toBeInTheDocument(),
     );
     expect(screen.getByText(/类型由 project\.json 的 project_type 锁定/)).toBeInTheDocument();
   });

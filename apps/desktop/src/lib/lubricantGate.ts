@@ -12,7 +12,7 @@
  * unsatisfied_conditions / evidence_gaps 是否为空、evidence 里有无 status=="GAP"。
  * 数值达标属于 Phase 4 计算引擎的职责（optimization_result 的
  * result.recommended_candidates[].total_cost / predicted_ctq），那些信封不在
- * 13 步工件链上，因此面板**不**做数值判定 —— 不假装能判。
+ * 工件链上，因此面板**不**做数值判定 —— 不假装能判。
  */
 import { readArtifact, writeWorkspaceFile } from "./artifactFile";
 import { isGateStatus, validateArtifactLite, type GateStatus } from "./lubricantContracts";

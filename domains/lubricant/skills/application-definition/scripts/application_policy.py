@@ -27,6 +27,12 @@ ARTIFACT_FIELDS = (
     "application_id", "project_reference", "formula_reference", "process_window_reference",
     "bench_references", "acceptance_criteria", "result", "counterexamples", "life_claim_boundary",
 )
+# `process_window_reference` is permitted but never required: the window it cites
+# is an on-demand artifact (process-scale-up) that exists only for products whose
+# structure is set by the manufacturing process — grease (saponification / phase
+# inversion / milling). A blended oil is physically mixed and has no such window
+# to cite, so forcing the field would make a legitimate record unconstructible.
+REQUIRED_FIELDS = tuple(field for field in ARTIFACT_FIELDS if field != "process_window_reference")
 RESULTS = ("PASS", "FAIL", "INCONCLUSIVE", "GAP")
 EVIDENCE_SCOPES = {"SYNTHETIC", "PHYSICAL"}
 OPERATORS = {"<", "<=", "==", ">=", ">"}
