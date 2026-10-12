@@ -267,5 +267,50 @@
       "before": { "project_id": "PGD-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-401"] },
       "after": { "project_id": "PGD-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-401"] }
     }
+  },
+  {
+    "name": "go-precision-grease-cannot-backtrack-across-the-ring", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Batch-4 negative case N21: the bench shows the method unreliable and R&D wants to go back to method qualification. That is INTER-RING backtracking, not an inner-loop edge — decision 3 adds no BACKTRACK action, so the jump stays denied (a human decides outside the system).",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV",
+      "before": { "project_id": "PGD-001", "stage": "BENCH_TESTED", "status": "ACTIVE", "version": 9, "decision_question": "Is the bench method discriminating enough?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-2:bench_test.json"] },
+      "after": { "project_id": "PGD-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 9, "decision_question": "Is the bench method discriminating enough?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-2:bench_test.json"] }
+    }
+  },
+  {
+    "name": "go-cannot-backtrack-from-optimized-to-method-qualification", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Batch-4 negative case N22: the documented NEW_PRODUCT denial (refactor plan 4.1) — the method's discrimination turns out to be insufficient after OPTIMIZED, and the request to return to TEST_METHODS_QUALIFIED is still refused by the router/state machine.",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "NEW_PRODUCT",
+      "before": { "project_id": "WGO-001", "stage": "OPTIMIZED", "status": "ACTIVE", "version": 5, "decision_question": "Is the optimized formula ready for the gate?", "evidence_scope": "PHYSICAL", "evidence": ["E-501"] },
+      "after": { "project_id": "WGO-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 5, "decision_question": "Is the optimized formula ready for the gate?", "evidence_scope": "PHYSICAL", "evidence": ["E-501"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-iteration-exceeds-max-iterations", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Batch-4 negative case N23: a 13th bench round against the contract's max_iterations = 12. The ring is capped; past the cap the project must record PIVOT or KILL instead of iterating.",
+    "expected_reason": "iteration 13 exceeds max_iterations 12; stop the inner loop and record PIVOT or KILL",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 13,
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 12, "decision_question": "Should the campaign run a thirteenth bench round?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-12:batch.json", "ITER-12:variance.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 12, "decision_question": "Should the campaign run a thirteenth bench round?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-12:batch.json", "ITER-12:variance.json", "ITER-13:batch.json"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-ring-edge-cannot-drop-evidence", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Batch-4 negative case N24: a legal ring edge (VARIANCE_ASSESSED -> BATCH_PRODUCED, iteration 3 valid) whose after state carries LESS evidence than the before state. Evidence is append-only (铁律 8), so the advance is rejected even though the edge itself is declared.",
+    "expected_reason": "GO ring-edge advance must retain prior evidence",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 3,
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 7, "decision_question": "Does round 2 resolve the difference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-2:batch.json", "ITER-2:variance.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 7, "decision_question": "Does round 2 resolve the difference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-2:batch.json", "ITER-2:variance.json"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-ring-edge-cannot-void-an-earlier-round", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Batch-4 negative case N25: the ring is not a ROLLBACK, so a ring advance may not void what round 1 already recorded (its records disappear from the after state). The negative counterpart of go-precision-grease-third-iteration-keeps-earlier-round-records.",
+    "expected_reason": "GO ring-edge advance must retain prior evidence",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 3,
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 8, "decision_question": "What did round 1 leave behind?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:variance.json", "ITER-2:batch.json", "ITER-2:variance.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 8, "decision_question": "What did round 1 leave behind?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-2:batch.json", "ITER-2:variance.json", "ITER-3:batch.json"] }
+    }
   }
 ]

@@ -6,13 +6,15 @@ artifacts and never performs business calculation.
 
 A second form, `--list-stages <PROJECT_TYPE>`, prints the full stage sequence of
 one declared project type (one stage per line) so callers can read the route
-without duplicating it. Both forms fail closed when the contract is unreadable.
+without duplicating it. A third form, `--list-loop-edges <PROJECT_TYPE>`, prints
+that route's declared inner-loop back edges (`from -> to (kind)`) for the same
+reason. All forms fail closed when the contract is unreadable.
 
 The differentiated per-project_type stage chains are NOT hardcoded here: they
 are read from the shared contract `contracts/state-machine.json` (`type_routes`),
 the same list `scripts/validate_state_machine.py` uses for its GO adjacency
 assertion. One list, two consumers, so the router and the state machine cannot
-drift apart.
+drift apart. The inner-loop back edges (`loop_edges`) are read the same way.
 """
 
 from __future__ import annotations
@@ -98,6 +100,17 @@ ON_DEMAND_NEXT = dict((stage, spec["next_stage"]) for stage, spec in ON_DEMAND_S
 # Differentiated workflows, published by the contract (one list, two consumers).
 TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
 
+# Inner-loop ring edges (contract `loop_edges`, v0.9.0): the controlled back
+# edges of the PRECISION_GREASE_DEV inner loop. An edge with `from == current`
+# adds ONE legal target (`to`) next to the route's normal next step; it never
+# replaces it. Inter-ring backtracking is not an edge and stays DENIED — the
+# contract publishes no BACKTRACK action (decision 3).
+LOOP_EDGES = tuple(CONTRACT.get("loop_edges", ())) if CONTRACT else ()
+MAX_ITERATIONS = CONTRACT.get("max_iterations") if CONTRACT else None
+LOOP_TARGETS: dict[str, list[str]] = {}
+for _edge in LOOP_EDGES:
+    LOOP_TARGETS.setdefault(_edge["from"], []).append(_edge["to"])
+
 # The undifferentiated fallback chain, used only when state declares no routed
 # project_type. It is the contract's NEW_PRODUCT route, not "every stage the
 # router can materialise": ROUTE_TABLE also carries the stages of the
@@ -170,13 +183,30 @@ def decide(project_state: object, requested_stage: str) -> dict:
     else:
         target_stage = None
 
-    if target_stage is None:
+    # Legal targets: the route's next step, PLUS any declared inner-loop ring
+    # edge leaving this stage (`loop_edges`). An edge is offered only when the
+    # active route contains it as well, so the exemption can never leak into a
+    # route that does not declare both endpoints (the six oil routes have
+    # neither stage). It is an addition, never a replacement: the normal next
+    # step stays legal.
+    next_targets = [target_stage] if target_stage is not None else []
+    ring_targets = [target for target in LOOP_TARGETS.get(current, ()) if target in route]
+    next_targets.extend(ring_targets)
+
+    if not next_targets:
         return {"decision": "DENY", "reason": f"stage {current} is the final routed stage; no further step exists", "skill": None}
 
     if requested_stage == current:
         return {"decision": "HOLD", "reason": f"project is already at {current}; no step to take", "skill": None}
-    if requested_stage != target_stage:
-        return {"decision": "DENY", "reason": f"cross-stage jump rejected: next allowed stage is {target_stage}, requested {requested_stage}", "skill": None}
+    if requested_stage not in next_targets:
+        if len(next_targets) == 1:
+            reason = f"cross-stage jump rejected: next allowed stage is {next_targets[0]}, requested {requested_stage}"
+        else:
+            reason = (
+                f"cross-stage jump rejected: next allowed stages are {', '.join(next_targets)}, "
+                f"requested {requested_stage}"
+            )
+        return {"decision": "DENY", "reason": reason, "skill": None}
 
     gaps = project_state.get("evidence_gaps") or []
     unsatisfied = project_state.get("unsatisfied_conditions") or []
@@ -193,7 +223,22 @@ def decide(project_state: object, requested_stage: str) -> dict:
     if scope == "SYNTHETIC":
         return {"decision": "DENY", "reason": "SYNTHETIC evidence cannot authorize stage advancement; PHYSICAL evidence required", "skill": None}
 
-    return {"decision": "ALLOW", "reason": "single-step advancement permitted", "skill": SKILL_FOR_STAGE[requested_stage]}
+    # Fail closed instead of the bare KeyError this used to raise: a stage the
+    # contract publishes but ROUTE_TABLE has no producer for is a deployment bug,
+    # and a crash is not a routing decision.
+    skill = SKILL_FOR_STAGE.get(requested_stage)
+    if skill is None:
+        return {
+            "decision": "DENY",
+            "reason": (
+                f"stage {requested_stage} has no producing skill in ROUTE_TABLE; "
+                "add the (skill, stage) entry in skills/lubricant-rd-agent/scripts/route_step.py"
+            ),
+            "skill": None,
+        }
+
+    reason = "declared inner-loop edge permitted" if requested_stage in ring_targets else "single-step advancement permitted"
+    return {"decision": "ALLOW", "reason": reason, "skill": skill}
 
 
 def list_stages(project_type: str) -> int:
@@ -210,15 +255,42 @@ def list_stages(project_type: str) -> int:
     return 0
 
 
+def list_loop_edges(project_type: str) -> int:
+    """Print the declared inner-loop back edges of one route: `from -> to (kind)`.
+
+    Only edges whose two endpoints both sit on that route are printed, because
+    the exemption is route-local; a route without edges prints nothing and still
+    exits 0. Publishing this here (same pattern as `--list-stages`) keeps callers
+    from keeping a third copy of the ring in sync by hand.
+    """
+    if CONTRACT is None:
+        print(f"DENY: routing contract unavailable: {'; '.join(CONTRACT_ERRORS)}")
+        return 1
+    route = TYPE_ROUTES.get(project_type)
+    if route is None:
+        print(f"DENY: project_type {project_type!r} has no routed stage chain; publish type_routes[{project_type!r}] in contracts/state-machine.json")
+        return 1
+    for edge in LOOP_EDGES:
+        if edge["from"] in route and edge["to"] in route:
+            print(f"{edge['from']} -> {edge['to']} ({edge['kind']})")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == "--list-stages":
         if len(sys.argv) != 3:
             print("Usage: python route_step.py --list-stages <PROJECT_TYPE>")
             return 1
         return list_stages(sys.argv[2])
+    if len(sys.argv) >= 2 and sys.argv[1] == "--list-loop-edges":
+        if len(sys.argv) != 3:
+            print("Usage: python route_step.py --list-loop-edges <PROJECT_TYPE>")
+            return 1
+        return list_loop_edges(sys.argv[2])
     if len(sys.argv) != 2:
         print("Usage: python route_step.py <input.json>")
         print("       python route_step.py --list-stages <PROJECT_TYPE>")
+        print("       python route_step.py --list-loop-edges <PROJECT_TYPE>")
         return 1
     path = Path(sys.argv[1]).resolve()
     try:

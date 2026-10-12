@@ -1,5 +1,5 @@
 {
-  "contract_version": "0.8.0",
+  "contract_version": "0.9.0",
   "gate_statuses": ["GO", "HOLD", "PIVOT", "KILL", "FREEZE"],
   "project_statuses": ["DRAFT", "ACTIVE", "HOLD", "PIVOTED", "KILLED", "FROZEN", "CLOSED"],
   "stages": [
@@ -46,8 +46,22 @@
       "note": "润滑脂（皂化/转相/研磨）工艺窗口固化；调和油无此一等工艺维度，故不进入任何 type_route。产出后仍可推进至 VERIFIED。精密传动脂路线（PRECISION_GREASE_DEV）使用独立的新阶段 PROCESS_SCALE_VALIDATED，不复用本按需阶段，故其语义保持不变。"
     }
   },
-  "loop_edges": [],
+  "loop_edges": [
+    {
+      "from": "VARIANCE_ASSESSED",
+      "to": "BATCH_PRODUCED",
+      "kind": "LOOP_BACK",
+      "note": "Inner-loop continuation: the round produced no decision, run another bench round (iteration + 1) with a new batch."
+    },
+    {
+      "from": "SCREENING_PASSED",
+      "to": "BATCH_PRODUCED",
+      "kind": "REWORK",
+      "note": "Inner-loop rework: the physical screening failed, so the batch is remade without consuming a bench slot."
+    }
+  ],
   "max_iterations": 12,
+  "max_iterations_note": "Unit: bench rounds (inner-loop iterations) per campaign; 1-based like schemas/campaign.schema.json's current_iteration. Default 12 = about 12 bench rounds in one year (refactor plan 4.3).",
   "actions": {
     "GO": { "gate_status": "GO", "before_statuses": ["ACTIVE", "HOLD"], "after_status": "ACTIVE" },
     "HOLD": { "gate_status": "HOLD", "before_statuses": ["ACTIVE"], "after_status": "HOLD" },

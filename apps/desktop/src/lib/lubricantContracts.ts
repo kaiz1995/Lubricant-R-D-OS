@@ -505,6 +505,59 @@ export function isProjectType(value: unknown): value is ProjectType {
   return typeof value === "string" && value in TYPE_ROUTES;
 }
 
+/* ------------------------------------------------------------------ *
+ * 内环（环内迭代）—— 镜像 state-machine.json 的 loop_edges / max_iterations
+ *
+ * 精密传动脂路线的内环 5 步是**带退出判据的循环体**，不是顺序链：
+ *   BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED
+ *        ↑                 │                                    │
+ *        └── REWORK ───────┘              └──── LOOP_BACK ──────┘
+ * 两条回边由契约声明（`loop_edges`）。环内推进**不改写** stage 序列历史
+ * （version 不变），只增加 iteration 计数；证据只追加 —— 第 3 轮不得让第 1、2
+ * 轮的记录失效（铁律 8），所以环结构不是 ROLLBACK。
+ *
+ * ★ 环间回退（台架发现方法不可靠 → 回方法资格；判据不可达 → 回判据）**不在**
+ * `loop_edges` 里，系统仍然拒绝（决策 3 不做 BACKTRACK）：那是人工判断，不是
+ * 环边。面板不提供任何"回退"入口。
+ *
+ * 回边是**路线内**的例外：只有同时含两个端点的路线才成立，6 条油品路线一条都
+ * 不受影响（mirror 用例反向守住这一点）。
+ * ------------------------------------------------------------------ */
+
+export type LoopEdgeKind = "LOOP_BACK" | "REWORK";
+
+export interface LoopEdge {
+  readonly from: ChainStage;
+  readonly to: ChainStage;
+  readonly kind: LoopEdgeKind;
+}
+
+/** 契约 loop_edges 逐条镜像（只镜像驱动行为的 from / to / kind）。 */
+export const LOOP_EDGES: readonly LoopEdge[] = [
+  { from: "VARIANCE_ASSESSED", to: "BATCH_PRODUCED", kind: "LOOP_BACK" },
+  { from: "SCREENING_PASSED", to: "BATCH_PRODUCED", kind: "REWORK" },
+];
+
+/**
+ * 内环轮次上限（契约 max_iterations）。单位：每战役的台架轮次 —— 12 ≈ 一年
+ * 12 轮台架战役。超限必须退出内环（PIVOT / KILL），不得再开新一轮。
+ */
+export const MAX_ITERATIONS = 12;
+
+/**
+ * 某条路线上的内环阶段切片，由 LOOP_EDGES **推导**（不另立第三份清单）：
+ * 从最靠前的回边目标（环首，BATCH_PRODUCED）到最靠后的回边起点（环尾，
+ * VARIANCE_ASSESSED），闭区间。路线不含全部端点时返回 []（油品路线即如此）。
+ */
+export function innerLoopStages(projectType: string | null | undefined): ChainStage[] {
+  const key: ProjectType = isProjectType(projectType) ? projectType : "NEW_PRODUCT";
+  const route = TYPE_ROUTES[key];
+  const heads = LOOP_EDGES.map((edge) => route.indexOf(edge.to)).filter((index) => index >= 0);
+  const tails = LOOP_EDGES.map((edge) => route.indexOf(edge.from)).filter((index) => index >= 0);
+  if (heads.length === 0 || tails.length === 0) return [];
+  return route.slice(Math.min(...heads), Math.max(...tails) + 1);
+}
+
 /**
  * 开发期告警：只在 DEV 构建里输出。
  *

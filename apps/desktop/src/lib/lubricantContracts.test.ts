@@ -8,10 +8,13 @@ import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   GATE_STATUSES,
+  LOOP_EDGES,
+  MAX_ITERATIONS,
   ON_DEMAND_STAGES,
   PROJECT_TYPES,
   STAGE_CHAIN,
   TYPE_ROUTES,
+  innerLoopStages,
   isGateStatus,
   isProjectType,
   routeFor,
@@ -421,6 +424,81 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     for (const [stage, spec] of Object.entries(mapped)) {
       expect(spec.skill, `${stage}.skill`).toBe(contract[stage].skill);
       expect(spec.next_stage, `${stage}.next_stage`).toBe(contract[stage].next_stage);
+    }
+  });
+
+  it("LOOP_EDGES / MAX_ITERATIONS 与 state-machine.json 的 loop_edges / max_iterations 逐项一致", () => {
+    // v0.9.0 语义变更：内环 5 步变成带退出判据的循环体，回边由契约声明。
+    // 契约可带文档键（note），本模块只镜像驱动行为的 from / to / kind。
+    const contract = readJson<{
+      loop_edges: { from: string; to: string; kind: string }[];
+      max_iterations: number;
+    }>("contracts/state-machine.json");
+    const mapped = LOOP_EDGES.map((edge) => ({ from: edge.from, to: edge.to, kind: edge.kind }));
+    expect(mapped).toEqual(
+      contract.loop_edges.map((edge) => ({ from: edge.from, to: edge.to, kind: edge.kind })),
+    );
+    expect(MAX_ITERATIONS).toBe(contract.max_iterations);
+    // 单位是「台架轮次」，且必须是正数：0 轮等于内环根本跑不起来。
+    expect(Number.isInteger(MAX_ITERATIONS)).toBe(true);
+    expect(MAX_ITERATIONS).toBeGreaterThan(0);
+  });
+
+  it("环边是受控回边：不出现在任何路由的相邻位上，且两端在同一条路由上", () => {
+    // 环边如果出现在 TYPE_ROUTES 的相邻位上，它就不是回边而是普通前进，
+    // 契约的 loop_edges 就变成了第二个真源（此处红）。
+    for (const edge of LOOP_EDGES) {
+      for (const [typeKey, stages] of Object.entries(TYPE_ROUTES)) {
+        const from = (stages as readonly string[]).indexOf(edge.from);
+        const to = (stages as readonly string[]).indexOf(edge.to);
+        if (from < 0 || to < 0) {
+          // 端点不同时在该路线上 = 该路线不受这条边影响（油品路线即如此）。
+          expect(from < 0 && to < 0, `${typeKey} 只含 ${edge.from} 与 ${edge.to} 中的一个`).toBe(true);
+          continue;
+        }
+        expect(to, `${typeKey}: ${edge.from} -> ${edge.to} 必须是回边（序号更小），不是相邻前进`).toBeLessThan(from);
+        // 且它不得是路由自己的下一格（否则 loop_edges 就是路由的第二份拷贝）。
+        expect(to, `${typeKey}: ${edge.from} -> ${edge.to} 不是路由的下一格`).not.toBe(from + 1);
+      }
+    }
+  });
+
+  it("环边两端只在 PRECISION_GREASE_DEV 一条路线上，且回边目标在 STAGE_CHAIN 中可解析", () => {
+    const owners = LOOP_EDGES.map((edge) =>
+      Object.entries(TYPE_ROUTES)
+        .filter(([, stages]) => {
+          const list = stages as readonly string[];
+          return list.includes(edge.from) && list.includes(edge.to);
+        })
+        .map(([typeKey]) => typeKey),
+    );
+    expect(owners).toEqual([["PRECISION_GREASE_DEV"], ["PRECISION_GREASE_DEV"]]);
+    // 回边目标必须是路线首（BATCH_PRODUCED）；没有生产者的 stage 面板解析不出来。
+    for (const edge of LOOP_EDGES) {
+      expect(edge.to).toBe("BATCH_PRODUCED");
+    }
+    // 6 条油品路线的内环切片为空 —— 面板只在脂路线上渲染内环读数。
+    for (const typeKey of PROJECT_TYPES) {
+      const loop = innerLoopStages(typeKey);
+      if (typeKey === "PRECISION_GREASE_DEV") {
+        expect(loop).toEqual([
+          "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED",
+        ]);
+      } else {
+        expect(loop, `${typeKey} 不该有内环`).toEqual([]);
+      }
+    }
+  });
+
+  it("routeFor 不因环边而多出步骤（环边不是路由项，进度推导不受影响）", () => {
+    // 内环的重复落盘（第二轮 screening.json）不会让步骤表变长：步骤序列仍由
+    // TYPE_ROUTES 决定，环边只在路由时提供"额外合法目标"。
+    const stages = routeFor("PRECISION_GREASE_DEV").map((c) => c.stage);
+    expect(stages).toHaveLength(20);
+    expect(new Set(stages).size).toBe(20);
+    for (const edge of LOOP_EDGES) {
+      expect(stages).toContain(edge.from);
+      expect(stages).toContain(edge.to);
     }
   });
 

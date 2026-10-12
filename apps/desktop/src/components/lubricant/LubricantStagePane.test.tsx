@@ -250,6 +250,62 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     expect(screen.queryByText("25")).not.toBeInTheDocument();
   });
 
+  it("精密脂路线标记内环：回边两端与迭代体共 4 步，且不显示轮次时说明未开启", async () => {
+    // v0.9.0：内环 5 步是带退出判据的循环体。面板只做最小呈现 —— 内环步骤
+    // 打「内环」标记 + 一行迭代读数（campaign.json 未落盘则显示未开启，不猜）。
+    workspaceWith({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" });
+    renderPane();
+    await waitFor(() => expect(screen.getByText("内环迭代")).toBeInTheDocument());
+    expect(screen.getByText(/BATCH_PRODUCED → VARIANCE_ASSESSED/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/未开启（campaign\.json 未落盘）· 上限 12 轮/),
+    ).toBeInTheDocument();
+    // BATCH_PRODUCED / SCREENING_PASSED / BENCH_TESTED / VARIANCE_ASSESSED 各一枚标记。
+    const chips = screen.getAllByText("内环");
+    expect(chips).toHaveLength(4);
+    expect(chips.map((chip) => chip.getAttribute("title")).join("\n")).toContain(
+      "SCREENING_PASSED → BATCH_PRODUCED（REWORK）",
+    );
+  });
+
+  it("campaign.json 落盘时读盘显示当前轮次，不用猜", async () => {
+    const CAMPAIGN = {
+      schema_version: "0.1.0",
+      artifact_type: "campaign",
+      project_id: "PGD-001",
+      stage: "CAMPAIGN_OPENED",
+      decision_question: "q", hypothesis: "h", uncertainty: "u",
+      evidence: [{ evidence_id: "E-1", statement: "s", source: "x", status: "OBSERVED" }],
+      decision_rule: "r", result: "res", decision: "GO", next_action: "n",
+      current_iteration: 2,
+    };
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir === "") return [entry("project.json"), entry("campaign.json")];
+      throw new Error("not a directory");
+    });
+    readArtifact.mockImplementation(async (path: string) => {
+      const data = path === "project.json" ? PROJECT : path === "campaign.json" ? CAMPAIGN : null;
+      if (!data) return null;
+      return {
+        path, mime: "application/json", encoding: "utf8",
+        data: JSON.stringify(
+          path === "project.json" ? { ...PROJECT, project_type: "PRECISION_GREASE_DEV" } : data,
+        ),
+        size: 10,
+      };
+    });
+    renderPane();
+    await waitFor(() => expect(screen.getByText("第 2 / 12 轮")).toBeInTheDocument());
+  });
+
+  it("油品路线不渲染任何内环读数（环边是脂路线独占）", async () => {
+    renderPane();
+    await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
+    expect(screen.queryByText("内环迭代")).not.toBeInTheDocument();
+    expect(screen.queryByText("内环")).not.toBeInTheDocument();
+    expect(screen.queryByText(/BATCH_PRODUCED → VARIANCE_ASSESSED/)).not.toBeInTheDocument();
+  });
+
   it("工件不合规时不点亮该步，并显示原因", async () => {
     workspaceWith({ ...PROJECT, artifact_type: "foo" });
     renderPane();

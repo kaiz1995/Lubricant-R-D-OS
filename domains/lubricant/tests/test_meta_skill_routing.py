@@ -207,6 +207,101 @@ def main() -> int:
     result = router.decide(physical_state("DUTY_DEFINED", project_type="PRECISION_GREASE_DEV"), "FAILURE_MECHANISM_DEFINED")
     assert result["decision"] == "ALLOW" and result["skill"] == "failure-ctq-analysis", result
 
+    # 19. Batch 4: the inner-loop ring (`loop_edges`). The PRECISION_GREASE_DEV
+    #     inner loop is a loop body, so the declared back edges become ADDITIONAL
+    #     legal targets — they never replace the route's own next step. Inter-ring
+    #     backtracking is NOT an edge and stays DENIED (decision 3, plan N21/N22).
+    assert list(router.LOOP_EDGES) == contract["loop_edges"], router.LOOP_EDGES
+    assert router.LOOP_TARGETS == {
+        "VARIANCE_ASSESSED": ["BATCH_PRODUCED"],
+        "SCREENING_PASSED": ["BATCH_PRODUCED"],
+    }, router.LOOP_TARGETS
+    assert router.MAX_ITERATIONS == contract["max_iterations"] == 12, router.MAX_ITERATIONS
+    grease_route = router.TYPE_ROUTES["PRECISION_GREASE_DEV"]
+    for edge in router.LOOP_EDGES:
+        # An edge is a controlled BACK edge of one route: both endpoints on the
+        # same route, target strictly earlier (otherwise it is not a loop).
+        assert edge["from"] in grease_route and edge["to"] in grease_route, edge
+        assert grease_route.index(edge["to"]) < grease_route.index(edge["from"]), edge
+        # The loop only ever returns to the batch, which has a producer skill.
+        assert edge["to"] == "BATCH_PRODUCED", edge
+        assert router.SKILL_FOR_STAGE[edge["to"]] == "grease-batch", router.SKILL_FOR_STAGE
+        for oil_type, oil_route in router.TYPE_ROUTES.items():
+            if oil_type == "PRECISION_GREASE_DEV":
+                continue
+            assert not (edge["from"] in oil_route and edge["to"] in oil_route), (edge, oil_type)
+
+    # Ring edge request: ALLOW, routed to the producing skill (grease-batch).
+    result = router.decide(physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV"), "BATCH_PRODUCED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "grease-batch", result
+    assert "inner-loop edge" in result["reason"], result
+    result = router.decide(physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV"), "BATCH_PRODUCED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "grease-batch", result
+    # The route's own next step stays legal next to the edge (addition, not replacement).
+    result = router.decide(physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV"), "BENCH_TESTED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "experiment-import", result
+    result = router.decide(physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV"), "MODEL_BUILT")
+    assert result["decision"] == "ALLOW" and result["skill"] == "statistical-analysis", result
+    # A DENY between the two legal targets names both, so callers are not misled.
+    result = router.decide(physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV"), "VARIANCE_ASSESSED")
+    assert result["decision"] == "DENY" and "BENCH_TESTED" in result["reason"] and "BATCH_PRODUCED" in result["reason"], result
+    # CLI parity: the ring is ALLOWed through the script too (exit 0).
+    returncode, stdout = run_cli({"project_state": physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV"), "requested_stage": "BATCH_PRODUCED"})
+    assert returncode == 0 and "ALLOW" in stdout and "grease-batch" in stdout, (returncode, stdout)
+
+    # 20. The exemption is ROUTE-LOCAL and the ring is not a general backtrack.
+    #     N21: inter-ring backtracking inside the grease route stays DENIED.
+    result = router.decide(physical_state("BENCH_TESTED", project_type="PRECISION_GREASE_DEV"), "TEST_METHODS_QUALIFIED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+    #     N22: the documented NEW_PRODUCT denial (OPTIMIZED -> method qualification).
+    result = router.decide(physical_state("OPTIMIZED", project_type="NEW_PRODUCT"), "TEST_METHODS_QUALIFIED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+    #     The same ring request outside its route is denied: an oil project_type,
+    #     a project_type that does not declare the endpoint, and no project_type.
+    for ptype in ("NEW_PRODUCT", "PROCESS_ROBUSTNESS"):
+        result = router.decide(physical_state("VARIANCE_ASSESSED", project_type=ptype), "BATCH_PRODUCED")
+        assert result["decision"] == "DENY", (ptype, result)
+    result = router.decide(physical_state("SCREENING_PASSED", project_type="NEW_PRODUCT"), "BATCH_PRODUCED")
+    assert result["decision"] == "DENY", result
+    result = router.decide(physical_state("VARIANCE_ASSESSED"), "BATCH_PRODUCED")
+    assert result["decision"] == "DENY", result
+    #     A ring edge never makes an unrelated jump legal: from BENCH_TESTED the
+    #     only target is VARIANCE_ASSESSED (no edge leaves BENCH_TESTED).
+    result = router.decide(physical_state("BENCH_TESTED", project_type="PRECISION_GREASE_DEV"), "BATCH_PRODUCED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+
+    # 21. `SKILL_FOR_STAGE` is no longer a bare index: a routed stage with no
+    #     producer fails closed with a reason instead of raising KeyError. Every
+    #     stage any request can reach (routes + ring targets + on-demand
+    #     hand-offs) must have a producer, and the hardened lookup is exercised on
+    #     a synthetic gap.
+    reachable = {stage for route in router.TYPE_ROUTES.values() for stage in route}
+    reachable |= {edge["to"] for edge in router.LOOP_EDGES}
+    reachable |= set(router.ON_DEMAND_NEXT)
+    reachable |= set(router.ON_DEMAND_NEXT.values())
+    for stage in sorted(reachable):
+        assert stage in router.SKILL_FOR_STAGE, f"{stage} has no producing skill in ROUTE_TABLE"
+    missing = router.SKILL_FOR_STAGE.pop("BATCH_PRODUCED")
+    try:
+        result = router.decide(physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV"), "BATCH_PRODUCED")
+        assert result["decision"] == "DENY" and "no producing skill" in result["reason"], result
+    finally:
+        router.SKILL_FOR_STAGE["BATCH_PRODUCED"] = missing
+
+    # 22. `--list-loop-edges <TYPE>` prints a route's declared back edges only
+    #     (same fail-closed contract as `--list-stages`).
+    returncode, stdout = run_cli_args("--list-loop-edges", "PRECISION_GREASE_DEV")
+    assert returncode == 0, (returncode, stdout)
+    assert stdout.splitlines() == [
+        "VARIANCE_ASSESSED -> BATCH_PRODUCED (LOOP_BACK)",
+        "SCREENING_PASSED -> BATCH_PRODUCED (REWORK)",
+    ], stdout
+    for oil_type in ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"):
+        returncode, stdout = run_cli_args("--list-loop-edges", oil_type)
+        assert returncode == 0 and stdout == "", (oil_type, returncode, stdout)
+    returncode, stdout = run_cli_args("--list-loop-edges", "NOT_A_TYPE")
+    assert returncode == 1 and "no routed stage chain" in stdout, (returncode, stdout)
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages, {len(router.TYPE_ROUTES)} project types)")
     return 0
 

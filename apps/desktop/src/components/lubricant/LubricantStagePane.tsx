@@ -12,6 +12,7 @@ import {
   Layers,
   Lock,
   RefreshCw,
+  Repeat,
   ShieldCheck,
   Sparkles,
   WifiOff,
@@ -23,7 +24,10 @@ import { useRuntimeStore } from "@/lib/runtime";
 import { useUiStore } from "@/lib/store";
 import {
   GATE_STATUSES,
+  LOOP_EDGES,
+  MAX_ITERATIONS,
   PROJECT_TYPES,
+  innerLoopStages,
   isGateStatus,
   routeFor,
   type GateStatus,
@@ -151,6 +155,21 @@ export function LubricantStagePane({
   const completedCount = steps.filter((s) => s.status === "completed").length;
   const percent = totalStages ? Math.round((completedCount / totalStages) * 100) : 0;
   const activeStep = steps.find((s) => s.status === "active") ?? null;
+
+  // 内环（环内迭代）：由契约 loop_edges 推导，油品路线为空 —— 面板只在脂路线上
+  // 标记内环、显示轮次。环间回退不在 loop_edges 里，面板不提供其入口。
+  const innerLoop = useMemo(() => innerLoopStages(effectiveType), [effectiveType]);
+  const innerLoopSet = useMemo(() => new Set<string>(innerLoop), [innerLoop]);
+  const ringEdgeFrom = useMemo(
+    () =>
+      new Map(LOOP_EDGES.filter((edge) => innerLoopSet.has(edge.from)).map((edge) => [edge.from as string, edge])),
+    [innerLoopSet],
+  );
+  /** campaign.json 的 current_iteration；读不到就说「未开启」，不猜轮次。 */
+  const currentIteration = (() => {
+    const value = snapshot?.probes.campaign?.data?.current_iteration;
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  })();
 
   const gateStatus: GateStatus | null = isGateStatus(snapshot?.gateStatus)
     ? snapshot.gateStatus
@@ -402,6 +421,23 @@ export function LubricantStagePane({
             </div>
           </div>
 
+          {innerLoop.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md border border-border/40 bg-surface/60 px-2 py-1 text-[10px] leading-relaxed text-muted">
+              <span className="flex items-center gap-1 font-medium text-text">
+                <Repeat size={10} className="shrink-0 text-accent" />
+                <span>内环迭代</span>
+              </span>
+              <span className="font-mono break-all">
+                {innerLoop[0]} → {innerLoop[innerLoop.length - 1]}
+              </span>
+              <span className="ml-auto whitespace-nowrap tabular-nums">
+                {currentIteration === null
+                  ? `未开启（campaign.json 未落盘）· 上限 ${MAX_ITERATIONS} 轮`
+                  : `第 ${currentIteration} / ${MAX_ITERATIONS} 轮`}
+              </span>
+            </div>
+          )}
+
           {!live && (
             <p className="rounded-md border border-border/40 bg-surface/60 p-2 text-[10px] leading-relaxed text-muted">
               当前为离线预览：进度与状态为内置示例数据，不代表工作区真实工件。
@@ -646,6 +682,18 @@ export function LubricantStagePane({
                           <span className="truncate text-xs font-semibold text-text">
                             {step.titleZh}
                           </span>
+                          {innerLoopSet.has(step.stage) && (
+                            <span
+                              title={
+                                ringEdgeFrom.has(step.stage)
+                                  ? `内环回边：${step.stage} → ${ringEdgeFrom.get(step.stage)!.to}（${ringEdgeFrom.get(step.stage)!.kind}），受控回退，不改写历史`
+                                  : `内环迭代体：${innerLoop[0]} → ${innerLoop[innerLoop.length - 1]}，判据满足才退出`
+                              }
+                              className="shrink-0 rounded border border-accent/40 bg-accent/10 px-1 py-0.2 text-[9px] font-medium text-accent"
+                            >
+                              内环
+                            </span>
+                          )}
                         </div>
                         <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
                           <FileCode2 size={11} className="shrink-0 text-accent/70" />
