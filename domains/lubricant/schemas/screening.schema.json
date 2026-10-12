@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/screening.schema.json",
+  "title": "Cheap physical/chemical screening (gate before the bench)",
+  "description": "Stage contract for the cheap physical/chemical screen that runs BEFORE the bench (PRECISION_GREASE_DEV inner loop). The bench is the bottleneck: about 2 positions per round and roughly 30 days per round, so cheap, fast tests exist to reject obviously-unqualified samples before they consume the scarce bench slots. Known limitation, recorded deliberately: physical/chemical indices usually have LOW discrimination power between close candidate formulas -- this stage is a gate, never a selection criterion, and a PASS means only 'not obviously unqualified', never 'better'. Fail-closed, encoded in the if/then below: overall_verdict=FAIL forces gate_to_bench=BLOCKED, because a failed screen must never reach the bench.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "A failed screen must not reach the bench: the bench is the scarcest resource in the inner loop, so FAIL forces gate_to_bench=BLOCKED.",
+      "if": {
+        "properties": { "overall_verdict": { "const": "FAIL" } },
+        "required": ["overall_verdict"]
+      },
+      "then": {
+        "properties": { "gate_to_bench": { "const": "BLOCKED" } }
+      }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "screening" },
+    "stage": { "const": "SCREENING_PASSED" },
+    "screening_id": { "type": "string", "minLength": 1 },
+    "sample_reference": {
+      "description": "The sample this screen was run on (batch-produced sample identity).",
+      "type": "string",
+      "minLength": 1
+    },
+    "tests": {
+      "description": "One entry per screened index. Every intended index of the frozen screen must appear; a measurement that is not determined must be recorded as verdict INCONCLUSIVE, never silently omitted.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/screening_test" }
+    },
+    "overall_verdict": {
+      "description": "Aggregate screen verdict. FAIL is what forces the bench gate closed via the if/then above.",
+      "enum": ["PASS", "FAIL", "INCONCLUSIVE"]
+    },
+    "measurement_replicates": {
+      "description": "Number of replicate measurements taken per index in this screen. Strictly positive.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "gate_to_bench": {
+      "description": "Whether the sample is released into a bench slot. RELEASED is only legal when overall_verdict is not FAIL.",
+      "enum": ["RELEASED", "BLOCKED"]
+    },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "screening_id",
+    "sample_reference",
+    "tests",
+    "overall_verdict",
+    "measurement_replicates",
+    "gate_to_bench",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "screening_test": {
+      "type": "object",
+      "properties": {
+        "test_id": { "type": "string", "minLength": 1 },
+        "test_name": {
+          "enum": [
+            "PENETRATION",
+            "WORKED_PENETRATION_CHANGE",
+            "DROPPING_POINT",
+            "OIL_SEPARATION",
+            "EVAPORATION_LOSS",
+            "SHEAR_STABILITY",
+            "APPEARANCE_UNIFORMITY"
+          ]
+        },
+        "value": { "type": ["number", "string"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "limit": { "type": ["number", "string", "null"] },
+        "verdict": { "enum": ["PASS", "FAIL", "INCONCLUSIVE"] }
+      },
+      "required": ["test_id", "test_name", "value", "unit", "limit", "verdict"],
+      "additionalProperties": false
+    }
+  }
+}

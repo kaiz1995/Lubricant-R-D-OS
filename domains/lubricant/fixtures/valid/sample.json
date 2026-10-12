@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "sample",
+  "project_id": "PGD-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the labelled sample taken from the batch be traced to the bench under a complete chain of custody?",
+  "hypothesis": "A sample carrying its printed label, preparation date, storage condition, and every handover can be used as measurement evidence; an untraceable sample cannot.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the label text, custody names, and dates are fabricated for contract validation.",
+  "evidence": [
+    {
+      "evidence_id": "E-SMP-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the label printer output and the custody handovers are recorded for this sample.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Accept a sample record only with a printed label and print time, a preparation date, a storage condition, a non-empty chain of custody, and a status; a sample without recorded custody cannot support a downstream measurement.",
+  "result": "The sample is recorded as PREPARED and traceable from the kettle to the bench intake.",
+  "decision": "GO",
+  "next_action": "Hand the sample to the bench campaign under the recorded custody chain.",
+  "sample_id": "SMP-2026-001",
+  "batch_reference": "BAT-2026-001",
+  "formula_reference": "FORM-GREASE-001@v1",
+  "label": {
+    "printed_text": "SMP-2026-001 | BAT-2026-001 | FORM-GREASE-001@v1 | 2026-09-02 | DEVIATED milling step",
+    "printed_at": "2026-09-02T10:15:00"
+  },
+  "prepared_at": "2026-09-02",
+  "storage": "Sealed 1 kg drum at 25 degC, dry indoor cabinet, sample shelf S-03.",
+  "chain_of_custody": [
+    {
+      "from": "Synthetic kettle operator OP-01",
+      "to": "Synthetic sample store SS-01",
+      "at": "2026-09-02",
+      "purpose": "Store the freshly filled drum until the bench slot opens."
+    },
+    {
+      "from": "Synthetic sample store SS-01",
+      "to": "Synthetic bench intake BI-01",
+      "at": "2026-09-03",
+      "purpose": "Submit the sample to the bench campaign."
+    }
+  ],
+  "status": "IN_TRANSIT"
+}

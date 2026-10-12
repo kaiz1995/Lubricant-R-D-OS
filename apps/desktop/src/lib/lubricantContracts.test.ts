@@ -5,7 +5,7 @@
 // single mapping instead; these checks keep it honest.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   GATE_STATUSES,
   ON_DEMAND_STAGES,
@@ -22,12 +22,12 @@ describe("lubricant 契约映射", () => {
   it("STAGE_CHAIN 的 chainIndex 连续且唯一", () => {
     expect(STAGE_CHAIN.map((c) => c.chainIndex)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     ]);
   });
 
-  it("文件名唯一、形如 x.json、无复合串", () => {
+  it("文件名形如 x.json、无复合串；重名只限契约允许的跨路线共用工件", () => {
     const files = STAGE_CHAIN.map((c) => c.file);
-    expect(new Set(files).size).toBe(files.length);
     for (const f of files) {
       expect(f).toMatch(/^[a-z_]+\.json$/);
       expect(f).not.toContain("/");
@@ -35,19 +35,75 @@ describe("lubricant 契约映射", () => {
     // The two names the old pane got wrong.
     expect(files).toContain("experiment_design.json");
     expect(files).not.toContain("doe_design.json");
+
+    // 一个工件文件被两个 stage 共用是允许的（跨路线复用同一种工件），但必须
+    // 显式登记：调和油路线与精密脂路线各有一步产出同名工件。多出任何一条
+    // 未登记的重名都要红。
+    const duplicated = [...new Set(files.filter((f, i) => files.indexOf(f) !== i))].sort();
+    expect(duplicated).toEqual(["failure_ctq.json", "optimization.json", "process.json"]);
+    const owners = Object.fromEntries(
+      duplicated.map((f) => [f, STAGE_CHAIN.filter((c) => c.file === f).map((c) => c.stage)]),
+    );
+    expect(owners).toEqual({
+      "failure_ctq.json": ["FAILURE_CTQ_DEFINED", "FAILURE_MECHANISM_DEFINED"],
+      "optimization.json": ["OPTIMIZED", "NON_INFERIORITY_PASSED"],
+      "process.json": ["PROCESS_WINDOW_DEFINED", "PROCESS_SCALE_VALIDATED"],
+    });
+
+    // 共用之所以安全，是因为每条 route 内部不存在同名工件（一步一工件）；
+    // 若哪天某条路线内部撞名，进度推导会把两步算成同一步 —— 这条守住它。
+    const fileFor = new Map(STAGE_CHAIN.map((c) => [c.stage as string, c.file]));
+    for (const [typeKey, stages] of Object.entries(TYPE_ROUTES)) {
+      const perRoute = stages.map((s) => fileFor.get(s));
+      expect(new Set(perRoute).size, `TYPE_ROUTES[${typeKey}] 内部出现同名工件`).toBe(perRoute.length);
+    }
   });
 
-  it("每个 project_type 的路由都是 STAGE_CHAIN 的子序列，首步为 PROJECT_DEFINED", () => {
+  it("每个 project_type 的路由：stage 都在 STAGE_CHAIN 中、首步为 PROJECT_DEFINED、无重复", () => {
+    const chainStages = new Set(STAGE_CHAIN.map((c) => c.stage));
+    for (const [typeKey, stages] of Object.entries(TYPE_ROUTES)) {
+      expect(stages[0], `${typeKey} 首步`).toBe("PROJECT_DEFINED");
+      expect(new Set(stages).size, `${typeKey} 出现重复 stage`).toBe(stages.length);
+      for (const stage of stages) {
+        expect(chainStages.has(stage), `${typeKey} 含 STAGE_CHAIN 未定义的 ${stage}`).toBe(true);
+      }
+    }
+  });
+
+  it("油品 6 条路由在 STAGE_CHAIN 中保持先后顺序（唯一例外见下一条）", () => {
     const order = STAGE_CHAIN.map((c) => c.stage);
-    for (const stages of Object.values(TYPE_ROUTES)) {
-      expect(stages[0]).toBe("PROJECT_DEFINED");
+    for (const [typeKey, stages] of Object.entries(TYPE_ROUTES)) {
+      if (typeKey === "PRECISION_GREASE_DEV") continue; // 见下一个用例
       let cursor = -1;
       for (const stage of stages) {
         const idx = order.indexOf(stage);
-        expect(idx).toBeGreaterThan(cursor);
+        expect(idx, `${typeKey}: ${stage} 未在 STAGE_CHAIN 或顺序颠倒`).toBeGreaterThan(cursor);
         cursor = idx;
       }
     }
+  });
+
+  it("精密脂的 12 个新 stage 按路线首次出现顺序登记在 STAGE_CHAIN 尾部（chainIndex 14..25）", () => {
+    // PRECISION_GREASE_DEV 把新 stage 与油品台阶交叉排列（FAILURE_MECHANISM_DEFINED
+    // → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED
+    // → BENCH_RESOURCE_REGISTERED → …），所以它**不是** STAGE_CHAIN 的单调子序列：
+    // STAGE_CHAIN 的顺序是登记顺序（新 stage 追加在 1..13 之后），不是该路线的执行
+    // 顺序。面板步骤序列用 routeFor() 的路由顺序，与登记顺序无关。这里同时钉住
+    // 「新 stage 是链尾 12 个、编号 14..25」与「登记顺序 = 路线首次出现顺序」。
+    const NEW_STAGES = [
+      "FAILURE_MECHANISM_DEFINED", "REFERENCE_MATERIAL_RESOLVED", "BENCH_RESOURCE_REGISTERED",
+      "CAMPAIGN_OPENED", "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED",
+      "VARIANCE_ASSESSED", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED",
+      "PROCESS_SCALE_VALIDATED", "KNOWLEDGE_ARCHIVED",
+    ];
+    expect(STAGE_CHAIN.slice(-12).map((c) => c.stage)).toEqual(NEW_STAGES);
+    expect(STAGE_CHAIN.slice(-12).map((c) => c.chainIndex)).toEqual(
+      Array.from({ length: 12 }, (_, i) => i + 14),
+    );
+    const firstSeen = [...new Set(TYPE_ROUTES.PRECISION_GREASE_DEV)].filter((s) =>
+      (NEW_STAGES as readonly string[]).includes(s),
+    );
+    expect(firstSeen).toEqual(NEW_STAGES);
   });
 
   it("各类型步数符合领域包定义", () => {
@@ -59,8 +115,51 @@ describe("lubricant 契约映射", () => {
     // 生产复现验证：8 步，配方不重新优化，且不带 VERIFIED（MODEL_BUILT 直接到 APPLIED）。
     expect(routeFor("PROCESS_ROBUSTNESS")).toHaveLength(8);
     expect(routeFor("PROCESS_ROBUSTNESS").map((c) => c.stage)).not.toContain("VERIFIED");
+    // 精密传动脂开发：20 步（契约 type_routes 的新第 7 类；12 个新 stage 全在链上，
+    // 缺任何一条这里都会短于 20 —— 下方还有逐项对齐契约的用例）。
+    expect(routeFor("PRECISION_GREASE_DEV")).toHaveLength(20);
+    expect(routeFor("PRECISION_GREASE_DEV").map((c) => c.stage)).toContain("KNOWLEDGE_ARCHIVED");
     expect(routeFor("UNKNOWN_TYPE")).toHaveLength(12);
     expect(routeFor(null)).toHaveLength(12);
+  });
+
+  it("未知 project_type 在 DEV 下告警、但仍回退 NEW_PRODUCT（返回值不变）", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(routeFor("NOT_A_TYPE").map((c) => c.stage)).toEqual(
+        routeFor("NEW_PRODUCT").map((c) => c.stage),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("NOT_A_TYPE"));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("null / undefined / 空串是合法回退路径，不告警", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(routeFor(null)).toHaveLength(12);
+      expect(routeFor(undefined)).toHaveLength(12);
+      expect(routeFor("")).toHaveLength(12);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("路由里出现镜像未定义的 stage 时 DEV 下告警，但仍跳过、不抛错", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const route = TYPE_ROUTES.NEW_PRODUCT as unknown as string[];
+    route.push("NOT_A_MIRRORED_STAGE");
+    try {
+      const steps = routeFor("NEW_PRODUCT");
+      expect(steps).toHaveLength(12); // 行为与旧实现一致：未知 stage 被跳过
+      expect(steps.map((c) => c.stage)).not.toContain("NOT_A_MIRRORED_STAGE");
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("NOT_A_MIRRORED_STAGE"));
+    } finally {
+      route.pop();
+      warn.mockRestore();
+    }
   });
 
   it("按需阶段不出现在任何路由上（工艺窗口不进调和油主链）", () => {
@@ -78,14 +177,16 @@ describe("lubricant 契约映射", () => {
     });
   });
 
-  it("PROJECT_TYPES 覆盖全部 6 类，且拒绝非枚举值", () => {
-    // The pack documents exactly six workflows and project.schema.json
-    // enumerates the same six. CORRECTIVE_ACTION used to sit in the enum with
+  it("PROJECT_TYPES 覆盖全部 7 类，且拒绝非枚举值", () => {
+    // The pack documents exactly seven workflows and project.schema.json
+    // enumerates the same seven. CORRECTIVE_ACTION used to sit in the enum with
     // no route and no documentation — vestigial, removed 2026-09-20.
+    // PRECISION_GREASE_DEV is the v0.8.0 seventh: 精密传动脂开发, 20 步。
     expect([...PROJECT_TYPES].sort()).toEqual([
       "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "IMPROVEMENT", "NEW_PRODUCT",
-      "PROCESS_ROBUSTNESS",
+      "PRECISION_GREASE_DEV", "PROCESS_ROBUSTNESS",
     ]);
+    expect(isProjectType("PRECISION_GREASE_DEV")).toBe(true);
     expect(isProjectType("CORRECTIVE_ACTION")).toBe(false);
     expect(isProjectType("NOT_A_TYPE")).toBe(false);
   });
@@ -160,21 +261,35 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     return from < 0 || to < 0 ? "" : src.slice(from, to);
   };
 
-  /** route_step.py 的 ROUTE_TABLE：13 组 (skill, stage)。 */
+  /**
+   * 面板不渲染的生命周期 stage：DRAFT 是草稿态，FROZEN / CLOSED 是终态。
+   * 依据契约 lifecycle_stage_sets —— 三者都只映射到自身（单元素集合），不是
+   * 研发工序。反向防漂移用例会核算本表与契约完全一致。
+   */
+  const NON_CHAIN_LIFECYCLE_STAGES = new Set(["DRAFT", "FROZEN", "CLOSED"]);
+
+  /**
+   * 尚未随领域包发货 schema 的 artifact_type。route_step.py 已把
+   * NEXT_BATCH_DECIDED 派给 doe-design，但 schemas/next_batch.schema.json 还没
+   * 落盘。显式登记而不是静默跳过；领域包补上后必须删条目（有用例反向核对）。
+   */
+  const SCHEMA_NOT_SHIPPED = new Set(["next_batch"]);
+
+  /** route_step.py 的 ROUTE_TABLE：25 组 (skill, stage)。 */
   const routeTable = () =>
     [...slice("ROUTE_TABLE = (", "\n)").matchAll(/\(\s*"([^"]+)",\s*"([^"]+)"\s*\)/g)].map((m) => ({
       skill: m[1],
       stage: m[2],
     }));
 
-  it("ROUTE_TABLE 有 13 组，且 skill / stage 顺序与本模块逐一对应", () => {
+  it("ROUTE_TABLE 有 25 组，且 skill / stage 顺序与本模块逐一对应", () => {
     const table = routeTable();
-    expect(table).toHaveLength(13);
+    expect(table).toHaveLength(25);
     expect(table.map((r) => r.skill)).toEqual(STAGE_CHAIN.map((c) => c.skill));
     expect(table.map((r) => r.stage)).toEqual(STAGE_CHAIN.map((c) => c.stage));
   });
 
-  it("STAGE_CHAIN 的 stage 是 state-machine.json 的 stages 子集，且来自契约", () => {
+  it("正向：STAGE_CHAIN 的 stage 都是 state-machine.json 的 stages（镜像 ⊆ 契约）", () => {
     const machine = readJson<{ stages: string[] }>("contracts/state-machine.json");
     const known = new Set(machine.stages);
     for (const c of STAGE_CHAIN) {
@@ -182,8 +297,47 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     }
   });
 
-  it("每个 artifact_type 都有 schema，且其 artifact_type const 与本模块一致", () => {
+  it("反向防漂移：契约 stages 除三个生命周期 stage 外，全部都在 STAGE_CHAIN 中", () => {
+    // 上一条只查正向（镜像 ⊆ 契约），查不出「契约加了 stage、镜像没跟上」——
+    // v0.8.0 一次加 12 个 stage，正是这一类漂移：正向断言全绿，面板却少渲染
+    // 12 步。这里把反方向也钉住：契约 stage 必须要么进 STAGE_CHAIN，要么在
+    // 排除表里显式登记。
+    const machine = readJson<{
+      stages: string[];
+      lifecycle_stage_sets: Record<string, string[]>;
+    }>("contracts/state-machine.json");
+
+    // 排除表不是随手写的常量：契约里 DRAFT / FROZEN / CLOSED 各自映射到只含
+    // 自身的单元素集合 —— 它们是生命周期容器（草稿态 + 两个终态），按定义不是
+    // 研发工序，面板不渲染。这里从契约现算并比对，排除表一旦与契约脱节即红。
+    const lifecycleOnly = Object.entries(machine.lifecycle_stage_sets)
+      .filter(([status, stages]) => stages.length === 1 && stages[0] === status)
+      .map(([status]) => status)
+      .sort();
+    expect(lifecycleOnly).toEqual([...NON_CHAIN_LIFECYCLE_STAGES].sort());
+
+    const mirrored = new Set<string>(STAGE_CHAIN.map((c) => c.stage));
+    const uncovered = machine.stages.filter(
+      (s) => !mirrored.has(s) && !NON_CHAIN_LIFECYCLE_STAGES.has(s),
+    );
+    expect(
+      uncovered,
+      `STAGE_CHAIN 未覆盖契约 stage: ${uncovered.join(", ")} —— 契约/镜像已漂移`,
+    ).toEqual([]);
+    // 被排除的也必须恰好是这三个：契约新增的任何 stage 都不许悄悄落进排除区。
+    const excluded = machine.stages.filter((s) => !mirrored.has(s)).sort();
+    expect(excluded).toEqual([...NON_CHAIN_LIFECYCLE_STAGES].sort());
+  });
+
+  it("每个 artifact_type 都有 schema（未随包发货者显式登记），且其 const 与本模块一致", () => {
     for (const c of STAGE_CHAIN) {
+      if (SCHEMA_NOT_SHIPPED.has(c.artifactType)) {
+        expect(
+          existsSync(join(PACK as string, `schemas/${c.artifactType}.schema.json`)),
+          `领域包已补 ${c.artifactType}.schema.json，请从 SCHEMA_NOT_SHIPPED 移除`,
+        ).toBe(false);
+        continue;
+      }
       const schema = readJson<{ properties: { artifact_type: { const: string } } }>(
         `schemas/${c.artifactType}.schema.json`,
       );
@@ -191,22 +345,48 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     }
   });
 
-  it("每个 file 都存在于 fixtures/valid/", () => {
+  it("每个 file 都存在于 fixtures/valid/（未随包发货者显式登记）", () => {
     const validFixtures = new Set(readdirSync(join(PACK as string, "fixtures/valid")));
-    // process.json / application.json 是 WP 新增的两步工件：领域包用 schema +
-    // skill 内 build 脚本的测试覆盖它们，尚未在 fixtures/valid 落样例。除这两者
-    // 外，链上每个 file 都必须有可用 fixture，防止再出现旧版虚构文件名。
-    const noFixtureShipped = new Set(["process.json", "application.json"]);
+    // 尚无 fixtures/valid 样例的链上工件：
+    //   process.json / application.json —— WP 新增工件，只有 schema + skill 内
+    //     构建脚本的测试覆盖；
+    //   bench.json —— 台架登记由 e2e 在临时工作区现搭
+    //     （tests/lubricant_e2e/test_application_bench.py）；
+    //   next_batch.json —— 连 schema 都未发货（见上一条）。
+    // 显式登记；领域包补货后必须删条目（反向断言会红）。
+    const noFixtureShipped = new Set([
+      "process.json", "application.json", "bench.json", "next_batch.json",
+    ]);
     for (const c of STAGE_CHAIN) {
-      if (noFixtureShipped.has(c.file)) continue;
+      if (noFixtureShipped.has(c.file)) {
+        expect(
+          validFixtures.has(c.file),
+          `领域包已补 ${c.file} 样例，请从 noFixtureShipped 移除`,
+        ).toBe(false);
+        continue;
+      }
       expect(validFixtures.has(c.file), `fixtures/valid 缺 ${c.file}`).toBe(true);
     }
   });
 
-  it("每个 skill 目录都存在", () => {
+  it("每个 skill 目录都存在（未随包发货者显式登记）", () => {
+    // route_step.py 已把 12 个新 stage 派给技能，其中 5 个技能目录的 SKILL.md
+    // 尚未随领域包落盘（包内进度差，不是镜像漂移：技能名逐字来自 route_step.py，
+    // 由上面 ROUTE_TABLE 用例强制）。显式登记；补货后必须删条目（反向断言会红）。
+    const skillNotShipped = new Set([
+      "reference-material", "grease-batch", "grease-screening",
+      "variance-assessment", "knowledge-archive",
+    ]);
+    const missing = new Set<string>();
     for (const c of STAGE_CHAIN) {
-      expect(existsSync(join(PACK as string, "skills", c.skill, "SKILL.md"))).toBe(true);
+      if (existsSync(join(PACK as string, "skills", c.skill, "SKILL.md"))) continue;
+      expect(
+        skillNotShipped.has(c.skill),
+        `skills/${c.skill}/SKILL.md 不存在，且未登记为「未发货」`,
+      ).toBe(true);
+      missing.add(c.skill);
     }
+    expect([...missing].sort()).toEqual([...skillNotShipped].sort());
   });
 
   it("TYPE_ROUTES 与 state-machine.json 的 type_routes 逐项一致（直接读契约，防漂移）", () => {
@@ -238,14 +418,22 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     }
   });
 
-  it("project.schema.json 的 project_type 枚举与 PROJECT_TYPES 完全一致", () => {
+  it("project.schema.json 的 project_type 枚举与 PROJECT_TYPES 一致（三处同源）", () => {
     // 三处必须同源：state-machine.json 的 type_routes、project.schema.json 的枚举、
     // 本模块的 PROJECT_TYPES。2026-09-20 之前 schema 多了一个无路由的
     // CORRECTIVE_ACTION，正是这条检查要防的漂移。
+    //
+    // v0.8.0：PRECISION_GREASE_DEV 已同时进入契约与 project.schema.json 的枚举，
+    // 三处一致，不再有未发货缺口（下面的差集断言会守住这一点）。
     const schema = readJson<{ properties: { project_type: { enum: string[] } } }>(
       "schemas/project.schema.json",
     );
     expect([...schema.properties.project_type.enum].sort()).toEqual([...PROJECT_TYPES].sort());
+    // 差集必须为空：任何一侧新增而另一侧漏改都会红。
+    const actualGap = [...PROJECT_TYPES].filter(
+      (t) => !schema.properties.project_type.enum.includes(t),
+    );
+    expect(actualGap).toEqual([]);
   });
 
   it("gate_statuses 与 state-machine.json 一致", () => {
@@ -256,6 +444,9 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
   it("lite 校验的必填键集合不宽于 schema 的 required", () => {
     // 反向守卫：schema 新增必填字段时这里会红，提醒同步 OWN_REQUIRED。
     for (const c of STAGE_CHAIN) {
+      // 未发货 schema 的工件无法比对；只做 common 必填的 lite 校验本就是
+      // 保守的一面（这里跳过不影响守卫方向：lite 只可能更窄，不会更宽）。
+      if (SCHEMA_NOT_SHIPPED.has(c.artifactType)) continue;
       const schema = readJson<{ required: string[] }>(`schemas/${c.artifactType}.schema.json`);
       const full: Record<string, unknown> = {
         schema_version: "0.1.0",

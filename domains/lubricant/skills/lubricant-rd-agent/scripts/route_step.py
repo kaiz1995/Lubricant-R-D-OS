@@ -59,6 +59,22 @@ ROUTE_TABLE = (
     ("process-scale-up", "PROCESS_WINDOW_DEFINED"),
     ("gate-review", "VERIFIED"),
     ("application-validation", "APPLIED"),
+    # PRECISION_GREASE_DEV (the 7th route) runs all 17 of its steps as
+    # first-class stages. The stages below are the ones the oil routes skip,
+    # fold into a neighbour, or never had; each needs a producer here or the
+    # router raises KeyError on SKILL_FOR_STAGE instead of failing closed.
+    ("failure-ctq-analysis", "FAILURE_MECHANISM_DEFINED"),
+    ("reference-material", "REFERENCE_MATERIAL_RESOLVED"),
+    ("bench-registration", "BENCH_RESOURCE_REGISTERED"),
+    ("bench-registration", "CAMPAIGN_OPENED"),
+    ("grease-batch", "BATCH_PRODUCED"),
+    ("grease-screening", "SCREENING_PASSED"),
+    ("experiment-import", "BENCH_TESTED"),
+    ("variance-assessment", "VARIANCE_ASSESSED"),
+    ("doe-design", "NEXT_BATCH_DECIDED"),
+    ("optimization", "NON_INFERIORITY_PASSED"),
+    ("process-scale-up", "PROCESS_SCALE_VALIDATED"),
+    ("knowledge-archive", "KNOWLEDGE_ARCHIVED"),
 )
 
 STAGES = tuple(stage for _, stage in ROUTE_TABLE)
@@ -79,18 +95,26 @@ SKILL_FOR_STAGE = dict((stage, skill) for skill, stage in ROUTE_TABLE)
 ON_DEMAND_STAGES = CONTRACT["on_demand_stages"] if CONTRACT else {}
 ON_DEMAND_NEXT = dict((stage, spec["next_stage"]) for stage, spec in ON_DEMAND_STAGES.items())
 
+# Differentiated workflows, published by the contract (one list, two consumers).
+TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
+
 # The undifferentiated fallback chain, used only when state declares no routed
-# project_type. On-demand stages are excluded: they are never a step of a
-# workflow, so an unrouted project must not walk through them either.
-FALLBACK_STAGES = tuple(stage for stage in STAGES if stage not in ON_DEMAND_STAGES)
+# project_type. It is the contract's NEW_PRODUCT route, not "every stage the
+# router can materialise": ROUTE_TABLE also carries the stages of the
+# PRECISION_GREASE_DEV route (a 17-step workflow published as its own
+# type_routes entry), and folding those into the fallback would walk an
+# unrouted legacy project through a chain it was never designed for.
+#
+# Deriving it from the route also keeps on-demand stages out by construction
+# (they sit on no route), and removes the third hand-maintained copy of the
+# chain that used to live here.
+FALLBACK_STAGES = tuple(TYPE_ROUTES.get("NEW_PRODUCT", ()))
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 
-# Differentiated workflows for the 6 project types, published by the contract.
-TYPE_ROUTES = CONTRACT["type_routes"] if CONTRACT else {}
-# Stage universe = the contract's stages (16 since WP-06 added APPLIED). A
-# contract that cannot be read leaves the universe empty so decide() denies
-# every request instead of guessing.
+# Stage universe = the contract's stages (28 since PRECISION_GREASE_DEV added
+# its 12). A contract that cannot be read leaves the universe empty so decide()
+# denies every request instead of guessing.
 KNOWN_STAGES = tuple(CONTRACT["stages"]) if CONTRACT else ()
 NEXT_STAGE = dict(zip(KNOWN_STAGES, KNOWN_STAGES[1:]))
 

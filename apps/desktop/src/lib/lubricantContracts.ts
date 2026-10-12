@@ -3,7 +3,8 @@
  *
  * 派生自：
  *   - contracts/state-machine.json 的 stages / type_routes / on_demand_stages
- *     （16 段、6 类路由 + 1 个按需阶段）
+ *     （v0.8.0：28 段、7 类路由 + 1 个按需阶段；第 7 类 PRECISION_GREASE_DEV
+ *     是精密传动脂开发路线，独占 12 个新 stage）
  *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE（skill → stage 顺序）
  *   - schemas/<artifact_type>.schema.json 的 artifact_type const 与 required
  *   - fixtures/valid/*.json 的文件名
@@ -17,7 +18,8 @@ export type ProjectType =
   | "COST_DOWN"
   | "CUSTOMIZATION"
   | "EXPLORATION"
-  | "PROCESS_ROBUSTNESS";
+  | "PROCESS_ROBUSTNESS"
+  | "PRECISION_GREASE_DEV";
 
 /** STAGE_CHAIN 覆盖的 stage 子集（含不在任何路由上的按需阶段）。 */
 export type ChainStage =
@@ -33,7 +35,20 @@ export type ChainStage =
   | "OPTIMIZED"
   | "PROCESS_WINDOW_DEFINED"
   | "VERIFIED"
-  | "APPLIED";
+  | "APPLIED"
+  // v0.8.0 精密传动脂（PRECISION_GREASE_DEV）路线的 12 个新 stage。
+  | "FAILURE_MECHANISM_DEFINED"
+  | "REFERENCE_MATERIAL_RESOLVED"
+  | "BENCH_RESOURCE_REGISTERED"
+  | "CAMPAIGN_OPENED"
+  | "BATCH_PRODUCED"
+  | "SCREENING_PASSED"
+  | "BENCH_TESTED"
+  | "VARIANCE_ASSESSED"
+  | "NEXT_BATCH_DECIDED"
+  | "NON_INFERIORITY_PASSED"
+  | "PROCESS_SCALE_VALIDATED"
+  | "KNOWLEDGE_ARCHIVED";
 
 /** 契约绑定部分：与领域包一一对应，不得随意改动。 */
 export interface StageContract {
@@ -240,6 +255,182 @@ export const STAGE_CHAIN: readonly StageContract[] = [
       "bench_references 至少引用一个已登记台架",
     ],
   },
+  /* ---- v0.8.0 精密传动脂路线（PRECISION_GREASE_DEV）独享的 12 个 stage ---- *
+   * 前 7 条（14~20）是调和油路线跳过或折叠掉的工序，后 5 条（21~25）是
+   * 内环迭代与知识封存的闭环工序。注意三条**共用工件**（跨路线复用，同一
+   * 条 route 内不会重复出现）：failure_ctq.json（失效机制 + CTQ 两段共享）、
+   * optimization.json（优化 + 非劣效共享）、process.json（工艺窗口按需阶段 +
+   * 工艺放大共享）。routeFor() 按 stage 取契约，共用不影响进度推导。          */
+  {
+    chainIndex: 14,
+    skill: "failure-ctq-analysis",
+    stage: "FAILURE_MECHANISM_DEFINED",
+    artifactType: "failure_ctq",
+    file: "failure_ctq.json",
+    titleZh: "失效机制与判据界定",
+    description: "把失效模式落到机理与判据层：每个 CTQ 必须声明它属于筛测、台架还是整机判据。",
+    criteria: [
+      "每条失效模式与机理一一对应，并给出润滑剂贡献路径",
+      "每个 CTQ 声明判据层级（筛测 / 台架 / 整机），禁止混层",
+      "root_cause_hypotheses 与 failure_diagnosis 均有证据，缺证据者显式标 GAP",
+      "test_chain 指向已确认的测试方法，未确认者标注待资格",
+    ],
+  },
+  {
+    chainIndex: 15,
+    skill: "reference-material",
+    stage: "REFERENCE_MATERIAL_RESOLVED",
+    artifactType: "reference",
+    file: "reference.json",
+    titleZh: "参照物卷宗（已知好/坏样）",
+    description: "登记已知好样与已知坏样实物及其历史证据，至少一方 RESOLVED 才可进入方法资格。",
+    criteria: [
+      "known_good / known_bad 至少一方有实物与可追溯来源",
+      "tier 明确（DIRECT_HISTORY / LONG_RUN_NO_EVENT / UNRESOLVED）",
+      "历史证据与参照物绑定，每条可回指 evidence_id",
+      "downstream_flag 如实反映区分性证据是否齐备",
+    ],
+  },
+  {
+    chainIndex: 16,
+    skill: "bench-registration",
+    stage: "BENCH_RESOURCE_REGISTERED",
+    artifactType: "bench",
+    file: "bench.json",
+    titleZh: "台架资源与档期登记",
+    description: "登记可用台架位数、单轮占用天数与单轮成本，作为台架战役的资源包络。",
+    criteria: [
+      "可用位数由档期与单轮天数换算得出，不得手填",
+      "单轮成本含数值、单位与来源",
+      "availability_window 起止合法（start 早于 end），reserved_days 已扣除",
+    ],
+  },
+  {
+    chainIndex: 17,
+    skill: "bench-registration",
+    stage: "CAMPAIGN_OPENED",
+    artifactType: "campaign",
+    file: "campaign.json",
+    titleZh: "台架战役开启（内环迭代）",
+    description: "开启内环迭代的台架战役载体，含成对比较设计与迭代轮次上限。",
+    criteria: [
+      "pairing_design 成对比较设计齐备，缺失不得开战",
+      "bench_references 指向已登记台架",
+      "iterations 每轮记录 stop_state，且不得超过 max_iterations",
+    ],
+  },
+  {
+    chainIndex: 18,
+    skill: "grease-batch",
+    stage: "BATCH_PRODUCED",
+    artifactType: "batch",
+    file: "batch.json",
+    titleZh: "制脂与制样（工艺全轨迹）",
+    description: "记录皂化 / 脱水 / 转相 / 冷却 / 研磨全轨迹与原材料批次，工艺偏差显式登记。",
+    criteria: [
+      "trajectory 覆盖全部单元操作，工艺偏差显式记录、不得抹平",
+      "raw_material_lots 与 formula_reference 可追溯，样品交接链完整",
+      "batch_verdict 取值合法（VALID / DEVIATED / VOID），偏差未判定不得放行",
+    ],
+  },
+  {
+    chainIndex: 19,
+    skill: "grease-screening",
+    stage: "SCREENING_PASSED",
+    artifactType: "screening",
+    file: "screening.json",
+    titleZh: "理化筛测（送台架门槛）",
+    description: "先做理化筛测再送台架：筛测只当门槛，不当选优依据。",
+    criteria: [
+      "overall_verdict 为 PASS 才可 gate_to_bench=RELEASED",
+      "FAIL / INCONCLUSIVE 一律不得送台架（gate_to_bench=BLOCKED）",
+      "tests 与 measurement_replicates 齐备，每个结果可回指原始测量",
+    ],
+  },
+  {
+    chainIndex: 20,
+    skill: "experiment-import",
+    stage: "BENCH_TESTED",
+    artifactType: "bench_test",
+    file: "bench_test.json",
+    titleZh: "台架实测与删失登记",
+    description: "录入台架实测记录：删失不得记为终点值，停机原因必填。",
+    criteria: [
+      "censoring_type 明确（RIGHT / LEFT / INTERVAL / NONE），删失值不得当终点值",
+      "event_occurred / event_time 与 anomalies 一致，停机原因必填",
+      "raw_record_reference 指向原始记录，不得只留整理稿",
+    ],
+  },
+  {
+    chainIndex: 21,
+    skill: "variance-assessment",
+    stage: "VARIANCE_ASSESSED",
+    artifactType: "variance",
+    file: "variance.json",
+    titleZh: "方差与重复性判定",
+    description: "判定观测差异是否真实存在；测不出差异时要区分「真的没差异」与「功效不足」。",
+    criteria: [
+      "verdict 明确（真实差异 / 无可检出差异 / 功效不足 / 重复不一致）",
+      "power 与 k_ratio 支撑判定，UNDERPOWERED 不得当作没差异",
+      "computed_by 指向计算引擎，禁止手工计算方差",
+    ],
+  },
+  {
+    chainIndex: 22,
+    skill: "doe-design",
+    stage: "NEXT_BATCH_DECIDED",
+    artifactType: "next_batch",
+    file: "next_batch.json",
+    titleZh: "模型更新与序贯决策",
+    description: "用新数据更新模型并给出下一轮小批的决策与理由（或显式终止理由）。",
+    criteria: [
+      "指明下一轮批次与理由，或显式记录终止理由",
+      "模型更新引用了最新一轮台架与筛测数据",
+      "结论与证据链一致，不得以单点结果下结论",
+    ],
+  },
+  {
+    chainIndex: 23,
+    skill: "optimization",
+    stage: "NON_INFERIORITY_PASSED",
+    artifactType: "optimization",
+    file: "optimization.json",
+    titleZh: "优化与非劣效判定",
+    description: "默认约束满足型优化，以参照物为基准做非劣效判定；成本是约束而非判据。",
+    criteria: [
+      "以参照物为基准给出非劣效结论，方法与阈值明确",
+      "成本只作约束，不参与判据",
+      "候选配方与引擎交接记录齐备",
+    ],
+  },
+  {
+    chainIndex: 24,
+    skill: "process-scale-up",
+    stage: "PROCESS_SCALE_VALIDATED",
+    artifactType: "process",
+    file: "process.json",
+    titleZh: "工艺窗口与放大验证",
+    description: "固化 validated 的工艺窗口并验证放大可行性，制造可行性须指向 PROCESS-WINDOW 引用。",
+    criteria: [
+      "process_window.validated 为 true，窗口有 basis 与来源",
+      "制造可行性引用 PROCESS-WINDOW:<window_id>，不得空口声明",
+      "放大倍数有来源，换釜复现记录一致，scale_class 沿 LAB→PILOT→PRODUCTION 前进",
+    ],
+  },
+  {
+    chainIndex: 25,
+    skill: "knowledge-archive",
+    stage: "KNOWLEDGE_ARCHIVED",
+    artifactType: "knowledge_asset",
+    file: "knowledge_asset.json",
+    titleZh: "知识入库（资产封存）",
+    description: "六类知识资产齐备才可 CLOSED_KNOWLEDGE；SYNTHETIC 证据只能停在 DRAFT。",
+    criteria: [
+      "六类资产齐备（推荐配方 / 可行设计空间 / 临界失效边界 / 证据包 / 材料知识 / 模型）",
+      "asset_status=CLOSED_KNOWLEDGE 才可归档，SYNTHETIC 强制 DRAFT_KNOWLEDGE",
+      "每条资产带证据引用，可被后续项目的知识检索复用",
+    ],
+  },
 ];
 
 const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
@@ -247,13 +438,17 @@ const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
 );
 
 /**
- * 镜像 state-machine.json 的 type_routes（6 类）。
+ * 镜像 state-machine.json 的 type_routes（7 类）。
  *
  * 注意：PROCESS_WINDOW_DEFINED **不在任何一条路由上** —— 它是 on-demand
  * 阶段（见 ON_DEMAND_STAGES）。工艺窗口固化对润滑脂是一等维度（皂化 / 转相 /
  * 冷却速率决定皂纤维骨架，同配方换釜可出不同产品），对调和油只是二阶变量
  * （物理混合，不生成产品结构）。把它排进每条油品链会迫使研发员为走完流程
  * 填写一个无意义的工件 —— 与本领域包 NO Invented Process Data 红线直接冲突。
+ *
+ * 第 7 类 PRECISION_GREASE_DEV（精密传动脂）是唯一走满 20 步的路线：它用
+ * 独立的 PROCESS_SCALE_VALIDATED 表达工艺放大，不复用按需阶段
+ * PROCESS_WINDOW_DEFINED（契约 on_demand_stages 的 note 明确此事）。
  */
 export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
   NEW_PRODUCT: [
@@ -283,6 +478,17 @@ export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
     "MODEL_BUILT", "APPLIED",
   ],
+  // 精密传动脂开发：20 步，逐项照抄契约 type_routes（含 12 个新 stage）。
+  // 与油品路线并列，不是它的延长线：内环迭代（战役 → 制脂 → 筛测 → 台架 →
+  // 方差 → 下一批）插在 DOE 与模型之间，末端多出非劣效 / 工艺放大 / 知识入库。
+  PRECISION_GREASE_DEV: [
+    "PROJECT_DEFINED", "DUTY_DEFINED", "FAILURE_MECHANISM_DEFINED",
+    "REFERENCE_MATERIAL_RESOLVED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
+    "BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED", "EXPERIMENT_DESIGNED",
+    "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED",
+    "MODEL_BUILT", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED",
+    "PROCESS_SCALE_VALIDATED", "VERIFIED", "APPLIED", "KNOWLEDGE_ARCHIVED",
+  ],
 };
 
 /**
@@ -299,13 +505,41 @@ export function isProjectType(value: unknown): value is ProjectType {
   return typeof value === "string" && value in TYPE_ROUTES;
 }
 
-/** 某 project_type 下的有序步骤列表；未知类型回退 NEW_PRODUCT。 */
+/**
+ * 开发期告警：只在 DEV 构建里输出。
+ *
+ * 旧实现遇到契约/镜像漂移是**静默**的：路由里的未知 stage 被直接丢掉、
+ * 未知 project_type 被静默换成 NEW_PRODUCT，界面上完全看不出来 —— 面板
+ * 只是少几步或悄悄走错链。这里把漂移变成可见的 console.warn（生产构建下
+ * `import.meta.env.DEV` 为 false，分支被静态剔除）。
+ */
+function warnDev(message: string): void {
+  if (import.meta.env.DEV) console.warn(`[lubricantContracts] ${message}`);
+}
+
+/** 某 project_type 下的有序步骤列表；未知类型回退 NEW_PRODUCT（DEV 下告警）。 */
 export function routeFor(projectType: string | null | undefined): StageContract[] {
-  const key: ProjectType = isProjectType(projectType) ? projectType : "NEW_PRODUCT";
+  const known = isProjectType(projectType);
+  if (!known && typeof projectType === "string" && projectType.length > 0) {
+    // 非空但不在枚举里 = 契约新增了类型而镜像没跟上，或工作区写错了值。
+    // null / undefined / "" 是「项目尚未声明类型」的合法回退路径，不告警。
+    warnDev(
+      `未知 project_type "${projectType}"，已回退 NEW_PRODUCT；请核对 ` +
+        `domains/lubricant/contracts/state-machine.json 的 type_routes 与 TYPE_ROUTES 是否漂移`,
+    );
+  }
+  const key: ProjectType = known ? projectType : "NEW_PRODUCT";
   const out: StageContract[] = [];
   for (const stage of TYPE_ROUTES[key]) {
     const contract = BY_STAGE.get(stage);
-    if (contract) out.push(contract);
+    if (contract) {
+      out.push(contract);
+    } else {
+      warnDev(
+        `${key} 的路由含 STAGE_CHAIN 未定义的 stage "${stage}"，该步已跳过；` +
+          `请核对 state-machine.json 的 stages 与 STAGE_CHAIN 是否漂移`,
+      );
+    }
   }
   return out;
 }

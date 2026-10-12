@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "formula",
+  "project_id": "PGD-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the lithium grease trial formula be recorded with its in-situ reaction product separated from its charge?",
+  "hypothesis": "Recording the soap thickener as a PRODUCT of saponification rather than as a charged input keeps the formula reproducible and keeps the charge-closure constraint honest.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the intended soap fraction is a design target, not a measured batch result, and the charge fractions are supplied by the fixture author.",
+  "evidence": [
+    {
+      "evidence_id": "E-FR-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the input list records the base oil, fatty acid, and lithium hydroxide charge with their roles.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-FR-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the lithium soap is formed in situ by saponification, so its target fraction is recorded on the product side.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Record a formula only with non-empty inputs and products, an explicit mixture_basis, and a required baseline_process_reference; the soap thickener is a product of the reaction, never a charged input.",
+  "result": "The trial formula is recorded with the charge on the input side, the in-situ lithium soap on the product side, and the charge-closure basis declared as INPUTS.",
+  "decision": "GO",
+  "next_action": "Pair the formula with a batch trajectory so the intended soap fraction can be compared with the produced one.",
+  "formula_id": "FORM-GREASE-001",
+  "version": "v1",
+  "inputs": [
+    { "material_id": "MAT-BO-001", "fraction": 0.87, "role": "base_oil" },
+    { "material_id": "MAT-FA-001", "fraction": 0.10, "role": "fatty_acid" },
+    { "material_id": "MAT-LIOH-001", "fraction": 0.03, "role": "alkali" }
+  ],
+  "products": [
+    { "product_id": "PROD-BASE-OIL", "target_fraction": 0.87, "reaction_reference": "REACTION-NONE: base oil carries through the saponification unchanged" },
+    { "product_id": "PROD-LI-SOAP", "target_fraction": 0.12, "reaction_reference": "REACTION-SAPONIFICATION-001: fatty acid + LiOH -> lithium soap + water" },
+    { "product_id": "PROD-ADDITIVE-PACK", "target_fraction": 0.01, "reaction_reference": "REACTION-NONE: additive package is blended in after dehydration" }
+  ],
+  "mixture_basis": "INPUTS",
+  "baseline_process_reference": "PROCESS-BASE-GREASE-001"
+}

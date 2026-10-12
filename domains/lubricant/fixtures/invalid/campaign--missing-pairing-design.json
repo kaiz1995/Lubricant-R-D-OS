@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "campaign",
+  "project_id": "PGD-001",
+  "stage": "CAMPAIGN_OPENED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Invalid fixture: can the inner loop open without a declared pairing design?",
+  "hypothesis": "This invalid fixture evaluates no product hypothesis.",
+  "uncertainty": "Fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-CM-BAD-001",
+      "statement": "This is a schema-validation fixture, not product evidence.",
+      "source": "fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A campaign must declare whether its rounds are paired; without it the resolution benefit of pairing is unrecorded.",
+  "result": "Rejected.",
+  "decision": "UNDECIDED",
+  "next_action": "Do not use this fixture for R&D decisions.",
+  "campaign_id": "CMP-BAD-001",
+  "bench_references": ["BENCH-SZ-01"],
+  "max_iterations": 6,
+  "current_iteration": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": ["SAM-SYN-001", "SAM-SYN-002"],
+      "stop_state": "CONTINUE"
+    }
+  ]
+}

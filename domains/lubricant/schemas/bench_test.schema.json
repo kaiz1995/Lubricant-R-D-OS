@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/bench_test.schema.json",
+  "title": "Bench test run (censoring-discipline carrier)",
+  "description": "Stage contract for one bench run (PRECISION_GREASE_DEV inner loop) and the carrier of the censoring discipline. Provenance of if/then rule (i): real-case evidence -- a right-censored 10 h observation (no event within the 10 h window) must NEVER be recorded or used as event_time = 10 h; once such a value is mixed into an analysis the variance estimate is wrong and every downstream conclusion is void. A right-censored run is therefore recorded as event_occurred=false with event_time=null and a declared stop_reason, never as an end-point value. Rule (ii): any censored observation (RIGHT / LEFT / INTERVAL) must declare why it stopped, so administrative censoring can never be silently presented as a completed run.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "A right-censored observation is NEVER an end-point value: censoring_type=RIGHT forces event_occurred=false and event_time=null.",
+      "if": {
+        "properties": { "censoring_type": { "const": "RIGHT" } },
+        "required": ["censoring_type"]
+      },
+      "then": {
+        "properties": {
+          "event_occurred": { "const": false },
+          "event_time": { "type": "null" }
+        }
+      }
+    },
+    {
+      "$comment": "A censored observation must declare why it stopped: censoring_type other than NONE requires a non-empty stop_reason.",
+      "if": {
+        "properties": { "censoring_type": { "not": { "const": "NONE" } } },
+        "required": ["censoring_type"]
+      },
+      "then": {
+        "required": ["stop_reason"],
+        "properties": { "stop_reason": { "type": "string", "minLength": 1 } }
+      }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "bench_test" },
+    "stage": { "const": "BENCH_TESTED" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "bench_reference": { "type": "string", "minLength": 1 },
+    "batch_reference": { "type": "string", "minLength": 1 },
+    "sample_reference": { "type": "string", "minLength": 1 },
+    "protocol_version": {
+      "description": "Frozen bench protocol version this run was executed under.",
+      "type": "string",
+      "minLength": 1
+    },
+    "setpoints": {
+      "description": "Fixed run setpoints recorded as executed (for example load, speed, temperature), one non-empty string each.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "environment": {
+      "description": "Ambient conditions during the run.",
+      "type": "object",
+      "properties": {
+        "temperature_c": { "type": "number" },
+        "humidity_percent": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "required": ["temperature_c", "humidity_percent"],
+      "additionalProperties": false
+    },
+    "raw_record_reference": {
+      "description": "Reference to the immutable raw record this summary is distilled from.",
+      "type": "string",
+      "minLength": 1
+    },
+    "event_occurred": {
+      "description": "Whether the defined event actually occurred inside the observation window. false means the run produced no event (typically censored).",
+      "type": "boolean"
+    },
+    "event_time": {
+      "description": "Event time in hours when event_occurred is true; null when no event occurred. A censoring time is NEVER recorded here.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "censoring_type": {
+      "description": "Censoring discipline for this observation: NONE (event observed), RIGHT, LEFT or INTERVAL.",
+      "enum": ["RIGHT", "LEFT", "INTERVAL", "NONE"]
+    },
+    "stop_reason": {
+      "description": "Why the run stopped. Hard-required and non-empty whenever censoring_type is not NONE (see if/then rule (ii)); may be null only for an uncensored run.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "anomalies": {
+      "description": "Observed anomalies during the run. May be empty; an empty list is an explicit 'none observed'.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "campaign_iteration": {
+      "description": "Which inner-loop round of the campaign this run belongs to. Strictly positive.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "run_id",
+    "bench_reference",
+    "batch_reference",
+    "sample_reference",
+    "protocol_version",
+    "setpoints",
+    "environment",
+    "raw_record_reference",
+    "event_occurred",
+    "event_time",
+    "censoring_type",
+    "anomalies",
+    "campaign_iteration",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false
+}

@@ -37,6 +37,16 @@ EXPECTED_ERRORS = {
     "design_freeze--synthetic.json": "'PHYSICAL' was expected",
     "knowledge_asset--missing-model.json": "True was expected",
     "knowledge_asset--synthetic-closed.json": "'DRAFT_KNOWLEDGE' was expected",
+    # PRECISION_GREASE_DEV objects (contract v0.8.0).
+    "material--missing-source.json": "'source' is a required property",
+    "formula--missing-baseline-process.json": "'baseline_process_reference' is a required property",
+    "batch--bad-deviation-verdict.json": "'OK' is not one of",
+    "sample--missing-custody.json": "'chain_of_custody' is a required property",
+    "reference--unbound-history-evidence.json": "'mechanism_reference' is a required property",
+    "screening--failed-but-released.json": "'BLOCKED' was expected",
+    "bench_test--censored-as-endpoint.json": "False was expected",
+    "variance--manual-computation.json": "'ENGINE' was expected",
+    "campaign--missing-pairing-design.json": "'pairing_design' is a required property",
 }
 
 

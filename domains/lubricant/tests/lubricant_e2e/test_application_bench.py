@@ -40,10 +40,25 @@ APP_BUILDER = ROOT / "skills/application-definition/scripts/build_application_ar
 APP_VALIDATOR = ROOT / "skills/application-definition/scripts/validate_application_artifact.py"
 
 # Recorded inventory just before WP-05 (17). WP-05 adds application + bench,
-# WP-09 adds interface; the arithmetic assertion below still holds.
+# WP-09 adds interface, and PRECISION_GREASE_DEV adds the nine precision-gear
+# grease objects; the arithmetic assertion below still holds.
 SCHEMA_COUNT_BEFORE = 17
-SCHEMA_COUNT_AFTER = 21
-NEW_SCHEMAS = ("application.schema.json", "bench.schema.json", "interface.schema.json", "external_record.schema.json")
+SCHEMA_COUNT_AFTER = 30
+NEW_SCHEMAS = (
+    "application.schema.json",
+    "bench.schema.json",
+    "interface.schema.json",
+    "external_record.schema.json",
+    "material.schema.json",
+    "formula.schema.json",
+    "batch.schema.json",
+    "sample.schema.json",
+    "reference.schema.json",
+    "screening.schema.json",
+    "variance.schema.json",
+    "campaign.schema.json",
+    "bench_test.schema.json",
+)
 
 
 def read_json(path: Path) -> dict:

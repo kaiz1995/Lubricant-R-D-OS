@@ -127,7 +127,7 @@ def main() -> int:
     assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.FALLBACK_STAGES), router.FALLBACK_STAGES
     assert router.ON_DEMAND_NEXT == {"PROCESS_WINDOW_DEFINED": "VERIFIED"}, router.ON_DEMAND_NEXT
     assert tuple(router.KNOWN_STAGES) == tuple(contract["stages"]), router.KNOWN_STAGES
-    assert len(router.KNOWN_STAGES) == 16, router.KNOWN_STAGES
+    assert len(router.KNOWN_STAGES) == 28, router.KNOWN_STAGES
     assert router.STAGES == ROUTE_TABLE_REF, router.STAGES
     assert router.SKILL_FOR_STAGE["PROCESS_WINDOW_DEFINED"] == "process-scale-up", router.SKILL_FOR_STAGE
     assert router.SKILL_FOR_STAGE["APPLIED"] == "application-validation", router.SKILL_FOR_STAGE
@@ -165,9 +165,9 @@ def main() -> int:
     #     Production-reproduction work re-runs design and modelling after a
     #     kettle/batch swap and closes on application validation — no OPTIMIZED
     #     (the formula is not re-optimised) and no process-window step.
-    assert len(router.TYPE_ROUTES) == 6, router.TYPE_ROUTES
+    assert len(router.TYPE_ROUTES) == 7, router.TYPE_ROUTES
     assert tuple(router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]) == PROCESS_ROBUSTNESS_REF, router.TYPE_ROUTES["PROCESS_ROBUSTNESS"]
-    assert tuple(router.TYPE_ROUTES) == ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS"), tuple(router.TYPE_ROUTES)
+    assert tuple(router.TYPE_ROUTES) == ("NEW_PRODUCT", "IMPROVEMENT", "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "PROCESS_ROBUSTNESS", "PRECISION_GREASE_DEV"), tuple(router.TYPE_ROUTES)
     result = router.decide(physical_state("MODEL_BUILT", project_type="PROCESS_ROBUSTNESS"), "APPLIED")
     assert result["decision"] == "ALLOW" and result["skill"] == "application-validation", result
     # The skip is route-local: MODEL_BUILT cannot jump straight to VERIFIED here.
@@ -189,6 +189,24 @@ def main() -> int:
     returncode, stdout = run_cli_args("--list-stages", "NOT_A_TYPE")
     assert returncode == 1 and "no routed stage chain" in stdout, (returncode, stdout)
 
+    # 17. WP-14 seventh route: PRECISION_GREASE_DEV is published by the contract
+    #     and runs its grease-specific stages as first-class workflow steps. The
+    #     block-16 loop already covers it (it iterates TYPE_ROUTES); this pins
+    #     the sequence itself, and the legacy oil route is unchanged.
+    assert tuple(router.TYPE_ROUTES["PRECISION_GREASE_DEV"]) == PRECISION_GREASE_DEV_REF, router.TYPE_ROUTES["PRECISION_GREASE_DEV"]
+    assert router.TYPE_ROUTES["NEW_PRODUCT"] == list(router.FALLBACK_STAGES) == ["PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "VERIFIED", "APPLIED"], router.TYPE_ROUTES["NEW_PRODUCT"]
+    assert len(router.FALLBACK_STAGES) == 12, router.FALLBACK_STAGES
+    assert router.SKILL_FOR_STAGE["KNOWLEDGE_ARCHIVED"] == "knowledge-archive", router.SKILL_FOR_STAGE
+    assert router.SKILL_FOR_STAGE["BATCH_PRODUCED"] == "grease-batch", router.SKILL_FOR_STAGE
+
+    # 18. Route-aware jumps hold on the new route too: DUTY_DEFINED advances to
+    #     FAILURE_MECHANISM_DEFINED, while TEST_METHODS_QUALIFIED (four steps
+    #     later on this route) stays denied as a cross-stage jump.
+    result = router.decide(physical_state("DUTY_DEFINED", project_type="PRECISION_GREASE_DEV"), "TEST_METHODS_QUALIFIED")
+    assert result["decision"] == "DENY" and "cross-stage" in result["reason"], result
+    result = router.decide(physical_state("DUTY_DEFINED", project_type="PRECISION_GREASE_DEV"), "FAILURE_MECHANISM_DEFINED")
+    assert result["decision"] == "ALLOW" and result["skill"] == "failure-ctq-analysis", result
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages, {len(router.TYPE_ROUTES)} project types)")
     return 0
 
@@ -196,7 +214,10 @@ def main() -> int:
 PROCESS_ROBUSTNESS_REF = ("PROJECT_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "APPLIED")
 
 
-ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED")
+PRECISION_GREASE_DEV_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "FAILURE_MECHANISM_DEFINED", "REFERENCE_MATERIAL_RESOLVED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED", "EXPERIMENT_DESIGNED", "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED", "MODEL_BUILT", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED", "PROCESS_SCALE_VALIDATED", "VERIFIED", "APPLIED", "KNOWLEDGE_ARCHIVED")
+
+
+ROUTE_TABLE_REF = ("PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED", "VERIFIED", "APPLIED", "FAILURE_MECHANISM_DEFINED", "REFERENCE_MATERIAL_RESOLVED", "BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED", "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED", "PROCESS_SCALE_VALIDATED", "KNOWLEDGE_ARCHIVED")
 
 
 if __name__ == "__main__":

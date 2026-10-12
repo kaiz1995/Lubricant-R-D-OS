@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/batch.schema.json",
+  "title": "Lubricant R&D batch record",
+  "description": "Batch-produced object: the landing point where recipe + process = product. A formula fixes intent and a trajectory records what the equipment actually did, so the batch record is the only place where setpoint-versus-actual deviations can be judged against the product that resulted. raw_material_lots is required because a batch is identified by the lots consumed, not by the trade names. anomalies may legitimately be empty (\"none recorded\") - that is a recorded absence, not missing data - while batch_verdict states whether the recorded trajectory is VALID, DEVIATED, or VOID.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "batch" },
+    "stage": { "const": "BATCH_PRODUCED" },
+    "batch_id": { "type": "string", "minLength": 1 },
+    "formula_reference": {
+      "description": "Formula this batch was made from, together with the process baseline the formula requires.",
+      "type": "string",
+      "minLength": 1
+    },
+    "scale_class": { "enum": ["LAB", "PILOT", "PRODUCTION"] },
+    "trajectory": {
+      "description": "Ordered process steps actually executed, each with setpoint, actual, duration, and a per-step deviation verdict. Step types cover the grease route: saponification, dehydration, phase inversion, dilution/cooling, milling, homogenization, vacuum deaeration, filling, soap hold, dilution curve, ripening, filling temperature.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/trajectory_step" }
+    },
+    "raw_material_lots": {
+      "description": "Lots charged into this batch. minItems 1: a batch with no recorded lot cannot be traced back to a material record.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "operator": { "type": "string", "minLength": 1 },
+    "equipment": { "type": "string", "minLength": 1 },
+    "anomalies": {
+      "description": "Anything unexpected observed during the batch. An empty array means \"none recorded\" and is a legitimate value, so no minItems is applied here.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "batch_verdict": { "enum": ["VALID", "DEVIATED", "VOID"] }
+  },
+  "required": [
+    "artifact_type",
+    "batch_id",
+    "formula_reference",
+    "scale_class",
+    "trajectory",
+    "raw_material_lots",
+    "operator",
+    "equipment",
+    "anomalies",
+    "batch_verdict"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "trajectory_step": {
+      "description": "One executed process step. setpoint and actual accept a number or a string so a qualitative step (for example a visual phase inversion) stays recordable; deviation_verdict forces an explicit WITHIN / DEVIATED judgement per step instead of one batch-level summary.",
+      "type": "object",
+      "properties": {
+        "step_type": {
+          "enum": [
+            "SAPONIFICATION",
+            "DEHYDRATION",
+            "PHASE_INVERSION",
+            "DILUTION_COOLING",
+            "MILLING",
+            "HOMOGENIZATION",
+            "VACUUM_DEAERATION",
+            "FILLING",
+            "SOAP_HOLD",
+            "DILUTION_CURVE",
+            "RIPENING",
+            "FILLING_TEMPERATURE"
+          ]
+        },
+        "setpoint": { "type": ["number", "string"], "minLength": 1 },
+        "actual": { "type": ["number", "string"], "minLength": 1 },
+        "unit": { "type": "string", "minLength": 1 },
+        "duration_s": { "type": "number", "minimum": 0 },
+        "deviation": { "type": ["number", "string"], "minLength": 1 },
+        "deviation_verdict": { "enum": ["WITHIN", "DEVIATED"] }
+      },
+      "required": [
+        "step_type",
+        "setpoint",
+        "actual",
+        "unit",
+        "duration_s",
+        "deviation",
+        "deviation_verdict"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

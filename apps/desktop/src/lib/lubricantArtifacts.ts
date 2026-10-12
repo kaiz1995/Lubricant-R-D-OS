@@ -205,7 +205,9 @@ async function probeOne(
 }
 
 /**
- * 探测当前活动工作区中的全部 13 个链上工件。
+ * 探测当前活动工作区中的全部链上工件（STAGE_CHAIN 25 个 stage / 22 个唯一
+ * 工件类型；failure_ctq / optimization / process 被两条路线共用，probes 以
+ * artifactType 为键只留一个探针，两个 stage 的探针本就相同）。
  *
  * 探测的是 STAGE_CHAIN 全表（含不在任何路由上的按需阶段），而不是某个
  * project_type 的子集：project_type 本身就

@@ -186,16 +186,22 @@ describe("probeWorkspace", () => {
     await probeWorkspace();
     const asked = readArtifact.mock.calls.map((c) => c[0]);
     expect(asked).toEqual(["project.json", "docs/duty.json"]);
-    // 13 个链上工件里只有这两个存在
+    // 链上 25 个 stage / 22 个唯一工件里只有这两个存在
     expect(asked).not.toContain("gate.json");
     expect(asked).not.toContain("experiment_design.json");
   });
 
   it("探测 STAGE_CHAIN 全表（含按需阶段；project_type 本身就在工件里，鸡生蛋）", async () => {
     const snap = await probeWorkspace();
+    // probes 以 artifactType 为键：跨路线共用的工件（failure_ctq / optimization /
+    // process 各被两条路线的 stage 复用）只留下一个探针 —— 两个 stage 的探针
+    // 只由 contract.file + artifactType 决定，本就完全相同，故按唯一类型比对。
     expect(Object.keys(snap.probes).sort()).toEqual(
-      STAGE_CHAIN.map((c) => c.artifactType).sort(),
+      [...new Set(STAGE_CHAIN.map((c) => c.artifactType))].sort(),
     );
+    // 25 个 stage、22 个唯一工件类型；共用的三步都仍能取到探针。
+    expect(STAGE_CHAIN).toHaveLength(25);
+    expect(Object.keys(snap.probes)).toHaveLength(22);
   });
 });
 

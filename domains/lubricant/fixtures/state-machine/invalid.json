@@ -258,5 +258,14 @@
       "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
       "revision": { "reason": "Process-only change; cites a blank gate reference.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": "   " }
     }
+  },
+  {
+    "name": "go-precision-grease-cannot-skip-a-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV",
+      "before": { "project_id": "PGD-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-401"] },
+      "after": { "project_id": "PGD-001", "stage": "TEST_METHODS_QUALIFIED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-401"] }
+    }
   }
 ]

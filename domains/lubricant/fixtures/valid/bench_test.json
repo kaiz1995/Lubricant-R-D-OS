@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench_test",
+  "project_id": "PGD-001",
+  "stage": "BENCH_TESTED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Did the run produce an event inside the observation window under the frozen bench protocol?",
+  "hypothesis": "The run either produces an event inside the window or ends as an administrative right-censor at the window end.",
+  "uncertainty": "A single run cannot separate bench-to-bench drift from a formulation effect.",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-001",
+      "statement": "Synthetic run record recorded for schema validation only; this is not product evidence.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Record the observation exactly as it happened: a right-censored run is never recorded or used as an end-point value.",
+  "result": "The run reached the end of the 10 h window with no event and is recorded as right-censored with event_time null.",
+  "decision": "UNDECIDED",
+  "next_action": "Hand the run to the variance assessment of campaign iteration 1.",
+  "run_id": "RUN-SYN-001",
+  "bench_reference": "BENCH-SZ-01",
+  "batch_reference": "BATCH-SYN-001",
+  "sample_reference": "SAM-SYN-001",
+  "protocol_version": "BENCH_PROTOCOL_V2",
+  "setpoints": ["load 1.5 kN", "speed 1200 rpm", "temperature 80 degC"],
+  "environment": { "temperature_c": 23.5, "humidity_percent": 45.0 },
+  "raw_record_reference": "RAW-SYN-001",
+  "event_occurred": false,
+  "event_time": null,
+  "censoring_type": "RIGHT",
+  "stop_reason": "ADMINISTRATIVE_10H_END",
+  "anomalies": [],
+  "campaign_iteration": 1
+}

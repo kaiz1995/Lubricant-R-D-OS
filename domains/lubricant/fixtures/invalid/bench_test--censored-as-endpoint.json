@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench_test",
+  "project_id": "PGD-001",
+  "stage": "BENCH_TESTED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Invalid fixture: may a right-censored observation be recorded as an end-point value?",
+  "hypothesis": "This invalid fixture evaluates no product hypothesis.",
+  "uncertainty": "Fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-BAD-001",
+      "statement": "This is a schema-validation fixture, not product evidence.",
+      "source": "fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A right-censored observation must never be recorded or used as an end-point value.",
+  "result": "Rejected.",
+  "decision": "UNDECIDED",
+  "next_action": "Do not use this fixture for R&D decisions.",
+  "run_id": "RUN-BAD-CENSOR-001",
+  "bench_reference": "BENCH-SZ-01",
+  "batch_reference": "BATCH-SYN-BAD-001",
+  "sample_reference": "SAM-SYN-BAD-001",
+  "protocol_version": "BENCH_PROTOCOL_V2",
+  "setpoints": ["load 1.5 kN", "speed 1200 rpm", "temperature 80 degC"],
+  "environment": { "temperature_c": 23.5, "humidity_percent": 45.0 },
+  "raw_record_reference": "RAW-SYN-BAD-001",
+  "event_occurred": true,
+  "event_time": 10,
+  "censoring_type": "RIGHT",
+  "stop_reason": "ADMINISTRATIVE_10H_END",
+  "anomalies": [],
+  "campaign_iteration": 1
+}

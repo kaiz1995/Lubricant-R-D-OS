@@ -211,10 +211,10 @@ describe("LubricantStagePane — 主题色 token", () => {
 });
 
 describe("LubricantStagePane — 契约驱动渲染", () => {
-  it("类型选择器是 6 个 domain pack 里的 project_type", async () => {
+  it("类型选择器是 7 个 domain pack 里的 project_type", async () => {
     renderPane();
     for (const label of [
-      "正向开发", "性能优化", "配方降本", "客户定制", "机理探索", "生产复现",
+      "正向开发", "性能优化", "配方降本", "客户定制", "机理探索", "生产复现", "精密脂",
     ]) {
       expect(await screen.findByRole("button", { name: label })).toBeInTheDocument();
     }
@@ -230,6 +230,24 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
       expect(screen.getByText(/工件链阶段步骤（12 步独立推进）/)).toBeInTheDocument(),
     );
     expect(screen.getByText(/类型由 project\.json 的 project_type 锁定/)).toBeInTheDocument();
+  });
+
+  it("project.json 锁定为 PRECISION_GREASE_DEV 时渲染 20 步新链", async () => {
+    workspaceWith({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" });
+    renderPane();
+    // 20 步 = 契约新第 7 类路由；新 stage 必须真的出现在步骤表里
+    await waitFor(() =>
+      expect(screen.getByText(/工件链阶段步骤（20 步独立推进）/)).toBeInTheDocument(),
+    );
+    expect(screen.getByText("20 阶段")).toBeInTheDocument();
+    expect(screen.getByText("知识入库（资产封存）")).toBeInTheDocument();
+    expect(screen.getByText("台架战役开启（内环迭代）")).toBeInTheDocument();
+    // 步骤徽章必须按本条路线内的位置编号（1..20），不得直接用与油品链
+    // 交叉的全局 chainIndex（那会渲染出 1,2,14,15,5,… 的乱序）。
+    for (let n = 1; n <= 20; n += 1) {
+      expect(screen.getByText(String(n)), `缺少步骤徽章 ${n}`).toBeInTheDocument();
+    }
+    expect(screen.queryByText("25")).not.toBeInTheDocument();
   });
 
   it("工件不合规时不点亮该步，并显示原因", async () => {

@@ -55,6 +55,7 @@ const TYPE_META: Record<ProjectType, { label: string; shortLabel: string }> = {
   CUSTOMIZATION: { label: "客户定制", shortLabel: "客户定制" },
   EXPLORATION: { label: "机理 / 平台型探索", shortLabel: "机理探索" },
   PROCESS_ROBUSTNESS: { label: "生产复现验证", shortLabel: "生产复现" },
+  PRECISION_GREASE_DEV: { label: "精密传动脂开发", shortLabel: "精密脂" },
 };
 
 const GATE_TONE: Record<GateStatus, string> = {
@@ -394,8 +395,10 @@ export function LubricantStagePane({
               />
             </div>
             <div className="flex justify-between text-[10px] text-muted">
-              <span>起步：立项与定义</span>
-              <span>终点：应用与整机验证</span>
+              {/* 端点文案跟随当前路由，而不是写死油品链：精密脂路线的终点
+                  是 KNOWLEDGE_ARCHIVED，不是 APPLIED。 */}
+              <span>起步：{steps[0]?.titleZh ?? "开工"}</span>
+              <span>终点：{steps[steps.length - 1]?.titleZh ?? "收尾"}</span>
             </div>
           </div>
 
@@ -584,7 +587,11 @@ export function LubricantStagePane({
           </div>
 
           <div className="space-y-2">
-            {steps.map((step) => {
+            {steps.map((step, stepPosition) => {
+              // 徽章显示的是「本条路线内的第几步」，不是全局 chainIndex：两条路线的
+              // 阶段互相交错（精密传动脂用 14~25 与油品链的 5~13 交叉排列），用
+              // 全局序号会渲染出 1,2,14,15,5,… 这样的乱序。chainIndex 仍作为
+              // 展开态与 React key 的稳定标识，只是不再直接当序号展示。
               const isExpanded = expandedStep === step.chainIndex;
               const isCompleted = step.status === "completed";
               const isActive = step.status === "active";
@@ -634,7 +641,7 @@ export function LubricantStagePane({
                                   : "bg-surface-2 text-muted",
                             )}
                           >
-                            {step.chainIndex}
+                            {stepPosition + 1}
                           </span>
                           <span className="truncate text-xs font-semibold text-text">
                             {step.titleZh}
