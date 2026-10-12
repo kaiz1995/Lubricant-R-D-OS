@@ -1,4 +1,19 @@
-"""Reject incomplete design-space input before an artifact is built."""
+"""Reject incomplete design-space input before an artifact is built.
+
+The PRECISION_GREASE_DEV route (outer-loop step 6) carries four extra mandatory
+elements, enforced here in the POLICY LAYER rather than in the shared contract so
+the six oil routes keep their current behaviour exactly:
+
+  * every material-bearing variable must reference a ``material`` object and the
+    referenced ``material_id`` must resolve to a readable material record - a bare
+    name string carries no supplier, lot, chemistry, or property list;
+  * ``baseline_process_reference`` is required, because comparing formulae across
+    a changed process is invalid;
+  * every variable must declare its material-side ``role``;
+  * the in-situ reaction semantics: grease soap is generated during saponification,
+    so a thickener percentage is a PRODUCT of the batch, and a variable over an
+    in-situ feedstock may not be declared as a charged input.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +25,20 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from design_space_policy import has_gap
+from design_space_policy import (
+    CONSTRAINT_KINDS,
+    IN_SITU_PRODUCT_MATERIAL_CATEGORIES,
+    INPUT_MATERIAL,
+    MATERIAL_BEARING_VARIABLE_TYPES,
+    MATERIAL_ROLES,
+    REACTION_PRODUCT,
+    derive_material_role,
+    effective_route_is_grease,
+    feasibility_region_errors,
+    grease_notes,
+    has_gap,
+    has_text,
+)
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -36,27 +64,28 @@ def _ensure_constraint_role_importable() -> None:
 
 _ensure_constraint_role_importable()
 
-from constraint_role import ConstraintRoleError, describe_constraint_role, resolve_constraint_role  # noqa: E402
+from constraint_role import (  # noqa: E402
+    ConstraintRoleError,
+    describe_constraint_role,
+    describe_variable_constraint_role,
+    resolve_variable_constraint_role,
+)
 
 
 SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json")
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
 VARIABLE_REQUIRED_FIELDS = {"variable_id", "variable_type", "lower_bound", "upper_bound", "constraint_rationale"}
-VARIABLE_OPTIONAL_FIELDS = {"constraint_role"}
+VARIABLE_OPTIONAL_FIELDS = {"constraint_role", "material_reference", "role"}
 VARIABLE_ALLOWED_FIELDS = VARIABLE_REQUIRED_FIELDS | VARIABLE_OPTIONAL_FIELDS
-INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space"}
+REQUIRED_INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space"}
+# Additive: material records may be supplied beside the input instead of being
+# scanned out of the workspace. Optional for every route, so the six oil routes
+# keep their exact input shape.
+OPTIONAL_INPUT_FIELDS = {"material_artifacts"}
+INPUT_FIELDS = REQUIRED_INPUT_FIELDS | OPTIONAL_INPUT_FIELDS
 VARIABLE_TYPES = {"MATERIAL_FAMILY", "FORMULATION_VARIABLE", "PROCESS_VARIABLE"}
 DESIGN_SPACE_REQUIRED_FIELDS = {"design_space_id", "scope", "variables", "ctq_references", "qualified_test_method_references", "constraints", "evidence"}
-DESIGN_SPACE_OPTIONAL_FIELDS = {"process_reference"}
-
-
-def has_text(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-
-def schema_dir() -> Path:
-    canonical = SKILL_ROOT.parents[1] / "schemas"
-    return canonical if all((canonical / name).is_file() for name in SCHEMA_NAMES) else SKILL_ROOT / "references"
+DESIGN_SPACE_OPTIONAL_FIELDS = {"process_reference", "baseline_process_reference", "feasibility_regions"}
 
 
 def resolved_path(value: object, input_path: Path) -> Path | None:
@@ -64,6 +93,11 @@ def resolved_path(value: object, input_path: Path) -> Path | None:
         return None
     path = Path(value)
     return path if path.is_absolute() else input_path.parent / path
+
+
+def schema_dir() -> Path:
+    canonical = SKILL_ROOT.parents[1] / "schemas"
+    return canonical if all((canonical / name).is_file() for name in SCHEMA_NAMES) else SKILL_ROOT / "references"
 
 
 def schema_artifact(path: Path, name: str, label: str) -> tuple[list[str], dict | None]:
@@ -78,6 +112,49 @@ def schema_artifact(path: Path, name: str, label: str) -> tuple[list[str], dict 
         registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
     errors = [f"{label}: {error.message}" for error in Draft202012Validator(loaded[name], registry=registry).iter_errors(artifact)]
     return errors, artifact if not errors else None
+
+
+def material_paths(data: dict, input_path: Path) -> list[Path]:
+    """Every material record reachable for this run.
+
+    Explicit ``material_artifacts`` entries win; the workspace holding the input
+    is also scanned for the canonical names ``material.json`` and
+    ``material-<id>.json``. A material the caller did not supply is simply not
+    resolvable - the policy reports it and never invents one.
+    """
+    paths: list[Path] = []
+    declared = data.get("material_artifacts")
+    if isinstance(declared, str):
+        declared = [declared]
+    for value in declared if isinstance(declared, list) else []:
+        path = resolved_path(value, input_path)
+        if path is not None:
+            paths.append(path)
+    for directory in (input_path.parent, input_path.parent.parent):
+        if not directory.is_dir():
+            continue
+        for candidate in sorted(directory.glob("material*.json")):
+            if candidate.is_file():
+                paths.append(candidate)
+    unique: list[Path] = []
+    for path in paths:
+        if path not in unique:
+            unique.append(path)
+    return unique
+
+
+def load_materials(data: dict, input_path: Path) -> list[dict]:
+    """Read every readable material record. An unreadable record is skipped here
+    and reported by :func:`material_reference_errors` as an unresolved id."""
+    materials: list[dict] = []
+    for path in material_paths(data, input_path):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(record, dict) and has_text(record.get("material_id")):
+            materials.append(record)
+    return materials
 
 
 def measurement_errors(value: object, label: str) -> list[str]:
@@ -111,7 +188,91 @@ def evidence_errors(value: object) -> list[str]:
     return errors
 
 
-def design_space_errors(value: object, failure: dict | None, method: dict | None) -> list[str]:
+def constraint_errors(value: object) -> list[str]:
+    """Constraints accept BOTH the legacy free-text form and the object form.
+
+    The string form stays exactly as before, so every existing design space keeps
+    validating. The object form is validated here because the shared contract can
+    only state the shape, not the meaning of each declared kind.
+    """
+    if not isinstance(value, list) or not value:
+        return ["design_space.constraints"]
+    errors: list[str] = []
+    for index, item in enumerate(value):
+        label = f"design_space.constraints[{index}]"
+        if has_text(item):
+            continue
+        if not isinstance(item, dict):
+            errors.append(label)
+            continue
+        permitted = {"constraint_id", "kind", "expression", "rationale", "evidence_id"}
+        errors.extend(f"{label}.{field} is not a permitted constraint field" for field in sorted(set(item) - permitted))
+        for field in ("constraint_id", "expression", "rationale"):
+            if not has_text(item.get(field)):
+                errors.append(f"{label}.{field}")
+        if item.get("kind") not in CONSTRAINT_KINDS:
+            errors.append(f"{label}.kind must be one of {list(CONSTRAINT_KINDS)}")
+    return errors
+
+
+def material_reference_errors(variables: list, materials: list[dict], project_type: object, design_space: dict) -> list[str]:
+    """Grease-route material reference resolution and the in-situ role semantics.
+
+    Returns nothing for a non-grease route: the oil routes keep today's behaviour.
+    ``role`` is the optional artifact field added by the grease step; when it is
+    present the shared resolver is always used, so a reaction product can never be
+    classified MIXTURE_CLOSED on any route.
+    """
+    by_id = {record["material_id"]: record for record in materials if has_text(record.get("material_id"))}
+    grease = effective_route_is_grease(project_type, design_space)
+    errors: list[str] = []
+    for index, variable in enumerate(variables):
+        if not isinstance(variable, dict):
+            continue
+        label = f"design_space.variables[{index}]"
+        variable_id = variable.get("variable_id", f"variables[{index}]")
+        reference = variable.get("material_reference")
+        declared_role = variable.get("role")
+        material_bearing = variable.get("variable_type") in MATERIAL_BEARING_VARIABLE_TYPES
+        if grease and material_bearing and not has_text(reference):
+            errors.append(
+                f"{label}.material_reference is required on the PRECISION_GREASE_DEV route: "
+                "a bare name string is not a material record"
+            )
+            continue
+        if not has_text(reference):
+            if declared_role is not None and declared_role not in MATERIAL_ROLES:
+                errors.append(f"{label}.role must be one of {list(MATERIAL_ROLES)}")
+            continue
+        record = by_id.get(reference)
+        if grease and record is None:
+            errors.append(
+                f"{label}.material_reference: {reference} does not resolve to a readable material record "
+                f"(searched {len(by_id)} material object(s))"
+            )
+            continue
+        category = record.get("category") if isinstance(record, dict) else None
+        if declared_role is not None and declared_role not in MATERIAL_ROLES:
+            errors.append(f"{label}.role must be one of {list(MATERIAL_ROLES)}")
+            continue
+        if grease and material_bearing and declared_role is None:
+            errors.append(f"{label}.role is required on the PRECISION_GREASE_DEV route: state whether this variable is a charge or a reaction product")
+            continue
+        implied = derive_material_role(category)
+        if grease and implied == REACTION_PRODUCT and declared_role != REACTION_PRODUCT:
+            # N6: the thickener feed is consumed by saponification and the soap is
+            # generated in situ, so the percentage that matters is a product.
+            errors.append(
+                f"{label}.role: {variable_id} ranges over material {reference} "
+                f"({category}); its content is generated in situ by saponification, so it is a "
+                f"{REACTION_PRODUCT} and must not be declared {declared_role or INPUT_MATERIAL}. "
+                f"In-situ feedstocks: {list(IN_SITU_PRODUCT_MATERIAL_CATEGORIES)}"
+            )
+    return errors
+
+
+def design_space_errors(value: object, failure: dict | None, method: dict | None, project_type: object = None, materials: list[dict] | None = None) -> list[str]:
+    materials = materials or []
     if not isinstance(value, dict) or not DESIGN_SPACE_REQUIRED_FIELDS <= set(value) <= DESIGN_SPACE_REQUIRED_FIELDS | DESIGN_SPACE_OPTIONAL_FIELDS:
         return ["design_space must contain only the Stage 4 input fields"]
     errors = []
@@ -120,6 +281,21 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
             errors.append(f"design_space.{field}")
     if "process_reference" in value and not has_text(value.get("process_reference")):
         errors.append("design_space.process_reference")
+    grease = effective_route_is_grease(project_type, value)
+    if grease and not has_text(value.get("baseline_process_reference")):
+        errors.append(
+            "design_space.baseline_process_reference is required on the PRECISION_GREASE_DEV route: "
+            "if the process changed, comparing formulae is invalid"
+        )
+    if "baseline_process_reference" in value and not has_text(value.get("baseline_process_reference")):
+        errors.append("design_space.baseline_process_reference")
+    feasibility = value.get("feasibility_regions")
+    if feasibility is not None:
+        if not isinstance(feasibility, list) or not feasibility:
+            errors.append("design_space.feasibility_regions")
+        else:
+            for index, region in enumerate(feasibility):
+                errors.extend(feasibility_region_errors(region, f"design_space.feasibility_regions[{index}]"))
     variables = value.get("variables")
     if not isinstance(variables, list) or not variables:
         errors.append("design_space.variables")
@@ -140,9 +316,9 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
             variable_type = variable.get("variable_type")
             if variable_type not in VARIABLE_TYPES:
                 errors.append(f"{label}.variable_type")
-            elif "constraint_role" in variable:
+            elif "constraint_role" in variable or "role" in variable:
                 try:
-                    resolve_constraint_role(variable_type, variable.get("constraint_role"))
+                    resolve_variable_constraint_role(variable_type, variable.get("constraint_role"), variable.get("role"))
                 except ConstraintRoleError as error:
                     errors.append(f"{label}.constraint_role: {error}")
             errors.extend(measurement_errors(variable.get("lower_bound"), f"{label}.lower_bound"))
@@ -155,6 +331,8 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
                     errors.append(f"{label} bounds must use the same unit")
                 if lower["value"] > upper["value"]:
                     errors.append(f"{label}.lower_bound.value must be <= upper_bound.value")
+        if isinstance(variables, list):
+            errors.extend(material_reference_errors(variables, materials, project_type, value))
     ctq_references = value.get("ctq_references")
     if not isinstance(ctq_references, list) or not ctq_references or not all(has_text(item) for item in ctq_references):
         errors.append("design_space.ctq_references")
@@ -166,9 +344,7 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
     elif method is not None and method.get("method_id") not in method_references:
         # Defect 1 fix: membership instead of single-element equality.
         errors.append("design_space.qualified_test_method_references must contain the supplied qualified method_id")
-    constraints = value.get("constraints")
-    if not isinstance(constraints, list) or not constraints or not all(has_text(item) for item in constraints):
-        errors.append("design_space.constraints")
+    errors.extend(constraint_errors(value.get("constraints")))
     errors.extend(evidence_errors(value.get("evidence")))
     if not errors and has_gap(value):
         errors.append("design_space.evidence contains GAP; current input is insufficient")
@@ -188,7 +364,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors = []
-    if set(data) != INPUT_FIELDS:
+    if not REQUIRED_INPUT_FIELDS <= set(data) <= INPUT_FIELDS:
         errors.append("input must contain only required Stage 4 artifact paths and design_space")
     artifacts: dict[str, dict | None] = {}
     requirements = (
@@ -225,7 +401,8 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         errors.append("test_method_artifact.target_failure_reference must equal failure_ctq_artifact.failure_id")
     if method is not None and method.get("qualification_status") != "QUALIFIED":
         errors.append("test_method_artifact must have qualification_status QUALIFIED")
-    errors.extend(design_space_errors(data.get("design_space"), failure, method))
+    project_type = project.get("project_type") if isinstance(project, dict) else None
+    errors.extend(design_space_errors(data.get("design_space"), failure, method, project_type, load_materials(data, input_path)))
     return errors
 
 
@@ -234,7 +411,9 @@ def constraint_role_notes(value: object) -> list[str]:
 
     Declared roles and type-derived roles are both reported; unresolved
     variables (unknown type, contradictory or invalid declaration) are reported
-    as unresolved rather than omitted.
+    as unresolved rather than omitted. A variable that declares the grease
+    material-side ``role`` also reports the derived product side, so an in-situ
+    product can never be silently classified as a charge.
     """
     if not isinstance(value, dict):
         return []
@@ -247,7 +426,12 @@ def constraint_role_notes(value: object) -> list[str]:
             continue
         variable_id = variable.get("variable_id", f"variables[{index}]")
         try:
-            note = describe_constraint_role(variable.get("variable_type"), variable.get("constraint_role"))
+            if "role" in variable:
+                note = describe_variable_constraint_role(
+                    variable.get("variable_type"), variable.get("constraint_role"), variable.get("role")
+                )
+            else:
+                note = describe_constraint_role(variable.get("variable_type"), variable.get("constraint_role"))
         except ConstraintRoleError as error:
             notes.append(f"{variable_id}: CONSTRAINT_ROLE unresolved: {error}")
             continue
@@ -266,8 +450,21 @@ def main() -> int:
         print(f"HOLD: cannot read input: {error}; no artifact generated")
         return 1
     errors = errors_for(data, path)
-    for note in constraint_role_notes(data.get("design_space") if isinstance(data, dict) else None):
+    design_space = data.get("design_space") if isinstance(data, dict) else None
+    for note in constraint_role_notes(design_space):
         print(note)
+    # The closure-basis note is grease-only: on the six oil routes the run output
+    # must stay exactly what it was, so nothing new is printed there.
+    project_path = resolved_path(data.get("project_artifact"), path) if isinstance(data, dict) else None
+    project = None
+    if project_path is not None and project_path.is_file():
+        try:
+            project = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            project = None
+    if effective_route_is_grease(project.get("project_type") if isinstance(project, dict) else None, design_space):
+        for note in grease_notes(design_space):
+            print(note)
     if errors:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
@@ -277,3 +474,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

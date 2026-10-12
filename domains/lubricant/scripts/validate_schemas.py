@@ -47,6 +47,14 @@ EXPECTED_ERRORS = {
     "bench_test--censored-as-endpoint.json": "False was expected",
     "variance--manual-computation.json": "'ENGINE' was expected",
     "campaign--missing-pairing-design.json": "'pairing_design' is a required property",
+    # Outer-loop steps 5-6 extensions (batch 1). The constraint-kind fixture
+    # fails through an anyOf, so its message embeds the whole offending object;
+    # the registered substring is kept short and stable on purpose.
+    "test_method--illegal-computed-by.json": "'HAND_ENTERED' is not one of",
+    "design_space--illegal-constraint-kind.json": "is not valid under any of the given schemas",
+    "design_space--illegal-material-role.json": "'THICKENER' is not one of",
+    "design_space--illegal-convexity.json": "'MOSTLY_CONVEX' is not one of",
+    "process--illegal-step-type.json": "'HOMOGENISATION' is not one of",
 }
 
 

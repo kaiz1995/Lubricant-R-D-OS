@@ -11,6 +11,9 @@ from preflight_formulation_design import errors_for, resolved_path
 
 
 DESIGN_SPACE_FIELDS = ("design_space_id", "scope", "variables", "ctq_references", "qualified_test_method_references", "constraints")
+# Copied through only when supplied, so an oil-route artifact keeps exactly the
+# field set it had before.
+OPTIONAL_DESIGN_SPACE_FIELDS = ("process_reference", "baseline_process_reference", "feasibility_regions")
 
 
 def main() -> int:
@@ -31,11 +34,12 @@ def main() -> int:
     design_space = data["design_space"]
     artifact = {
         "schema_version": "0.1.0", "artifact_type": "design_space", "project_id": project["project_id"], "stage": "DESIGN_SPACE_DEFINED",
-        **expected_decision_fields(design_space), "evidence": design_space["evidence"],
+        **expected_decision_fields(design_space, project.get("project_type")), "evidence": design_space["evidence"],
         **{field: design_space[field] for field in DESIGN_SPACE_FIELDS},
     }
-    if "process_reference" in design_space:
-        artifact["process_reference"] = design_space["process_reference"]
+    for field in OPTIONAL_DESIGN_SPACE_FIELDS:
+        if field in design_space:
+            artifact[field] = design_space[field]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}")

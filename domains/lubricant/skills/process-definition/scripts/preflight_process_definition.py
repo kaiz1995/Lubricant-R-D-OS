@@ -31,6 +31,10 @@ PROCESS_FIELDS = {
 STEP_TYPES = {
     "SAPONIFICATION", "DEHYDRATION", "PHASE_INVERSION", "DILUTION_COOLING",
     "MILLING", "HOMOGENIZATION", "VACUUM_DEAERATION", "FILLING",
+    # Grease-specific steps appended for the PRECISION_GREASE_DEV route
+    # (outer-loop step 6 / step 15). Purely additive: the eight original values
+    # and every existing process record are unchanged.
+    "SOAP_HOLD", "DILUTION_CURVE", "RIPENING", "FILLING_TEMPERATURE",
 }
 EVIDENCE_SCOPES = {"SYNTHETIC", "PHYSICAL"}
 CONTROL_TYPES = {"INCOMING", "IN_PROCESS", "FINAL"}

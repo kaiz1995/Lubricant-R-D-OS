@@ -1,6 +1,6 @@
 ---
 name: process-definition
-description: Define one evidence-bound grease manufacturing process record alongside the Stage 4 design space; preflight verifies the upstream DESIGN_SPACE_DEFINED artifact and rejects any process parameter missing source or evidence_id. Use when user mentions "process-definition", "工艺定义", "制脂工艺", "工艺参数", "process window", "factor_role", "WHOLE_PLOT", "SUB_PLOT", or defining the grease manufacturing process (皂化/转相/研磨/均质) linked to a design space.
+description: Define one evidence-bound grease manufacturing process record alongside the Stage 4 design space; preflight verifies the upstream DESIGN_SPACE_DEFINED artifact and rejects any process parameter missing source or evidence_id. Use when user mentions "process-definition", "工艺定义", "制脂工艺", "工艺参数", "process window", "factor_role", "WHOLE_PLOT", "SUB_PLOT", "皂化保温", "稀释曲线", "熟化", "灌装温度", or defining the grease manufacturing process (皂化/转相/研磨/均质) linked to a design space.
 ---
 
 # Process Definition (design-space companion)
@@ -84,7 +84,8 @@ Input must be a single JSON object containing the upstream `design_space_artifac
 - Upstream alignment: the process is created only from a `DESIGN_SPACE_DEFINED` design space with `decision: "GO"`; `process.project_reference` MUST equal the upstream `project_id`.
 - Parameter provenance (hard): every parameter REQUIRES non-empty `source` and `evidence_id`. A parameter without either is rejected with a per-parameter error; it is never defaulted.
 - Parameter ordering: `lower_bound <= upper_bound`, both finite numbers, with an explicit `unit`.
-- Step vocabulary: `step_type` is one of the 8 grease-manufacturing steps (`SAPONIFICATION`, `DEHYDRATION`, `PHASE_INVERSION`, `DILUTION_COOLING`, `MILLING`, `HOMOGENIZATION`, `VACUUM_DEAERATION`, `FILLING`).
+- Step vocabulary: `step_type` is one of the 12 grease-manufacturing steps. The original eight are `SAPONIFICATION`, `DEHYDRATION`, `PHASE_INVERSION`, `DILUTION_COOLING`, `MILLING`, `HOMOGENIZATION`, `VACUUM_DEAERATION`, `FILLING`; the grease-specific four appended for the PRECISION_GREASE_DEV route are `SOAP_HOLD` (saponification hold), `DILUTION_CURVE` (dilution curve), `RIPENING`, and `FILLING_TEMPERATURE`. The four are additive: an unknown value is still rejected.
+- Coupling with the design space: the process is a peer dimension, not a factor hung inside the formulation. The same formula over a different kettle can produce a different product because the soap-fibre skeleton is set by saponification, phase inversion, cooling rate, and milling — which is why the design space must declare a fixed `baseline_process_reference` before formulae may be compared.
 - Control points: every `control_point.parameter_id` MUST reference a parameter declared in `process_step`.
 - Scale: `amplification_factor` is a positive number; `batch_scale.scale_class` is one of `LAB` / `PILOT` / `PRODUCTION`.
 - Split-plot role: `factor_role` is one of `WHOLE_PLOT` / `SUB_PLOT` (orthogonal to the design-space `constraint_role`).

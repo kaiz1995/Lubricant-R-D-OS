@@ -9,15 +9,32 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from preflight_failure_ctq import contribution_errors, evidence_errors, failure_ctq_errors, schema_dir
+from preflight_failure_ctq import evidence_errors, failure_ctq_errors, schema_dir
+from failure_ctq_policy import policy_errors, resolved_project_type
+
+
+def sibling_project_type(artifact_path: Path) -> object:
+    """The project type declared by the ``project.json`` beside this artifact, if any.
+
+    The artifact records no project type. The workspace stores the charter beside the
+    artifacts it governs, so when that file is present and readable it is the authoritative
+    signal; without it the policy falls back to the artifact's own shape. A failed read is
+    never fatal here.
+    """
+    try:
+        project = json.loads((artifact_path.parent / "project.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return project.get("project_type") if isinstance(project, dict) else None
 
 
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python validate_failure_ctq_artifact.py <artifact.json>")
         return 1
+    artifact_path = Path(sys.argv[1])
     try:
-        artifact = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
         schemas = schema_dir()
         common = json.loads((schemas / "common.schema.json").read_text(encoding="utf-8"))
         project = json.loads((schemas / "project.schema.json").read_text(encoding="utf-8"))
@@ -34,6 +51,15 @@ def main() -> int:
     if artifact.get("stage") != "FAILURE_CTQ_DEFINED":
         errors.append("stage must be FAILURE_CTQ_DEFINED")
     errors.extend(failure_ctq_errors(artifact, None))
+    # Policy layer: the project type comes from a sibling project.json when the workspace
+    # has one, else the record's own shape (a CTQ declaring a criteria layer). An oil
+    # record resolves to the legacy path and adds nothing, exactly as before.
+    project_type = sibling_project_type(artifact_path)
+    route_type = resolved_project_type(
+        {"project_type": project_type} if isinstance(project_type, str) and project_type else None,
+        artifact,
+    )
+    errors.extend(policy_errors(artifact, route_type))
     errors.extend(evidence_errors(artifact.get("evidence")))
     if errors:
         for error in errors:

@@ -85,7 +85,11 @@
             "MILLING",
             "HOMOGENIZATION",
             "VACUUM_DEAERATION",
-            "FILLING"
+            "FILLING",
+            "SOAP_HOLD",
+            "DILUTION_CURVE",
+            "RIPENING",
+            "FILLING_TEMPERATURE"
           ]
         },
         "parameters": {

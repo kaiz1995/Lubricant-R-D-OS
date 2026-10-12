@@ -9,10 +9,18 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from failure_ctq_policy import policy_errors, resolved_project_type
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
 CTQ_CLASSES = {"CTQ", "DEGRADATION_INDICATOR", "FUNCTIONAL_SYMPTOM"}
+# The contract's CTQ item keys, in the schema's own order. The builder projects each input
+# CTQ onto this list so a stray input key can never reach the artifact.
+CTQ_ITEM_FIELDS = (
+    "ctq_id", "classification", "criteria_layer", "observable", "specification_limit",
+    "engineering_risk_limit", "test_references", "evidence_required",
+)
 EVIDENCE_STATUSES = {"OBSERVED", "ASSUMED", "GAP"}
 UNCERTAINTY_MARKERS = ("may", "possible", "potential", "hypothesis", "pending", "to be verified", "可能", "待验证", "尚待", "假设", "潜在", "需验证", "未证实")
 CONFIRMED_CAUSE_MARKERS = ("confirmed root cause", "confirmed cause", "proven cause", "direct cause", "已确认根因", "已证实为原因", "确定由")
@@ -204,7 +212,13 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append("challenge_artifact must be stage CHALLENGES_DEFINED")
     if project is not None and challenge is not None and project.get("project_id") != challenge.get("project_id"):
         errors.append("project_artifact.project_id must equal challenge_artifact.project_id")
-    errors.extend(failure_ctq_errors(data.get("failure_ctq"), challenge))
+    failure_ctq = data.get("failure_ctq")
+    errors.extend(failure_ctq_errors(failure_ctq, challenge))
+    # Policy layer, gated on the project type: the grease route requires a declared
+    # criteria layer on every CTQ, a harmonic-drive failure mode, and the full
+    # Failure Diagnosis -> Root-Cause Hypothesis -> Lubricant Contribution chain. Oil
+    # routes resolve to None and add nothing, so their output is unchanged.
+    errors.extend(policy_errors(failure_ctq, resolved_project_type(project, failure_ctq)))
     errors.extend(evidence_errors(data.get("evidence")))
     return errors
 

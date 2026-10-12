@@ -13,5 +13,15 @@
     "id": 3,
     "prompt": "在工况挑战分析阶段直接指定台架试验方法（如 FZG 齿轮试验）或推荐特定极压抗磨添加剂",
     "expected": "触发黑名单拦截，严格限制在工况挑战映射，禁止跳步生成失效机理、CTQ 指标或配方原料"
+  },
+  {
+    "id": 4,
+    "prompt": "PRECISION_GREASE_DEV 精密脂项目：基于脂工况（微幅摆动 + 低温启动扭矩）定义微振磨损与低温扭矩挑战，分别标注严重度/暴露度/敏感度/优先级",
+    "expected": "策略层按脂路线词表接受 FRETTING_WEAR / LOW_TEMP_TORQUE 等八类脂挑战；builder 生成 CHALLENGES_DEFINED 工件（category 不在油专属三值内），validate 通过后落盘"
+  },
+  {
+    "id": 5,
+    "prompt": "精密脂项目沿用油的挑战词表，把挑战类别写成 WATER_CONTAMINATION（进水）并说明「沿用上一版模板」",
+    "expected": "策略层拒绝：HOLD: missing or invalid: challenge.category WATER_CONTAMINATION names no grease challenge (oil-only value rejected for PRECISION_GREASE_DEV; use INTERFACE_COMPATIBILITY for sealing or media ingress)；不落盘，要求改为 INTERFACE_COMPATIBILITY 或其余脂类挑战（对应负向用例 N7）"
   }
 ]

@@ -6,7 +6,8 @@ import json
 import sys
 from pathlib import Path
 
-from preflight_duty_definition import DUTY_FIELDS, errors_for, project_errors, resolved_path
+from duty_definition_policy import ordered_dimensions
+from preflight_duty_definition import errors_for, project_errors, resolved_path
 
 
 def main() -> int:
@@ -25,12 +26,17 @@ def main() -> int:
         return 1
     _, project = project_errors(resolved_path(data["project_artifact"], input_path))
     duty = data["duty"]
+    # The recorded dimension set follows the policy for this project type: the legacy
+    # seven for the oil routes (unchanged output), the legacy seven plus the grease seven
+    # for PRECISION_GREASE_DEV. `ordered_dimensions` returns the legacy order first, so an
+    # oil-route artifact is byte-identical to the pre-policy builder.
+    dimensions = ordered_dimensions(duty, project.get("project_type"))
     artifact = {
         "schema_version": "0.1.0", "artifact_type": "duty", "project_id": project["project_id"],
         "stage": "DUTY_DEFINED", "decision_question": f"Can supplied duty profile {data['duty_id']} be recorded?",
         "hypothesis": "Supplied duty conditions can define the project duty profile.",
         "uncertainty": "Declared assumptions remain assumed; this record does not derive a challenge, failure, CTQ, test, or performance conclusion.",
-        "evidence": [{key: duty[name][key] for key in ("evidence_id", "statement", "source", "status")} for name in DUTY_FIELDS],
+        "evidence": [{key: duty[name][key] for key in ("evidence_id", "statement", "source", "status")} for name in dimensions],
         "decision_rule": "Record only complete duty conditions linked to an active Project Charter and preserve their declared evidence statuses.",
         "result": "The supplied duty profile is recorded with its declared evidence statuses and without downstream conclusions.",
         "decision": "GO", "next_action": "Record a supplied duty-derived challenge.",

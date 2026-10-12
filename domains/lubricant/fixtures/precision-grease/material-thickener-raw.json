@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "material",
+  "project_id": "PGD-B1-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the thickener feedstock be recorded as a design-space material?",
+  "hypothesis": "A thickener feedstock whose identity and lot are recorded can enter the design space without any property being invented.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the supplier has not supplied every property, so one is recorded as a GAP.",
+  "evidence": [
+    {
+      "evidence_id": "E-MAT-PG-B1-003",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the supplier datasheet records the fatty acid trade name and lot.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED",
+      "claim_class": "MANUFACTURER_DATASHEET"
+    }
+  ],
+  "decision_rule": "Register a material only with identity (supplier / trade name / lot), a chemistry family, at least one recorded property, and a dated price.",
+  "result": "The thickener feedstock is recorded as a design-space material.",
+  "decision": "GO",
+  "next_action": "Record the in-situ reaction that consumes this feedstock before declaring a soap fraction.",
+  "material_id": "MAT-PG-FA-001",
+  "category": "THICKENER_RAW",
+  "identity": {
+    "supplier": "Synthetic supplier B",
+    "trade_name": "Synthetic 12-hydroxystearic acid",
+    "lot": "LOT-SYN-PG-B1-002"
+  },
+  "chemistry": {
+    "base_oil_family": "OTHER",
+    "notes": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fatty acid feedstock of the saponification reaction; the soap that determines the product is generated in situ from it."
+  },
+  "properties": [
+    { "property_id": "acid_value", "value": 178, "unit": "mg KOH/g", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-003", "status": "ASSUMED" },
+    { "property_id": "melting_point", "value": 78, "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-003", "status": "ASSUMED" }
+  ],
+  "cost": {
+    "value": 22.0,
+    "unit": "CNY/kg",
+    "price_timestamp": "2026-09-01"
+  }
+}

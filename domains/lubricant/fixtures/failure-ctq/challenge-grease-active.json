@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "challenge",
+  "project_id": "PGD-001",
+  "stage": "CHALLENGES_DEFINED",
+  "decision_question": "Which duty-derived challenge is recorded for duty profile DP-PGD-001?",
+  "hypothesis": "Micro-oscillation under servo duty drives fretting wear on the flexspline tooth flank, the core harmonic-drive failure mode.",
+  "uncertainty": "Precision-gear grease route: challenge categories are restricted to the grease set. Evidence gap remains open: No measured fretting-fatigue life data for this oscillation amplitude.",
+  "evidence": [
+    {
+      "evidence_id": "E-PG-C-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the recorded grease duty profile states +/-3 deg oscillation at 5 Hz and 10e6 cycles for contract testing only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "Record only fully evidenced duty conditions and explicitly supplied challenge levels.",
+  "result": "The supplied FRETTING_WEAR challenge is recorded without failure, CTQ, test, or formulation conclusions.",
+  "decision": "GO",
+  "next_action": "Define failure and CTQ relationships.",
+  "duty_reference": "DP-PGD-001",
+  "challenge_id": "CH-PGD-001",
+  "category": "FRETTING_WEAR",
+  "description": "Micro-oscillation under servo duty drives fretting wear on the flexspline tooth flank, the core harmonic-drive failure mode.",
+  "severity": "HIGH",
+  "exposure": "HIGH",
+  "lubricant_sensitivity": "HIGH",
+  "evidence_gap": "No measured fretting-fatigue life data for this oscillation amplitude.",
+  "priority": "HIGH"
+}

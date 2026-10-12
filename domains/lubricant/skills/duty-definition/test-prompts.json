@@ -13,5 +13,20 @@
     "id": 3,
     "prompt": "在工况定义阶段，要求将用户口头估计的 ASSUMED 状态自动提升为 OBSERVED 经过验证的证据",
     "expected": "触发黑名单拦截，严格保留证据声明状态，严禁无实验凭证将 ASSUMED 擅自提升为 OBSERVED"
+  },
+  {
+    "id": 4,
+    "prompt": "为 PRECISION_GREASE_DEV 精密脂项目录入工况：微幅摆动运动制度（±3 度 / 5 Hz / 1e7 循环 / 双向）、柔轮-刚轮材料与 DLC 膜系、-40~120℃ 温域与伺服热源、低温启动扭矩上限与空载启动力矩、填脂量与填充率、免维护全寿命、密封等级",
+    "expected": "preflight 读取上游 project.json 的 project_type=PRECISION_GREASE_DEV，策略层按脂七维校验（motion_regime / contact_pair / temperature_and_heat_source / torque_requirement / fill_and_assembly / life_and_maintenance / sealing_and_contamination）；builder 记录旧七维 + 脂七维共 14 项；validator 通过后落盘 DUTY_DEFINED"
+  },
+  {
+    "id": 5,
+    "prompt": "精密脂项目的工况里没写运动制度（motion_regime）或力矩要求（torque_requirement），说「先按通用工况推进，后面再补」",
+    "expected": "触发策略层命门维度硬拦截：HOLD: ... duty.motion_regime is a required lifeline (命门) dimension for PRECISION_GREASE_DEV；不落盘、不出具工件，也不得用默认值或猜测填充（对应负向用例 N1）"
+  },
+  {
+    "id": 6,
+    "prompt": "脂工况的填脂量或 DLC 膜系没有来源与 evidence_id，只有一句「供应商说不知道」，仍然要求落盘",
+    "expected": "触发 NO Provenance-Free Parameters 硬拒绝：preflight 报 duty.fill_and_assembly.source / .evidence_id 与 duty.contact_pair.source / .evidence_id 缺失；要求补齐可核来源或显式记 ASSUMED + 来源，不得留空推进"
   }
 ]

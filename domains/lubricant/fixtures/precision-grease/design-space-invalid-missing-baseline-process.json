@@ -1,0 +1,133 @@
+{
+  "project_artifact": "project-active.json",
+  "challenge_artifact": "challenge-defined.json",
+  "failure_ctq_artifact": "failure-ctq-defined.json",
+  "test_method_artifact": "test-method-qualified.json",
+  "material_artifacts": [
+    "material-base-oil.json",
+    "material-thickener-raw.json"
+  ],
+  "design_space": {
+    "design_space_id": "DS-PG-B1-001",
+    "scope": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: precision-gear grease formulation and process window for the step 6 contract.",
+    "variables": [
+      {
+        "variable_id": "VAR-SOAP-CONCENTRATION",
+        "variable_type": "FORMULATION_VARIABLE",
+        "material_reference": "MAT-PG-FA-001",
+        "role": "REACTION_PRODUCT",
+        "constraint_role": "INDEPENDENT",
+        "lower_bound": {
+          "value": 8.0,
+          "unit": "mass percent",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "baseline-v1"
+        },
+        "upper_bound": {
+          "value": 14.0,
+          "unit": "mass percent",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "baseline-v1"
+        },
+        "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: below 8 % the soap network does not form a stable grease, above 14 % the low-temperature torque requirement is at risk."
+      },
+      {
+        "variable_id": "VAR-BASE-OIL-FRACTION",
+        "variable_type": "MATERIAL_FAMILY",
+        "material_reference": "MAT-PG-BO-001",
+        "role": "INPUT_MATERIAL",
+        "lower_bound": {
+          "value": 80.0,
+          "unit": "mass percent",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "LOT-SYN-PG-B1-001",
+          "formula_version": "baseline-v1"
+        },
+        "upper_bound": {
+          "value": 92.0,
+          "unit": "mass percent",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "LOT-SYN-PG-B1-001",
+          "formula_version": "baseline-v1"
+        },
+        "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: charged base oil fraction; it is a real charge, so it closes the charge side."
+      },
+      {
+        "variable_id": "VAR-SOAP-HOLD-TIME",
+        "variable_type": "PROCESS_VARIABLE",
+        "lower_bound": {
+          "value": 20,
+          "unit": "min",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "not_applicable"
+        },
+        "upper_bound": {
+          "value": 60,
+          "unit": "min",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "design-space-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "not_applicable"
+        },
+        "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the saponification hold must complete before dehydration starts."
+      }
+    ],
+    "ctq_references": [
+      "CTQ-PG-B1-001"
+    ],
+    "qualified_test_method_references": [
+      "TM-PG-B1-001"
+    ],
+    "constraints": [
+      {
+        "constraint_id": "CONS-PG-B1-001",
+        "kind": "MIXTURE_CLOSURE_INPUTS",
+        "expression": "sum(inputs.mass_percent) == 100",
+        "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this closes the CHARGE only. The soap is generated in situ, so the charged fatty acid and alkali are not the substances the batch contains and this constraint does not hold for the product composition.",
+        "evidence_id": "E-DS-PG-B1-001"
+      },
+      {
+        "constraint_id": "CONS-PG-B1-002",
+        "kind": "FEASIBILITY_STRUCTURAL",
+        "expression": "soap_percent <= f(base_oil_family, aniline_point)",
+        "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: some soap/oil combinations do not form a stable grease at all, so the feasible set is structurally constrained rather than a box.",
+        "evidence_id": "E-DS-PG-B1-001"
+      },
+      "Use only the supplied variable bounds."
+    ],
+    "feasibility_regions": [
+      {
+        "region_id": "REG-PG-B1-LOW-SOAP",
+        "expression": "soap_percent in [8, 11] and base_oil_family == PAO",
+        "convexity": "CONVEX",
+        "connected": true,
+        "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the low-soap PAO corner forms a stable grease.",
+        "evidence_id": "E-DS-PG-B1-001"
+      },
+      {
+        "region_id": "REG-PG-B1-ESTER-ISLAND",
+        "expression": "soap_percent in [12, 14] and base_oil_family == ESTER",
+        "convexity": "CONVEX",
+        "connected": true,
+        "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: an ester island separated from the PAO region by a soap/oil combination that does not form a grease.",
+        "evidence_id": "E-DS-PG-B1-001"
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-DS-PG-B1-001",
+        "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: bounds, the charge-closure basis, the structural feasibility limit, and the disconnected feasible islands are supplied for contract validation only.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "project_artifact": "project-grease-active.json",
+  "challenge_artifact": "challenge-grease-active.json",
+  "evidence": [
+    {
+      "evidence_id": "E-PG-F-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the recorded fretting-wear challenge is carried forward for contract testing only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "failure_ctq": {
+    "challenge_reference": "CH-PGD-001",
+    "failure_id": "FM-PGD-001",
+    "failure_mode": "Flexspline tooth-flank fretting wear with micro-pitting",
+    "mechanism": "Micro-oscillation keeps the contact in the boundary regime; the entrained film cannot reform between reversals, so asperity contact accumulates fretting damage.",
+    "failure_diagnosis": "The flexspline flank records material loss at the oscillation reversal zones while the bulk tooth form is intact: a boundary-regime contact-fatigue state, not a bulk load failure.",
+    "root_cause_hypotheses": [
+      "Hypothesis: Grease base-oil bleed rate is too low to replenish the reversal zones between micro-oscillations.",
+      "Hypothesis: Thickener soap-fiber structure is sheared out of the contact under sustained micro-oscillation."
+    ],
+    "lubricant_contribution": "POSSIBLE - Pending SRV fretting bench verification of base-oil bleed rate and soap-fiber shear stability.",
+    "ctqs": [
+      {
+        "ctq_id": "CTQ-PGD-PEN",
+        "classification": "CTQ",
+        "criteria_layer": "SCREENING",
+        "observable": "Worked penetration change after 100000 double strokes",
+        "specification_limit": {"value": 30, "unit": "0.1mm", "source": "OEM grease specification compliance line", "method_version": "ASTM-D217-2024", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "engineering_risk_limit": {"value": 20, "unit": "0.1mm", "source": "Engineering risk line", "method_version": "risk-model-v1", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "test_references": ["TM-PGD-001"],
+        "evidence_required": ["qualified screening method", "reference grease comparison"]
+      },
+      {
+        "ctq_id": "CTQ-PGD-SRV",
+        "classification": "CTQ",
+        "criteria_layer": "BENCH",
+        "observable": "SRV fretting wear scar depth on flexspline material pair",
+        "specification_limit": {"value": 15, "unit": "um", "source": "OEM grease specification compliance line", "method_version": "DIN-51834-2024", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "engineering_risk_limit": {"value": 10, "unit": "um", "source": "Engineering risk line", "method_version": "risk-model-v1", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "test_references": ["TM-PGD-002"],
+        "evidence_required": ["qualified SRV method", "reference grease comparison"]
+      },
+      {
+        "ctq_id": "CTQ-PGD-TORQUE",
+        "classification": "FUNCTIONAL_SYMPTOM",
+        "criteria_layer": "MACHINE",
+        "observable": "Low-temperature start-up torque of the assembled reducer at -40 C",
+        "specification_limit": {"value": 0.15, "unit": "Nm", "source": "OEM reducer acceptance line", "method_version": "torque-rig-v1", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "engineering_risk_limit": {"value": 0.10, "unit": "Nm", "source": "Engineering risk line", "method_version": "risk-model-v1", "material_batch": "baseline-batch", "formula_version": "baseline-v1"},
+        "test_references": ["TM-PGD-003"],
+        "evidence_required": ["whole-machine torque rig record", "reference reducer comparison"]
+      }
+    ],
+    "test_chain": ["TM-PGD-001", "TM-PGD-002", "TM-PGD-003"]
+  }
+}

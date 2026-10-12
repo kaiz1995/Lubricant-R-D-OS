@@ -9,9 +9,18 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from duty_definition_policy import (
+    LEGACY_DUTY_DIMENSIONS,
+    dimension_errors,
+    resolved_project_type,
+)
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-DUTY_FIELDS = ("equipment", "operating_conditions", "maintenance", "temperature", "load", "contamination", "life")
+# The legacy seven dimensions. Kept as the module-level constant every existing consumer
+# imports (build_duty_artifact reads it); the enforced set for a given project type comes
+# from the policy layer, which returns exactly this tuple for the six oil routes.
+DUTY_FIELDS = LEGACY_DUTY_DIMENSIONS
 
 
 def _ensure_knowledge_retrieval_importable() -> bool:
@@ -73,41 +82,32 @@ def project_errors(path: Path) -> tuple[list[str], dict | None]:
     return errors, artifact if not errors else None
 
 
-def duty_errors(duty: object) -> list[str]:
-    if not isinstance(duty, dict):
-        return ["duty"]
-    errors: list[str] = []
-    for name in DUTY_FIELDS:
-        item = duty.get(name)
-        label = f"duty.{name}"
-        if not isinstance(item, dict):
-            errors.append(label)
-            continue
-        if not has_value(item.get("value")):
-            errors.append(f"{label}.value")
-        for field in ("source", "evidence_id", "statement"):
-            if not has_text(item.get(field)):
-                errors.append(f"{label}.{field}")
-        if item.get("status") == "GAP":
-            errors.append(f"{label}.status GAP requires resolution")
-        elif item.get("status") not in {"OBSERVED", "ASSUMED"}:
-            errors.append(f"{label}.status must be OBSERVED or ASSUMED")
-    return errors
+def duty_errors(duty: object, project_type: object = None) -> list[str]:
+    """Duty-dimension errors for this project type.
+
+    Delegates to the policy layer, which selects the required set: the grease seven for
+    ``PRECISION_GREASE_DEV``, the legacy seven for the six oil routes. Without an
+    explicit project type the policy infers the grease route only from a grease-shaped
+    duty profile, so legacy calls behave exactly as before.
+    """
+    return dimension_errors(duty, resolved_project_type(project_type, duty))
 
 
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors: list[str] = []
+    project: dict | None = None
     project_path = resolved_path(data.get("project_artifact"), input_path)
     if project_path is None:
         errors.append("project_artifact")
     else:
-        project_errors_found, _ = project_errors(project_path)
+        project_errors_found, project = project_errors(project_path)
         errors.extend(project_errors_found)
     if not has_text(data.get("duty_id")):
         errors.append("duty_id")
-    errors.extend(duty_errors(data.get("duty")))
+    project_type = project.get("project_type") if isinstance(project, dict) else None
+    errors.extend(duty_errors(data.get("duty"), project_type))
     return errors
 
 
