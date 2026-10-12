@@ -45,6 +45,8 @@ VALIDATORS = [
     ("^design_space-", "formulation-design/scripts/validate_design_space_artifact.py"),
     ("^experiment_design\\.json$", "doe-design/scripts/validate_experiment_design_artifact.py"),
     ("^experiment_design-", "doe-design/scripts/validate_experiment_design_artifact.py"),
+    ("^reference\\.json$", "reference-material/scripts/validate_reference_artifact.py"),
+    ("^reference-", "reference-material/scripts/validate_reference_artifact.py"),
 ]
 
 

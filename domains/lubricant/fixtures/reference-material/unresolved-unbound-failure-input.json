@@ -1,0 +1,53 @@
+{
+  "project_artifact": "project-active.json",
+  "reference_id": "REF-PGD-005",
+  "evidence_scope": "SYNTHETIC",
+  "known_good": [
+    {
+      "reference_id": "REF-PGD-005-G1",
+      "resolution": "RESOLVED",
+      "selection_rung": "LONG_RUN_NO_EVENT",
+      "material_identity": "Synthetic OEM precision-gear grease, trade name SYN-PG-OEM, lot LOT-SYN-PG-0003",
+      "formula_identity": "FORM-PG-OEM@v1",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic history record SYN-PG-H-005: one 10 h no-event run on the synthetic stand.",
+          "mechanism_reference": "MECHANISM-NONE: no failure mechanism is demonstrated by this no-event history."
+        }
+      ],
+      "storage_sop": "SOP-SYN-PG-STORE-001",
+      "safety_reference": "SDS-SYN-PG-OEM-2025"
+    }
+  ],
+  "known_bad": [
+    {
+      "reference_id": "REF-PGD-005-B1",
+      "resolution": "RESOLVED",
+      "selection_rung": "DIRECT_HISTORY",
+      "material_identity": "Synthetic high-sulfur contaminated grease, trade name SYN-PG-S, lot LOT-SYN-PG-0004",
+      "formula_identity": "FORM-PG-000@v1",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic bench note SYN-PG-N-005: the high-sulfur blend failed the synthetic bench run in three hours.",
+          "mechanism_reference": "MECHANISM-NONE: the statement 'high sulfur is generally bad' is a general claim and binds no mechanism."
+        }
+      ],
+      "storage_sop": "SOP-SYN-PG-STORE-003",
+      "safety_reference": "SDS-SYN-PG-S-2025"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E-REF-PG-401",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the Known Good cites a single 10 h no-event run.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-REF-PG-402",
+      "statement": "Synthetic negative fixture / NOT_FOR_PHYSICAL_EXECUTION: the Known Bad candidate claims RESOLVED and carries identity, SOP and safety sheet, but its only failure record is a general statement with no bound mechanism.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

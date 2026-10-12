@@ -34,7 +34,7 @@ import json
 import os
 import sys
 
-# The 13 stage types tracked by the stage-gate panel (canonical names:
+# The stage types tracked by the stage-gate panel (canonical names:
 # <type>.json). Order here is display order; suffix matching uses longest-prefix.
 STAGE_TYPES = [
     "project",
@@ -50,6 +50,7 @@ STAGE_TYPES = [
     "process",
     "gate",
     "application",
+    "reference",
 ]
 
 # Longest-first so that ``experiment_design-*.json`` is never misattributed

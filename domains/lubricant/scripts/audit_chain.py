@@ -62,6 +62,8 @@ KINDS = {
     "optimization-": ("OPTIMIZED", "optimization"),
     "gate.json": ("VERIFIED", "gate"),
     "gate-": ("VERIFIED", "gate"),
+    "reference.json": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
+    "reference-": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
 }
 
 # Free-text fields may embed a method id ("...record: HDG-TM-012"). The bare-id

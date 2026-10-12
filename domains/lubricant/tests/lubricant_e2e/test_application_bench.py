@@ -458,7 +458,7 @@ def main() -> int:
     sys.path.insert(0, str(ROOT))
     from scripts.install_domain_skill import SKILLS
 
-    assert len(SKILLS) == 19, sorted(SKILLS)
+    assert len(SKILLS) == 20, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
     assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
     assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]

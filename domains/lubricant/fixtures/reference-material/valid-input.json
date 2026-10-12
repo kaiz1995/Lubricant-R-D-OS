@@ -1,0 +1,53 @@
+{
+  "project_artifact": "project-active.json",
+  "reference_id": "REF-PGD-001",
+  "evidence_scope": "SYNTHETIC",
+  "known_good": [
+    {
+      "reference_id": "REF-PGD-001-G1",
+      "resolution": "RESOLVED",
+      "selection_rung": "DIRECT_HISTORY",
+      "material_identity": "Synthetic precision-gear grease, trade name SYN-PG-GOOD, lot LOT-SYN-PG-0001",
+      "formula_identity": "FORM-PG-000@v1",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic history record SYN-PG-H-001: 24 months in the reference harmonic drive with no bearing event recorded.",
+          "mechanism_reference": "MECHANISM-NONE: no failure mechanism is demonstrated by this no-event history."
+        }
+      ],
+      "storage_sop": "SOP-SYN-PG-STORE-001",
+      "safety_reference": "SDS-SYN-PG-GOOD-2025"
+    }
+  ],
+  "known_bad": [
+    {
+      "reference_id": "REF-PGD-001-B1",
+      "resolution": "RESOLVED",
+      "selection_rung": "DIRECT_HISTORY",
+      "material_identity": "Synthetic precision-gear grease, trade name SYN-PG-BAD, lot LOT-SYN-PG-0002",
+      "formula_identity": "FORM-PG-000@v0",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic failure event SYN-PG-FE-001: grease hardening and torque rise after the synthetic bench run.",
+          "mechanism_reference": "MECHANISM-PG-GREASE-HARDENING-001: the recorded failure demonstrates hardening driven by an under-milled soap structure."
+        }
+      ],
+      "storage_sop": "SOP-SYN-PG-STORE-002",
+      "safety_reference": "SDS-SYN-PG-BAD-2025"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E-REF-PG-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the Known Good dossier cites a no-event service history.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-REF-PG-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the Known Bad dossier cites a failure event bound to the grease-hardening mechanism it demonstrates.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

@@ -1,0 +1,661 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/variance_result_schema.json",
+  "title": "Variance result",
+  "description": "Output contract for the step-12 variance assessment. The verdict enum has exactly four values and UNDERPOWERED is deliberately its own value: conflating it with NO_DETECTABLE_DIFFERENCE is the most expensive error in grease R&D, because it turns 'we cannot measure it' into 'there is no difference' and so justifies a wrong product decision. Every number here is engine-computed; the LLM reports it and never recomputes it.",
+  "allOf": [
+    {
+      "$ref": "compute_envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "engine_name": {
+      "const": "statistics"
+    },
+    "method": {
+      "const": "NESTED_VARIANCE_V1"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "analysis_type": {
+          "const": "VARIANCE_ANALYSIS"
+        },
+        "variance_method": {
+          "const": "EXPECTED_MEAN_SQUARE_NESTED_RANDOM_EFFECTS_V1"
+        },
+        "ci_method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "power_method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "MEASUREMENT",
+              "BENCH",
+              "BATCH"
+            ]
+          }
+        },
+        "alpha": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "target_power": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "k_required": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "planning_numerator": {
+          "const": 16.0
+        },
+        "bench_round_days": {
+          "const": 30
+        },
+        "bench_positions_per_round": {
+          "const": 2
+        },
+        "resolution_constant": {
+          "const": 4.0
+        },
+        "requested_analyses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "VARIANCE_COMPONENTS",
+              "POWER_ANALYSIS",
+              "CONSISTENCY_CHECK"
+            ]
+          }
+        }
+      },
+      "required": [
+        "analysis_type",
+        "variance_method",
+        "alpha",
+        "target_power",
+        "k_required",
+        "requested_analyses"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "description": "CONSISTENT_DIFFERENCE (difference exceeds the noise scale and replicates agree) / NO_DETECTABLE_DIFFERENCE (properly powered, nothing found) / UNDERPOWERED (the design could not have answered the question -- never a synonym for no difference) / REPLICATE_INCONSISTENT (same-arm replicates contradict, so no mean is worth comparing).",
+          "enum": [
+            "CONSISTENT_DIFFERENCE",
+            "NO_DETECTABLE_DIFFERENCE",
+            "UNDERPOWERED",
+            "REPLICATE_INCONSISTENT"
+          ]
+        },
+        "verdict_basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict_values_available": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "CONSISTENT_DIFFERENCE",
+              "NO_DETECTABLE_DIFFERENCE",
+              "UNDERPOWERED",
+              "REPLICATE_INCONSISTENT"
+            ]
+          }
+        },
+        "variance_components": {
+          "description": "sigma_meas / sigma_bench / sigma_batch / sigma_total, each with a confidence interval. A component the layout cannot separate is null, never zero: a missing component must not be readable as a zero one. At n=3 the sample standard deviation carries roughly +/-50% relative error, which is exactly why the interval is reported alongside.",
+          "type": "object",
+          "properties": {
+            "sigma_meas": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_meas_ci_low": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_meas_ci_high": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_bench": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_bench_ci_low": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_bench_ci_high": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_batch": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_batch_ci_low": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_batch_ci_high": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "sigma_total": {
+              "type": "number",
+              "minimum": 0
+            },
+            "sigma_total_ci_low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "sigma_total_ci_high": {
+              "type": "number",
+              "minimum": 0
+            },
+            "confidence_level": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "ci_method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "df_meas": {
+              "type": "number",
+              "minimum": 0
+            },
+            "df_bench": {
+              "type": "number",
+              "minimum": 0
+            },
+            "df_batch": {
+              "type": "number",
+              "minimum": 0
+            },
+            "small_sample_warning": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "sigma_meas",
+            "sigma_bench",
+            "sigma_batch",
+            "sigma_total",
+            "sigma_total_ci_low",
+            "sigma_total_ci_high",
+            "confidence_level",
+            "ci_method",
+            "small_sample_warning"
+          ],
+          "additionalProperties": false
+        },
+        "variance_balance": {
+          "type": "object",
+          "properties": {
+            "variance_meas": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "variance_bench": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "variance_batch": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "variance_total": {
+              "type": "number"
+            },
+            "mean_squares": {
+              "type": "object"
+            },
+            "ems_coefficients": {
+              "type": "object"
+            },
+            "structure": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "variance_meas",
+            "variance_bench",
+            "variance_batch",
+            "variance_total"
+          ],
+          "additionalProperties": false
+        },
+        "replicate_structure": {
+          "description": "The declared nesting echoed back next to the observed counts, plus any shortfall. A component estimated from fewer replicates than were planned is a weaker statement than the plan assumed, so the difference must be visible rather than hidden.",
+          "type": "object",
+          "properties": {
+            "declared": {
+              "type": "array"
+            },
+            "declared_groups_by_level": {
+              "type": "object"
+            },
+            "observed_groups_by_level": {
+              "type": "object"
+            },
+            "shortfalls": {
+              "type": "array"
+            },
+            "usable_observations": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "excluded_observations": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "declared",
+            "declared_groups_by_level",
+            "observed_groups_by_level",
+            "usable_observations",
+            "excluded_observations"
+          ],
+          "additionalProperties": false
+        },
+        "data_quality": {
+          "description": "Which observations were excluded and why. The three rules are stated in the output so a reader never has to infer them from the code.",
+          "type": "object",
+          "properties": {
+            "observations_total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "observations_used": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "observations_excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "censored_excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "confounded_excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "identity_conflicts_excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "excluded_observations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation_reference": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "enum": [
+                      "CENSORED_NOT_AN_END_POINT",
+                      "CONFOUNDED_OBSERVATION",
+                      "MATERIAL_IDENTITY_CONFLICT"
+                    ]
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation_reference",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "rule_censoring": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rule_material_identity": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rule_confounding": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "observations_total",
+            "observations_used",
+            "censored_excluded",
+            "confounded_excluded",
+            "identity_conflicts_excluded",
+            "excluded_observations"
+          ],
+          "additionalProperties": false
+        },
+        "consistency": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "enum": [
+                "CONSISTENT",
+                "REPLICATE_INCONSISTENT"
+              ]
+            },
+            "arms_checked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "observations_checked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inconsistent_arms": {
+              "type": "array"
+            },
+            "material_identity_conflicts": {
+              "type": "array"
+            },
+            "basis": {
+              "type": "string",
+              "minLength": 1
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "verdict",
+            "arms_checked",
+            "observations_checked",
+            "inconsistent_arms",
+            "material_identity_conflicts"
+          ],
+          "additionalProperties": false
+        },
+        "comparison": {
+          "type": "object",
+          "properties": {
+            "arm_a": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "arm_b": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "difference": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "effect_size": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "k_required": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "k_observed": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "k_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sigma_max_requirement": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "difference",
+            "effect_size",
+            "k_required",
+            "k_observed",
+            "sigma_max_requirement"
+          ],
+          "additionalProperties": false
+        },
+        "power": {
+          "description": "Power against the pre-registered delta. status NOT_COMPUTABLE is reported rather than a default: an invented power is what lets an underpowered design look conclusive.",
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "COMPUTED",
+                "NOT_COMPUTABLE"
+              ]
+            },
+            "power": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "reason": {
+              "type": "string"
+            },
+            "per_arm_n": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "alpha": {
+              "type": "number"
+            },
+            "target_power": {
+              "type": "number"
+            },
+            "sigma_used": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "k_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "required_n": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "status",
+            "power",
+            "per_arm_n"
+          ],
+          "additionalProperties": false
+        },
+        "sigma_estimate_used": {
+          "type": "object"
+        },
+        "frozen_inputs": {
+          "type": "object",
+          "properties": {
+            "frozen_sigma_reference": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "frozen_sigma": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "control_band": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "preregistered_delta": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sigma_source": {
+              "enum": [
+                "FROZEN_METHOD_CHARACTERIZATION",
+                "ESTIMATED_FROM_THIS_DESIGN"
+              ]
+            }
+          },
+          "required": [
+            "frozen_sigma",
+            "preregistered_delta",
+            "sigma_source"
+          ],
+          "additionalProperties": false
+        },
+        "resolution_table": {
+          "description": "Smallest reliably detectable difference ~ 4*sigma/sqrt(n) per replicate count. The square root is the message: reading it shows that raising n only helps as sqrt(n), so effort belongs in a bigger signal, a lower sigma or pairing.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "replicates_per_group": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "detectable_difference": {
+                "type": "number",
+                "minimum": 0
+              },
+              "detectable": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "replicates_per_group",
+              "detectable_difference",
+              "detectable"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "verdict",
+        "verdict_basis",
+        "variance_components",
+        "replicate_structure",
+        "data_quality",
+        "consistency",
+        "comparison",
+        "power",
+        "frozen_inputs",
+        "resolution_table"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "engine_name",
+    "method",
+    "result"
+  ],
+  "unevaluatedProperties": false
+}
