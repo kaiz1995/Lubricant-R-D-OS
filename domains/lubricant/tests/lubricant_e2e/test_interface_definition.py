@@ -127,7 +127,7 @@ def main() -> int:
     #    PRECISION_GREASE_DEV brings the inventory to 30).
     schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.schema.json"))
     assert "interface.schema.json" in schema_names, schema_names
-    assert len(schema_names) == 30, (len(schema_names), schema_names)
+    assert len(schema_names) == 31, (len(schema_names), schema_names)
     validated = subprocess.run(
         [sys.executable, "-B", "scripts/validate_schemas.py"], cwd=ROOT, capture_output=True, text=True
     )

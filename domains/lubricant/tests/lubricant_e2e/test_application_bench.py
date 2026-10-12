@@ -43,7 +43,7 @@ APP_VALIDATOR = ROOT / "skills/application-definition/scripts/validate_applicati
 # WP-09 adds interface, and PRECISION_GREASE_DEV adds the nine precision-gear
 # grease objects; the arithmetic assertion below still holds.
 SCHEMA_COUNT_BEFORE = 17
-SCHEMA_COUNT_AFTER = 30
+SCHEMA_COUNT_AFTER = 31
 NEW_SCHEMAS = (
     "application.schema.json",
     "bench.schema.json",
@@ -58,6 +58,7 @@ NEW_SCHEMAS = (
     "variance.schema.json",
     "campaign.schema.json",
     "bench_test.schema.json",
+    "next_batch.schema.json",
 )
 
 

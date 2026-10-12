@@ -70,6 +70,10 @@ KINDS = {
     "screening-": ("SCREENING_PASSED", "screening"),
     "variance.json": ("VARIANCE_ASSESSED", "variance"),
     "variance-": ("VARIANCE_ASSESSED", "variance"),
+    "bench_test.json": ("BENCH_TESTED", "bench_test"),
+    "bench_test-": ("BENCH_TESTED", "bench_test"),
+    "next_batch.json": ("NEXT_BATCH_DECIDED", "next_batch"),
+    "next_batch-": ("NEXT_BATCH_DECIDED", "next_batch"),
 }
 
 # Free-text fields may embed a method id ("...record: HDG-TM-012"). The bare-id

@@ -1,0 +1,35 @@
+{
+  "project_artifact": "project-active.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-PG-B4-EVT-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the bench log supplied for this run records the event inside the observation window at 4.25 h.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "bench_test": {
+    "run_id": "RUN-PG-B4-EVT-001",
+    "bench_reference": "BENCH-SZ-01",
+    "batch_reference": "BAT-PG-B4-EVT-001",
+    "sample_reference": "SMP-PG-B4-EVT-001",
+    "protocol_version": "BENCH_PROTOCOL_V2",
+    "setpoints": [
+      "load 1.5 kN",
+      "speed 1200 rpm",
+      "temperature 80 degC"
+    ],
+    "environment": {
+      "temperature_c": 23.8,
+      "humidity_percent": 44.0
+    },
+    "raw_record_reference": "RAW-PG-B4-EVT-001",
+    "event_occurred": true,
+    "event_time": 4.25,
+    "censoring_type": "NONE",
+    "stop_reason": "event observed inside the protocol window",
+    "anomalies": [],
+    "campaign_iteration": 1
+  }
+}

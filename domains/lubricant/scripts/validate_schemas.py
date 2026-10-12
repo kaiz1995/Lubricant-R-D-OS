@@ -55,6 +55,9 @@ EXPECTED_ERRORS = {
     "design_space--illegal-material-role.json": "'THICKENER' is not one of",
     "design_space--illegal-convexity.json": "'MOSTLY_CONVEX' is not one of",
     "process--illegal-step-type.json": "'HOMOGENISATION' is not one of",
+    # Step 13b sequential decision (batch 2). The violation is the schema's own
+    # conditional rule: stopping the loop needs its reason recorded.
+    "next_batch--stop-without-rationale.json": "'stop_rationale' is a required property",
 }
 
 

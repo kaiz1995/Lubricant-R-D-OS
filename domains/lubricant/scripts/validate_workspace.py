@@ -53,6 +53,8 @@ VALIDATORS = [
     ("^screening-", "grease-screening/scripts/validate_screening_artifact.py"),
     ("^variance\\.json$", "variance-assessment/scripts/validate_variance_artifact.py"),
     ("^variance-", "variance-assessment/scripts/validate_variance_artifact.py"),
+    ("^bench_test\.json$", "experiment-import/scripts/validate_bench_test_artifact.py"),
+    ("^bench_test-", "experiment-import/scripts/validate_bench_test_artifact.py"),
 ]
 
 
