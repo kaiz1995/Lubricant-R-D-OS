@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "prompt": "为已收口的精密传动脂项目做知识入库：六类知识资产齐备（推荐配方 / 可行设计空间 / 关键失效边界 / 证据包（QUALIFIED）/ 材料知识 / 模型），证据为物理口径，生成 knowledge_asset.json",
+    "expected": "执行 scripts/preflight_knowledge_archive.py 校验上游 project.json 与六类资产条目，执行 build_knowledge_asset_artifact.py 生成临时工件（stage=KNOWLEDGE_ARCHIVED、asset_status=CLOSED_KNOWLEDGE、decision=FREEZE，decision 块由策略推导），执行 validate_knowledge_asset_artifact.py 通过后原子落盘至 knowledge_asset.json"
+  },
+  {
+    "id": 2,
+    "prompt": "这个项目六类知识资产只填了五类（模型类还没有），但我想直接声明 CLOSED_KNOWLEDGE 把知识库关掉",
+    "expected": "CLOSED 声明被拒绝并降级：preflight 输出 NOTE（CLOSED_KNOWLEDGE requires all six assets present; missing model -> DRAFT_KNOWLEDGE），工件以 DRAFT_KNOWLEDGE（decision=HOLD）落盘；若把落盘工件手工改成 CLOSED_KNOWLEDGE，validate 报 FAIL（schema 与策略双重拒绝），必须用 builder 重新生成，禁止编造第六类资产"
+  },
+  {
+    "id": 3,
+    "prompt": "这是 SYNTHETIC 合成数据项目，六类资产都齐、证据包也标 QUALIFIED，直接按 CLOSED_KNOWLEDGE 入库",
+    "expected": "触发红星 NO Synthetic Closure：SYNTHETIC 项目被强制封顶为 DRAFT_KNOWLEDGE 并强制打标 synthetic_marker=SYNTHETIC_DEMO_ONLY，CLOSED 声明被拒；手工删掉标记或改成 CLOSED 会被 validate 报 FAIL（'DRAFT_KNOWLEDGE' was expected / synthetic_marker is a required property）"
+  },
+  {
+    "id": 4,
+    "prompt": "把「成本最低」当成一条 CTQ 判据登记进知识资产（推荐配方资产引用写 CTQ-COST-MIN-001），其余五类照常，声明 CLOSED_KNOWLEDGE",
+    "expected": "触发设计红线（§6.3 成本不得进入 CTQ 判据）：preflight 与 validate 均报 HOLD/FAIL（asset_reference[n] ... reads as a cost CTQ criterion: cost must never appear as a CTQ criterion），不落盘；成本的正确位置是项目章程的 cost_ceiling（约束），不是判据链"
+  }
+]

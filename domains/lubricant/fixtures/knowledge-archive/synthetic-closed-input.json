@@ -1,0 +1,41 @@
+{
+  "project_artifact": "project-active.json",
+  "asset_status": "CLOSED_KNOWLEDGE",
+  "knowledge_assets": {
+    "recommended_formula": {
+      "artifact_reference": "FORMULA-REC-PGD-001",
+      "present": true
+    },
+    "feasible_design_space": {
+      "artifact_reference": "DS-FEASIBLE-PGD-001",
+      "present": true
+    },
+    "critical_failure_boundaries": {
+      "artifact_reference": "CFB-PGD-001",
+      "present": true
+    },
+    "evidence_package": {
+      "artifact_reference": "EP-PGD-001",
+      "present": true,
+      "qualification_reference": "EQ-PGD-001",
+      "qualification": "QUALIFIED"
+    },
+    "material_knowledge": {
+      "artifact_reference": "MAT-KNOW-PGD-001",
+      "present": true
+    },
+    "model": {
+      "artifact_reference": "MODEL-PGD-001",
+      "present": true
+    }
+  },
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-KA-PGD-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: a synthetic project claims closure.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

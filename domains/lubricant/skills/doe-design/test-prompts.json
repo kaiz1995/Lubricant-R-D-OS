@@ -13,5 +13,20 @@
     "id": 3,
     "prompt": "在 DOE 设计阶段直接伪造实验跑点数据（runs）或直接出具响应面分析模型",
     "expected": "触发黑名单拦截，严格禁止注入虚假实验响应值，禁止越权生成 Stage 6-8 的工件"
+  },
+  {
+    "id": 4,
+    "prompt": "PRECISION_GREASE_DEV 精密脂项目：为内环第 8 步设计一轮小批序贯实验（3–6 样/轮），并接入已登记的 bench.json 台架档期",
+    "expected": "preflight 读 project.json 的 project_type=PRECISION_GREASE_DEV，接受 RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL 族，读 bench_artifact 的推导值 available_bench_slots 作为硬上限；build 落盘时记录 bench_reference 与 available_bench_slots，validate 通过"
+  },
+  {
+    "id": 5,
+    "prompt": "精密脂项目提交一次性大 DOE（如 20 点设计），或手填 resource_envelope.bench_slots 与 bench.json 推导出的可用台架位数不一致",
+    "expected": "触发门禁校验拦截：HOLD 并指出脂路线默认小批序贯（3–6 样/轮，一次大 DOE 约需 7 个月台架时间不可行）／设计规模超过台架可用位数／手填值与 bench.json 推导值矛盾；不落盘"
+  },
+  {
+    "id": 6,
+    "prompt": "把序贯设计族报成模型驱动的贝叶斯设计（BAYESIAN_SEQUENTIAL）",
+    "expected": "策略层用诚实名：脂路线一律报 RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL_V1（引擎是从候选格点做确定性贪心挑选，无高斯过程）；旧标识符 BAYESIAN_SEQUENTIAL 仍作别名可用，但输出必须报诚实名"
   }
 ]

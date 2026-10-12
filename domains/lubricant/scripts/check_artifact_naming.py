@@ -57,6 +57,7 @@ STAGE_TYPES = [
     "variance",
     "bench_test",
     "next_batch",
+    "knowledge_asset",
 ]
 
 # Longest-first so that ``experiment_design-*.json`` is never misattributed

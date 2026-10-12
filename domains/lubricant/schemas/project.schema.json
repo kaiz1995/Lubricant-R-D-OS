@@ -7,6 +7,11 @@
     {
       "if": { "not": { "required": ["benchmark_products"] } },
       "then": { "required": ["benchmark_waiver_reason"] }
+    },
+    {
+      "$comment": "Cost is a CONSTRAINT, never a CRITERION. A charter may legitimately declare no cost target and explain why instead - on a grease project the cost is a ceiling to respect, not a target to optimise toward - exactly as a missing benchmark requires a waiver reason. target_cost stays legal when supplied (it keeps its historical meaning on the six oil routes); a grease charter records cost_ceiling and writes cost_basis_reason.",
+      "if": { "not": { "required": ["target_cost"] } },
+      "then": { "required": ["cost_basis_reason"] }
     }
   ],
   "type": "object",
@@ -20,12 +25,14 @@
     "technical_objective": { "type": "string", "minLength": 1 },
     "hard_constraints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "target_cost": { "$ref": "common.schema.json#/$defs/measurement" },
+    "cost_ceiling": { "$ref": "common.schema.json#/$defs/measurement", "description": "Optional cost ceiling: the highest unit cost the product may carry before the project is not worth doing. This is the cost semantics a precision-gear grease charter uses - a limit to respect, NOT a reduction target to optimise toward. Cost is a constraint (step 6 filter / step 14 constraint / step 16 ceiling check); it must never enter a CTQ criterion." },
+    "cost_basis_reason": { "type": "string", "minLength": 1, "description": "Mandatory when target_cost is absent: why this project sets no cost target (e.g. performance-first, customer-specified price, supply-security driven). A project that declares neither a target cost nor a reason is rejected, exactly as with benchmark_waiver_reason." },
     "benchmark_products": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "benchmark_waiver_reason": { "type": "string", "minLength": 1, "description": "Mandatory when benchmark_products is absent: why no competitive benchmark applies (e.g. brand-new category, mechanism exploration, no comparable product)." },
     "success_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "risk_class": { "enum": ["LOW", "MEDIUM", "HIGH", "STRATEGIC"] },
     "owner": { "type": "string", "minLength": 1 }
   },
-  "required": ["artifact_type", "status", "project_name", "project_type", "product_family", "business_objective", "technical_objective", "hard_constraints", "target_cost", "success_criteria", "risk_class", "owner"],
+  "required": ["artifact_type", "status", "project_name", "project_type", "product_family", "business_objective", "technical_objective", "hard_constraints", "success_criteria", "risk_class", "owner"],
   "unevaluatedProperties": false
 }

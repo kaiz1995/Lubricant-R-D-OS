@@ -1,4 +1,13 @@
-"""Build the only permitted Phase 3 optimization request artifact."""
+"""Build the only permitted Phase 3 optimization request artifact.
+
+ADDITIVE (precision-grease step 14): on that route the artifact lands at
+``NON_INFERIORITY_PASSED`` instead of ``OPTIMIZED``, records the objective type the
+policy layer resolved (CONSTRAINT_SATISFACTION when the caller supplied none, because
+cost is a constraint and never an objective weighed against performance), cites the
+variance assessment that admitted the round, and carries the model's applicability
+boundary as ``trust_region`` so the engine can enforce it. The six oil routes keep
+their original stage, wording, and field set.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +15,45 @@ import json
 import sys
 from pathlib import Path
 
-from optimization_policy import expected_decision_fields
+from optimization_policy import (
+    MODEL_TRUST_REGION_INPUT_FIELD,
+    TRUST_REGION_FIELD,
+    expected_decision_fields,
+    grease_route,
+    resolve_objective_type,
+    stage_for,
+    trust_region_from_boundary,
+)
 from preflight_optimization import errors_for
+
+
+def build_artifact(project: dict, model: dict, request: dict, variance: dict | None, boundary: object) -> dict:
+    """Assemble the optimization artifact. Pure function of validated input + upstreams."""
+    grease = grease_route(project)
+    trust_region = trust_region_from_boundary(boundary) if grease else None
+    variance_id = variance["variance_id"] if isinstance(variance, dict) else None
+    # The decision block is computed from the RESOLVED request, so a grease request that
+    # omitted objective_type states the default it actually received.
+    resolved = {**request, "objective_type": resolve_objective_type(request, grease)}
+    artifact = {
+        "schema_version": "0.1.0",
+        "artifact_type": "optimization",
+        "project_id": project["project_id"],
+        "stage": stage_for(grease),
+        "evidence_scope": model["evidence_scope"],
+        **expected_decision_fields(resolved, grease, trust_region, variance_id if grease else None),
+        "evidence": request["evidence"],
+        "model_reference": model["model_id"],
+        "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE",
+        "optimization_id": request["optimization_id"],
+        "objective_type": resolve_objective_type(request, grease),
+        "objectives": request["objectives"],
+        "methods": request["methods"],
+    }
+    if grease:
+        artifact["variance_reference"] = variance_id
+        artifact[TRUST_REGION_FIELD] = trust_region
+    return artifact
 
 
 def main() -> int:
@@ -17,10 +63,12 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as error: print(f"HOLD: cannot read input: {error}; no artifact generated"); return 1
     errors = errors_for(data, input_path)
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
-    project = json.loads((input_path.parent / data["project_artifact"]).read_text(encoding="utf-8")); model = json.loads((input_path.parent / data["model_artifact"]).read_text(encoding="utf-8")); request = data["optimization"]
-    artifact = {"schema_version": "0.1.0", "artifact_type": "optimization", "project_id": project["project_id"], "stage": "OPTIMIZED", "evidence_scope": model["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "model_reference": model["model_id"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("optimization_id", "objective_type", "objectives", "methods")}}
+    def load(key: str) -> dict: return json.loads((input_path.parent / data[key]).read_text(encoding="utf-8"))
+    project = load("project_artifact"); model = load("model_artifact"); request = data["optimization"]
+    variance = load("variance_artifact") if "variance_artifact" in data else None
+    artifact = build_artifact(project, model, request, variance, data.get(MODEL_TRUST_REGION_INPUT_FIELD))
     output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"BUILT: {output_path}"); return 0
+    print(f"BUILT: {output_path} stage={artifact['stage']} objective_type={artifact['objective_type']}"); return 0
 
 
 if __name__ == "__main__":

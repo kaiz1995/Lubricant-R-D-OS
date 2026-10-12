@@ -229,7 +229,7 @@ def main() -> int:
             from integrations.open_science import install_skill
             from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-            assert len(SKILLS) == 23, sorted(SKILLS)
+            assert len(SKILLS) == 24, sorted(SKILLS)
             assert SKILLS["interface-definition"] == ("common.schema.json", "interface.schema.json"), SKILLS["interface-definition"]
 
             deploy_ws = workspace / "deploy"

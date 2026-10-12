@@ -6,7 +6,7 @@
   "properties": {"engine_name": {"const": "optimization"}, "result": {"type": "object", "properties": {
     "total_candidates_evaluated": {"type": "integer", "minimum": 0}, "hard_constraint_passed": {"type": "integer", "minimum": 0}, "guardrail_passed": {"type": "integer", "minimum": 0}, "pareto_front_size": {"type": "integer", "minimum": 0},
     "recommended_candidates": {"type": "array", "items": {"type": "object", "properties": {
-      "rank": {"type": "integer", "minimum": 1}, "candidate_role": {"enum": ["PARETO_FRONT", "WEIGHTED_RANK_TOP", "MIN_COST_FEASIBLE"]},
+      "rank": {"type": "integer", "minimum": 1}, "candidate_role": {"enum": ["PARETO_FRONT", "WEIGHTED_RANK_TOP", "MIN_COST_FEASIBLE", "EXTRAPOLATION_WARNING"]},
       "proportions": {"type": "object", "additionalProperties": {"type": "number"}}, "predicted_ctq": {"type": "object", "additionalProperties": {"type": "number"}}, "total_cost": {"type": "number"}, "currency": {"type": "string"}, "in_pareto_front": {"type": "boolean"}, "weighted_score": {"type": ["number", "null"]},
       "margin_report": {"type": "array", "items": {"type": "object", "properties": {"guardrail_id": {"type": "string"}, "margin_value": {"type": "number"}, "passes": {"type": "boolean"}}, "required": ["guardrail_id", "margin_value", "passes"], "additionalProperties": false}},
       "cost_evaluation": {"type": "object", "properties": {"engine_name": {"type": "string"}, "engine_version": {"type": "string"}, "input_digest": {"type": "string"}, "total_cost": {"type": "number"}}, "required": ["engine_name", "engine_version", "input_digest", "total_cost"], "additionalProperties": false}

@@ -27,13 +27,13 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "description": "MANUFACTURABILITY_ACCEPTABLE cites the fixed process-window artifact as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record, WHEN the product has one — i.e. when its structure is set by the manufacturing process (grease). A blended oil has no such window: it establishes manufacturability through the qualified blending process instead, so the citation is not required for it.",
+            "description": "MANUFACTURABILITY_ACCEPTABLE cites the fixed process-window artifact as PROCESS-WINDOW:<window_id> (process.schema.json process_window.evidence_reference), never a free-form record, WHEN the product has one — i.e. when its structure is set by the manufacturing process (grease). A blended oil has no such window: it establishes manufacturability through the qualified blending process instead, so the citation is not required for it. COST_CEILING_RESPECTED records that the cost stayed under the declared ceiling, NOT that a cost-reduction target was met: 'stayed under the limit' and 'hit a reduction target' are two different judgements, and a domestic-substitution grease may legitimately cost more than the incumbent as long as it stays under the customer-acceptable ceiling. The eight-condition count is a hard contract and is unchanged by this rename.",
             "properties": {
               "condition_id": {
                 "enum": [
                   "CRITICAL_CTQ_SATISFIED",
                   "CRITICAL_RISK_EVIDENCE_SUFFICIENT",
-                  "COST_TARGET_MET",
+                  "COST_CEILING_RESPECTED",
                   "RAW_MATERIAL_SUPPLY_ACCEPTABLE",
                   "MANUFACTURABILITY_ACCEPTABLE",
                   "CRITICAL_BENCHMARK_NO_DEGRADATION",

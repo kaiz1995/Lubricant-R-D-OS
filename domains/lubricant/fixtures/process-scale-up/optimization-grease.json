@@ -1,0 +1,54 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "optimization",
+  "project_id": "PGD-OPT-001",
+  "stage": "NON_INFERIORITY_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can supplied optimization request OPT-PGD-001 be handed to the Phase 4 deterministic engine?",
+  "hypothesis": "OPT-PGD-001 records supplied objectives and methods without calculating an optimum.",
+  "uncertainty": "No candidate, Pareto front, desirability, non-inferiority result, constraint evaluation, trade-off, formulation recommendation, performance conclusion, or verification result is established by this Phase 3 artifact.",
+  "decision_rule": "Hand off only a linked MODEL_BUILT request with supplied objectives, supported Phase 3 methods, and evidence without GAP. On the precision-grease route the round must ALSO have passed the variance check (UNDERPOWERED or REPLICATE_INCONSISTENT blocks the optimization), the objective_type defaults to CONSTRAINT_SATISFACTION because cost is a constraint and never an objective weighed against performance, and every recommendation must fall inside the model's applicability boundary.",
+  "result": "OPT-PGD-001 records supplied methods NON_INFERIORITY with objective_type CONSTRAINT_SATISFACTION; no optimization calculation or recommendation has been produced. Variance gate: VAR-OPT-001. Model applicability boundary: Synthetic fixture: the model was fitted over the constrained mixture box used by the recorded design points. (A=[0.2, 0.8], B=[0.2, 0.8]; mode EXCLUDE).",
+  "decision": "GO",
+  "next_action": "Hand OPT-PGD-001 to the Phase 4 deterministic engine with the model's trust region (Synthetic fixture: the model was fitted over the constrained mixture box used by the recorded design points. (A=[0.2, 0.8], B=[0.2, 0.8]; mode EXCLUDE)): a recommended point outside it must be removed or explicitly degraded, never recommended silently.",
+  "evidence": [
+    {
+      "evidence_id": "E-OPT-PGD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: optimization scope supplied for the precision-grease route.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "model_reference": "MODEL-001",
+  "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE",
+  "optimization_id": "OPT-PGD-001",
+  "objective_type": "CONSTRAINT_SATISFACTION",
+  "objectives": [
+    {
+      "response_reference": "CTQ-DOE-001",
+      "direction": "MINIMIZE",
+      "criterion": "Meet the supplied CTQ boundary."
+    }
+  ],
+  "methods": [
+    "NON_INFERIORITY"
+  ],
+  "variance_reference": "VAR-OPT-001",
+  "trust_region": {
+    "region_statement": "Synthetic fixture: the model was fitted over the constrained mixture box used by the recorded design points.",
+    "mode": "EXCLUDE",
+    "variable_bounds": [
+      {
+        "component_id": "A",
+        "lower": 0.2,
+        "upper": 0.8
+      },
+      {
+        "component_id": "B",
+        "lower": 0.2,
+        "upper": 0.8
+      }
+    ],
+    "basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+  }
+}

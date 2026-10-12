@@ -1,6 +1,6 @@
 ---
 name: application-validation
-description: Gate one verified project's entry into the WP-06 APPLIED stage by aggregating the application record. Use when user mentions "application-validation", "应用与整机验证", "APPLIED", "应用验证门禁", "application verdict gate", or asking whether a VERIFIED project may advance to application-and-machine validation.
+description: Gate one verified project's entry into the WP-06 APPLIED stage by aggregating the application record. On the precision-grease route the record must also bind every whole-machine indicator (start-up torque / backlash / temperature rise / life) to an observed criterion. Use when user mentions "application-validation", "应用与整机验证", "APPLIED", "应用验证门禁", "application verdict gate", "整机指标", "启动扭矩", "回差", "温升", "寿命", or asking whether a VERIFIED project may advance to application-and-machine validation.
 ---
 
 # Application Validation (APPLIED entry gate)
@@ -13,6 +13,8 @@ Authority contract: the APPLIED entry rules in `scripts/application_validation_p
 
 Upstream output contract consumed here (produced by `application-definition`):
 - `application_id`, `project_reference`, `formula_reference`, `bench_references`, `acceptance_criteria`, `result` (PASS / FAIL / INCONCLUSIVE / GAP), `counterexamples`, `life_claim_boundary`, plus `artifact_type = "application"`. `process_window_reference` is optional (on-demand window artifact; grease only).
+
+**ADDITIVE — the precision-grease route (step 16b, plan §4.4.3 item 3-6).** A record that declares `project_type: "PRECISION_GREASE_DEV"` must also satisfy the whole-machine criteria chain: it carries `machine_indicators`, each of the four indicators (START_UP_TORQUE / BACKLASH / TEMPERATURE_RISE / LIFE) binds to an acceptance criterion, and each cited criterion is OBSERVED with a determined numeric threshold when the verdict is PASS (the LIFE indicator additionally requires a non-empty OBSERVED life-claim boundary). It also carries `campaign_artifact` and `bench_test_artifact` so the machine verdict traces to the campaign round and the bench run that produced it. A record with no `project_type` is an oil record and is validated exactly as before.
 
 ---
 
@@ -53,6 +55,13 @@ Input is a single JSON object containing only `application_validation`:
 - `project_reference`: non-empty string; must equal `application.project_reference`.
 - `current_stage`: must be exactly `VERIFIED`.
 - `application`: the built application artifact object (`artifact_type = "application"`), not the raw application-definition input.
+
+### Precision-grease route (additive)
+When `project_type` is `PRECISION_GREASE_DEV`, the record additionally carries:
+- `machine_indicators`: a non-empty array of `{ "indicator": ..., "criterion_reference": ... }`. Every one of `START_UP_TORQUE`, `BACKLASH`, `TEMPERATURE_RISE`, `LIFE` must be declared exactly once, and every `criterion_reference` must resolve to an `acceptance_criteria[].criterion_id` on the application record. When the verdict is PASS, each cited criterion must be `OBSERVED` with a numeric `threshold`, and the LIFE indicator requires a non-empty OBSERVED `life_claim_boundary`.
+- `campaign_artifact` / `bench_test_artifact`: paths to the built `campaign` (stage `CAMPAIGN_OPENED`) and `bench_test` (stage `BENCH_TESTED`) artifacts. Both are required on this route, must belong to the same project, and the `bench_test` bench must be cited in `application.bench_references`. The machine verdict must trace to the campaign round and bench run that produced it.
+
+An oil record (no `project_type`) must contain exactly the three original fields; a grease record must contain those three plus `project_type` and `machine_indicators`, and may contain the two upstream paths.
 
 ### The APPLIED Entry Rule (contract guarantee)
 Entry is admissible **only** when all of the following hold; otherwise the preflight holds and no APPLIED entry happens:
@@ -108,3 +117,5 @@ A READY verdict authorizes — it does not perform — the transition. The proje
 6. **NO Synthetic Advancement**: a SYNTHETIC-scope application record must never be presented as physical application evidence for APPLIED.
 7. **NO Bypass of Preflight**: DO NOT declare APPLIED entry without running `preflight_application_validation.py`.
 8. **NO Soft Guidance Words**: Forbidden ambiguous words: "灵活调整", "视情况而定", "酌情设置", "可以考虑". The verdict is READY or HOLD, nothing else.
+9. **NO Bench-Only Machine Verdict (grease route)**: DO NOT present a bench criterion as an application verdict. Every whole-machine indicator must be named and bound to a criterion; a criterion that the record never names cannot gate APPLIED.
+10. **NO Untraceable Machine Evidence (grease route)**: DO NOT accept a machine verdict whose campaign round and bench run are not cited; the chain `campaign → bench_test → application` is the evidence path, and a broken link is a HOLD, never a pass.

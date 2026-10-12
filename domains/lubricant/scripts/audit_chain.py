@@ -74,6 +74,8 @@ KINDS = {
     "bench_test-": ("BENCH_TESTED", "bench_test"),
     "next_batch.json": ("NEXT_BATCH_DECIDED", "next_batch"),
     "next_batch-": ("NEXT_BATCH_DECIDED", "next_batch"),
+    "knowledge_asset.json": ("KNOWLEDGE_ARCHIVED", "knowledge_asset"),
+    "knowledge_asset-": ("KNOWLEDGE_ARCHIVED", "knowledge_asset"),
 }
 
 # Free-text fields may embed a method id ("...record: HDG-TM-012"). The bare-id

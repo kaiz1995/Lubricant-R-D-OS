@@ -13,9 +13,15 @@ from referencing import Registry, Resource
 from doe_design_policy import (
     COMBINED_FAMILIES,
     FACTOR_FAMILIES,
+    GREASE_PROJECT_TYPE,
+    GREASE_SMALL_BATCH_MAX,
+    GREASE_SMALL_BATCH_MIN,
     MIXTURE_FAMILIES,
+    SEQUENTIAL_FAMILIES,
     SUPPORTED_FAMILIES,
+    canonical_family,
     has_gap,
+    is_sequential_family,
 )
 
 
@@ -43,11 +49,23 @@ def _ensure_constraint_role_importable() -> None:
 
 _ensure_constraint_role_importable()
 
-from constraint_role import CONSTRAINT_ROLES, ConstraintRoleError, resolve_constraint_role  # noqa: E402
+from constraint_role import (  # noqa: E402
+    CONSTRAINT_ROLES,
+    ConstraintRoleError,
+    resolve_variable_constraint_role,
+)
 
 
 SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json")
 INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "design_space_artifact", "experiment_design"}
+# Grease step 8: the registered bench artifact is an OPTIONAL extra upstream path.
+# It is optional on purpose: when it is absent the design keeps the hand-filled
+# resource_envelope.bench_slots path it always had, so every pre-existing oil-route
+# input is unaffected. When it IS supplied the bench's derived capacity becomes the
+# authority for the round size and the design size.
+OPTIONAL_INPUT_FIELDS = {"bench_artifact"}
+REQUIRED_INPUT_FIELDS = INPUT_FIELDS
+INPUT_FIELDS = REQUIRED_INPUT_FIELDS | OPTIONAL_INPUT_FIELDS
 # mixture_total is only meaningful for the mixture channels, so it is optional at
 # the envelope level and required/forbidden per family by the bridge below.
 # resource_envelope (WP-04b) is the same: optional in the request shape, required on
@@ -67,6 +85,7 @@ CHANNEL_BOTH = "BOTH"
 FAMILY_CHANNEL = {
     **{family: CHANNEL_MIXTURE for family in MIXTURE_FAMILIES},
     **{family: CHANNEL_FACTOR for family in FACTOR_FAMILIES},
+    **{family: CHANNEL_FACTOR for family in SEQUENTIAL_FAMILIES},
     **{family: CHANNEL_BOTH for family in COMBINED_FAMILIES},
 }
 
@@ -119,6 +138,34 @@ def measurement_errors(value: object, label: str) -> list[str]:
     return errors
 
 
+def bench_capacity_errors(bench: object, label: str = "bench_artifact") -> list[str]:
+    """The bench artifact must carry the derived capacity this stage consumes.
+
+    Only the field this skill actually reads is checked here: the bench artifact's
+    full contract (availability windows, cycle time, cost, provenance, and the
+    derived-vs-declared assertion) belongs to ``bench-registration``, which owns
+    ``bench.schema.json``. Re-validating the whole object here would take a second
+    cross-skill schema dependency and duplicate a rule that already has one owner.
+
+    ``available_bench_slots`` is DERIVED by bench-registration
+    (``bench_policy.available_bench_slots``); this preflight never recomputes it and
+    never accepts a hand-set substitute. What it requires is that the field is
+    present as an integer >= 0, because that is the number the round is bounded by.
+    """
+    if not isinstance(bench, dict):
+        return [f"{label} must be a JSON object"]
+    capacity = bench.get("available_bench_slots")
+    if isinstance(capacity, bool) or not isinstance(capacity, int):
+        return [
+            f"{label}.available_bench_slots must be the integer derived by bench-registration "
+            "(it is never hand-set)"]
+    if capacity < 0:
+        return [f"{label}.available_bench_slots must be >= 0, got {capacity}"]
+    if bench.get("artifact_type") != "bench":
+        return [f"{label}.artifact_type must be bench"]
+    return []
+
+
 def resource_envelope_errors(value: object) -> list[str]:
     """Structural + semantic checks for the WP-04b resource envelope."""
     label = "experiment_design.resource_envelope"
@@ -167,6 +214,14 @@ def resolved_variable_roles(design_space: dict | None) -> tuple[dict[str, str], 
     ``variable_type``-derived value). A declared ``constraint_role`` that
     contradicts the derived role is reported, never silently coerced — exactly the
     Stage 4 formulation-preflight rule, because this is the same implementation.
+
+    Grease step 8 (purely additive): the material-side ``role`` is passed through
+    too, so a design space whose variable ranges over an in-situ reaction product
+    (grease soap: ``role: REACTION_PRODUCT``) resolves to INDEPENDENT instead of
+    being rejected against its FORMULATION_VARIABLE type. Omitting ``role`` — every
+    oil-route design space — returns exactly the pre-extension result, because
+    ``resolve_variable_constraint_role`` falls back to ``resolve_constraint_role``
+    when ``material_role`` is None.
     """
     roles: dict[str, str] = {}
     errors: list[str] = []
@@ -175,7 +230,8 @@ def resolved_variable_roles(design_space: dict | None) -> tuple[dict[str, str], 
             continue
         variable_id = item.get("variable_id")
         try:
-            roles[variable_id] = resolve_constraint_role(item.get("variable_type"), item.get("constraint_role"))
+            roles[variable_id] = resolve_variable_constraint_role(
+                item.get("variable_type"), item.get("constraint_role"), item.get("role"))
         except ConstraintRoleError as error:
             errors.append(f"design_space_artifact.variables[{variable_id}].constraint_role: {error}")
     return roles, errors
@@ -187,7 +243,9 @@ def request_errors(request: object, design_space: dict | None, failure: dict | N
         return errors
     design = request.get("design") if isinstance(request.get("design"), dict) else {}
     family = design.get("family")
-    channel = FAMILY_CHANNEL.get(family)
+    # Grease step 8: the honest sequential name is an alias of the legacy one, so it
+    # routes through the same channel and every check below sees the canonical value.
+    channel = FAMILY_CHANNEL.get(canonical_family(family))
     if channel is None:
         errors.append(f"experiment_design.design.family is not supported for GO; supported families are {list(SUPPORTED_FAMILIES)}")
     if has_gap(request):
@@ -273,11 +331,83 @@ def request_errors(request: object, design_space: dict | None, failure: dict | N
     return errors
 
 
+def bench_capacity_errors(bench: object, label: str = "bench_artifact") -> list[str]:
+    """The bench artifact must carry a derived capacity, and that capacity is the authority.
+
+    ``available_bench_slots`` is DERIVED by bench-registration
+    (``bench_policy.available_bench_slots``) and asserted by its validator; this
+    preflight never recomputes it and never accepts a hand-set value as a
+    substitute. What it checks is the field the DOE round actually consumes: an
+    integer >= 0. A bench that does not carry it cannot bound the design.
+    """
+    if not isinstance(bench, dict):
+        return [f"{label} must be a JSON object"]
+    capacity = bench.get("available_bench_slots")
+    if isinstance(capacity, bool) or not isinstance(capacity, int):
+        return [
+            f"{label}.available_bench_slots must be the integer derived by bench-registration "
+            "(it is never hand-set)"]
+    if capacity < 0:
+        return [f"{label}.available_bench_slots must be >= 0, got {capacity}"]
+    return []
+
+
+def grease_request_errors(request: object, bench: object, project_type: str | None) -> list[str]:
+    """Grease-route rules (step 8): small sequential round, and bench capacity as the cap.
+
+    Returns [] for every other route, so the six oil routes keep their existing
+    behaviour byte for byte. Two rules are enforced here at the skill layer:
+
+    * The declared round size (``run_plan.target_count``) must not exceed the
+      small-batch window's top -- that is the route's DEFAULT design policy, and one
+      big fixed design is what the plan rejects (a single 20-point design is about
+      7 months of bench time at the registered capacity). The window's floor is a
+      preference, not a refusal: the registered bench may legitimately pull a round
+      below it, which is exactly the paired round the plan asks for when the bench
+      is tight.
+    * The design size must not exceed the bench's available positions. That is the
+      step-8 release criterion, and it is read from the bench artifact when one is
+      supplied. Without a bench artifact the hand-filled envelope stays the only
+      declaration (the pre-existing path), and the capacity rule has nothing to
+      check against.
+    """
+    if project_type != GREASE_PROJECT_TYPE or not isinstance(request, dict):
+        return []
+    errors: list[str] = []
+    design = request.get("design") if isinstance(request.get("design"), dict) else {}
+    family = design.get("family")
+    run_plan = request.get("run_plan") if isinstance(request.get("run_plan"), dict) else {}
+    target_count = run_plan.get("target_count")
+    numeric_target = isinstance(target_count, int) and not isinstance(target_count, bool)
+    if is_sequential_family(family) and numeric_target and target_count > GREASE_SMALL_BATCH_MAX:
+        errors.append(
+            f"experiment_design.run_plan.target_count must not exceed {GREASE_SMALL_BATCH_MAX} for a {family} "
+            "round on the grease route: the route defaults to small sequential rounds of "
+            f"{GREASE_SMALL_BATCH_MIN}-{GREASE_SMALL_BATCH_MAX} samples per round, not one big fixed design")
+    if bench is None:
+        return errors
+    capacity = bench.get("available_bench_slots") if isinstance(bench, dict) else None
+    if not isinstance(capacity, int) or isinstance(capacity, bool):
+        return errors
+    envelope = request.get("resource_envelope") if isinstance(request.get("resource_envelope"), dict) else {}
+    declared = envelope.get("bench_slots")
+    if isinstance(declared, int) and not isinstance(declared, bool) and declared != capacity:
+        errors.append(
+            f"experiment_design.resource_envelope.bench_slots={declared} contradicts the supplied bench "
+            f"artifact's derived available_bench_slots={capacity}: on the grease route the registered bench "
+            "schedule is the authority and the hand-filled slot count must equal its derived capacity")
+    if numeric_target and target_count > capacity:
+        errors.append(
+            f"experiment_design.run_plan.target_count={target_count} exceeds the bench's available positions "
+            f"{capacity} (bench_artifact.available_bench_slots): the design size must not exceed the bench capacity")
+    return errors
+
+
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors, artifacts = [], {}
-    if set(data) != INPUT_FIELDS:
+    if not REQUIRED_INPUT_FIELDS <= set(data) or not set(data) <= INPUT_FIELDS:
         errors.append("input must contain only required upstream artifact paths and experiment_design")
     requirements = (
         ("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"),
@@ -297,6 +427,20 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append(f"{key} must be stage {stage}")
         if artifact is not None and artifact.get("decision") != "GO":
             errors.append(f"{key} must have decision GO")
+    # Grease step 8: the optional bench artifact. Only the derived capacity this
+    # stage consumes is read here; the object's own contract is owned by
+    # bench-registration. When absent, nothing changes for any route.
+    bench = None
+    bench_path = resolved_path(data.get("bench_artifact"), input_path)
+    if data.get("bench_artifact") is not None and bench_path is None:
+        errors.append("bench_artifact")
+    elif bench_path is not None:
+        try:
+            bench = json.loads(bench_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            errors.append(f"bench_artifact cannot be read: {error}")
+        else:
+            errors.extend(bench_capacity_errors(bench))
     project, challenge, failure, method, design_space = (artifacts[key] for key, _, _ in requirements)
     present = [item for item in (project, challenge, failure, method, design_space) if item is not None]
     if method is not None and method.get("evidence_scope") not in {"SYNTHETIC", "PHYSICAL"}:
@@ -326,6 +470,8 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             elif method["method_id"] not in ctq.get("test_references", []) and method["method_id"] not in failure.get("test_chain", []):
                 errors.append(f"design_space_artifact.ctq_references: {ctq_id} is not linked to the supplied qualified method")
     errors.extend(request_errors(data.get("experiment_design"), design_space, failure, method, project.get("project_id", "") if project else ""))
+    errors.extend(grease_request_errors(
+        data.get("experiment_design"), bench, project.get("project_type") if project else None))
     return errors
 
 

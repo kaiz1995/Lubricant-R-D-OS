@@ -273,7 +273,9 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
    * NEXT_BATCH_DECIDED 派给 doe-design，但 schemas/next_batch.schema.json 还没
    * 落盘。显式登记而不是静默跳过；领域包补上后必须删条目（有用例反向核对）。
    */
-  const SCHEMA_NOT_SHIPPED = new Set(["next_batch"]);
+  // 2026-10-12：next_batch.schema.json 已随包落盘，登记表清空。
+  // 保留空集合与守卫本身，以便后续新增 artifactType 时仍有显式登记位。
+  const SCHEMA_NOT_SHIPPED = new Set<string>();
 
   /** route_step.py 的 ROUTE_TABLE：25 组 (skill, stage)。 */
   const routeTable = () =>
@@ -355,7 +357,8 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     //   next_batch.json —— 连 schema 都未发货（见上一条）。
     // 显式登记；领域包补货后必须删条目（反向断言会红）。
     const noFixtureShipped = new Set([
-      "process.json", "application.json", "bench.json", "next_batch.json",
+      "process.json", "application.json", "bench.json",
+      // 2026-10-12：next_batch.json 样例已补，移出登记表。
     ]);
     for (const c of STAGE_CHAIN) {
       if (noFixtureShipped.has(c.file)) {
@@ -377,7 +380,9 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     // 2026-10-12：reference-material / grease-batch / grease-screening /
     // variance-assessment 四个已随包落盘（各自带 SKILL.md 与策略模块），故从
     // 登记表移除；只剩 knowledge-archive（第 17 步知识入库）未发货。
-    const skillNotShipped = new Set(["knowledge-archive"]);
+    // 2026-10-12：knowledge-archive（第 17 步知识入库）已随包落盘，
+    // 12 个新 stage 的技能目录全部就位，登记表清空。
+    const skillNotShipped = new Set<string>();
     const missing = new Set<string>();
     for (const c of STAGE_CHAIN) {
       if (existsSync(join(PACK as string, "skills", c.skill, "SKILL.md"))) continue;

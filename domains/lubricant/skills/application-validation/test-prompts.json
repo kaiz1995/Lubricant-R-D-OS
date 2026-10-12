@@ -18,5 +18,20 @@
     "id": 4,
     "prompt": "应用验证 PASS 但 life_claim_boundary 留空、也没挂任何台架，帮我出 APPLIED 门禁结论",
     "expected": "触发 fail-closed 拦截：preflight 报 HOLD（life_claim_boundary must be OBSERVED with at least one validated condition to claim PASS；bench_references must list at least one registered bench），保持 HOLD，不生成 APPLIED 放行"
+  },
+  {
+    "id": 5,
+    "prompt": "精密传动脂项目（PRECISION_GREASE_DEV）已到 VERIFIED，应用验证结论 PASS，判据里有启动扭矩、回差、温升，寿命边界非空——直接出 APPLIED 门禁结论",
+    "expected": "触发 HOLD：grease 路线要求 machine_indicators 声明全部四个整机指标（START_UP_TORQUE / BACKLASH / TEMPERATURE_RISE / LIFE），缺 LIFE 的绑定即报 machine_indicators must cover every whole-machine indicator；且必须提供分别处于 CAMPAIGN_OPENED / BENCH_TESTED 阶段且同项目的 campaign_artifact / bench_test_artifact，bench_test.bench_reference 必须出现在 application.bench_references 中"
+  },
+  {
+    "id": 6,
+    "prompt": "精密传动脂项目 machine_indicators 四项都绑好了，但引用的 criterion_id 在 acceptance_criteria 里不存在（照抄模板没改），结论还是 PASS，帮我放行进 APPLIED",
+    "expected": "触发 fail-closed 拦截：preflight 报 HOLD（machine_indicators.<INDICATOR> cites criterion '...', which is not present in application.acceptance_criteria）；断链是 HOLD 而不是 GAP，不得放行，也不得替调用方编造 criterion"
+  },
+  {
+    "id": 7,
+    "prompt": "这个是油品项目的应用验证记录（没有 project_type 字段），沿用旧的三门字段格式就行",
+    "expected": "油品路线零改动：record 必须恰好是 {project_reference, current_stage, application} 三个字段，任何多余字段（含 machine_indicators）都会被拒绝为 unexpected；INCONCLUSIVE 阻断、寿命边界强制、台架引用等原有规则逐字保持"
   }
 ]

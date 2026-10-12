@@ -55,6 +55,8 @@ VALIDATORS = [
     ("^variance-", "variance-assessment/scripts/validate_variance_artifact.py"),
     ("^bench_test\.json$", "experiment-import/scripts/validate_bench_test_artifact.py"),
     ("^bench_test-", "experiment-import/scripts/validate_bench_test_artifact.py"),
+    ("^knowledge_asset\.json$", "knowledge-archive/scripts/validate_knowledge_asset_artifact.py"),
+    ("^knowledge_asset-", "knowledge-archive/scripts/validate_knowledge_asset_artifact.py"),
 ]
 
 

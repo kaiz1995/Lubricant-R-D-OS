@@ -5,6 +5,23 @@
   "type": "object",
   "properties": {
     "input_type": { "enum": ["MIXTURE_DOE_DESIGN", "FACTORIAL_DOE_DESIGN", "MIXTURE_PROCESS_DOE_DESIGN"] },
+    "project_type": {
+      "description": "Optional route marker, purely additive (grease step 8). Only the exact value PRECISION_GREASE_DEV activates the grease-route rules (small sequential rounds of 3-6 samples per round, honest sequential method name, bench-schedule hard constraint). Absent or any other value keeps the pre-existing oil-route behaviour byte for byte. The skill layer fills this from the validated project artifact, whose project_type enum is the authority.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bench_artifact": {
+      "description": "Optional registered bench object (grease step 8, plan section 7.2 D-4). The engine consumes exactly one field of it: available_bench_slots, the value DERIVED by bench-registration (floor(usable_days/cycle_days) summed over availability_window, asserted by validate_bench_artifact.py). Supplying it turns the hand-filled resource_envelope.bench_slots into a checked declaration: a contradiction is rejected, and the design size must not exceed the derived capacity. The embedded artifact is validated by its own authority contract (bench.schema.json); this container deliberately stays open instead of mirroring that contract, so the two lists cannot drift.",
+      "type": "object",
+      "properties": {
+        "available_bench_slots": {
+          "description": "DERIVED by bench-registration, never hand-set.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["available_bench_slots"]
+    },
     "design_space_reference": { "type": "string", "minLength": 1 },
     "components": {
       "type": "array",
@@ -70,7 +87,10 @@
       }
     },
     "whole_plot_replicates": { "type": "integer", "minimum": 1 },
-    "design_type": { "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "TAGUCHI_ROBUST", "BAYESIAN_SEQUENTIAL"] },
+    "design_type": {
+      "description": "Grease step 8 (purely additive enum value): RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL is the honest name for what the engine actually runs on this channel -- deterministic greedy selection from candidate lattice points, not model-driven sequential design (there is no Gaussian process). BAYESIAN_SEQUENTIAL stays a working alias and keeps emitting its legacy method string, so pre-rename inputs are unchanged.",
+      "enum": ["SIMPLEX_MIXTURE", "D_OPTIMAL_MIXTURE", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "TAGUCHI_ROBUST", "BAYESIAN_SEQUENTIAL", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"]
+    },
     "model_order": { "enum": ["LINEAR", "QUADRATIC"] },
     "target_runs": { "type": "integer", "minimum": 0 },
     "responses": {

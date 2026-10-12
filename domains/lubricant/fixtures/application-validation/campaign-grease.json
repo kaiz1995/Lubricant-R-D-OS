@@ -1,0 +1,48 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "campaign",
+  "project_id": "PGD-APP-001",
+  "stage": "CAMPAIGN_OPENED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "May the campaign open?",
+  "hypothesis": "Scarce bench slots are allocated across rounds.",
+  "uncertainty": "Synthetic fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-CMP-001",
+      "statement": "Synthetic campaign fixture.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Open the campaign with recorded bench references.",
+  "result": "Synthetic campaign recorded.",
+  "decision": "GO",
+  "next_action": "Run round 1.",
+  "campaign_id": "CMP-APP-001",
+  "bench_references": [
+    "BENCH-SZ-01"
+  ],
+  "max_iterations": 12,
+  "current_iteration": 3,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": [
+        "S-1"
+      ],
+      "screening_reference": "SCR-1",
+      "bench_test_references": [
+        "BT-1"
+      ],
+      "variance_reference": "VAR-1",
+      "model_reference": "MODEL-1",
+      "next_batch_reference": "NB-1",
+      "stop_state": "CONTINUE"
+    }
+  ],
+  "pairing_design": {
+    "paired": true,
+    "description": "Paired A/B runs within each round; arms swapped in the next round."
+  }
+}

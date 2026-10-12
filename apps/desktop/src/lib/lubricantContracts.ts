@@ -563,10 +563,11 @@ const COMMON_REQUIRED: readonly string[] = [
 /** 各 schema 自身的 required（不含 common 部分）。 */
 const OWN_REQUIRED: Record<string, readonly string[]> = {
   project: ["artifact_type", "status", "project_name", "project_type", "product_family",
-    "business_objective", "technical_objective", "hard_constraints", "target_cost",
-    // benchmark_products 已由领域包改为条件必填：凭 benchmark_waiver_reason 豁免
-    // （schema 走 allOf if/then），故不列入 required。lite 校验刻意只做结构必填、
-    // 不复刻业务条件（见上方「轻量结构校验」说明，不引入 jsonschema）。
+    "business_objective", "technical_objective", "hard_constraints",
+    // target_cost 已由领域包移出 required（成本是天花板不是目标）：改由
+    // cost_basis_reason 条件必填（schema 走 allOf if/then），且可改用 cost_ceiling。
+    // lite 校验只做结构必填、不复刻业务条件（见上方「轻量结构校验」说明）。
+    // benchmark_products 同理：条件必填，凭 benchmark_waiver_reason 豁免。
     "success_criteria", "risk_class", "owner"],
   duty: ["artifact_type", "duty_id", "project_reference", "duty"],
   challenge: ["artifact_type", "duty_reference", "challenge_id", "category", "description",
