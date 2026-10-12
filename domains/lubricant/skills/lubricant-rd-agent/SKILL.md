@@ -12,22 +12,30 @@ This skill strictly evaluates stage advancement feasibility. It does not perform
 
 ## 1. Routing Contracts by Project Type
 
-Advancement follows a deterministic, ordered stage chain configured by `project_type`:
+Advancement follows a deterministic, ordered stage chain configured by `project_type`. Seven routes are published by `contracts/state-machine.json` (`type_routes`); each ends at `APPLIED`, and the chain lengths are 12 / 10 / 8 / 8 / 7 / 8 / 20.
 
 - **NEW_PRODUCT** (新产品正向开发):
-  `project-definition` (PROJECT_DEFINED) -> `duty-definition` (DUTY_DEFINED) -> `duty-challenge-analysis` (CHALLENGES_DEFINED) -> `failure-ctq-analysis` (FAILURE_CTQ_DEFINED) -> `test-method-qualification` (TEST_METHODS_QUALIFIED) -> `formulation-design` (DESIGN_SPACE_DEFINED) -> `doe-design` (EXPERIMENT_DESIGNED) -> `experiment-import` (EXPERIMENT_RUNNING) -> `statistical-analysis` (MODEL_BUILT) -> `optimization` (OPTIMIZED) -> `gate-review` (VERIFIED)
+  `project-definition` (PROJECT_DEFINED) -> `duty-definition` (DUTY_DEFINED) -> `duty-challenge-analysis` (CHALLENGES_DEFINED) -> `failure-ctq-analysis` (FAILURE_CTQ_DEFINED) -> `test-method-qualification` (TEST_METHODS_QUALIFIED) -> `formulation-design` (DESIGN_SPACE_DEFINED) -> `doe-design` (EXPERIMENT_DESIGNED) -> `experiment-import` (EXPERIMENT_RUNNING) -> `statistical-analysis` (MODEL_BUILT) -> `optimization` (OPTIMIZED) -> `gate-review` (VERIFIED) -> `application-validation` (APPLIED)
 
 - **IMPROVEMENT** (已有产品性能优化):
-  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `OPTIMIZED` -> `VERIFIED`
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `OPTIMIZED` -> `VERIFIED` -> `APPLIED`
 
 - **COST_DOWN** (降本替代):
-  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `OPTIMIZED` -> `VERIFIED`
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `OPTIMIZED` -> `VERIFIED` -> `APPLIED`
 
 - **CUSTOMIZATION** (客户定制):
-  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `VERIFIED`
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `VERIFIED` -> `APPLIED`
 
 - **EXPLORATION** (机理/平台型探索):
-  `PROJECT_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `VERIFIED`
+  `PROJECT_DEFINED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `VERIFIED` -> `APPLIED`
+
+- **PROCESS_ROBUSTNESS** (生产复现):
+  `PROJECT_DEFINED` -> `FAILURE_CTQ_DEFINED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `EXPERIMENT_DESIGNED` -> `EXPERIMENT_RUNNING` -> `MODEL_BUILT` -> `APPLIED`
+  (No `OPTIMIZED`: the formula is not re-optimised after a kettle/batch swap.)
+
+- **PRECISION_GREASE_DEV** (精密传动脂开发):
+  `PROJECT_DEFINED` -> `DUTY_DEFINED` -> `FAILURE_MECHANISM_DEFINED` -> `REFERENCE_MATERIAL_RESOLVED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `BENCH_RESOURCE_REGISTERED` -> `CAMPAIGN_OPENED` -> `EXPERIMENT_DESIGNED` -> `BATCH_PRODUCED` -> `SCREENING_PASSED` -> `BENCH_TESTED` -> `VARIANCE_ASSESSED` -> `MODEL_BUILT` -> `NEXT_BATCH_DECIDED` -> `NON_INFERIORITY_PASSED` -> `PROCESS_SCALE_VALIDATED` -> `VERIFIED` -> `APPLIED` -> `KNOWLEDGE_ARCHIVED`
+  (20 stages over 17 process steps; steps 9-13 form the inner-loop ring — see §6.)
 
 ---
 
