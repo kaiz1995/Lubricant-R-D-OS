@@ -1,0 +1,88 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "batch",
+  "project_id": "PGD-B3-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Was batch BAT-PG-B3-DEV-001 produced from FORM-PG-B2-001@v1 against the declared process baseline, step by step, from the recorded lots?",
+  "hypothesis": "A batch whose trajectory records setpoint, actual, duration, and an explicit per-step deviation verdict against the baseline is the landing point where recipe plus process becomes a traceable product.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. The trajectory records what the equipment actually did; it is not independently verified, and recording a within-tolerance trajectory does not establish product performance or that the sample will clear screening. batch_verdict=DEVIATED.",
+  "decision_rule": "A batch is released to Stage 10 only when every trajectory step is within its declared tolerance (batch_verdict VALID); a DEVIATED batch holds until the deviation is dispositioned, and a VOID batch is never released.",
+  "result": "batch BAT-PG-B3-DEV-001: 3 step(s) recorded, 1 DEVIATED, 2 WITHIN; batch_verdict=DEVIATED.",
+  "decision": "HOLD",
+  "next_action": "Stay at Stage 9: disposition the recorded deviation on BAT-PG-B3-DEV-001 before its sample is screened or sent to the bench.",
+  "evidence": [
+    {
+      "evidence_id": "E-BAT-PG-B3-DEV-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the kettle log records a milling shear rate far below its setpoint for the whole step.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-BAT-PG-B2-DEV-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the milling deviation exceeds the declared tolerance of 20 1/s, so the step must be recorded DEVIATED and the batch is not released.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-DEV-001-01",
+      "statement": "TRAJ {\"actual\": 196, \"deviation\": 1, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 5400, \"setpoint\": 195, \"step_index\": 0, \"step_type\": \"SAPONIFICATION\", \"tolerance\": 3, \"unit\": \"degC\"}",
+      "source": "Synthetic kettle log KL-B2-DEV-001 line 12",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-DEV-001-02",
+      "statement": "TRAJ {\"actual\": 240, \"deviation\": -80, \"deviation_verdict\": \"DEVIATED\", \"duration_s\": 900, \"setpoint\": 320, \"step_index\": 1, \"step_type\": \"MILLING\", \"tolerance\": 20, \"unit\": \"1/s\"}",
+      "source": "Synthetic kettle log KL-B2-DEV-001 line 37",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-DEV-001-03",
+      "statement": "TRAJ {\"actual\": \"fill to 1 kg drum\", \"deviation\": \"none recorded\", \"deviation_verdict\": \"WITHIN\", \"duration_s\": 600, \"setpoint\": \"fill to 1 kg drum\", \"step_index\": 2, \"step_type\": \"FILLING\", \"tolerance\": \"fill weight within 1 kg +/- 5 g on the drum scale\", \"unit\": \"qualitative\"}",
+      "source": "Synthetic kettle log KL-B2-DEV-001 line 48",
+      "status": "OBSERVED"
+    }
+  ],
+  "batch_id": "BAT-PG-B3-DEV-001",
+  "formula_reference": "FORM-PG-B2-001@v1",
+  "scale_class": "LAB",
+  "trajectory": [
+    {
+      "step_type": "SAPONIFICATION",
+      "setpoint": 195,
+      "actual": 196,
+      "unit": "degC",
+      "duration_s": 5400,
+      "deviation": 1,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "MILLING",
+      "setpoint": 320,
+      "actual": 240,
+      "unit": "1/s",
+      "duration_s": 900,
+      "deviation": -80,
+      "deviation_verdict": "DEVIATED"
+    },
+    {
+      "step_type": "FILLING",
+      "setpoint": "fill to 1 kg drum",
+      "actual": "fill to 1 kg drum",
+      "unit": "qualitative",
+      "duration_s": 600,
+      "deviation": "none recorded",
+      "deviation_verdict": "WITHIN"
+    }
+  ],
+  "raw_material_lots": [
+    "LOT-SYN-PG-B2-001",
+    "LOT-SYN-PG-B2-021"
+  ],
+  "operator": "Synthetic operator OP-PG-02",
+  "equipment": "Synthetic 5 L pilot kettle K-PG-01",
+  "anomalies": [
+    "Milling shear rate stayed below its setpoint for the whole step; the mill drive fault has not been identified yet."
+  ],
+  "batch_verdict": "DEVIATED"
+}

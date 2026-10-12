@@ -370,13 +370,14 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
   });
 
   it("每个 skill 目录都存在（未随包发货者显式登记）", () => {
-    // route_step.py 已把 12 个新 stage 派给技能，其中 5 个技能目录的 SKILL.md
-    // 尚未随领域包落盘（包内进度差，不是镜像漂移：技能名逐字来自 route_step.py，
-    // 由上面 ROUTE_TABLE 用例强制）。显式登记；补货后必须删条目（反向断言会红）。
-    const skillNotShipped = new Set([
-      "reference-material", "grease-batch", "grease-screening",
-      "variance-assessment", "knowledge-archive",
-    ]);
+    // route_step.py 把 12 个新 stage 派给技能，技能名逐字来自 route_step.py，
+    // 由上面 ROUTE_TABLE 用例强制。目录尚未随领域包落盘的显式登记在此；
+    // 补货后必须删条目（反向断言会红）。
+    //
+    // 2026-10-12：reference-material / grease-batch / grease-screening /
+    // variance-assessment 四个已随包落盘（各自带 SKILL.md 与策略模块），故从
+    // 登记表移除；只剩 knowledge-archive（第 17 步知识入库）未发货。
+    const skillNotShipped = new Set(["knowledge-archive"]);
     const missing = new Set<string>();
     for (const c of STAGE_CHAIN) {
       if (existsSync(join(PACK as string, "skills", c.skill, "SKILL.md"))) continue;

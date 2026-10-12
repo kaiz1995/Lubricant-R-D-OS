@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "sample",
+  "project_id": "PGD-B3-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can sample SMP-PG-B3-001 taken from batch BAT-PG-B3-001 be traced to the bench under a complete chain of custody?",
+  "hypothesis": "SMP-PG-B3-001 carries the printed label, the preparation date, the storage condition, and every handover, so a downstream measurement can be bound to it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. The label text, custody names, and dates are recorded as supplied; a sample record does not establish that its batch is within tolerance. batch_verdict=VALID.",
+  "evidence": [
+    {
+      "evidence_id": "E-SMP-PG-B3-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the label printer output and the custody handovers are recorded for this sample.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A sample may be handed to the bench only when its batch record is released (batch_verdict VALID); a sample from a DEVIATED or VOID batch is held at Stage 9.",
+  "result": "sample SMP-PG-B3-001 recorded at status IN_TRANSIT against batch BAT-PG-B3-001 (batch_verdict=VALID).",
+  "decision": "GO",
+  "next_action": "Hand sample SMP-PG-B3-001 to Stage 10 (grease-screening) under the recorded custody chain.",
+  "sample_id": "SMP-PG-B3-001",
+  "batch_reference": "BAT-PG-B3-001",
+  "formula_reference": "FORM-PG-B2-001@v1",
+  "label": {
+    "printed_text": "SMP-PG-B3-001 | BAT-PG-B3-001 | FORM-PG-B2-001@v1 | 2026-10-05",
+    "printed_at": "2026-10-05T09:40:00"
+  },
+  "prepared_at": "2026-10-05",
+  "storage": "Sealed 1 kg drum at 25 degC, dry indoor cabinet, sample shelf S-03.",
+  "chain_of_custody": [
+    {
+      "from": "Synthetic kettle operator OP-PG-02",
+      "to": "Synthetic sample store SS-PG-01",
+      "at": "2026-10-05",
+      "purpose": "Store the freshly filled drum until the screening bench run is scheduled."
+    },
+    {
+      "from": "Synthetic sample store SS-PG-01",
+      "to": "Synthetic screening lab SL-PG-01",
+      "at": "2026-10-06",
+      "purpose": "Submit the sample to the Stage 10 physical/chemical screen."
+    }
+  ],
+  "status": "IN_TRANSIT"
+}

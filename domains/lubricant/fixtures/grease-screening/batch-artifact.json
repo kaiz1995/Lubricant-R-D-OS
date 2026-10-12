@@ -1,0 +1,162 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "batch",
+  "project_id": "PGD-B3-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Was batch BAT-PG-B3-001 produced from FORM-PG-B2-001@v1 against the declared process baseline, step by step, from the recorded lots?",
+  "hypothesis": "A batch whose trajectory records setpoint, actual, duration, and an explicit per-step deviation verdict against the baseline is the landing point where recipe plus process becomes a traceable product.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. The trajectory records what the equipment actually did; it is not independently verified, and recording a within-tolerance trajectory does not establish product performance or that the sample will clear screening. batch_verdict=VALID.",
+  "decision_rule": "A batch is released to Stage 10 only when every trajectory step is within its declared tolerance (batch_verdict VALID); a DEVIATED batch holds until the deviation is dispositioned, and a VOID batch is never released.",
+  "result": "batch BAT-PG-B3-001: 8 step(s) recorded, 0 DEVIATED, 8 WITHIN; batch_verdict=VALID.",
+  "decision": "GO",
+  "next_action": "Route the sample taken from BAT-PG-B3-001 to Stage 10 (grease-screening) before it may consume a bench slot.",
+  "evidence": [
+    {
+      "evidence_id": "E-BAT-PG-B3-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the kettle log supplied for this batch records setpoint, actual, duration and a tolerance band for every executed step.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-BAT-PG-B3-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the milling shear-rate deviation of this batch is below its declared tolerance, so the step is recorded WITHIN.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-01",
+      "statement": "TRAJ {\"actual\": 196, \"deviation\": 1, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 5400, \"setpoint\": 195, \"step_index\": 0, \"step_type\": \"SAPONIFICATION\", \"tolerance\": 3, \"unit\": \"degC\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 12",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-02",
+      "statement": "TRAJ {\"actual\": 202, \"deviation\": 2, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 3600, \"setpoint\": 200, \"step_index\": 1, \"step_type\": \"DEHYDRATION\", \"tolerance\": 5, \"unit\": \"degC\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 18",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-03",
+      "statement": "TRAJ {\"actual\": \"visual inversion point\", \"deviation\": \"none recorded\", \"deviation_verdict\": \"WITHIN\", \"duration_s\": 420, \"setpoint\": \"visual inversion point\", \"step_index\": 2, \"step_type\": \"PHASE_INVERSION\", \"tolerance\": \"operator confirms the inversion point on the sight glass\", \"unit\": \"qualitative\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 24",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-04",
+      "statement": "TRAJ {\"actual\": 2.3, \"deviation\": -0.2, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 2400, \"setpoint\": 2.5, \"step_index\": 3, \"step_type\": \"DILUTION_COOLING\", \"tolerance\": 0.5, \"unit\": \"degC/min\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 31",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-05",
+      "statement": "TRAJ {\"actual\": 305, \"deviation\": -15, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 900, \"setpoint\": 320, \"step_index\": 4, \"step_type\": \"MILLING\", \"tolerance\": 20, \"unit\": \"1/s\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 37",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-06",
+      "statement": "TRAJ {\"actual\": 5.4, \"deviation\": 0.4, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 1200, \"setpoint\": 5, \"step_index\": 5, \"step_type\": \"VACUUM_DEAERATION\", \"tolerance\": 1, \"unit\": \"kPa\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 42",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-07",
+      "statement": "TRAJ {\"actual\": \"fill to 1 kg drum\", \"deviation\": \"none recorded\", \"deviation_verdict\": \"WITHIN\", \"duration_s\": 600, \"setpoint\": \"fill to 1 kg drum\", \"step_index\": 6, \"step_type\": \"FILLING\", \"tolerance\": \"fill weight within 1 kg +/- 5 g on the drum scale\", \"unit\": \"qualitative\"}",
+      "source": "Synthetic kettle log KL-B2-001 line 48",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TRAJ-BAT-PG-B3-001-08",
+      "statement": "TRAJ {\"actual\": 24, \"deviation\": 0, \"deviation_verdict\": \"WITHIN\", \"duration_s\": 86400, \"setpoint\": 24, \"step_index\": 7, \"step_type\": \"RIPENING\", \"tolerance\": 2, \"unit\": \"degC\"}",
+      "source": "Synthetic ripening room log RL-B2-001 line 3",
+      "status": "OBSERVED"
+    }
+  ],
+  "batch_id": "BAT-PG-B3-001",
+  "formula_reference": "FORM-PG-B2-001@v1",
+  "scale_class": "LAB",
+  "trajectory": [
+    {
+      "step_type": "SAPONIFICATION",
+      "setpoint": 195,
+      "actual": 196,
+      "unit": "degC",
+      "duration_s": 5400,
+      "deviation": 1,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "DEHYDRATION",
+      "setpoint": 200,
+      "actual": 202,
+      "unit": "degC",
+      "duration_s": 3600,
+      "deviation": 2,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "PHASE_INVERSION",
+      "setpoint": "visual inversion point",
+      "actual": "visual inversion point",
+      "unit": "qualitative",
+      "duration_s": 420,
+      "deviation": "none recorded",
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "DILUTION_COOLING",
+      "setpoint": 2.5,
+      "actual": 2.3,
+      "unit": "degC/min",
+      "duration_s": 2400,
+      "deviation": -0.2,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "MILLING",
+      "setpoint": 320,
+      "actual": 305,
+      "unit": "1/s",
+      "duration_s": 900,
+      "deviation": -15,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "VACUUM_DEAERATION",
+      "setpoint": 5,
+      "actual": 5.4,
+      "unit": "kPa",
+      "duration_s": 1200,
+      "deviation": 0.4,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "FILLING",
+      "setpoint": "fill to 1 kg drum",
+      "actual": "fill to 1 kg drum",
+      "unit": "qualitative",
+      "duration_s": 600,
+      "deviation": "none recorded",
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "RIPENING",
+      "setpoint": 24,
+      "actual": 24,
+      "unit": "degC",
+      "duration_s": 86400,
+      "deviation": 0,
+      "deviation_verdict": "WITHIN"
+    }
+  ],
+  "raw_material_lots": [
+    "LOT-SYN-PG-B2-001",
+    "LOT-SYN-PG-B2-014",
+    "LOT-SYN-PG-B2-021"
+  ],
+  "operator": "Synthetic operator OP-PG-02",
+  "equipment": "Synthetic 5 L pilot kettle K-PG-01",
+  "anomalies": [],
+  "batch_verdict": "VALID"
+}

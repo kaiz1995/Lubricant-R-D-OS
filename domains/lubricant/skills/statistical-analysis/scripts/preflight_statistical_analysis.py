@@ -13,9 +13,22 @@ from statistical_analysis_policy import has_gap
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json")
-UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"))
+# ADDITIVE (step 12, PRECISION_GREASE_DEV): the four upstream artifact types named by
+# the plan (batch / screening / bench_test / variance) are appended AFTER the seven
+# original entries. Nothing existing is removed or reordered, so every oil route keeps
+# exactly the upstream list it had; the new entries are only ever required on the
+# grease route (see grease_route and UPSTREAM_GREASE below).
+SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json")
+UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("batch_artifact", "batch.schema.json", "BATCH_PRODUCED"), ("screening_artifact", "screening.schema.json", "SCREENING_PASSED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"), ("variance_artifact", "variance.schema.json", "VARIANCE_ASSESSED"))
+# Upstream entries the six oil routes use. Kept as the original seven, verbatim, so an
+# oil request is validated against exactly the list it was validated against before.
+UPSTREAM_OIL = UPSTREAM[:7]
+# Upstream entries the precision-grease inner loop adds. Required only when the
+# supplied project charter routes as PRECISION_GREASE_DEV; on any other route they are
+# neither required nor read, which is what keeps the oil paths byte-for-byte unchanged.
+UPSTREAM_GREASE = UPSTREAM[7:]
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"analysis"}
+OIL_INPUT_FIELDS = {key for key, _, _ in UPSTREAM_OIL} | {"analysis"}
 REQUEST_FIELDS = {"model_id", "requested_analyses", "response_references", "evidence"}
 
 
@@ -61,9 +74,17 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors, artifacts = [], {}
-    if set(data) != INPUT_FIELDS:
+    # The input key set is decided by the route, not by the widest list: an oil
+    # request supplies exactly the seven original keys it always did, and the
+    # grease route additionally supplies the four inner-loop artifacts. Requiring
+    # the union on both routes would reject every oil request.
+    supplied = set(data)
+    if supplied not in (OIL_INPUT_FIELDS, INPUT_FIELDS):
         errors.append("input must contain only required upstream artifact paths and analysis")
+    grease_route = supplied == INPUT_FIELDS
     for key, schema, stage in UPSTREAM:
+        if key not in supplied:
+            continue
         item_errors, artifact = load_artifact(read_path(data.get(key), input_path), schema, key)
         errors.extend(item_errors)
         artifacts[key] = artifact
@@ -71,13 +92,32 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append(f"{key} must be stage {stage}")
         if artifact and artifact.get("decision") != "GO":
             errors.append(f"{key} must have decision GO")
-    project, challenge, failure, method, design_space, experiment_design, experiment = (artifacts[key] for key, _, _ in UPSTREAM)
-    available = [item for item in (project, challenge, failure, method, design_space, experiment_design, experiment) if item]
+    if grease_route:
+        # The four inner-loop artifacts are the grease route's own precondition:
+        # without a variance assessment there is nothing that says whether the
+        # round's difference is real, and modeling it would fit noise.
+        for key, schema, stage in UPSTREAM_GREASE:
+            if artifacts.get(key) is None:
+                errors.append(f"{key} is required on the PRECISION_GREASE_DEV route")
+    # The seven original upstream artifacts are read BY NAME, not unpacked
+    # positionally: UPSTREAM grew to eleven entries for the precision-grease
+    # inner loop, and a positional unpack silently becomes a crash the moment a
+    # list grows (it did, and this comment is why it will not again). The four
+    # additions are read by name where they are needed.
+    project = artifacts["project_artifact"]
+    challenge = artifacts["challenge_artifact"]
+    failure = artifacts["failure_ctq_artifact"]
+    method = artifacts["test_method_artifact"]
+    design_space = artifacts["design_space_artifact"]
+    experiment_design = artifacts["experiment_design_artifact"]
+    experiment = artifacts["experiment_artifact"]
+    oil_upstream = (project, challenge, failure, method, design_space, experiment_design, experiment)
+    available = [item for item in oil_upstream if item]
     scopes = {item.get("evidence_scope") for item in (method, experiment_design, experiment) if item is not None}
     if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:
         errors.append("test_method, experiment_design, and experiment evidence_scope values must exist and match")
     if project and project.get("status") != "ACTIVE": errors.append("project_artifact must have status ACTIVE")
-    if len(available) == 7 and len({item.get("project_id") for item in available}) != 1: errors.append("all upstream artifact project_id values must match")
+    if len(available) == len(oil_upstream) and len({item.get("project_id") for item in available}) != 1: errors.append("all upstream artifact project_id values must match")
     if challenge and failure and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
     if failure and method and method.get("target_failure_reference") != failure.get("failure_id"): errors.append("test_method_artifact failure link is invalid")
     if method and (method.get("qualification_status") != "QUALIFIED" or not ({"D", "P"} & set(method.get("role", [])))): errors.append("test_method_artifact must be qualified D or P")

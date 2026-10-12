@@ -47,6 +47,12 @@ VALIDATORS = [
     ("^experiment_design-", "doe-design/scripts/validate_experiment_design_artifact.py"),
     ("^reference\\.json$", "reference-material/scripts/validate_reference_artifact.py"),
     ("^reference-", "reference-material/scripts/validate_reference_artifact.py"),
+    ("^batch\\.json$", "grease-batch/scripts/validate_batch_artifact.py"),
+    ("^batch-", "grease-batch/scripts/validate_batch_artifact.py"),
+    ("^screening\\.json$", "grease-screening/scripts/validate_screening_artifact.py"),
+    ("^screening-", "grease-screening/scripts/validate_screening_artifact.py"),
+    ("^variance\\.json$", "variance-assessment/scripts/validate_variance_artifact.py"),
+    ("^variance-", "variance-assessment/scripts/validate_variance_artifact.py"),
 ]
 
 

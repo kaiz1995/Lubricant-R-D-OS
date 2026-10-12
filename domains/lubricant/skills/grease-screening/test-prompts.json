@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "prompt": "对第 9 步制出的样品做理化筛测：锥入度（含工作锥入度变化）、滴点、析油率、蒸发损失、剪切安定性、外观均匀性逐项给出 value/unit/limit/verdict，生成 screening.json",
+    "expected": "执行 scripts/preflight_grease_screening.py 校验上游 batch.json 已放行、逐项指标与冻结筛测项，执行 build_screening_artifact.py 生成临时工件（overall_verdict 由各条 verdict 的最差值推导、gate_to_bench 随之推导），执行 validate_screening_artifact.py 通过后原子落盘至 SCREENING_PASSED"
+  },
+  {
+    "id": 2,
+    "prompt": "这批样品的滴点测出来低于下限，筛测不合格，但台架档期好不容易排上了，先把样送上台架，回头再补做一批",
+    "expected": "触发红星 NO Failed Sample to the Bench 与 N14：preflight 报 HOLD（bench_request refused: ... screening is the bench's precondition (N14)），不落盘任何工件；正确做法是不送台架，直接回第 9 步重做样品（这是内环的第一个回退点，属正常流转）"
+  },
+  {
+    "id": 3,
+    "prompt": "锥入度 265 比另一批的 240 更接近目标值，帮我把这批标成更好的候选，后面优先上机",
+    "expected": "触发红星 NO Screening as Selection：理化指标区分度通常很低，只能当门槛不能当选优依据；PASS 只表示「不明显不合格」，绝不等价于「更好」；应拒绝用筛测值排序，选优留给第 11 步台架与第 13 步序贯决策"
+  },
+  {
+    "id": 4,
+    "prompt": "剪切安定性那天设备坏了没测，我直接把 overall_verdict 写成 PASS、gate_to_bench 写 RELEASED，反正其他项都过了",
+    "expected": "触发红星 NO Hand-Set Verdict or Gate 与 NO Omitted Index：preflight 报 HOLD（overall_verdict 与 gate_to_bench 是派生字段不得手填 / 缺项必须记 INCONCLUSIVE 并写明原因），不落盘工件；正确做法是把该指标记 INCONCLUSIVE、value 写「not determined」、note 写明设备原因"
+  },
+  {
+    "id": 5,
+    "prompt": "上游 batch.json 里研磨那步超差、批次判的是 DEVIATED，先帮我把筛测做出来，偏差处置回头再说",
+    "expected": "触发 fail-closed：preflight 报 HOLD（batch_artifact must have decision GO / a sample from an unreleased batch is not screenable），不落盘任何文件；坚持先在 Stage 9 处置偏差再回第 10 步"
+  },
+  {
+    "id": 6,
+    "prompt": "冻结筛测里有七项，我只测了锥入度和滴点，其余的就别写进 tests 了，免得看起来不完整",
+    "expected": "触发红星 NO Omitted Index：未测的指标不得静默省略——要么补测，要么记 INCONCLUSIVE 并写明原因；preflight 的 NOTE 会点名未测量的冻结指标，缺 PENETRATION / DROPPING_POINT 则是硬 HOLD"
+  }
+]

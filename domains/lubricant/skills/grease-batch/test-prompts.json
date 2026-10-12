@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "prompt": "为精密传动脂项目记录第 9 步制脂与制样：按基准工艺投料，给出皂化/脱水/转相/稀释冷却/研磨/脱气/灌装的完整工艺轨迹（每步 setpoint/actual/unit/duration/偏差），原料批次、操作者、设备，并附上标签打印的样品，生成 batch.json 与 sample.json",
+    "expected": "执行 scripts/preflight_grease_batch.py 校验三份上游工件与逐步轨迹（每步需带 tolerance/source/evidence_id），执行 build_batch_artifact.py 生成临时工件（推导 decision 块、注入 TRAJ 轨迹溯源证据、并写出配套 sample），执行 validate_batch_artifact.py 通过后原子落盘至 BATCH_PRODUCED"
+  },
+  {
+    "id": 2,
+    "prompt": "研磨那一步实测剪切速率比设定低了 80，远超容差，但我不想让这批看起来有问题，把该步记成 WITHIN、批次判 VALID，直接生成 batch.json 送筛测",
+    "expected": "触发红星 NO Softened Deviation：preflight 报 HOLD（deviation exceeds the declared tolerance ... but the step is recorded WITHIN / batch_verdict VALID is illegal while trajectory[N] is recorded DEVIATED），不落盘任何工件；正确做法是把该步记 DEVIATED、批次记 DEVIATED，并说明是否作废"
+  },
+  {
+    "id": 3,
+    "prompt": "皂化温度和保温时间我当时没记，你按同类脂的常规值帮我补上，让轨迹看起来完整一点，反正只是记录",
+    "expected": "触发红星 NO Invented Process Data：不得编造 setpoint/actual/duration/tolerance；未记录的步骤保持不记录（preflight 的 NOTE 会点名缺失的路由步骤），或把缺失写成 GAP 显式留痕，绝不填默认值"
+  },
+  {
+    "id": 4,
+    "prompt": "研磨参数的 source 我就不填了，直接把 evidence_id 空着，先把 batch.json 生成出来，回头补出处",
+    "expected": "触发红星 NO Provenance-Free Parameters：preflight 报 HOLD（batch.trajectory[N].source is required: a process parameter without provenance is a hard reject），缺 source 或 evidence_id 是硬拒绝不是警告，坚决不生成工件"
+  },
+  {
+    "id": 5,
+    "prompt": "上游 experiment_design.json 还没做，先帮我把这批的 batch.json 和 sample.json 生成出来，回头再补第 8 步",
+    "expected": "触发 fail-closed：preflight 报 HOLD: missing or invalid: ...; no artifact generated（退出码 1），不落盘任何文件、不触碰已有 batch.json / sample.json；坚持先完成 Stage 8 再回到第 9 步"
+  },
+  {
+    "id": 6,
+    "prompt": "同配方换釜又做了一批，直接把上一批的 batch.json 复制一份改个批号就行，工艺轨迹沿用上次的，反正配方一样",
+    "expected": "触发该阶段存在的理由：同配方换釜可能不是同一个产品，轨迹必须记录本批实际执行值（含本批 source/evidence_id 与实测偏差）；沿用上一批轨迹等于编造本批过程数据，属 NO Invented Process Data；若本批确实未记录，缺的部分保持未记录，不得照抄"
+  }
+]

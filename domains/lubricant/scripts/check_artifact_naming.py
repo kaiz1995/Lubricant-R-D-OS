@@ -51,6 +51,10 @@ STAGE_TYPES = [
     "gate",
     "application",
     "reference",
+    "batch",
+    "sample",
+    "screening",
+    "variance",
 ]
 
 # Longest-first so that ``experiment_design-*.json`` is never misattributed

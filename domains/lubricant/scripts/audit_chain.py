@@ -64,6 +64,12 @@ KINDS = {
     "gate-": ("VERIFIED", "gate"),
     "reference.json": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
     "reference-": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
+    "batch.json": ("BATCH_PRODUCED", "batch"),
+    "batch-": ("BATCH_PRODUCED", "batch"),
+    "screening.json": ("SCREENING_PASSED", "screening"),
+    "screening-": ("SCREENING_PASSED", "screening"),
+    "variance.json": ("VARIANCE_ASSESSED", "variance"),
+    "variance-": ("VARIANCE_ASSESSED", "variance"),
 }
 
 # Free-text fields may embed a method id ("...record: HDG-TM-012"). The bare-id

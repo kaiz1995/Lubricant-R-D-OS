@@ -1,0 +1,197 @@
+{
+  "campaign_reference": "CMP-PGD-VAR-001",
+  "variance_id": "VAR-PGD-N12",
+  "iteration": 1,
+  "evidence_scope": "SYNTHETIC",
+  "input_mode": "FROZEN_SIGMA",
+  "bench_test_artifacts": [
+    "run-c01.json",
+    "run-c02.json",
+    "run-c03.json",
+    "run-c04.json",
+    "run-d01.json",
+    "run-d02.json"
+  ],
+  "engine_input": {
+    "input_type": "VARIANCE_ANALYSIS",
+    "analyses": [
+      "VARIANCE_COMPONENTS",
+      "POWER_ANALYSIS",
+      "CONSISTENCY_CHECK"
+    ],
+    "replicate_structure": [
+      {
+        "level": "BATCH",
+        "n": 2,
+        "group_reference": "ARM-BLANK",
+        "batch_reference": "BATCH-301",
+        "sample_reference": "SAM-C01"
+      },
+      {
+        "level": "BATCH",
+        "n": 2,
+        "group_reference": "ARM-BLANK",
+        "batch_reference": "BATCH-302",
+        "sample_reference": "SAM-C03"
+      },
+      {
+        "level": "BENCH",
+        "n": 2,
+        "group_reference": "RUN-C01",
+        "batch_reference": "BATCH-301",
+        "sample_reference": "SAM-C01"
+      },
+      {
+        "level": "BENCH",
+        "n": 2,
+        "group_reference": "RUN-C03",
+        "batch_reference": "BATCH-302",
+        "sample_reference": "SAM-C03"
+      }
+    ],
+    "observations": [
+      {
+        "observation_reference": "OBS-C01",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-BLANK",
+        "sample_id": "SAM-C01",
+        "batch_id": "BATCH-301",
+        "run_reference": "RUN-C01",
+        "value": 4.0,
+        "at": "2026-04-10T09:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.0
+      },
+      {
+        "observation_reference": "OBS-C02",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-BLANK",
+        "sample_id": "SAM-C02",
+        "batch_id": "BATCH-301",
+        "run_reference": "RUN-C02",
+        "value": 4.1,
+        "at": "2026-04-10T11:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.1
+      },
+      {
+        "observation_reference": "OBS-C03",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-BLANK",
+        "sample_id": "SAM-C03",
+        "batch_id": "BATCH-302",
+        "run_reference": "RUN-C03",
+        "value": 4.2,
+        "at": "2026-04-17T09:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.2
+      },
+      {
+        "observation_reference": "OBS-C04",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-BLANK",
+        "sample_id": "SAM-C04",
+        "batch_id": "BATCH-302",
+        "run_reference": "RUN-C04",
+        "value": 4.3,
+        "at": "2026-04-17T11:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.3
+      },
+      {
+        "observation_reference": "OBS-D01",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-ADDITIVE",
+        "sample_id": "SAM-D01",
+        "batch_id": "BATCH-401",
+        "run_reference": "RUN-D01",
+        "value": 4.05,
+        "at": "2026-04-10T09:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.05
+      },
+      {
+        "observation_reference": "OBS-D02",
+        "level": "MEASUREMENT",
+        "group_reference": "ARM-ADDITIVE",
+        "sample_id": "SAM-D02",
+        "batch_id": "BATCH-402",
+        "run_reference": "RUN-D02",
+        "value": 4.15,
+        "at": "2026-04-17T09:00:00Z",
+        "event_occurred": true,
+        "event_time": 4.15
+      }
+    ],
+    "censoring": [
+      {
+        "observation_reference": "OBS-C01",
+        "event_occurred": true,
+        "event_time": 4.0,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      },
+      {
+        "observation_reference": "OBS-C02",
+        "event_occurred": true,
+        "event_time": 4.1,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      },
+      {
+        "observation_reference": "OBS-C03",
+        "event_occurred": true,
+        "event_time": 4.2,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      },
+      {
+        "observation_reference": "OBS-C04",
+        "event_occurred": true,
+        "event_time": 4.3,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      },
+      {
+        "observation_reference": "OBS-D01",
+        "event_occurred": true,
+        "event_time": 4.05,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      },
+      {
+        "observation_reference": "OBS-D02",
+        "event_occurred": true,
+        "event_time": 4.15,
+        "censoring_type": "NONE",
+        "stop_reason": "event observed inside the protocol window"
+      }
+    ],
+    "intervention_events": [],
+    "comparison_arms": {
+      "arm_a_group_reference": "ARM-ADDITIVE",
+      "arm_b_group_reference": "ARM-BLANK"
+    },
+    "frozen_sigma": 0.2,
+    "frozen_sigma_reference": "METHOD-CHAR-S1A-004",
+    "preregistered_delta": 0.1,
+    "k_required": 3,
+    "alpha": 0.05,
+    "target_power": 0.8,
+    "resolution_n_values": [
+      2,
+      3,
+      6,
+      12,
+      16
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "E-VAR-PGD-N12",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: variance-assessment request VAR-PGD-N12 is recorded for contract validation only; it is not product evidence.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

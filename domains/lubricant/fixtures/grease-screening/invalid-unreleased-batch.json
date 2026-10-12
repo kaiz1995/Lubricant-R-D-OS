@@ -1,0 +1,36 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact-deviated.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-DEVBATCH-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this screen is requested against a batch whose milling step is recorded DEVIATED and whose deviation has not been dispositioned.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-DEVBATCH-001",
+    "sample_reference": "SMP-PG-B3-DEV-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-DEVBATCH-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-DEVBATCH-002",
+        "test_name": "DROPPING_POINT",
+        "value": 185,
+        "unit": "degC",
+        "limit": "180 min",
+        "verdict": "PASS"
+      }
+    ],
+    "measurement_replicates": 3
+  }
+}

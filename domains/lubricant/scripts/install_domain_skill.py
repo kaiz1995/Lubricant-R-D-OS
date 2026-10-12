@@ -23,7 +23,7 @@ SKILLS = {
     "process-definition": ("common.schema.json", "design_space.schema.json", "process.schema.json"),
     "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json"),
     "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json"),
-    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json"),
+    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json"),
     "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json"),
     "process-scale-up": ("common.schema.json", "process.schema.json", "optimization.schema.json"),
     "application-definition": ("common.schema.json", "application.schema.json"),
@@ -32,6 +32,9 @@ SKILLS = {
     "interface-definition": ("common.schema.json", "interface.schema.json"),
     "external-record-import": ("common.schema.json", "external_record.schema.json"),
     "reference-material": ("common.schema.json", "project.schema.json", "reference.schema.json"),
+    "grease-batch": ("common.schema.json", "project.schema.json", "design_space.schema.json", "experiment_design.schema.json", "batch.schema.json", "sample.schema.json"),
+    "grease-screening": ("common.schema.json", "project.schema.json", "batch.schema.json", "sample.schema.json", "screening.schema.json"),
+    "variance-assessment": ("common.schema.json", "bench_test.schema.json", "variance.schema.json"),
     "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "process.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json"),
     "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json", "knowledge_asset.schema.json"),
 }
@@ -69,6 +72,9 @@ SHARED_MODULES = {
     "doe-design": ("constraint_role.py", "check_artifact_naming.py"),
     "gate-review": ("check_artifact_naming.py",),
     "reference-material": ("check_artifact_naming.py",),
+    "grease-batch": ("check_artifact_naming.py",),
+    "grease-screening": ("check_artifact_naming.py",),
+    "variance-assessment": ("check_artifact_naming.py",),
 }
 
 # Pack-level language-agnostic contracts deployed into a skill's references/ so a
