@@ -96,6 +96,15 @@ OIL_FIXTURE_NAMES = {
 # Frozen pre-fix outputs for the oil route (same input, pre-fix revision). The oil path is
 # required to stay byte-for-byte identical, so these are compared verbatim.
 OIL_READY_OUTPUT = "READY: input can form one MODEL_BUILT request only"
+# This HOLD output is produced under a state this test manufactures, not by the
+# fixtures as stored. oil_workspace() overwrites the three stored HOLD upstreams
+# (test_method.json, experiment_design.json, experiment.json) to decision GO -- the
+# same simulation test_phase3_chain performs -- while the other four are already GO in
+# the fixtures, so the manufactured baseline is GO throughout and READY. case_a_and_d
+# then flips only the copied test_method back to HOLD and expects exactly this string.
+# It therefore describes the test-simulated GO baseline with one record held, and
+# deliberately does NOT represent the fixtures' real recorded state, in which
+# test_method.json is itself decision=HOLD.
 OIL_HOLD_METHOD_OUTPUT = (
     "HOLD: missing or invalid: test_method_artifact must have decision GO; no artifact generated"
 )
@@ -204,7 +213,11 @@ def oil_workspace(workspace: Path) -> dict:
             value["evidence"][0].update({"statement": MARKER, "source": MARKER})
         write_json(workspace / name, value)
         request[key] = name
-    request["analysis"] = read_json(OIL_FIXTURES / "valid-input.synthetic.json")["analysis"]
+    # hold-input.synthetic.json is the honest name: the three HOLD upstreams it names
+    # (test-method, experiment-design, experiment) are why its own preflight result is
+    # HOLD. oil_workspace() uses it only for its analysis block; the three HOLD upstream
+    # fixtures are read and rewritten to GO just above.
+    request["analysis"] = read_json(OIL_FIXTURES / "hold-input.synthetic.json")["analysis"]
     return request
 
 
