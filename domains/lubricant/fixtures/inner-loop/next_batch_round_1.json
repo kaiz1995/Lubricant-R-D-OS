@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "next_batch",
+  "project_id": "PGD-IL-001",
+  "stage": "NEXT_BATCH_DECIDED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Which samples should round 2 run, and why?",
+  "hypothesis": "The round-1 difference is either the formulation effect or bench-to-bench drift.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: this next-batch record is assembled inline against schemas/next_batch.schema.json because no script in the pack produces a next_batch artifact; it is a contract record, not product evidence.",
+  "evidence": [
+    {
+      "evidence_id": "E-NEXT-IL-001",
+      "statement": "Inner-loop acceptance fixture: the round-2 proposal is the round-1 pair with the order swapped.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Continue with the samples that separate the competing explanations; stop only with a recorded rationale.",
+  "result": "Round 2 proposed with the A/B pair swapped, at two bench slots.",
+  "decision": "GO",
+  "next_action": "Produce the round-2 batch and run the swapped pair.",
+  "next_batch_id": "NEXT-PGD-IL-001",
+  "campaign_reference": "CMP-PGD-IL-001",
+  "from_iteration": 1,
+  "to_iteration": 2,
+  "proposed_samples": [
+    {
+      "formula_reference": "FORM-PG-IL@v1",
+      "hypothesis": "The candidate formulation produces the round-1 difference.",
+      "discriminates": "The formulation effect explains the round-1 difference vs bench-to-bench drift explains it."
+    },
+    {
+      "formula_reference": "FORM-PG-REF@v1",
+      "hypothesis": "The reference grease is the baseline of the round-2 swapped pair.",
+      "discriminates": "A drift-cancelled run order explains the round-1 difference vs a run-order artefact explains it."
+    }
+  ],
+  "information_gain_basis": "Swapping the pair in round 2 cancels bench-to-bench drift: if the difference follows the formula and not the run order, it is real.",
+  "bench_slots_required": 2,
+  "stop_state": "CONTINUE",
+  "next_round_budget": {
+    "bench_slots_remaining": 6,
+    "calendar_days_remaining": 240
+  }
+}

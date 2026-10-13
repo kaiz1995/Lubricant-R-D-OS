@@ -17,7 +17,12 @@ numbers cannot be distinguished from legitimate physical quantities
 (0 as a lower bound, -1 as a temperature) — no hardcoded numeric list.
 
 A measurement-shaped object is any JSON object containing all six keys:
-value, unit, source, method_version, material_batch, formula_version.
+value, unit, source, method_version, material_batch, formula_version AND
+carrying instance-typed values (value: number|null, the other five: string).
+The type requirement matters: schemas/common.schema.json#/$defs/measurement
+.properties is an object whose *keys* are those same six field names, so key
+presence alone also matches that schema definition, where unit/source are
+nested schema objects instead of strings.
 Note: value=null without status is rejected by the schema itself (allOf
 if/then), so it is not this script's job to flag it.
 
@@ -46,20 +51,37 @@ SENTINEL_MARKERS = ("SENTINEL", "UNSET")
 CONTRADICTORY_STATUSES = ("DEFERRED", "PENDING_CLIENT")
 
 
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def is_measurement_instance(node) -> bool:
+    """True only for instance-shaped measurements, never for schema definitions.
+
+    Key presence alone is not enough: the `properties` object inside
+    common.schema.json#/$defs/measurement has exactly the six measurement field
+    names as its keys, so it matched the old key-presence test and made
+    check_object call .upper() on a nested dict. Requiring the instance types
+    the schema declares (value: number|null; the other five: string) keeps
+    schema definitions out of the scan.
+    """
+    if not isinstance(node, dict) or not all(key in node for key in MEASUREMENT_KEYS):
+        return False
+    if node["value"] is not None and not is_number(node["value"]):
+        return False
+    return all(isinstance(node[key], str) for key in MEASUREMENT_KEYS if key != "value")
+
+
 def find_measurements(node, path, found):
     """Recursively collect (json_path, obj) for every measurement-shaped object."""
     if isinstance(node, dict):
-        if all(key in node for key in MEASUREMENT_KEYS):
+        if is_measurement_instance(node):
             found.append((path, node))
         for key, child in node.items():
             find_measurements(child, f"{path}.{key}" if path else str(key), found)
     elif isinstance(node, list):
         for index, child in enumerate(node):
             find_measurements(child, f"{path}[{index}]", found)
-
-
-def is_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def check_object(obj):
@@ -69,10 +91,13 @@ def check_object(obj):
     value = obj["value"]
     status = obj.get("status")
 
-    # R2: sentinel marker in unit/source is the strongest signal.
+    # R2: sentinel marker in unit/source is the strongest signal. Non-string
+    # fields are skipped instead of crashing: a schema fragment carries nested
+    # objects under these key names and must never reach .upper().
     hit_fields = [
         field
         for field, text in (("unit", unit), ("source", source))
+        if isinstance(text, str)
         for marker in SENTINEL_MARKERS
         if marker in text.upper()
     ]

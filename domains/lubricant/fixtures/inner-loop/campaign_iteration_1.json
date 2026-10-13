@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "campaign",
+  "project_id": "PGD-IL-001",
+  "stage": "CAMPAIGN_OPENED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Does the inner bench loop continue past iteration 1?",
+  "hypothesis": "The paired A/B round separates the candidate grease from the known-good reference.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: this campaign record is assembled inline against schemas/campaign.schema.json because no script in the pack produces a campaign artifact; it is a contract record, not product evidence.",
+  "evidence": [
+    {
+      "evidence_id": "E-CMP-IL-001",
+      "statement": "Inner-loop acceptance fixture: campaign CMP-PGD-IL-001 is opened with a two-sample paired round.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Continue only while stop_state is CONTINUE and current_iteration stays within max_iterations.",
+  "result": "Iteration 1 opened with the candidate/reference pair.",
+  "decision": "GO",
+  "next_action": "Run iteration 1 and decide the next round from its variance assessment.",
+  "campaign_id": "CMP-PGD-IL-001",
+  "bench_references": ["BENCH-PGD-IL-01"],
+  "max_iterations": 12,
+  "current_iteration": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": ["SMP-PGD-IL-R1A", "SMP-PGD-IL-R1B"],
+      "stop_state": "CONTINUE",
+      "screening_reference": "SCR-PGD-IL-001",
+      "variance_reference": "VAR-PGD-IL-001",
+      "model_reference": "MODEL-PGD-IL-001",
+      "next_batch_reference": "NEXT-PGD-IL-001",
+      "bench_test_references": [
+        "RUN-PGD-IL-R1A-1",
+        "RUN-PGD-IL-R1A-2",
+        "RUN-PGD-IL-R1B-1",
+        "RUN-PGD-IL-R1B-2"
+      ]
+    }
+  ],
+  "pairing_design": {
+    "paired": true,
+    "description": "Inner-loop acceptance fixture: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels."
+  }
+}

@@ -218,12 +218,14 @@
                 "type": "object",
                 "properties": {
                   "design_type": {
+                    "description": "Factorial-channel design types. RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL is the honest name of the sequential family the engine runs (deterministic greedy selection from candidate lattice points, no Gaussian process) and is the name reported in method/parameters; BAYESIAN_SEQUENTIAL stays valid as its legacy alias, so pre-rename artifacts keep validating. Purely additive.",
                     "enum": [
                       "FULL_FACTORIAL",
                       "FRACTIONAL_FACTORIAL",
                       "SPLIT_PLOT",
                       "TAGUCHI_ROBUST",
-                      "BAYESIAN_SEQUENTIAL"
+                      "BAYESIAN_SEQUENTIAL",
+                      "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"
                     ]
                   },
                   "model_order": {

@@ -378,6 +378,24 @@ def main() -> int:
     assert "process-definition" in SKILLS, sorted(SKILLS)
     assert SKILLS["process-definition"] == ("common.schema.json", "design_space.schema.json", "process.schema.json"), SKILLS["process-definition"]
 
+    # Vocabulary mirror guard: preflight_process_definition.STEP_TYPES is a
+    # hand-maintained copy of process.schema.json#/$defs/process_step.properties
+    # .step_type.enum, and a drift between the two used to be silent. Both
+    # directions are compared, so a value added to either side alone fails here.
+    sys.path.insert(0, str(ROOT / "skills/process-definition/scripts"))
+    import preflight_process_definition as process_preflight
+
+    schema_step_types = set(
+        read_json(ROOT / "schemas" / "process.schema.json")["$defs"]["process_step"]["properties"]["step_type"]["enum"]
+    )
+    preflight_step_types = set(process_preflight.STEP_TYPES)
+    assert preflight_step_types == schema_step_types, (
+        "preflight STEP_TYPES drifted from the process.schema.json step_type enum: "
+        f"only in STEP_TYPES={sorted(preflight_step_types - schema_step_types)}, "
+        f"only in schema enum={sorted(schema_step_types - preflight_step_types)}"
+    )
+    print("PASS: preflight STEP_TYPES mirrors the process.schema.json step_type enum")
+
     print("PASS: WP-01 process object, constraint_role derivation, and fixture regression")
     return 0
 

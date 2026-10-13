@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "model",
+  "project_id": "PGD-IL-001",
+  "stage": "MODEL_BUILT",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Does the round-1 evidence update the campaign model?",
+  "hypothesis": "The round-1 difference is a formulation effect, so the model may be updated with the round's run records and variance assessment.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: this MODEL_BUILT record is assembled inline against schemas/model.schema.json because the producing skill (statistical-analysis) refuses this route's own bench_test record today (its decision is UNDECIDED by contract, see tests/lubricant_e2e/test_inner_loop_iteration.py); experiment_reference names the round-1 execution identity because this inner-loop-only workspace materialises no experiment.json.",
+  "evidence": [
+    {
+      "evidence_id": "E-MODEL-IL-001",
+      "statement": "Inner-loop acceptance fixture: the round-1 model update is recorded for contract validation only; it is not product evidence.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Update the model only for a round released by a CONSISTENT_DIFFERENCE variance assessment.",
+  "result": "Round-1 model update recorded for the inner-loop acceptance run.",
+  "decision": "GO",
+  "next_action": "Hand the updated model to the next-batch decision of round 2.",
+  "model_id": "MODEL-PGD-IL-001",
+  "experiment_reference": "ITER-1:EXP-PGD-IL-001",
+  "design_space_reference": "DS-PGD-IL-001",
+  "test_method_references": ["TM-PGD-IL-001"],
+  "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL"],
+  "response_references": [
+    {
+      "ctq_reference": "CTQ-PGD-IL-001",
+      "test_method_reference": "TM-PGD-IL-001"
+    }
+  ],
+  "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE"
+}

@@ -30,6 +30,7 @@ import {
   innerLoopStages,
   isGateStatus,
   routeFor,
+  type ChainStage,
   type GateStatus,
   type ProjectType,
 } from "@/lib/lubricantContracts";
@@ -39,6 +40,7 @@ import {
   deriveSteps,
   derivedCurrentStage,
   probeWorkspace,
+  type StepView,
   type WorkspaceSnapshot,
 } from "@/lib/lubricantArtifacts";
 import {
@@ -69,6 +71,85 @@ const GATE_TONE: Record<GateStatus, string> = {
   KILL: "border-red-500/30 bg-red-500/15 text-red-600 dark:text-red-400",
   FREEZE: "border-violet-500/30 bg-violet-500/15 text-violet-600 dark:text-violet-400",
 };
+
+/**
+ * 精密传动脂路线（PRECISION_GREASE_DEV）的三环分组 —— 逐条镜像领域包
+ * `domains/lubricant/README.md` §5.1 的「环」表：
+ *
+ *   外环 · 配方与工艺设计  工艺步骤 1–8   → 9 个 stage（第 7 步占
+ *                                          BENCH_RESOURCE_REGISTERED + CAMPAIGN_OPENED）
+ *   内环 · 台架战役        工艺步骤 9–13  → 6 个 stage（第 13 步占
+ *                                          MODEL_BUILT + NEXT_BATCH_DECIDED）
+ *   收口                  工艺步骤 14–17 → 5 个 stage（第 16 步占
+ *                                          VERIFIED + APPLIED）
+ *
+ * 17 个工艺步骤 → 20 个 stage，所以面板里三段分别是 9 / 6 / 5 步，合计仍是
+ * 整条路由。内环是「环体 + 退出判据」：环体（BATCH_PRODUCED …
+ * VARIANCE_ASSESSED）由契约 loop_edges 经 innerLoopStages() 推导、打「内环」
+ * 徽章；MODEL_BUILT / NEXT_BATCH_DECIDED 是退出判据，属于内环段但不属于环体。
+ *
+ * 桌面端契约镜像（lubricantContracts.ts）只镜像 loop_edges / max_iterations，
+ * 没有环分组这一层，所以分组放在呈现层；LubricantStagePane.test.tsx 断言
+ * 「三段不重不漏地覆盖整条路由」防止这里与领域包漂移。
+ *
+ * 油品 6 条路线没有环（innerLoopStages 为空）→ 不分组，走原来的平铺列表。
+ */
+interface RingSegment {
+  readonly id: "outer" | "inner" | "closing";
+  readonly label: string;
+  /** 领域包 README §5.1「迭代形态」列的原文口径。 */
+  readonly mode: string;
+  readonly stages: readonly ChainStage[];
+}
+
+const RING_SEGMENTS: readonly RingSegment[] = [
+  {
+    id: "outer",
+    label: "外环 · 配方与工艺设计",
+    mode: "做一次",
+    stages: [
+      "PROJECT_DEFINED",
+      "DUTY_DEFINED",
+      "FAILURE_MECHANISM_DEFINED",
+      "REFERENCE_MATERIAL_RESOLVED",
+      "TEST_METHODS_QUALIFIED",
+      "DESIGN_SPACE_DEFINED",
+      "BENCH_RESOURCE_REGISTERED",
+      "CAMPAIGN_OPENED",
+      "EXPERIMENT_DESIGNED",
+    ],
+  },
+  {
+    id: "inner",
+    label: "内环 · 台架战役",
+    mode: "循环 N 轮，有退出判据",
+    stages: [
+      "BATCH_PRODUCED",
+      "SCREENING_PASSED",
+      "BENCH_TESTED",
+      "VARIANCE_ASSESSED",
+      "MODEL_BUILT",
+      "NEXT_BATCH_DECIDED",
+    ],
+  },
+  {
+    id: "closing",
+    label: "收口",
+    mode: "判据满足 / 止损后各一次",
+    stages: [
+      "NON_INFERIORITY_PASSED",
+      "PROCESS_SCALE_VALIDATED",
+      "VERIFIED",
+      "APPLIED",
+      "KNOWLEDGE_ARCHIVED",
+    ],
+  },
+];
+
+/** 步骤区的一行：分组标识，或一张步骤卡。 */
+type StepRow =
+  | { readonly kind: "segment"; readonly segment: RingSegment; readonly count: number }
+  | { readonly kind: "step"; readonly step: StepView; readonly position: number };
 
 function formatAge(probedAt: number, now: number): string {
   const seconds = Math.max(0, Math.round((now - probedAt) / 1000));
@@ -170,6 +251,52 @@ export function LubricantStagePane({
     const value = snapshot?.probes.campaign?.data?.current_iteration;
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   })();
+
+  /**
+   * 三段分组（外环 / 内环 / 收口）。只有带内环的路线（精密脂）才分组；油品 6 条
+   * 路线没有环，返回 null 走平铺渲染 —— 呈现与旧版逐字不变。
+   */
+  const ringSegments = useMemo(() => {
+    if (innerLoop.length === 0) return null;
+    const segmentOf = new Map<string, RingSegment>();
+    for (const segment of RING_SEGMENTS) {
+      for (const stage of segment.stages) segmentOf.set(stage, segment);
+    }
+    // 三段必须恰好覆盖整条路由。契约/领域包漂移时宁可退回平铺，也不渲染
+    // 半截分组；DEV 下出声，便于在开发期抓到漂移。
+    const uncovered = steps.filter((step) => !segmentOf.has(step.stage)).map((step) => step.stage);
+    if (uncovered.length > 0) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[LubricantStagePane] 环分组未覆盖 ${effectiveType} 的 stage：${uncovered.join(", ")}；` +
+            "已退回平铺列表。请核对 domains/lubricant/README.md §5.1 与本文件的 RING_SEGMENTS。",
+        );
+      }
+      return null;
+    }
+    return RING_SEGMENTS.map((segment) => ({
+      segment,
+      items: steps
+        .map((step, index) => ({ step, position: index + 1 }))
+        .filter(({ step }) => segmentOf.get(step.stage) === segment),
+    })).filter(({ items }) => items.length > 0);
+  }, [effectiveType, innerLoop, steps]);
+
+  /**
+   * 步骤区的渲染行：脂路线上在每一段的第一条步骤前插入一条分组标识
+   * （外环 / 内环 / 收口）；油品路线没有环，只有步骤行 —— 呈现与旧版逐字不变。
+   */
+  const stepRows = useMemo<StepRow[]>(() => {
+    if (!ringSegments) {
+      return steps.map((step, index) => ({ kind: "step" as const, step, position: index + 1 }));
+    }
+    const rows: StepRow[] = [];
+    for (const { segment, items } of ringSegments) {
+      rows.push({ kind: "segment", segment, count: items.length });
+      for (const { step, position } of items) rows.push({ kind: "step", step, position });
+    }
+    return rows;
+  }, [ringSegments, steps]);
 
   const gateStatus: GateStatus | null = isGateStatus(snapshot?.gateStatus)
     ? snapshot.gateStatus
@@ -623,11 +750,57 @@ export function LubricantStagePane({
           </div>
 
           <div className="space-y-2">
-            {steps.map((step, stepPosition) => {
-              // 徽章显示的是「本条路线内的第几步」，不是全局 chainIndex：两条路线的
+            {stepRows.map((row) => {
+              if (row.kind === "segment") {
+                // 分组标识（外环 / 内环 / 收口）。段头是 flex-wrap、标签不截断 ——
+                // 窄视口下换行而不是横向溢出；步骤区不引入第二个滚动容器。
+                const { segment, count } = row;
+                return (
+                  <div
+                    key={`segment-${segment.id}`}
+                    data-ring-segment={segment.id}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border/50 bg-surface-2/50 px-2 py-1.5"
+                  >
+                    {segment.id === "inner" ? (
+                      <Repeat size={11} className="shrink-0 text-accent" />
+                    ) : segment.id === "outer" ? (
+                      <Layers size={11} className="shrink-0 text-accent" />
+                    ) : (
+                      <ShieldCheck size={11} className="shrink-0 text-accent" />
+                    )}
+                    <span className="text-[11px] font-semibold leading-relaxed text-text">
+                      {segment.label}
+                    </span>
+                    <span className="shrink-0 rounded bg-surface px-1.5 py-0.2 font-mono text-[10px] text-muted">
+                      {count} 步
+                    </span>
+                    <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+                      <span className="text-[10px] leading-relaxed text-muted">{segment.mode}</span>
+                      {segment.id === "inner" && (
+                        <span
+                          title={
+                            currentIteration === null
+                              ? `campaign.json 未落盘，轮次未知（不猜轮次）；每战役上限 ${MAX_ITERATIONS} 轮`
+                              : `campaign.json 的 current_iteration = ${currentIteration}（每战役上限 ${MAX_ITERATIONS} 轮）`
+                          }
+                          className="shrink-0 rounded border border-accent/40 bg-accent/10 px-1 py-0.2 font-mono text-[10px] font-medium tabular-nums text-accent"
+                        >
+                          {currentIteration === null
+                            ? "轮次未开启"
+                            : `第 ${currentIteration} 轮 / 上限 ${MAX_ITERATIONS}`}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              }
+
+              // 步骤卡。徽章显示的是「本条路线内的第几步」，不是全局 chainIndex：两条路线的
               // 阶段互相交错（精密传动脂用 14~25 与油品链的 5~13 交叉排列），用
               // 全局序号会渲染出 1,2,14,15,5,… 这样的乱序。chainIndex 仍作为
               // 展开态与 React key 的稳定标识，只是不再直接当序号展示。
+              const step = row.step;
+              const stepPosition = row.position;
               const isExpanded = expandedStep === step.chainIndex;
               const isCompleted = step.status === "completed";
               const isActive = step.status === "active";
@@ -636,6 +809,7 @@ export function LubricantStagePane({
               return (
                 <div
                   key={step.chainIndex}
+                  data-stage={step.stage}
                   className={cn(
                     "overflow-hidden rounded-xl border transition-all duration-150",
                     isActive
@@ -677,7 +851,7 @@ export function LubricantStagePane({
                                   : "bg-surface-2 text-muted",
                             )}
                           >
-                            {stepPosition + 1}
+                            {stepPosition}
                           </span>
                           <span className="truncate text-xs font-semibold text-text">
                             {step.titleZh}

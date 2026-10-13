@@ -5,7 +5,7 @@
 // sent behind the researcher's back.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -321,6 +321,227 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     for (const ghost of ["doe_design.json", "sample_profile.json", "baseline_bom.json"]) {
       expect(screen.queryByText(ghost)).not.toBeInTheDocument();
     }
+  });
+});
+
+describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / 收口）", () => {
+  // 领域包 domains/lubricant/README.md §5.1 的环表：17 个工艺步骤 → 20 个 stage
+  // （第 7 / 13 / 16 步各占两个 stage），所以面板里三段渲染为 9 / 6 / 5 步。
+  // 内环是「环体 + 退出判据」：环体 4 步由契约 loop_edges 推导（打「内环」徽章），
+  // MODEL_BUILT / NEXT_BATCH_DECIDED 是退出判据 —— 在同一段内，但不是环体。
+
+  const grease = () => workspaceWith({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" });
+
+  const waitForGreaseRoute = () =>
+    waitFor(() =>
+      expect(screen.getByText(/工件链阶段步骤（20 步独立推进）/)).toBeInTheDocument(),
+    );
+
+  /** 步骤区按渲染顺序读出「分组标识 / 步骤 stage」标记。 */
+  const renderedMarks = (container: HTMLElement): string[] =>
+    [...container.querySelectorAll("[data-ring-segment], [data-stage]")].map(
+      (el) => el.getAttribute("data-ring-segment") ?? el.getAttribute("data-stage") ?? "",
+    );
+
+  /** 把标记流切成 [{ id, stages }]，用于断言三段的边界与顺序。 */
+  const segmentsFrom = (marks: string[]): { id: string; stages: string[] }[] => {
+    const segments: { id: string; stages: string[] }[] = [];
+    for (const mark of marks) {
+      if (mark === "outer" || mark === "inner" || mark === "closing") {
+        segments.push({ id: mark, stages: [] });
+      } else {
+        segments[segments.length - 1].stages.push(mark);
+      }
+    }
+    return segments;
+  };
+
+  const cardFor = (container: HTMLElement, stage: string) =>
+    container.querySelector(`[data-stage="${stage}"]`) as HTMLElement;
+
+  /** 步骤区（含分组段头之外的所有卡片）里不允许出现滚动容器。 */
+  const SCROLLER_SELECTOR =
+    '[class~="overflow-y-auto"], [class~="overflow-x-auto"], [class~="overflow-auto"]';
+
+  it("三段分组标识齐备，步数合计 = 面板声明的 20 步", async () => {
+    grease();
+    const { container } = renderPane();
+    await waitForGreaseRoute();
+
+    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架战役", "收口"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // 每段的 stage 数（9 + 6 + 5）与面板的 20 步自洽
+    expect(screen.getByText("9 步")).toBeInTheDocument();
+    expect(screen.getByText("6 步")).toBeInTheDocument();
+    expect(screen.getByText("5 步")).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-ring-segment]")).toHaveLength(3);
+    // 分组不改变步骤编号：整条路线仍是 1..20
+    for (let n = 1; n <= 20; n += 1) {
+      expect(screen.getByText(String(n)), `缺少步骤徽章 ${n}`).toBeInTheDocument();
+    }
+  });
+
+  it("三段边界逐条对齐领域包 README §5.1 的环表，且不重不漏覆盖整条路由", async () => {
+    grease();
+    const { container } = renderPane();
+    await waitForGreaseRoute();
+
+    const { innerLoopStages, routeFor } = await import("@/lib/lubricantContracts");
+    const route = routeFor("PRECISION_GREASE_DEV").map((c) => c.stage);
+
+    const segments = segmentsFrom(renderedMarks(container));
+    // 顺序 + 边界 + 不重不漏：三段按顺序拼接就是整条路由
+    expect(segments).toEqual([
+      {
+        id: "outer",
+        stages: [
+          "PROJECT_DEFINED",
+          "DUTY_DEFINED",
+          "FAILURE_MECHANISM_DEFINED",
+          "REFERENCE_MATERIAL_RESOLVED",
+          "TEST_METHODS_QUALIFIED",
+          "DESIGN_SPACE_DEFINED",
+          "BENCH_RESOURCE_REGISTERED",
+          "CAMPAIGN_OPENED",
+          "EXPERIMENT_DESIGNED",
+        ],
+      },
+      {
+        id: "inner",
+        stages: [
+          "BATCH_PRODUCED",
+          "SCREENING_PASSED",
+          "BENCH_TESTED",
+          "VARIANCE_ASSESSED",
+          "MODEL_BUILT",
+          "NEXT_BATCH_DECIDED",
+        ],
+      },
+      {
+        id: "closing",
+        stages: [
+          "NON_INFERIORITY_PASSED",
+          "PROCESS_SCALE_VALIDATED",
+          "VERIFIED",
+          "APPLIED",
+          "KNOWLEDGE_ARCHIVED",
+        ],
+      },
+    ]);
+    const [outer, inner, closing] = segments.map((s) => s.stages);
+    expect([...outer, ...inner, ...closing]).toEqual(route);
+
+    // 契约 loop_edges 推导的环体（4 步）必须连续地落在「内环」段里；
+    // 段内其余两步是环的退出判据，属于内环但不属于环体。
+    const loopBody = innerLoopStages("PRECISION_GREASE_DEV") as readonly string[];
+    expect(loopBody).toEqual([
+      "BATCH_PRODUCED",
+      "SCREENING_PASSED",
+      "BENCH_TESTED",
+      "VARIANCE_ASSESSED",
+    ]);
+    const indices = loopBody.map((stage) => inner.indexOf(stage));
+    expect(indices.every((index) => index >= 0)).toBe(true);
+    expect(indices).toEqual(indices.map((_, offset) => indices[0] + offset));
+    expect(inner.filter((stage) => !loopBody.includes(stage))).toEqual([
+      "MODEL_BUILT",
+      "NEXT_BATCH_DECIDED",
+    ]);
+
+    // 「内环」徽章只打在环体 4 步上；退出判据两步不带章（环体 ≠ 内环段）
+    for (const stage of loopBody) {
+      expect(within(cardFor(container, stage)).getByText("内环")).toBeInTheDocument();
+    }
+    for (const stage of ["MODEL_BUILT", "NEXT_BATCH_DECIDED"]) {
+      expect(within(cardFor(container, stage)).queryByText("内环")).not.toBeInTheDocument();
+    }
+  });
+
+  it("内环段头显示当前轮次：未落盘时明说未开启，落盘后读 campaign.json 的 current_iteration", async () => {
+    grease();
+    const first = renderPane();
+    await waitForGreaseRoute();
+
+    const innerHeader = () =>
+      first.container.querySelector('[data-ring-segment="inner"]') as HTMLElement;
+    expect(innerHeader().textContent).toContain("轮次未开启");
+    expect(innerHeader().textContent).toContain("循环 N 轮");
+    expect(innerHeader().textContent).not.toMatch(/第 \d+ 轮/);
+    first.unmount();
+
+    const CAMPAIGN = {
+      schema_version: "0.1.0",
+      artifact_type: "campaign",
+      project_id: "PGD-001",
+      stage: "CAMPAIGN_OPENED",
+      decision_question: "q", hypothesis: "h", uncertainty: "u",
+      evidence: [{ evidence_id: "E-1", statement: "s", source: "x", status: "OBSERVED" }],
+      decision_rule: "r", result: "res", decision: "GO", next_action: "n",
+      current_iteration: 2,
+    };
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir === "") return [entry("project.json"), entry("campaign.json")];
+      throw new Error("not a directory");
+    });
+    readArtifact.mockImplementation(async (path: string) => {
+      if (path === "project.json") {
+        return {
+          path, mime: "application/json", encoding: "utf8", size: 10,
+          data: JSON.stringify({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" }),
+        };
+      }
+      if (path === "campaign.json") {
+        return { path, mime: "application/json", encoding: "utf8", data: JSON.stringify(CAMPAIGN), size: 10 };
+      }
+      return null;
+    });
+
+    const second = renderPane();
+    await waitFor(() => expect(screen.getByText("第 2 轮 / 上限 12")).toBeInTheDocument());
+    // 既有的迭代读数行保留：面板顶部卡片里的「第 2 / 12 轮」仍在
+    expect(screen.getByText("第 2 / 12 轮")).toBeInTheDocument();
+    expect(
+      (second.container.querySelector('[data-ring-segment="inner"]') as HTMLElement).textContent,
+    ).toContain("第 2 轮 / 上限 12");
+  });
+
+  it("油品路线不渲染任何环分组（没有环就不分组，呈现与旧版一致）", async () => {
+    const { container } = renderPane();
+    await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
+
+    expect(container.querySelectorAll("[data-ring-segment]")).toHaveLength(0);
+    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架战役", "收口"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText("轮次未开启")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("[data-stage]")).toHaveLength(12);
+  });
+
+  it("手机宽度：段头可换行、不截断，步骤区不引入嵌套滚动", async () => {
+    const oil = renderPane();
+    await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
+    const oilScrollers = oil.container.querySelectorAll(SCROLLER_SELECTOR).length;
+    oil.unmount();
+
+    grease();
+    const { container } = renderPane();
+    await waitForGreaseRoute();
+
+    const headers = [...container.querySelectorAll("[data-ring-segment]")] as HTMLElement[];
+    expect(headers).toHaveLength(3);
+    for (const header of headers) {
+      // 窄视口下段头换行，而不是把内容顶出横向滚动条
+      expect(header.className).toContain("flex-wrap");
+      // 分组标识不靠 truncate / nowrap 藏文本（截断 = 手机上读不到）
+      expect(header.querySelectorAll(".truncate")).toHaveLength(0);
+      expect(header.querySelectorAll(".whitespace-nowrap")).toHaveLength(0);
+    }
+    // 步骤区自身没有滚动容器（不会出现「列表里再套一个滚动条」）
+    const stepsContainer = headers[0].parentElement as HTMLElement;
+    expect(stepsContainer.querySelectorAll(SCROLLER_SELECTOR)).toHaveLength(0);
+    // 分组没有给面板新增滚动容器：与油品路线（平铺）数量一致
+    expect(container.querySelectorAll(SCROLLER_SELECTOR)).toHaveLength(oilScrollers);
   });
 });
 
