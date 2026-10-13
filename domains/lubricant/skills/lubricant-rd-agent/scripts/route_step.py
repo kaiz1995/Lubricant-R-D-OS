@@ -208,6 +208,30 @@ def decide(project_state: object, requested_stage: str) -> dict:
             )
         return {"decision": "DENY", "reason": reason, "skill": None}
 
+    # Ring-edge iteration cap (contract `max_iterations`): the inner loop is a
+    # bounded body, not an open-ended retry. When the request is a declared ring
+    # target and project_state publishes a `current_iteration` that has reached
+    # the cap, the back edge is refused — past the cap the loop must stop, so the
+    # message names the exit actions (same wording as the state machine's
+    # `iteration_error`) instead of a bare denial or a HOLD that would suggest
+    # "resolve the gaps and retry the ring".
+    if requested_stage in ring_targets:
+        declared_iteration = project_state.get("current_iteration")
+        if (
+            isinstance(MAX_ITERATIONS, int)
+            and isinstance(declared_iteration, int)
+            and not isinstance(declared_iteration, bool)
+            and declared_iteration >= MAX_ITERATIONS
+        ):
+            return {
+                "decision": "DENY",
+                "reason": (
+                    f"current_iteration {declared_iteration} has reached max_iterations {MAX_ITERATIONS}; "
+                    "stop the inner loop and record PIVOT or KILL"
+                ),
+                "skill": None,
+            }
+
     gaps = project_state.get("evidence_gaps") or []
     unsatisfied = project_state.get("unsatisfied_conditions") or []
     gate_status = project_state.get("gate_status")

@@ -312,5 +312,25 @@
       "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 8, "decision_question": "What did round 1 leave behind?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:variance.json", "ITER-2:batch.json", "ITER-2:variance.json"] },
       "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 8, "decision_question": "What did round 1 leave behind?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-2:batch.json", "ITER-2:variance.json", "ITER-3:batch.json"] }
     }
+  },
+  {
+    "name": "go-precision-grease-non-edge-source-cannot-take-a-ring-target",
+    "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Ring-exemption guard: BATCH_PRODUCED is the `to` of declared ring edges, but BENCH_TESTED is the `from` of none, so BENCH_TESTED -> BATCH_PRODUCED is not a declared edge. The exemption must match BOTH endpoints; an edge test weakened to compare only `to` (BATCH_PRODUCED) would wrongly let this cross-stage jump through as a ring advance.",
+    "expected_reason": "GO must advance exactly one stage",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 4,
+      "before": { "project_id": "PGD-001", "stage": "BENCH_TESTED", "status": "ACTIVE", "version": 8, "decision_question": "Does round 3 resolve the difference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-3:batch.json", "ITER-3:bench_test.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 8, "decision_question": "Does round 3 resolve the difference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-3:batch.json", "ITER-3:bench_test.json", "ITER-4:batch.json"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-ring-edge-cannot-bump-the-version",
+    "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Ring-exemption guard: the declared REWORK edge SCREENING_PASSED -> BATCH_PRODUCED, but the after state bumps the version. A ring advance only moves the stage pointer and carries the iteration counter; the project version and decision question are preserved exactly as for every other GO, so the advance must stay rejected even though the edge itself is declared.",
+    "expected_reason": "GO ring-edge advance must preserve the project version and decision question",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 1,
+      "before": { "project_id": "PGD-001", "stage": "SCREENING_PASSED", "status": "ACTIVE", "version": 6, "decision_question": "Can round 1 clear physical screening?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-fail.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 7, "decision_question": "Can round 1 clear physical screening?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-fail.json", "ITER-1:batch-rework.json"] }
+    }
   }
 ]

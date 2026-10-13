@@ -1,0 +1,532 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "experiment",
+  "project_id": "PGD-B1-001",
+  "stage": "EXPERIMENT_RUNNING",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Does the supplied PHYSICAL execution record satisfy the import provenance contract?",
+  "hypothesis": "The import records supplied execution provenance only.",
+  "uncertainty": "No owner approval, method qualification, product-performance, or release conclusion is established by import.",
+  "decision_rule": "Import only complete PHYSICAL records linked to one supplied DOE output and qualified method.",
+  "result": "Physical execution record imported from supplied records only; not owner approval, method qualification, product performance, or release approval.",
+  "decision": "GO",
+  "next_action": "Retain the supplied raw records for existing downstream validation without inferring performance.",
+  "experiment_id": "EXP-PG-B1-001",
+  "evidence_class": "DOE_POINT",
+  "experiment_design_reference": "ED-PG-B1-001",
+  "design_space_reference": "DS-PG-B1-001",
+  "test_method_references": [
+    "TM-PG-B1-001"
+  ],
+  "runs": [
+    {
+      "run_id": "EXP-RUN-PG-B1-001",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 1
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-001"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.51,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-002",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 2
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-002"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.52,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-003",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 3
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-003"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.53,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-004",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 4
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-004"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.54,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-005",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 5
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-005"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.55,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-006",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 6
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-006"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.56,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-007",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 7
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-007"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.57,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-008",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 8
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-008"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.58,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-009",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 9
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-009"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.59,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-010",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 10
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-010"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.6,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-011",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 11
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-011"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.61,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-012",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 12
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-012"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.62,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-013",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 13
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-013"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.63,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-014",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 14
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-014"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.64,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "EXP-RUN-PG-B1-015",
+      "material_batch": "BAT-PG-B1-001",
+      "formula_reference": "FORM-PG-B1-001@v1",
+      "formula_version": "v1",
+      "doe_point_reference": {
+        "run_index": 15
+      },
+      "execution_provenance": {
+        "executed_at": "2026-11-20T09:30:00+08:00",
+        "operator_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "instrument_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "calibration_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "raw_record_reference": "RAW-EXP-RUN-PG-B1-015"
+      },
+      "response_measurements": [
+        {
+          "ctq_reference": "CTQ-PG-B1-001",
+          "method_reference": {
+            "method_id": "TM-PG-B1-001",
+            "qualification_reference": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION"
+          },
+          "measurement": {
+            "value": 2.65,
+            "unit": "um",
+            "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+            "method_version": "e2e-fixture-v1",
+            "material_batch": "BAT-PG-B1-001",
+            "formula_version": "v1"
+          }
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E-X-PG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: synthetic observed measurement.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "doe_output_reference": {
+    "engine_name": "doe",
+    "engine_version": "0.1.0",
+    "input_digest": "88ec9349aec0e43182f993c342110f3c87293381fb24f11bc9b7558de2f44b60",
+    "output_digest": "4e35d4a7d2220e06292af2a4fa0d7bee6054ebcd68ca2a2a1a9386ef95e2587c"
+  }
+}

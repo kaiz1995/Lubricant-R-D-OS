@@ -1,0 +1,181 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "variance",
+  "project_id": "PGD-B1-001",
+  "stage": "VARIANCE_ASSESSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the difference assessed by variance record VAR-PGD-002 real, or could this design not answer the question at its resolution?",
+  "hypothesis": "VAR-PGD-002 records an engine-computed nested variance decomposition, an effect size, the power against the pre-registered delta and exactly one of the four frozen verdicts.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. verdict=CONSISTENT_DIFFERENCE; sigma_total=0.201556; power=1 against the pre-registered delta 1.5; k_ratio=2.48069; sigma_max_requirement=0.5; effect_size=-11.7589. UNDERPOWERED is never a synonym for NO_DETECTABLE_DIFFERENCE: 'we cannot measure it' is not 'there is no difference'. The verdict is the engine's; this record reports it and decides nothing about the product.",
+  "decision_rule": "The engine decides one of four verdicts and this record reports it unchanged. Only CONSISTENT_DIFFERENCE releases the step-13 model update; UNDERPOWERED means the question cannot be answered at this design's resolution and is never read as 'no difference'; REPLICATE_INCONSISTENT blocks every difference claim until the replicate structure is repaired; NO_DETECTABLE_DIFFERENCE asserts only that a capable design found nothing exceeding the k = 3 separation.",
+  "result": "variance assessment VAR-PGD-002 for campaign CMP-PGD-VAR-001 iteration 1: verdict=CONSISTENT_DIFFERENCE; sigma_total=0.201556; power=1; k_ratio=2.48069; sigma_max_requirement=0.5; effect_size=-11.7589.",
+  "decision": "GO",
+  "next_action": "Update the model (step 13) from the observations that passed this check and carry variance assessment VAR-PGD-002 forward with the model's applicability boundary (trust region).",
+  "evidence": [
+    {
+      "evidence_id": "E-VAR-PGD-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: variance-assessment request VAR-PGD-002 uses this round's run records and the declared replicate structure; no frozen sigma is imported.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-ENGINE-VAR-PGD-002",
+      "statement": "Engine verdict CONSISTENT_DIFFERENCE (observed difference -1.9499999999999997 exceeds k_required*sigma = 3*0.20155644370746392 (k_observed 9.67470929795825 > 3)). All statistics in this record were produced by the deterministic statistics engine (method NESTED_VARIANCE_V1, engine input digest 9020b22a174651ef35ebb42071dd19c2f1f4b7300cd0514c064562f0a7878873); no number here was computed or entered by hand.",
+      "source": "ENGINE:statistics",
+      "status": "OBSERVED"
+    }
+  ],
+  "variance_id": "VAR-PGD-002",
+  "campaign_reference": "CMP-PGD-VAR-001",
+  "iteration": 1,
+  "replicate_structure": [
+    {
+      "level": "BATCH",
+      "n": 3,
+      "group_reference": "ARM-BLANK"
+    },
+    {
+      "level": "BATCH",
+      "n": 3,
+      "group_reference": "ARM-BLANK"
+    },
+    {
+      "level": "BATCH",
+      "n": 3,
+      "group_reference": "ARM-BLANK"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "RUN-B01"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "RUN-B03"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "RUN-B05"
+    }
+  ],
+  "censoring": [
+    {
+      "observation_reference": "OBS-B01",
+      "event_occurred": true,
+      "event_time": 4.2,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B02",
+      "event_occurred": true,
+      "event_time": 4.25,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B03",
+      "event_occurred": true,
+      "event_time": 4.4,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B04",
+      "event_occurred": true,
+      "event_time": 4.45,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B05",
+      "event_occurred": true,
+      "event_time": 4.6,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B06",
+      "event_occurred": true,
+      "event_time": 4.65,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-B07",
+      "event_occurred": false,
+      "event_time": null,
+      "censoring_type": "RIGHT",
+      "stop_reason": "RIGHT-censored at the 10 h protocol limit; no event observed, so the 10 h value is not an end-point"
+    },
+    {
+      "observation_reference": "OBS-A01",
+      "event_occurred": true,
+      "event_time": 2.45,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-A02",
+      "event_occurred": true,
+      "event_time": 2.5,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    }
+  ],
+  "intervention_events": [
+    {
+      "event_id": "IV-00",
+      "description": "routine torque transducer zero check, protocol step, no setpoint change",
+      "at": "2026-02-24T08:00:00Z",
+      "confounds": false
+    }
+  ],
+  "components": {
+    "sigma_meas": null,
+    "sigma_bench": 0.03535533905932746,
+    "sigma_batch": 0.19843134832984446,
+    "sigma_total": 0.20155644370746392,
+    "sigma_bench_ci_low": 0.0200284299936871,
+    "sigma_bench_ci_high": 0.13182405313562168,
+    "sigma_batch_ci_low": 0.10261287015414557,
+    "sigma_batch_ci_high": 1.2569469392970778,
+    "sigma_total_ci_low": 0.10563841477831559,
+    "sigma_total_ci_high": 1.2074635989049427
+  },
+  "effect_size": -11.758942438532781,
+  "power": 0.9999999789870608,
+  "k_ratio": 2.480694691784167,
+  "sigma_max_requirement": 0.5,
+  "resolution_table": [
+    {
+      "replicates_per_group": 2,
+      "detectable_difference": 4.242640687119285,
+      "detectable": false,
+      "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+    },
+    {
+      "replicates_per_group": 3,
+      "detectable_difference": 3.464101615137755,
+      "detectable": false,
+      "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+    },
+    {
+      "replicates_per_group": 6,
+      "detectable_difference": 2.4494897427831783,
+      "detectable": false,
+      "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+    },
+    {
+      "replicates_per_group": 12,
+      "detectable_difference": 1.7320508075688774,
+      "detectable": false,
+      "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+    }
+  ],
+  "verdict": "CONSISTENT_DIFFERENCE",
+  "computed_by": "ENGINE",
+  "preregistered_delta": 1.5
+}

@@ -2,14 +2,21 @@
 
 Walks the contract's 20-stage route in order. For every stage the test first
 asserts that ``route_step.decide()`` ALLOWs the single-step advance from the
-previous stage and routes to the producing skill. Every stage whose producing
-skill can run on this route is then driven for real: preflight -> build ->
-validate with exit code 0, followed by a schema validation of the produced
-artifact against ``schemas/<type>.schema.json`` (jsonschema + referencing, the
-pack's existing usage). PASS therefore means "every drivable stage was driven
-AND only the recorded product-code gaps below are open": the covered-stage set
-is asserted against ``KNOWN_BLOCKED_STAGES`` at the end of main, so a drivable
-stage that silently drops out fails the run instead of shrinking a printout.
+previous stage and routes to the producing skill, then DRIVES the stage with that
+skill: preflight -> build -> validate with exit code 0, followed by a schema
+validation of the produced artifact against ``schemas/<type>.schema.json``
+(jsonschema + referencing, the pack's existing usage) and a cross-check of the
+fields the next stage consumes.
+
+All 20 stages are drivable: the six break points this file used to record as open
+product-code gaps were fixed (project-definition ships ``build_project_artifact.py``
+and accepts PRECISION_GREASE_DEV; bench-registration produces campaigns;
+doe-design produces next_batch records; statistical-analysis exempts the route's
+contract-UNDECIDED bench_test record from its GO requirement; gate-review and
+audit_chain accept the route's NON_INFERIORITY_PASSED optimization artifact).
+The driven set is therefore asserted to EQUAL ``EXPECTED_ROUTE`` -- the coverage
+floor is the full route, and a stage that silently drops out fails the run
+instead of shrinking a printout.
 
   PROJECT_DEFINED -> DUTY_DEFINED -> FAILURE_MECHANISM_DEFINED ->
   REFERENCE_MATERIAL_RESOLVED -> TEST_METHODS_QUALIFIED -> DESIGN_SPACE_DEFINED ->
@@ -18,54 +25,26 @@ stage that silently drops out fails the run instead of shrinking a printout.
   MODEL_BUILT -> NEXT_BATCH_DECIDED -> NON_INFERIORITY_PASSED ->
   PROCESS_SCALE_VALIDATED -> VERIFIED -> APPLIED -> KNOWLEDGE_ARCHIVED
 
-The chain is closed with ``audit_chain.py`` over the built workspace, and the
-knowledge_asset is checked for the six present assets and CLOSED_KNOWLEDGE.
+Beyond the per-stage drives the chain closes what the records themselves claim:
 
-Known implementation gaps this test records instead of hiding (no product code
-is modified by this file; each gap is asserted with its exact observed output,
-and a fixture-based probe section at the end locates every blocker precisely):
+  * ``audit_chain.py`` finds no violation over the workspace as built;
+  * the knowledge_asset reaches ``CLOSED_KNOWLEDGE`` and each of its six asset
+    references resolves to a real artifact this workspace produced, carrying the
+    artifact type and stage the asset name implies (the six ``present`` flags are
+    NOT taken as read-back of the test's own request);
+  * E2E-10 retrieval closure: the route's own failure-mechanism query, run
+    through the pack's retrieval consumer, finds the freshly archived asset --
+    the consumer prints ``history_hits=N backend=local_bm25`` and the module
+    search returns the asset's own file.
 
-  * PROJECT_DEFINED - two independent reasons this stage is NOT counted as
-    driven: (1) ``preflight_project_definition.py`` hardcodes the six oil project
-    types in its PROJECT_TYPES set, so the route's own ``PRECISION_GREASE_DEV``
-    charter is refused ("project_type is invalid") although
-    ``schemas/project.schema.json`` enumerates the seventh value; (2) the skill
-    ships no builder at all - its SKILL.md Step 2 has the caller assemble the
-    candidate charter and the validator check it - so the preflight -> build ->
-    validate pipeline can never run here. The charter used by the rest of the
-    chain is an explicitly labelled caller-assembled fixture (printed as such),
-    and ``NO_BUILDER_STAGES`` excludes this stage from the driven set even if the
-    preflight is fixed upstream.
-  * CAMPAIGN_OPENED / NEXT_BATCH_DECIDED - the router maps both stages to a
-    skill, but no script anywhere in the pack assembles a campaign / next_batch
-    artifact. The absence is ASSERTED (``has_producer``), the stages are excluded
-    from the driven set by construction (``NO_PRODUCER_STAGES``), and a producer
-    appearing later fails this test until it is driven here rather than left
-    behind a fixture. campaign.json is assembled inline only because the APPLIED
-    gate consumes it as upstream, and it is printed as a labelled fixture. Both
-    stages still land a schema-checked record (next_batch.json is additionally
-    cross-checked against the campaign's next_batch_reference and stop_state),
-    but a labelled fixture is not a substitute for a producer.
-  * MODEL_BUILT - ``preflight_statistical_analysis.py`` requires every supplied
-    upstream artifact to carry ``decision: GO``, but the route's own
-    ``bench_test`` record is ``UNDECIDED`` by contract (a single bench run is a
-    record, not a verdict). The stage therefore cannot be driven, which in turn
-    blocks NON_INFERIORITY_PASSED and PROCESS_SCALE_VALIDATED. The same
-    preflight additionally fails OPEN when the four inner-loop keys are omitted
-    (its grease precondition is keyed on the request shape, not the project
-    type); probe (e) records that hole instead of using it to fake a pass.
-  * VERIFIED - ``preflight_gate_review.py`` hard-requires the upstream
-    optimization artifact at stage ``OPTIMIZED`` while this route's own
-    optimization artifact legally lands at ``NON_INFERIORITY_PASSED``
-    (``schemas/optimization.schema.json`` enumerates both).
-  * audit_chain - its KINDS table maps ``optimization.json`` to stage OPTIMIZED
-    only, so a grease optimization artifact at NON_INFERIORITY_PASSED is
-    reported; the fixture probe pins that single problem.
-
-The chain workspace as built (13 of the 20 stages are drivable today) is audited
-as it was built: ``audit_chain.py`` must find no violation there. E2E-1's
-"the whole route runs end to end" is therefore NOT satisfied by the current
-implementation; this test's PASS reports exactly that split instead of hiding it.
+Negative checks lock the gates that make those drives meaningful: the router
+denies a cross-stage jump; the campaign gate refuses a PHYSICAL campaign drawing
+slots from a SYNTHETIC bench (NO Synthetic Closure); the next-batch gate refuses
+a request that declares fewer than two competing explanations (it never composes
+one); the bench-test gate refuses an event-free run with no declared stop reason;
+and statistical-analysis refuses a PRECISION_GREASE_DEV request that omits the
+four inner-loop artifacts -- its grease precondition is keyed on the charter's
+project_type, not on the request shape.
 
 Materials and censoring discipline are kept: the bench observation is recorded
 with its censoring fields exactly as bench_test_policy requires, and the
@@ -77,7 +56,6 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -147,52 +125,21 @@ STAGE_SKILL = {
     "KNOWLEDGE_ARCHIVED": "knowledge-archive",
 }
 
-# The one audit_chain.py problem the current registration produces: its KINDS
-# table maps ``optimization.json`` to a single stage (OPTIMIZED) although the
-# shared schema deliberately widened that constant to accept the grease route's
-# NON_INFERIORITY_PASSED. Every other audit problem must be absent.
-KNOWN_AUDIT_GAP = "optimization.json: stage is 'NON_INFERIORITY_PASSED', consumers require 'OPTIMIZED'"
-
-# Gate-review's exact refusal of this route's own optimization artifact.
-GATE_REVIEW_GAP = "optimization_artifact must be stage OPTIMIZED"
-# project-definition's exact refusal of the route's own charter type.
-PROJECT_DEFINITION_GAP = "project_type is invalid"
-# statistical-analysis's exact refusal of the route's own bench_test record.
-MODEL_BUILT_GAP = "bench_test_artifact must have decision GO"
-
-# project-definition ships no builder: its SKILL.md workflow (Step 2) has the
-# caller assemble the candidate charter and the skill's validator check it, so
-# this stage can never satisfy this test's notion of "driven" (preflight -> build
-# -> validate) - whatever its preflight decides about the route's project type.
-# It is therefore never counted as driven, and the charter this test hands to the
-# rest of the chain is an explicitly labelled fixture, not a skill output.
-NO_BUILDER_STAGES = ("PROJECT_DEFINED",)
-
-# No script anywhere in the pack assembles these artifact types (the router maps
-# the stages to bench-registration / doe-design, which ship only their own
-# records). The absence is ASSERTED at each stage below, and the records this
-# test assembles for them are labelled fixtures: the stages are never counted as
-# driven, and if a producer ever appears the test fails and must be updated to
-# drive it instead of keeping the fixture in front of it.
-NO_PRODUCER_STAGES = ("CAMPAIGN_OPENED", "NEXT_BATCH_DECIDED")
-
-# Stages that can never be driven by this test's definition (preflight -> build
-# -> validate), by pack construction rather than by a defect of the moment.
-NON_PIPELINE_STAGES = NO_BUILDER_STAGES + NO_PRODUCER_STAGES
-
-# The stages that are blocked by recorded product-code gaps today, and therefore
-# the only ones allowed to be absent from the driven set. Coverage is asserted
-# against this set below, so PASS cannot be earned by silently dropping a stage
-# that is drivable: a gap outside this set fails the run.
-KNOWN_BLOCKED_STAGES = (
-    "PROJECT_DEFINED",          # preflight hardcodes the six oil project types
-    "CAMPAIGN_OPENED",          # no campaign producer script exists in the pack
-    "MODEL_BUILT",              # preflight demands decision GO from an UNDECIDED bench_test
-    "NEXT_BATCH_DECIDED",       # no next_batch producer script exists in the pack
-    "NON_INFERIORITY_PASSED",   # blocked by MODEL_BUILT in-chain
-    "PROCESS_SCALE_VALIDATED",  # blocked by NON_INFERIORITY_PASSED in-chain
-    "VERIFIED",                 # gate-review demands the optimization artifact at OPTIMIZED
+# The exact refusals the negative checks below pin. Each is the product's own
+# wording, asserted against the observed output (never softened).
+CAMPAIGN_SYNTHETIC_BENCH_GAP = "is SYNTHETIC and may not back a PHYSICAL campaign"
+NEXT_BATCH_EXPLANATIONS_GAP = (
+    "next_batch.competing_explanations must declare at least two competing explanations"
 )
+GREASE_PRECONDITION_GAP = "is required on the PRECISION_GREASE_DEV route"
+# gate-review's stage constant for the oil routes (must survive the grease dispatch).
+GATE_OIL_STAGE_GAP = "optimization_artifact must be stage OPTIMIZED"
+
+# E2E-10: the printed retrieval summary line a knowledge-reuse consumer emits when
+# its query hits a closed history corpus (see skills/duty-definition and
+# skills/failure-ctq-analysis, both backed by scripts/knowledge_retrieval.py).
+RETRIEVAL_BACKEND = "backend=local_bm25"
+RETRIEVAL_LINE = "history_hits="
 
 
 def audit_problem_lines(stdout: str) -> list[str]:
@@ -340,50 +287,28 @@ def project_input() -> dict:
     }
 
 
-def project_artifact() -> dict:
-    artifact = {
-        "schema_version": "0.1.0",
-        "artifact_type": "project",
-        "project_id": PROJECT_ID,
-        "stage": "PROJECT_DEFINED",
-        "status": "ACTIVE",
-        "decision_question": "Proceed to duty definition for the precision-gear grease campaign?",
-        "hypothesis": "The supplied precision-gear grease brief is sufficient to define duty conditions.",
-        "uncertainty": f"{SIM}: duty conditions are not yet defined.",
-        "evidence": [
-            {
-                "evidence_id": "E-PROJ-E2E-001",
-                "statement": f"{SIM}: approved brief requests a precision-gear grease with an OEM grease as the performance benchmark.",
-                "source": SIM,
-                "status": "ASSUMED",
-            }
-        ],
-        "decision_rule": "Recorded goals, constraints, and success criteria are required.",
-        "result": "Project Charter recorded for the precision-gear grease campaign.",
-        "decision": "GO",
-        "next_action": "Define duty conditions.",
-        "project_name": "Precision-gear grease E2E campaign",
-        "project_type": PROJECT_TYPE,
-        "product_family": "Precision-gear (harmonic drive) grease",
-        "business_objective": "Qualify a precision-gear grease against the OEM reference grease.",
-        "technical_objective": "Maintain the required CTQ and risk boundaries under the harmonic-drive duty.",
-        "hard_constraints": [
-            "Reference materials must exist as physical samples before method qualification.",
-        ],
-        "target_cost": {
-            "value": 120,
-            "unit": "CNY/kg",
-            "source": SIM,
-            "method_version": "cost-baseline-v1",
-            "material_batch": "not_applicable",
-            "formula_version": "baseline-v1",
-        },
-        "benchmark_products": ["Synthetic OEM precision-gear grease reference"],
-        "success_criteria": ["Critical CTQs have evidence."],
-        "risk_class": "STRATEGIC",
-        "owner": "R&D owner",
+def project_ceiling_input() -> dict:
+    """The same grease charter with cost as a CEILING instead of a reduction target.
+
+    Cost is a constraint, never a criterion: on a grease project the cost is a limit
+    to respect, so the schema accepts cost_ceiling + cost_basis_reason in place of
+    target_cost. Keeping this reachable through the skill path is asserted in the
+    PROJECT_DEFINED section.
+    """
+    data = project_input()
+    data.pop("target_cost", None)
+    data["cost_ceiling"] = {
+        "value": 220,
+        "unit": "CNY/kg",
+        "source": SIM,
+        "method_version": "cost-baseline-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "baseline-v1",
     }
-    return artifact
+    data["cost_basis_reason"] = (
+        f"{SIM}: a performance-first grease charter sets a cost ceiling to respect, not a reduction target."
+    )
+    return data
 
 
 def duty_input(project_path: Path) -> dict:
@@ -890,7 +815,12 @@ def bench_input() -> dict:
             "cost_per_run": {"value": 12000, "unit": "CNY/run", "source": SIM},
             "source": SIM,
             "evidence_id": "EV-BENCH-PGD-E2E-01",
-            "evidence_scope": "SYNTHETIC",
+            # This fixture chain declares PHYSICAL throughout (the SIM text above is
+            # the provenance label on the content). The bench carries the same scope
+            # as the rest of the chain because the campaign gate enforces the bench
+            # skill's NO Synthetic Closure red line: a PHYSICAL campaign may not draw
+            # its scarce slots from a SYNTHETIC bench record.
+            "evidence_scope": "PHYSICAL",
             "evidence": [
                 {
                     "evidence_id": "EV-BENCH-PGD-E2E-01",
@@ -903,54 +833,58 @@ def bench_input() -> dict:
     }
 
 
-def campaign_artifact() -> dict:
-    """CAMPAIGN_OPENED record. No skill script produces campaigns (see module docstring),
-    so the record is assembled inline against schemas/campaign.schema.json."""
+def campaign_input(project_path: Path, bench_path: Path) -> dict:
+    """The CAMPAIGN_OPENED request for bench-registration's campaign producer.
+
+    The request shape is the skill's own (preflight_campaign_registration ->
+    build_campaign_artifact -> validate_campaign_artifact): the campaign record
+    plus the two upstream artifacts it draws on, supplied by path so the gate can
+    re-read them. ``max_iterations`` is deliberately OMITTED so this run exercises
+    the skill's contract-default path (the cap is read from
+    contracts/state-machine.json and the builder records that provenance), and the
+    round-1 entry cites the ids the later stages of this chain actually produce,
+    so the entry and the next_batch record it authorises agree by construction.
+    """
     return {
-        "schema_version": "0.1.0",
-        "artifact_type": "campaign",
-        "project_id": PROJECT_ID,
-        "stage": "CAMPAIGN_OPENED",
-        "evidence_scope": "PHYSICAL",
-        "decision_question": "How should the inner bench loop proceed after iteration 1?",
-        "hypothesis": "Paired A/B rounds can resolve the target difference within the available bench slots.",
-        "uncertainty": f"{SIM}: only four bench positions are available in the first round.",
-        "evidence": [
-            {
-                "evidence_id": "E-CM-PGD-E2E-001",
-                "statement": f"{SIM}: campaign record recorded for contract validation only; this is not product evidence.",
-                "source": SIM,
-                "status": "ASSUMED",
-            }
-        ],
-        "decision_rule": "Continue only while stop_state is CONTINUE and the iteration count stays within max_iterations.",
-        "result": "Iteration 1 opened with a four-run paired round.",
-        "decision": "GO",
-        "next_action": "Run iteration 1 and decide the next round from its variance assessment.",
-        "campaign_id": "CMP-PGD-E2E-001",
-        "bench_references": [BENCH_ID],
-        "max_iterations": 12,
-        "current_iteration": 1,
-        "iterations": [
-            {
-                "iteration": 1,
-                "samples": ["SMP-PGD-E2E-001", "SMP-PGD-E2E-002"],
-                "stop_state": "CONTINUE",
-                "screening_reference": "SCR-PGD-E2E-001",
-                "variance_reference": "VAR-PGD-E2E-001",
-                "model_reference": "MODEL-PGD-E2E-001",
-                "next_batch_reference": "NEXT-PGD-E2E-001",
-                "bench_test_references": [
-                    "RUN-PGD-E2E-001",
-                    "RUN-PGD-E2E-002",
-                    "RUN-PGD-E2E-003",
-                    "RUN-PGD-E2E-004",
-                ],
-            }
-        ],
-        "pairing_design": {
-            "paired": True,
-            "description": f"{SIM}: A/B pair runs in the same round; at a fixed sigma, pairing buys more resolution than measuring sigma precisely.",
+        "project_artifact": project_path.name,
+        "bench_artifacts": [bench_path.name],
+        "campaign": {
+            "campaign_id": "CMP-PGD-E2E-001",
+            "project_reference": PROJECT_ID,
+            "bench_references": [BENCH_ID],
+            "current_iteration": 1,
+            "iterations": [
+                {
+                    "iteration": 1,
+                    "samples": ["SMP-PGD-E2E-001", "SMP-PGD-E2E-002"],
+                    "stop_state": "CONTINUE",
+                    "screening_reference": "SCR-PGD-E2E-001",
+                    "variance_reference": "VAR-PGD-E2E-001",
+                    "model_reference": "MODEL-PGD-E2E-001",
+                    "next_batch_reference": "NEXT-PGD-E2E-001",
+                    "bench_test_references": [
+                        "RUN-PGD-E2E-001",
+                        "RUN-PGD-E2E-002",
+                        "RUN-PGD-E2E-003",
+                        "RUN-PGD-E2E-004",
+                    ],
+                }
+            ],
+            "pairing_design": {
+                "paired": True,
+                "description": f"{SIM}: A/B pair runs in the same round; at a fixed sigma, pairing buys more resolution than measuring sigma precisely.",
+            },
+            "evidence_scope": "PHYSICAL",
+            "source": SIM,
+            "evidence_id": "E-CM-PGD-E2E-001",
+            "evidence": [
+                {
+                    "evidence_id": "E-CM-PGD-E2E-001",
+                    "statement": f"{SIM}: campaign record recorded for contract validation only; this is not product evidence.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                }
+            ],
         },
     }
 
@@ -1443,21 +1377,35 @@ def application_validation_input(application_path: Path, campaign_path: Path, be
 
 
 def knowledge_input(project_path: Path) -> dict:
+    """The KNOWLEDGE_ARCHIVED request, with each asset reference bound to a real record.
+
+    ``knowledge_assets.<key>.artifact_reference`` is a free-text reference, so this
+    request points every one of the six assets at the artifact of this workspace
+    that actually carries it (the workspace root is the request's own directory,
+    exactly as the other artifact references in this chain resolve). main() then
+    asserts each reference RESOLVES -- the file exists and carries the artifact
+    type / stage the asset names -- so the six ``present`` flags are a claim the
+    chain can check, not the test reading its own request back.
+    """
     return {
         "project_artifact": project_path.name,
         "asset_status": "CLOSED_KNOWLEDGE",
         "knowledge_assets": {
-            "recommended_formula": {"artifact_reference": "FORMULA-REC-PGD-E2E-001", "present": True},
-            "feasible_design_space": {"artifact_reference": "DS-FEASIBLE-PGD-E2E-001", "present": True},
-            "critical_failure_boundaries": {"artifact_reference": "CFB-PGD-E2E-001", "present": True},
+            # The stage-16 optimization artifact records the recommended formula
+            # (its objectives and methods are what the closed loop recommends).
+            "recommended_formula": {"artifact_reference": "optimization.json", "present": True},
+            "feasible_design_space": {"artifact_reference": "design_space.json", "present": True},
+            "critical_failure_boundaries": {"artifact_reference": "failure_ctq.json", "present": True},
+            # The evidence package is the applied/validated record; its
+            # qualification reference is the gate review that verified the chain.
             "evidence_package": {
-                "artifact_reference": "EP-PGD-E2E-001",
+                "artifact_reference": "application.json",
                 "present": True,
-                "qualification_reference": "EQ-PGD-E2E-001",
+                "qualification_reference": "gate.json",
                 "qualification": "QUALIFIED",
             },
-            "material_knowledge": {"artifact_reference": "MAT-KNOW-PGD-E2E-001", "present": True},
-            "model": {"artifact_reference": "MODEL-PGD-E2E-001", "present": True},
+            "material_knowledge": {"artifact_reference": "material-base-oil.json", "present": True},
+            "model": {"artifact_reference": "model.json", "present": True},
         },
         "evidence_scope": "PHYSICAL",
         "evidence": [
@@ -1578,64 +1526,68 @@ def gate_request(project_path: Path, challenge_path: Path, failure_path: Path, m
     }
 
 
-def next_batch_artifact() -> dict:
-    """NEXT_BATCH_DECIDED record. No script in the pack produces next_batch
-    artifacts (see NO_PRODUCER_STAGES), so this record is assembled inline
-    against schemas/next_batch.schema.json and is always reported as a fixture.
+def next_batch_input(campaign_path: Path, experiment_design_path: Path, variance_path: Path) -> dict:
+    """The NEXT_BATCH_DECIDED request for doe-design's next_batch producer.
 
-    The ids and the CONTINUE stop_state are made consistent with the campaign
-    record the chain also assembles, so the two fixture records do not dangle.
+    Shape is the skill's own (preflight_next_batch -> build_next_batch_artifact ->
+    validate_next_batch_artifact): the three upstream records the decision is
+    taken at, plus the record's own fields. The two competing explanations are
+    DECLARED here because the gate refuses to compose one, and every proposed
+    sample quotes its discriminating pair from those declarations. The iteration
+    pair (from_iteration/to_iteration) is not supplied at all: the builder derives
+    it from the campaign carrier, so the record cannot claim a round boundary the
+    campaign does not have.
     """
     return {
-        "schema_version": "0.1.0",
-        "artifact_type": "next_batch",
-        "project_id": PROJECT_ID,
-        "stage": "NEXT_BATCH_DECIDED",
-        "evidence_scope": "PHYSICAL",
-        "decision_question": "Which samples should inner-loop round 2 run, and does the loop continue?",
-        "hypothesis": "One more paired round can separate a formulation effect from bench-to-bench drift.",
-        "uncertainty": f"{SIM}: the first round cannot yet tell the two explanations apart.",
-        "evidence": [
-            {
-                "evidence_id": "E-NB-PGD-E2E-001",
-                "statement": f"{SIM}: the round 1 variance assessment reports a consistent arm difference.",
-                "source": SIM,
-                "status": "ASSUMED",
-            },
-            {
-                "evidence_id": "E-NB-PGD-E2E-002",
-                "statement": f"{SIM}: the campaign record still has bench slots left before max_iterations.",
-                "source": SIM,
-                "status": "ASSUMED",
-            },
-        ],
-        "decision_rule": "Run the next round only while stop_state is CONTINUE and a sample exists that separates two competing hypotheses; stop the loop when it does not.",
-        "result": "Round 1 ended CONTINUE, so round 2 is opened with the paired samples swapped.",
-        "decision": "GO",
-        "next_action": "Hand the proposed samples to the doe-design step as the round 2 request.",
-        "next_batch_id": "NEXT-PGD-E2E-001",
-        "campaign_reference": "CMP-PGD-E2E-001",
-        "from_iteration": 1,
-        "to_iteration": 2,
-        "proposed_samples": [
-            {
-                "sample_reference": "SMP-PGD-E2E-003",
-                "hypothesis": "The round 1 arm difference is a formulation effect rather than bench-to-bench drift.",
-                "discriminates": "Formulation effect explains the round 1 difference vs bench drift explains the round 1 difference.",
-            },
-            {
-                "sample_reference": "SMP-PGD-E2E-004",
-                "hypothesis": "The soap fraction, not the base oil, sets the observed difference.",
-                "discriminates": "Soap fraction drives the response vs base oil drives the response.",
-            },
-        ],
-        "information_gain_basis": (
-            f"{SIM}: the two proposed samples are the swapped halves of the round 1 pair, so the round 2 "
-            "contrast cancels bench drift instead of measuring it, which no single-arm sample can do."
-        ),
-        "bench_slots_required": 2,
-        "stop_state": "CONTINUE",
-        "next_round_budget": {"bench_slots_remaining": 4, "calendar_days_remaining": 60},
+        "campaign_artifact": campaign_path.name,
+        "experiment_design_artifact": experiment_design_path.name,
+        "variance_artifact": variance_path.name,
+        "next_batch": {
+            "next_batch_id": "NEXT-PGD-E2E-001",
+            "stop_state": "CONTINUE",
+            "bench_slots_required": 2,
+            "information_gain_basis": (
+                f"{SIM}: the two proposed samples are the swapped halves of the round 1 pair, so the round 2 "
+                "contrast cancels bench drift instead of measuring it, which no single-arm sample can do."
+            ),
+            "competing_explanations": [
+                {
+                    "explanation_id": "EXPL-FORMULATION-EFFECT",
+                    "statement": "The round 1 arm difference is a formulation effect that travels with the formula.",
+                },
+                {
+                    "explanation_id": "EXPL-BENCH-DRIFT",
+                    "statement": "The round 1 arm difference is bench-to-bench drift that follows the run order.",
+                },
+            ],
+            "proposed_samples": [
+                {
+                    "sample_reference": "SMP-PGD-E2E-003",
+                    "hypothesis": "EXPL-FORMULATION-EFFECT",
+                    "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"],
+                },
+                {
+                    "sample_reference": "SMP-PGD-E2E-004",
+                    "hypothesis": "EXPL-BENCH-DRIFT",
+                    "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"],
+                },
+            ],
+            "next_round_budget": {"bench_slots_remaining": 4, "calendar_days_remaining": 60},
+            "evidence": [
+                {
+                    "evidence_id": "E-NB-PGD-E2E-001",
+                    "statement": f"{SIM}: the round 1 variance assessment reports a consistent arm difference.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                },
+                {
+                    "evidence_id": "E-NB-PGD-E2E-002",
+                    "statement": f"{SIM}: the campaign record still has bench slots left before max_iterations.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                },
+            ],
+        },
     }
 
 
@@ -1683,11 +1635,14 @@ def main() -> int:
         # workspace's canonical artifact names. Request files carry an
         # ``input-`` prefix so the naming checker reads them as unrelated.
 
-        # Stages whose producing skill cannot be driven here, and audit-topic
-        # gaps: collected while the chain runs and printed at the end, so the
-        # report reflects what actually happened.
+        # Stages that ARE driven by their skill are appended to ``driven_stages`` at
+        # the point of the drive; ``stage_gaps`` exists only as the safety net for a
+        # stage that has to be skipped, and the coverage assertion at the end of main
+        # requires it to be EMPTY and the driven list to equal the whole route. A
+        # skip therefore has to be recorded here on purpose -- it can never hide
+        # behind a printout.
         stage_gaps: dict[str, str] = {}
-        audit_topic_gaps: list[str] = []
+        driven_stages: list[str] = []
 
         def write_input(name: str, payload: object) -> Path:
             path = ws / name
@@ -1704,43 +1659,46 @@ def main() -> int:
             return path
 
         # --- 1. PROJECT_DEFINED (project-definition) ---------------------------
+        # The builder this stage is driven with is asserted to exist first: a skill
+        # that silently loses its writer is a coverage regression, not a skip.
+        project_builder = stage_script["PROJECT_DEFINED"] / "build_project_artifact.py"
+        assert project_builder.is_file(), (
+            "project-definition ships no build_project_artifact.py: the route's own charter can no longer be "
+            "produced by the skill, so PROJECT_DEFINED cannot be driven (update this test only with the drive "
+            "replaced by a real producer)"
+        )
         route_allow("DRAFT", "PROJECT_DEFINED")
         project_request = write_input("input-project.json", project_input())
-        # Evidence for NO_BUILDER_STAGES: this skill ships no builder to run.
-        project_builders = sorted(path.name for path in stage_script["PROJECT_DEFINED"].glob("build_*.py"))
-        if project_builders:
-            print("NOTE: project-definition now ships builders: " + ", ".join(project_builders) +
-                  " (the NO_BUILDER_STAGES accounting in this test needs revisiting)")
-        project_preflight = run(
-            stage_script["PROJECT_DEFINED"] / "preflight_project_definition.py", project_request
+        project_path = drive(
+            stage_script["PROJECT_DEFINED"] / "preflight_project_definition.py",
+            project_builder,
+            stage_script["PROJECT_DEFINED"] / "validate_project_artifact.py",
+            project_request,
+            "project.json",
         )
-        if project_preflight.returncode != 0:
-            # KNOWN GAP: PROJECT_TYPES hardcodes the six oil types; the seventh is
-            # in schemas/project.schema.json but not in this preflight.
-            assert PROJECT_DEFINITION_GAP in project_preflight.stdout, project_preflight.stdout
-            stage_gaps["PROJECT_DEFINED"] = (
-                "the project-definition preflight hardcodes the six oil project types (PROJECT_TYPES) "
-                "and refuses the route's own charter: " + project_preflight.stdout.strip()
-            )
-            print("KNOWN GAP (product code): " + project_preflight.stdout.strip())
-        else:
-            print("project-definition preflight accepts PRECISION_GREASE_DEV (gap closed upstream)")
-        # The gap record must mirror the observed preflight outcome: a refusal
-        # that was not recorded would silently vanish from the coverage report.
-        assert (project_preflight.returncode != 0) == ("PROJECT_DEFINED" in stage_gaps), (
-            project_preflight.returncode, stage_gaps.get("PROJECT_DEFINED")
-        )
-        # The charter below is a FIXTURE, not a skill output: the skill ships no
-        # builder (globbed above) and its SKILL.md Step 2 has the caller assemble
-        # the candidate charter for the validator to check. The rest of the chain
-        # consumes it as upstream input, and PROJECT_DEFINED is never counted as a
-        # driven stage (see NO_BUILDER_STAGES and the coverage assertions below).
-        print("FIXTURE (not a skill output): the charter is caller-assembled per "
-              "project-definition/SKILL.md Step 2; PROJECT_DEFINED is never counted as driven")
-        project_path = ws / "project.json"
-        write_json(project_path, project_artifact())
-        run_ok(stage_script["PROJECT_DEFINED"] / "validate_project_artifact.py", project_path)
-        check_schema("project", project_path)
+        project_record = check_schema("project", project_path)
+        assert project_record["project_type"] == PROJECT_TYPE, project_record
+        assert project_record["stage"] == "PROJECT_DEFINED", project_record["stage"]
+        assert project_record["decision"] == "GO" and project_record["status"] == "ACTIVE", project_record
+        driven_stages.append("PROJECT_DEFINED")
+
+        # The route's own cost semantics must stay reachable: on a grease charter the
+        # cost is a ceiling to respect, not a reduction target, so the schema allows
+        # cost_ceiling + cost_basis_reason instead of target_cost. A preflight that
+        # out-requires the schema would make that branch dead and force every grease
+        # charter to declare a target it does not have -- this asserts it does not.
+        # (Built into its own probe directory: the chain workspace keeps exactly one
+        # charter, and a second one there is itself a finding.)
+        ceiling_request = write_input("input-project-ceiling.json", project_ceiling_input())
+        ceiling_dir = ws / "cost-ceiling-probe"
+        ceiling_dir.mkdir(parents=True, exist_ok=True)
+        ceiling_path = ceiling_dir / "project.json"
+        run_ok(stage_script["PROJECT_DEFINED"] / "preflight_project_definition.py", ceiling_request)
+        run_ok(project_builder, ceiling_request, ceiling_path)
+        run_ok(stage_script["PROJECT_DEFINED"] / "validate_project_artifact.py", ceiling_path)
+        ceiling_record = check_schema("project", ceiling_path)
+        assert "target_cost" not in ceiling_record, ceiling_record
+        assert ceiling_record["cost_ceiling"]["value"] == 220, ceiling_record["cost_ceiling"]
 
         # --- 2. DUTY_DEFINED (duty-definition) ---------------------------------
         route_allow("PROJECT_DEFINED", "DUTY_DEFINED")
@@ -1753,6 +1711,7 @@ def main() -> int:
             "duty.json",
         )
         check_schema("duty", duty_path)
+        driven_stages.append("DUTY_DEFINED")
 
         # Supporting material for the next stage: the Challenge Map member. It is
         # produced by duty-challenge-analysis (a stage this route does not carry)
@@ -1779,6 +1738,7 @@ def main() -> int:
         )
         failure_artifact = check_schema("failure_ctq", failure_path)
         assert failure_artifact["stage"] == "FAILURE_CTQ_DEFINED", failure_artifact["stage"]
+        driven_stages.append("FAILURE_MECHANISM_DEFINED")
 
         # --- 4. REFERENCE_MATERIAL_RESOLVED (reference-material) ---------------
         route_allow("FAILURE_MECHANISM_DEFINED", "REFERENCE_MATERIAL_RESOLVED")
@@ -1792,6 +1752,7 @@ def main() -> int:
         )
         reference_artifact = check_schema("reference", reference_path)
         assert reference_artifact["downstream_flag"] == "DISCRIMINATION_EVIDENCE_COMPLETE", reference_artifact
+        driven_stages.append("REFERENCE_MATERIAL_RESOLVED")
 
         # --- 5. TEST_METHODS_QUALIFIED (test-method-qualification) -------------
         route_allow("REFERENCE_MATERIAL_RESOLVED", "TEST_METHODS_QUALIFIED")
@@ -1804,6 +1765,7 @@ def main() -> int:
             "test_method.json",
         )
         check_schema("test_method", method_path)
+        driven_stages.append("TEST_METHODS_QUALIFIED")
 
         # --- 6. DESIGN_SPACE_DEFINED (formulation-design) ----------------------
         route_allow("TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED")
@@ -1833,6 +1795,7 @@ def main() -> int:
         )
         baseline_artifact = check_schema("process", process_baseline_path)
         assert baseline_artifact["stage"] == "DESIGN_SPACE_DEFINED", baseline_artifact["stage"]
+        driven_stages.append("DESIGN_SPACE_DEFINED")
 
         # --- 7. BENCH_RESOURCE_REGISTERED (bench-registration) -----------------
         route_allow("DESIGN_SPACE_DEFINED", "BENCH_RESOURCE_REGISTERED")
@@ -1846,30 +1809,63 @@ def main() -> int:
         )
         bench_artifact = check_schema("bench", bench_path)
         assert bench_artifact["available_bench_slots"] == 4, bench_artifact["available_bench_slots"]
+        assert bench_artifact["evidence_scope"] == "PHYSICAL", bench_artifact["evidence_scope"]
+        driven_stages.append("BENCH_RESOURCE_REGISTERED")
 
         # --- 8. CAMPAIGN_OPENED (bench-registration) ---------------------------
         route_allow("BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED")
-        # KNOWN GAP: the router maps this stage to bench-registration, but no
-        # script anywhere in the pack assembles a campaign artifact. That absence
-        # is asserted, not assumed: if a producer ever appears, this test fails
-        # loudly instead of keeping an inline fixture in front of it.
+        # The router maps this stage to bench-registration, and the skill now ships
+        # the campaign producer. Both facts are asserted BEFORE the drive: the
+        # producer must exist (a silent removal would make this stage undrivable)
+        # and must live in the skill the contract routes the stage to.
         campaign_producers = has_producer("campaign")
-        assert not campaign_producers, (
-            "a campaign producer now exists: " + ", ".join(campaign_producers) +
-            "; drive it here (preflight -> build -> validate) instead of assembling campaign.json "
-            "inline, and update NO_PRODUCER_STAGES in this test"
+        assert campaign_producers, (
+            "no script in the pack assembles a campaign artifact: CAMPAIGN_OPENED cannot be driven "
+            "(the drive below needs a real campaign producer under the routed skill)"
         )
-        stage_gaps["CAMPAIGN_OPENED"] = (
-            "no script in the pack assembles a campaign artifact (router maps the stage to "
-            "bench-registration, which ships no campaign preflight/build/validate); campaign.json is "
-            "inline-assembled only because the APPLIED gate consumes it as upstream"
+        assert any(Path(hit).parts[:2] == ("skills", STAGE_SKILL["CAMPAIGN_OPENED"]) for hit in campaign_producers), (
+            "the campaign producer exists but does not live under the routed skill: " + repr(campaign_producers)
         )
-        print("KNOWN GAP (product code): CAMPAIGN_OPENED has no producing script anywhere in the pack")
-        print("FIXTURE (not a skill output): campaign.json is caller-assembled; "
-              "CAMPAIGN_OPENED is never counted as driven")
-        campaign_path = ws / "campaign.json"
-        write_json(campaign_path, campaign_artifact())
-        check_schema("campaign", campaign_path)
+        campaign_request = write_input("input-campaign.json", campaign_input(project_path, bench_path))
+        campaign_path = drive(
+            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py",
+            stage_script["CAMPAIGN_OPENED"] / "build_campaign_artifact.py",
+            stage_script["CAMPAIGN_OPENED"] / "validate_campaign_artifact.py",
+            campaign_request,
+            "campaign.json",
+        )
+        campaign_record = check_schema("campaign", campaign_path)
+        assert campaign_record["stage"] == "CAMPAIGN_OPENED", campaign_record["stage"]
+        assert campaign_record["decision"] == "GO", campaign_record["decision"]
+        assert campaign_record["current_iteration"] == 1, campaign_record["current_iteration"]
+        # The request omits the cap on purpose, so the artifact must carry the
+        # contract's published figure and say where it came from -- a cap this
+        # chain could see invented would be worse than no cap at all.
+        assert "max_iterations" not in read_json(campaign_request)["campaign"], "the contract-default path is the one under test"
+        assert campaign_record["max_iterations"] == contract["max_iterations"], (
+            campaign_record["max_iterations"], contract["max_iterations"]
+        )
+        assert any(item.get("source") == "contracts/state-machine.json" for item in campaign_record["evidence"]), (
+            "the contract-derived cap must record its provenance on the artifact: " + repr(campaign_record["evidence"])
+        )
+        driven_stages.append("CAMPAIGN_OPENED")
+
+        # The stage's NO Synthetic Closure gate is real: the same campaign on the
+        # same bench, but with the bench record downgraded to SYNTHETIC, is refused.
+        synthetic_bench = read_json(bench_path)
+        synthetic_bench["evidence_scope"] = "SYNTHETIC"
+        synthetic_bench_path = write_input("input-bench-synthetic.json", synthetic_bench)
+        synthetic_campaign_request = write_input(
+            "input-campaign-synthetic-bench.json",
+            campaign_input(project_path, synthetic_bench_path),
+        )
+        synthetic_refusal = run(
+            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py", synthetic_campaign_request
+        )
+        assert synthetic_refusal.returncode != 0 and CAMPAIGN_SYNTHETIC_BENCH_GAP in synthetic_refusal.stdout, (
+            synthetic_refusal.stdout
+        )
+        print("gate ok: the campaign preflight refuses a PHYSICAL campaign drawing slots from a SYNTHETIC bench")
 
         # --- 9. EXPERIMENT_DESIGNED (doe-design) -------------------------------
         route_allow("CAMPAIGN_OPENED", "EXPERIMENT_DESIGNED")
@@ -1892,7 +1888,10 @@ def main() -> int:
         compute = subprocess.run(
             [sys.executable, "-B", "run_compute.py"],
             cwd=stage_script["EXPERIMENT_DESIGNED"],
-            input=json.dumps(doe_engine_input(), ensure_ascii=False),
+            # The request handed to the engine is the file this test wrote, so the
+            # record on disk is the one the engine actually consumed (never a
+            # re-rendered copy of it).
+            input=engine_input.read_text(encoding="utf-8"),
             capture_output=True,
             text=True,
         )
@@ -1900,9 +1899,21 @@ def main() -> int:
         envelope = json.loads(compute.stdout)["result"]
         assert envelope["status"] == "OK", envelope.get("rejection_reasons")
         assert envelope["result"]["run_count"] == 4, envelope["result"]
+        # The engine's own points are checked against the factor box the request
+        # declared, and against each other: a run outside its declared bounds, or a
+        # repeated corner, would make the batch (and the experiment import that
+        # consumes this output) meaningless.
+        declared = {factor["factor_id"]: factor["range"] for factor in doe_engine_input()["factors"]}
+        points = envelope["result"]["runs"]
+        assert len(points) == 4, points
+        for point in points:
+            for factor_id, value in point["settings"].items():
+                lower, upper = declared[factor_id]["lower"], declared[factor_id]["upper"]
+                assert lower <= value <= upper, (point, factor_id, lower, upper)
+        assert len({tuple(sorted(point["settings"].items())) for point in points}) == 4, points
         doe_output_path = ws / "doe-output.json"
         write_json(doe_output_path, envelope)
-        assert engine_input.is_file()
+        driven_stages.append("EXPERIMENT_DESIGNED")
 
         # --- 10. BATCH_PRODUCED (grease-batch) ---------------------------------
         route_allow("EXPERIMENT_DESIGNED", "BATCH_PRODUCED")
@@ -1919,6 +1930,7 @@ def main() -> int:
         sample_path = ws / "sample.json"
         check_schema("sample", sample_path)
         assert read_json(sample_path)["sample_id"] == "SMP-PGD-E2E-001", read_json(sample_path)
+        driven_stages.append("BATCH_PRODUCED")
 
         # --- 11. SCREENING_PASSED (grease-screening) ---------------------------
         route_allow("BATCH_PRODUCED", "SCREENING_PASSED")
@@ -1932,6 +1944,7 @@ def main() -> int:
         )
         screening_artifact = check_schema("screening", screening_path)
         assert screening_artifact["decision"] == "GO", screening_artifact["decision"]
+        driven_stages.append("SCREENING_PASSED")
 
         # --- 12. BENCH_TESTED (experiment-import, bench path) ------------------
         route_allow("SCREENING_PASSED", "BENCH_TESTED")
@@ -1983,6 +1996,7 @@ def main() -> int:
         )
         experiment_artifact = check_schema("experiment", experiment_path)
         assert experiment_artifact["stage"] == "EXPERIMENT_RUNNING", experiment_artifact["stage"]
+        driven_stages.append("BENCH_TESTED")
 
         # --- 13. VARIANCE_ASSESSED (variance-assessment) -----------------------
         route_allow("BENCH_TESTED", "VARIANCE_ASSESSED")
@@ -1998,6 +2012,7 @@ def main() -> int:
         assert variance_artifact["verdict"] == "CONSISTENT_DIFFERENCE", variance_artifact["verdict"]
         assert variance_artifact["decision"] == "GO", variance_artifact["decision"]
         assert variance_artifact["computed_by"] == "ENGINE", variance_artifact["computed_by"]
+        driven_stages.append("VARIANCE_ASSESSED")
 
         # --- 14. MODEL_BUILT (statistical-analysis) ----------------------------
         route_allow("VARIANCE_ASSESSED", "MODEL_BUILT")
@@ -2006,141 +2021,188 @@ def main() -> int:
             model_input(project_path, method_path, design_space_path, experiment_design_path,
                         experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path),
         )
-        model_probe = run(
-            stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py", model_request
+        model_path = drive(
+            stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py",
+            stage_script["MODEL_BUILT"] / "build_model_artifact.py",
+            stage_script["MODEL_BUILT"] / "validate_model_artifact.py",
+            model_request,
+            "model.json",
         )
-        model_path = ws / "model.json"
-        if model_probe.returncode == 0:
-            print("statistical-analysis preflight accepts the inner-loop chain (gap closed upstream)")
-            run_ok(stage_script["MODEL_BUILT"] / "build_model_artifact.py", model_request, model_path)
-            run_ok(stage_script["MODEL_BUILT"] / "validate_model_artifact.py", model_path)
-            check_schema("model", model_path)
-        else:
-            # KNOWN GAP: the generic upstream loop demands decision GO from every
-            # supplied artifact, but the route's bench_test record is UNDECIDED by
-            # contract (a single bench run is a record, not a verdict).
-            assert MODEL_BUILT_GAP in model_probe.stdout, model_probe.stdout
-            stage_gaps["MODEL_BUILT"] = (
-                "the statistical-analysis preflight demands decision GO from every supplied upstream, "
-                "but the route's own bench_test record is UNDECIDED by contract: " + model_probe.stdout.strip()
-                + " (the same preflight fails OPEN when the four inner-loop keys are omitted: the grease "
-                "precondition is keyed on the request shape, not the project type - probe (e) below)"
-            )
-            print("KNOWN GAP (product code): " + model_probe.stdout.strip())
-            model_path = None
+        model_artifact = check_schema("model", model_path)
+        assert model_artifact["stage"] == "MODEL_BUILT", model_artifact["stage"]
+        assert model_artifact["decision"] == "GO", model_artifact["decision"]
+        # The route's bench_test record is UNDECIDED by contract (one bench run is a
+        # record, not a verdict) and is still the upstream the model consumes: the
+        # gate exempts it instead of demanding a verdict it must never carry. The
+        # artifact's own links, derived by the builder rather than copied from the
+        # request, are what bind the model to this chain.
+        assert read_json(bench_test_paths[0])["decision"] == "UNDECIDED", read_json(bench_test_paths[0])["decision"]
+        assert model_artifact["experiment_reference"] == experiment_artifact["experiment_id"], model_artifact
+        assert model_artifact["design_space_reference"] == read_json(design_space_path)["design_space_id"], model_artifact
+        assert METHOD_ID in model_artifact["test_method_references"], model_artifact
+        driven_stages.append("MODEL_BUILT")
+
+        # The grease precondition is keyed on the supplied charter's project_type,
+        # not on the request shape: the same PRECISION_GREASE_DEV analysis with the
+        # four inner-loop artifacts omitted is REFUSED. (The fail-open hole this
+        # chain used to record is closed; the refusal wording is the gate's own.)
+        oil_shaped_payload = model_input(project_path, method_path, design_space_path, experiment_design_path,
+                                         experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path)
+        for key in ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact"):
+            del oil_shaped_payload[key]
+        oil_shaped_request = write_input("input-model-oil-shaped.json", oil_shaped_payload)
+        oil_shaped_probe = run(
+            stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py", oil_shaped_request
+        )
+        assert oil_shaped_probe.returncode != 0 and GREASE_PRECONDITION_GAP in oil_shaped_probe.stdout, (
+            oil_shaped_probe.stdout
+        )
+        print("gate ok: statistical-analysis refuses a PRECISION_GREASE_DEV request that omits the four inner-loop artifacts")
 
         # --- 15. NEXT_BATCH_DECIDED (doe-design) --------------------------------
         route_allow("MODEL_BUILT", "NEXT_BATCH_DECIDED")
-        # KNOWN GAP: the router maps this stage to doe-design, but no script in
-        # the pack assembles a next_batch artifact. Same contract as CAMPAIGN_OPENED:
-        # the absence is asserted, no record is fabricated, and a future producer
-        # fails this test until it is driven here.
         next_batch_producers = has_producer("next_batch")
-        assert not next_batch_producers, (
-            "a next_batch producer now exists: " + ", ".join(next_batch_producers) +
-            "; drive it here (preflight -> build -> validate) and update NO_PRODUCER_STAGES in this test"
+        assert next_batch_producers, (
+            "no script in the pack assembles a next_batch artifact: NEXT_BATCH_DECIDED cannot be driven "
+            "(the drive below needs a real next_batch producer under the routed skill)"
         )
-        stage_gaps["NEXT_BATCH_DECIDED"] = (
-            "no script in the pack assembles a next_batch artifact (router maps the stage to "
-            "doe-design, which ships no next_batch preflight/build/validate); the record on disk is a "
-            "labelled fixture, never a skill output"
+        assert any(Path(hit).parts[:2] == ("skills", STAGE_SKILL["NEXT_BATCH_DECIDED"]) for hit in next_batch_producers), (
+            "the next_batch producer exists but does not live under the routed skill: " + repr(next_batch_producers)
         )
-        print("KNOWN GAP (product code): NEXT_BATCH_DECIDED has no producing script anywhere in the pack")
-        print("FIXTURE (not a skill output): next_batch.json is caller-assembled; "
-              "NEXT_BATCH_DECIDED is never counted as driven")
-        # The stage still lands a record: the route claims a NEXT_BATCH_DECIDED
-        # artifact, so the fixture is schema-checked and cross-checked against the
-        # campaign record (ids and stop_state) instead of the stage existing only
-        # as a route assertion.
-        next_batch_path = ws / "next_batch.json"
-        write_json(next_batch_path, next_batch_artifact())
+        next_batch_request = write_input(
+            "input-next-batch.json",
+            next_batch_input(campaign_path, experiment_design_path, variance_path),
+        )
+        next_batch_path = drive(
+            stage_script["NEXT_BATCH_DECIDED"] / "preflight_next_batch.py",
+            stage_script["NEXT_BATCH_DECIDED"] / "build_next_batch_artifact.py",
+            stage_script["NEXT_BATCH_DECIDED"] / "validate_next_batch_artifact.py",
+            next_batch_request,
+            "next_batch.json",
+        )
         next_batch_record = check_schema("next_batch", next_batch_path)
         assert next_batch_record["stage"] == "NEXT_BATCH_DECIDED", next_batch_record["stage"]
-        assert next_batch_record["campaign_reference"] == read_json(campaign_path)["campaign_id"], next_batch_record
-        assert next_batch_record["next_batch_id"] == read_json(campaign_path)["iterations"][0]["next_batch_reference"], next_batch_record
-        assert next_batch_record["stop_state"] == "CONTINUE", next_batch_record["stop_state"]
+        # The iteration pair is DERIVED from the campaign carrier (the request never
+        # supplies it), so the record cannot claim a round boundary the campaign does
+        # not have; the ids and the stop state must agree with the campaign's own
+        # round-1 entry, which is what authorises this decision.
+        assert (next_batch_record["from_iteration"], next_batch_record["to_iteration"]) == (1, 2), next_batch_record
+        assert next_batch_record["campaign_reference"] == campaign_record["campaign_id"], next_batch_record
+        assert next_batch_record["next_batch_id"] == campaign_record["iterations"][0]["next_batch_reference"], next_batch_record
+        assert next_batch_record["stop_state"] == campaign_record["iterations"][0]["stop_state"] == "CONTINUE", next_batch_record
+        assert next_batch_record["bench_slots_required"] == len(next_batch_record["proposed_samples"]) == 2, next_batch_record
+        driven_stages.append("NEXT_BATCH_DECIDED")
+
+        # The gate refuses to compose a hypothesis: a request that declares fewer
+        # than two competing explanations is held, never filled in with a plausible one.
+        singular_payload = next_batch_input(campaign_path, experiment_design_path, variance_path)
+        singular_payload["next_batch"]["competing_explanations"] = singular_payload["next_batch"]["competing_explanations"][:1]
+        singular_request = write_input("input-next-batch-single-explanation.json", singular_payload)
+        singular_probe = run(stage_script["NEXT_BATCH_DECIDED"] / "preflight_next_batch.py", singular_request)
+        assert singular_probe.returncode != 0 and NEXT_BATCH_EXPLANATIONS_GAP in singular_probe.stdout, (
+            singular_probe.stdout
+        )
+        print("gate ok: the next-batch preflight refuses a request with fewer than two competing explanations")
 
         # --- 16. NON_INFERIORITY_PASSED (optimization) -------------------------
         route_allow("NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED")
-        optimization_path = None
-        if model_path is None:
-            stage_gaps["NON_INFERIORITY_PASSED"] = (
-                "blocked in the chain by MODEL_BUILT (no model artifact can be built); the skill's own "
-                "preflight/build/validate exit 0/0/0 on the pack's recorded grease fixtures in the "
-                "gap-probe section"
-            )
-            print("BLOCKED: NON_INFERIORITY_PASSED needs a MODEL_BUILT artifact; the skill itself is exercised in the gap-probe section")
-        else:
-            optimization_request = write_input(
-                "input-optimization.json",
-                optimization_input(project_path, method_path, design_space_path, experiment_design_path,
-                                   experiment_path, model_path, variance_path),
-            )
-            optimization_path = drive(
-                stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py",
-                stage_script["NON_INFERIORITY_PASSED"] / "build_optimization_artifact.py",
-                stage_script["NON_INFERIORITY_PASSED"] / "validate_optimization_artifact.py",
-                optimization_request,
-                "optimization.json",
-            )
-            optimization_artifact = check_schema("optimization", optimization_path)
-            assert optimization_artifact["stage"] == "NON_INFERIORITY_PASSED", optimization_artifact["stage"]
-            assert optimization_artifact["decision"] == "GO", optimization_artifact["decision"]
+        optimization_request = write_input(
+            "input-optimization.json",
+            optimization_input(project_path, method_path, design_space_path, experiment_design_path,
+                               experiment_path, model_path, variance_path),
+        )
+        optimization_path = drive(
+            stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py",
+            stage_script["NON_INFERIORITY_PASSED"] / "build_optimization_artifact.py",
+            stage_script["NON_INFERIORITY_PASSED"] / "validate_optimization_artifact.py",
+            optimization_request,
+            "optimization.json",
+        )
+        optimization_artifact = check_schema("optimization", optimization_path)
+        assert optimization_artifact["stage"] == "NON_INFERIORITY_PASSED", optimization_artifact["stage"]
+        assert optimization_artifact["decision"] == "GO", optimization_artifact["decision"]
+        # The links and the grease trust region are the builder's own derivations:
+        # the artifact must cite the model and the round's variance record it was
+        # optimized against, and carry the applicability boundary the grease route
+        # requires, not a boundary the caller wrote.
+        assert optimization_artifact["model_reference"] == model_artifact["model_id"], optimization_artifact
+        assert optimization_artifact["variance_reference"] == variance_artifact["variance_id"], optimization_artifact
+        assert optimization_artifact["objectives"][0]["response_reference"] == CTQ_ID, optimization_artifact
+        assert optimization_artifact["engine_handoff"] == "PHASE4_DETERMINISTIC_ENGINE", optimization_artifact
+        driven_stages.append("NON_INFERIORITY_PASSED")
 
         # --- 17. PROCESS_SCALE_VALIDATED (process-scale-up) --------------------
         route_allow("NON_INFERIORITY_PASSED", "PROCESS_SCALE_VALIDATED")
-        window_path = None
-        if optimization_path is None:
-            stage_gaps["PROCESS_SCALE_VALIDATED"] = (
-                "blocked in the chain by NON_INFERIORITY_PASSED; the skill's own preflight/build/validate "
-                "exit 0/0/0 on the pack's recorded grease fixtures in the gap-probe section"
-            )
-            print("BLOCKED: PROCESS_SCALE_VALIDATED needs the NON_INFERIORITY_PASSED artifact; the skill itself is exercised in the gap-probe section")
-        else:
-            scale_up_request = write_input("input-scale-up.json", scale_up_input(process_baseline_path, optimization_path))
-            window_path = drive(
-                stage_script["PROCESS_SCALE_VALIDATED"] / "preflight_process_scale_up.py",
-                stage_script["PROCESS_SCALE_VALIDATED"] / "build_process_window_artifact.py",
-                stage_script["PROCESS_SCALE_VALIDATED"] / "validate_process_window_artifact.py",
-                scale_up_request,
-                "process.json",
-            )
-            window_artifact = check_schema("process", window_path)
-            assert window_artifact["stage"] == "PROCESS_SCALE_VALIDATED", window_artifact["stage"]
-            assert window_artifact["process_window"]["validated"] is True, window_artifact["process_window"]
-            assert window_artifact["process_window"]["evidence_reference"] == "PROCESS-WINDOW:PW-PGD-E2E-001-PROD", window_artifact
+        scale_up_request = write_input("input-scale-up.json", scale_up_input(process_baseline_path, optimization_path))
+        window_path = drive(
+            stage_script["PROCESS_SCALE_VALIDATED"] / "preflight_process_scale_up.py",
+            stage_script["PROCESS_SCALE_VALIDATED"] / "build_process_window_artifact.py",
+            stage_script["PROCESS_SCALE_VALIDATED"] / "validate_process_window_artifact.py",
+            scale_up_request,
+            "process.json",
+        )
+        window_artifact = check_schema("process", window_path)
+        # The stage constant is itself evidence: the builder derives it from the
+        # UPSTREAM optimization artifact's stage, so getting PROCESS_SCALE_VALIDATED
+        # (rather than the oil window stage) proves the grease dispatch saw this
+        # route's NON_INFERIORITY_PASSED artifact.
+        assert window_artifact["stage"] == "PROCESS_SCALE_VALIDATED", window_artifact["stage"]
+        assert window_artifact["process_window"]["validated"] is True, window_artifact["process_window"]
+        assert window_artifact["process_window"]["evidence_reference"] == "PROCESS-WINDOW:PW-PGD-E2E-001-PROD", window_artifact
+        driven_stages.append("PROCESS_SCALE_VALIDATED")
 
         # --- 18. VERIFIED (gate-review) ----------------------------------------
         route_allow("PROCESS_SCALE_VALIDATED", "VERIFIED")
-        if optimization_path is None:
-            stage_gaps["VERIFIED"] = (
-                "no optimization artifact exists in the chain, and gate-review's preflight additionally "
-                "hard-requires that artifact at stage OPTIMIZED while this route's stage is "
-                "NON_INFERIORITY_PASSED; the OPTIMIZED requirement is reproduced with the pack's fixtures "
-                "in the gap-probe section"
-            )
-            print("BLOCKED: VERIFIED (gate-review) cannot consume this route's optimization stage; demonstrated in the gap-probe section")
-        else:
-            gate_request_path = write_input(
-                "input-gate.json",
-                gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
-                             experiment_design_path, experiment_path, model_path, optimization_path),
-            )
-            gate_probe = run(stage_script["VERIFIED"] / "preflight_gate_review.py", gate_request_path)
-            gate_path = ws / "gate.json"
-            if gate_probe.returncode == 0:
-                print("gate-review preflight accepts NON_INFERIORITY_PASSED (gap closed upstream)")
-                run_ok(stage_script["VERIFIED"] / "build_gate_artifact.py", gate_request_path, gate_path)
-                run_ok(stage_script["VERIFIED"] / "validate_gate_artifact.py", gate_path)
-            else:
-                assert GATE_REVIEW_GAP in gate_probe.stdout, gate_probe.stdout
-                stage_gaps["VERIFIED"] = (
-                    "gate-review's preflight refuses the route's own optimization artifact: " +
-                    gate_probe.stdout.strip()
-                )
-                print("KNOWN GAP (product code): " + gate_probe.stdout.strip())
-            if gate_path.exists():
-                check_schema("gate", gate_path)
+        # The gate consumes the route's own optimization artifact at its own stage:
+        # the preflight dispatches the expected stage on the charter's project_type
+        # (the WP-14 fix this chain used to record as open), and the drive must land
+        # the gate artifact -- there is no "if it happened to exist" branch here.
+        gate_request_path = write_input(
+            "input-gate.json",
+            gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
+                         experiment_design_path, experiment_path, model_path, optimization_path),
+        )
+        gate_path = drive(
+            stage_script["VERIFIED"] / "preflight_gate_review.py",
+            stage_script["VERIFIED"] / "build_gate_artifact.py",
+            stage_script["VERIFIED"] / "validate_gate_artifact.py",
+            gate_request_path,
+            "gate.json",
+        )
+        gate_artifact = check_schema("gate", gate_path)
+        assert gate_artifact["stage"] == "VERIFIED", gate_artifact["stage"]
+        assert gate_artifact["gate_status"] == "GO", gate_artifact["gate_status"]
+        assert gate_artifact["experiment_reference"] == experiment_artifact["experiment_id"], gate_artifact
+        driven_stages.append("VERIFIED")
+
+        # The stage dispatch is route-local, and this is where that is locked: the
+        # SAME request with an oil charter (NEW_PRODUCT) makes the gate expect the
+        # oil constant again and the route's NON_INFERIORITY_PASSED artifact is
+        # refused. The grease allowance cannot leak into the six oil routes.
+        #
+        # The oil charter copy lives in its own directory on purpose: the chain audit
+        # dispatches the grease stage expectation from the first project-typed record
+        # it reads in the workspace ROOT, so a second charter there would shadow the
+        # real one (it would flip the audit itself onto the oil constants).
+        oil_check_dir = ws / "oil-charter-check"
+        oil_check_dir.mkdir()
+        oil_charter = read_json(project_path)
+        oil_charter["project_type"] = "NEW_PRODUCT"
+        oil_charter_path = oil_check_dir / "project.json"
+        write_json(oil_charter_path, oil_charter)
+        oil_gate_payload = gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
+                                        experiment_design_path, experiment_path, model_path, optimization_path)
+        oil_gate_payload["project_artifact"] = str(oil_charter_path)
+        # Every other reference is made absolute so the request resolves from the
+        # directory the copy lives in.
+        for key in sorted(key for key in oil_gate_payload if key.endswith("_artifact")):
+            oil_gate_payload[key] = str(ws / oil_gate_payload[key])
+        oil_gate_request = oil_check_dir / "input-gate-oil-charter.json"
+        write_json(oil_gate_request, oil_gate_payload)
+        oil_gate_probe = run(stage_script["VERIFIED"] / "preflight_gate_review.py", oil_gate_request)
+        assert oil_gate_probe.returncode != 0 and GATE_OIL_STAGE_GAP in oil_gate_probe.stdout, oil_gate_probe.stdout
+        print("gate ok: the same optimization artifact is refused under an oil charter (the stage expectation "
+              "stays OPTIMIZED for the six oil routes)")
 
         # --- 19. APPLIED (application-definition + application-validation) ------
         route_allow("VERIFIED", "APPLIED")
@@ -2163,6 +2225,7 @@ def main() -> int:
             stage_script["APPLIED"] / "preflight_application_validation.py", gate_entry_request
         )
         assert ready.stdout.startswith("READY:") and "APPLIED" in ready.stdout, ready.stdout
+        driven_stages.append("APPLIED")
 
         # --- 20. KNOWLEDGE_ARCHIVED (knowledge-archive) -------------------------
         route_allow("APPLIED", "KNOWLEDGE_ARCHIVED")
@@ -2188,6 +2251,64 @@ def main() -> int:
         assert set(assets) == expected_assets, sorted(assets)
         assert all(entry.get("present") is True for entry in assets.values()), assets
         assert knowledge_artifact["asset_status"] == "CLOSED_KNOWLEDGE", knowledge_artifact["asset_status"]
+        # The six present flags are a claim, not a read-back: every asset reference
+        # must RESOLVE to a record this workspace actually produced, and that record
+        # must carry the artifact type / stage the asset name implies. A reference
+        # that dangles -- or one pointing at the wrong kind of record -- fails here.
+        asset_resolution = {
+            "recommended_formula": ("optimization.json", "optimization", "NON_INFERIORITY_PASSED"),
+            "feasible_design_space": ("design_space.json", "design_space", "DESIGN_SPACE_DEFINED"),
+            "critical_failure_boundaries": ("failure_ctq.json", "failure_ctq", "FAILURE_CTQ_DEFINED"),
+            "evidence_package": ("application.json", "application", "APPLIED"),
+            "material_knowledge": ("material-base-oil.json", "material", "DESIGN_SPACE_DEFINED"),
+            "model": ("model.json", "model", "MODEL_BUILT"),
+        }
+        for key, (reference, artifact_type, stage) in asset_resolution.items():
+            entry = assets[key]
+            assert entry["artifact_reference"] == reference, (key, entry)
+            referenced = ws / reference
+            assert referenced.is_file(), f"{key} points at {reference}, which does not exist in the workspace"
+            target = check_schema(artifact_type, referenced)
+            assert target["stage"] == stage, (key, reference, target["stage"], stage)
+        qualification_path = ws / assets["evidence_package"]["qualification_reference"]
+        assert qualification_path.is_file(), assets["evidence_package"]
+        assert read_json(qualification_path)["stage"] == "VERIFIED", assets["evidence_package"]
+        driven_stages.append("KNOWLEDGE_ARCHIVED")
+
+        # --- E2E-10 retrieval closure ------------------------------------------
+        # A closed knowledge asset that no later project can find would close the
+        # chain on paper only. The route's own failure-mechanism query is run
+        # through the pack's retrieval consumer (the failure-ctq preflight drives
+        # scripts/knowledge_retrieval.py over history_roots), and then through the
+        # module directly, so both the consumer's printed summary and the module's
+        # own return value are asserted -- not the test's assumption about them.
+        retrieval_request = write_input(
+            "input-failure-retrieval.json",
+            {**failure_input(project_path, challenge_path), "history_roots": [str(ws)]},
+        )
+        retrieval = run_ok(
+            stage_script["FAILURE_MECHANISM_DEFINED"] / "preflight_failure_ctq.py", retrieval_request
+        )
+        summary = next((line for line in retrieval.stdout.splitlines() if line.startswith(RETRIEVAL_LINE)), None)
+        assert summary is not None, "the retrieval consumer printed no history summary: " + retrieval.stdout
+        assert RETRIEVAL_BACKEND in summary, summary
+        assert int(summary.split()[0].split("=")[1]) > 0, summary
+        assert any("artifact_type=knowledge_asset" in line and f"project_id={PROJECT_ID}" in line
+                   for line in retrieval.stdout.splitlines()), retrieval.stdout
+        print("E2E-10 ok: retrieval consumer reports " + summary)
+
+        retrieval_module = load_module(ROOT / "scripts" / "knowledge_retrieval.py", "e2e_knowledge_retrieval")
+        assert retrieval_module.describe_backend() == "local_bm25", retrieval_module.describe_backend()
+        hits = retrieval_module.search_history(
+            "Flexspline tooth-flank fretting wear with micro-pitting: asperity contact accumulates "
+            "fretting damage and grease hardening",
+            ws,
+        )
+        assert hits, "the archived knowledge_asset is not retrievable from the workspace that produced it"
+        assert all(hit["artifact_type"] == "knowledge_asset" for hit in hits), hits
+        assert any(Path(hit["source"]).resolve() == knowledge_path.resolve() for hit in hits), hits
+        print(f"E2E-10 ok: knowledge_retrieval.py backend={retrieval_module.describe_backend()} "
+              f"returns the archived asset as hit[0] (score={hits[0]['score']})")
 
         # --- chain audit over the workspace as built ---------------------------
         audit = run(AUDIT_SCRIPT, ws)
@@ -2198,202 +2319,30 @@ def main() -> int:
         assert ok_lines, audit.stdout
         print("audit_chain: no violation over the built workspace (" + str(len(ok_lines)) + " internal checks passed)")
 
-        # -----------------------------------------------------------------------
-        # gap probes: stages that cannot be driven inside the chain are located
-        # here with the pack's own recorded grease fixtures. The probes show the
-        # stage SKILLS run (optimization / process-scale-up) and pin the two
-        # cross-skill blockers (gate-review's OPTIMIZED requirement, audit_chain's
-        # optimization.json KINDS mapping) with their exact output.
-        # -----------------------------------------------------------------------
-        probes = ws / "gap-probes"
+        # The scratch copies this test needed along the way (the oil-charter copy,
+        # the SYNTHETIC-bench copy, the refused requests) all carry the ``input-``
+        # prefix, so the audit above reads them as scratch input rather than as
+        # chain records -- and the audit runs over the workspace AS BUILT, with
+        # every one of the 20 stage artifacts in it.
 
-        def copy_fixture(source: Path, target: Path) -> None:
-            shutil.copyfile(source, target)
-
-        # (a) optimization runs on the pack's recorded grease chain.
-        optimization_probe = probes / "optimization"
-        optimization_probe.mkdir(parents=True)
-        for name in (
-            "project-grease-active.json", "challenge-grease.json", "failure-ctq-grease.json",
-            "test-method-grease.json", "design-space-grease.json", "experiment-design-grease.json",
-            "experiment-grease.json", "model-grease.json", "variance-grease.json", "valid-input.grease.json",
-        ):
-            copy_fixture(ROOT / "fixtures" / "optimization" / name, optimization_probe / name)
-        probe_optimization = optimization_probe / "optimization-probe.json"
-        run_ok(
-            stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py",
-            optimization_probe / "valid-input.grease.json",
-        )
-        run_ok(
-            stage_script["NON_INFERIORITY_PASSED"] / "build_optimization_artifact.py",
-            optimization_probe / "valid-input.grease.json",
-            probe_optimization,
-        )
-        run_ok(stage_script["NON_INFERIORITY_PASSED"] / "validate_optimization_artifact.py", probe_optimization)
-        probe_optimization_artifact = check_schema("optimization", probe_optimization)
-        assert probe_optimization_artifact["stage"] == "NON_INFERIORITY_PASSED", probe_optimization_artifact["stage"]
-        print("gap-probe: optimization preflight/build/validate exit 0/0/0 on the pack's grease fixtures")
-
-        # (b) process-scale-up runs on the pack's recorded grease pair.
-        scale_probe = probes / "scale-up"
-        scale_probe.mkdir(parents=True)
-        for name in ("process-grease.json", "optimization-grease.json", "valid-input.grease.json"):
-            copy_fixture(ROOT / "fixtures" / "process-scale-up" / name, scale_probe / name)
-        probe_window = scale_probe / "process-window-probe.json"
-        run_ok(
-            stage_script["PROCESS_SCALE_VALIDATED"] / "preflight_process_scale_up.py",
-            scale_probe / "valid-input.grease.json",
-        )
-        run_ok(
-            stage_script["PROCESS_SCALE_VALIDATED"] / "build_process_window_artifact.py",
-            scale_probe / "valid-input.grease.json",
-            probe_window,
-        )
-        run_ok(stage_script["PROCESS_SCALE_VALIDATED"] / "validate_process_window_artifact.py", probe_window)
-        probe_window_artifact = check_schema("process", probe_window)
-        assert probe_window_artifact["stage"] == "PROCESS_SCALE_VALIDATED", probe_window_artifact["stage"]
-        print("gap-probe: process-scale-up preflight/build/validate exit 0/0/0 on the pack's grease fixtures")
-
-        # (c) gate-review refuses the route's own optimization stage.
-        gate_probe_dir = probes / "gate"
-        gate_probe_dir.mkdir(parents=True)
-        for name in (
-            "project-grease-active.json", "challenge-grease.json", "failure-ctq-grease.json",
-            "test-method-grease.json", "design-space-grease.json", "experiment-design-grease.json",
-            "experiment-grease.json", "model-grease.json",
-        ):
-            copy_fixture(ROOT / "fixtures" / "optimization" / name, gate_probe_dir / name)
-        copy_fixture(
-            ROOT / "fixtures" / "process-scale-up" / "optimization-grease.json",
-            gate_probe_dir / "optimization.json",
-        )
-        gate_probe_request = gate_probe_dir / "input-gate.json"
-        write_json(
-            gate_probe_request,
-            {
-                "project_artifact": "project-grease-active.json",
-                "challenge_artifact": "challenge-grease.json",
-                "failure_ctq_artifact": "failure-ctq-grease.json",
-                "test_method_artifact": "test-method-grease.json",
-                "design_space_artifact": "design-space-grease.json",
-                "experiment_design_artifact": "experiment-design-grease.json",
-                "experiment_artifact": "experiment-grease.json",
-                "model_artifact": "model-grease.json",
-                "optimization_artifact": "optimization.json",
-                "gate": {
-                    "gate_id": "GATE-PROBE-001",
-                    "scope": "gap probe",
-                    "gate_status": "GO",
-                    "satisfied_conditions": ["fixture chain linked"],
-                    "unsatisfied_conditions": [],
-                    "evidence_gaps": [],
-                    "risks": ["probe only"],
-                    "reason": "probe",
-                    "evidence": [
-                        {"evidence_id": "E-G-PROBE-001", "statement": "probe", "source": "probe", "status": "OBSERVED"}
-                    ],
-                },
-            },
-        )
-        gate_probe = run(stage_script["VERIFIED"] / "preflight_gate_review.py", gate_probe_request)
-        if gate_probe.returncode == 0:
-            print("gap-probe: gate-review now accepts the NON_INFERIORITY_PASSED optimization artifact (gap closed upstream)")
-        else:
-            assert GATE_REVIEW_GAP in gate_probe.stdout, gate_probe.stdout
-            if "VERIFIED" not in stage_gaps:
-                stage_gaps["VERIFIED"] = (
-                    "gate-review's preflight hard-requires the upstream optimization artifact at stage "
-                    "OPTIMIZED while this route's stage is NON_INFERIORITY_PASSED; reproduced with the "
-                    "pack's fixtures: " + gate_probe.stdout.strip()
-                )
-            print("gap-probe (KNOWN GAP, product code): " + GATE_REVIEW_GAP)
-
-        # (e) statistical-analysis's grease precondition is keyed on the request
-        # SHAPE, not on the project type: a grease project whose request omits
-        # the four inner-loop artifact keys falls through to the oil path and is
-        # accepted. Recorded as a fail-open hole; the chain above deliberately
-        # uses the intended flow (all four keys, which the contract cannot
-        # satisfy with a real bench_test record).
-        oil_shaped_payload = model_input(project_path, method_path, design_space_path, experiment_design_path,
-                                         experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path)
-        for key in ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact"):
-            del oil_shaped_payload[key]
-        oil_shaped_request = write_input("input-model-oil-shaped.json", oil_shaped_payload)
-        oil_shaped_probe = run(
-            stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py", oil_shaped_request
-        )
-        assert oil_shaped_probe.returncode == 0 and "READY" in oil_shaped_probe.stdout, oil_shaped_probe.stdout
-        print("KNOWN GAP (fail-open, product code): statistical-analysis accepts a grease project whose "
-              "request omits the four inner-loop artifact keys")
-
-        # (d) audit_chain flags the route's optimization artifact and nothing else.
-        audit_probe_dir = probes / "audit"
-        audit_probe_dir.mkdir(parents=True)
-        for name in ("project.json", "challenge.json", "failure_ctq.json", "test_method.json", "design_space.json"):
-            copy_fixture(ws / name, audit_probe_dir / name)
-        fixture_optimization = json.loads(
-            (ROOT / "fixtures" / "process-scale-up" / "optimization-grease.json").read_text(encoding="utf-8")
-        )
-        fixture_optimization["project_id"] = PROJECT_ID  # isolate the one rule under probe
-        write_json(audit_probe_dir / "optimization.json", fixture_optimization)
-        audit_probe = run(AUDIT_SCRIPT, audit_probe_dir)
-        assert "chain audit over" in audit_probe.stdout, audit_probe.stdout + audit_probe.stderr
-        audit_probe_problems = audit_problem_lines(audit_probe.stdout)
-        assert set(audit_probe_problems) <= {KNOWN_AUDIT_GAP}, audit_probe.stdout
-        if audit_probe_problems:
-            audit_topic_gaps.append(
-                "audit_chain maps optimization.json to stage OPTIMIZED only, so the route's legal "
-                "NON_INFERIORITY_PASSED artifact is reported; the probe shows this as the only problem"
-            )
-            print("gap-probe (KNOWN GAP, product code): " + KNOWN_AUDIT_GAP)
-        else:
-            print("gap-probe: audit_chain now accepts the route's optimization artifact (gap closed upstream)")
-
-    # Coverage is an assertion, never just a print: every stage this pack can
-    # actually drive end to end today must have been driven (a stage that silently
-    # drops out fails here), the only stages allowed to be reported as gaps are
-    # the ones with recorded product-code blockers, and a stage whose skill ships
-    # no builder is never counted as driven even when its preflight passes.
-    driven = [
-        stage for stage in EXPECTED_ROUTE
-        if stage not in stage_gaps and stage not in NON_PIPELINE_STAGES
-    ]
-    expected_driven = [
-        stage for stage in EXPECTED_ROUTE
-        if stage not in KNOWN_BLOCKED_STAGES and stage not in NON_PIPELINE_STAGES
-    ]
-    missing = sorted(set(expected_driven) - set(driven))
-    assert missing == [], f"stages that must be driven dropped out of coverage: {missing}"
-    unexpected_gaps = sorted(set(stage_gaps) - set(KNOWN_BLOCKED_STAGES))
-    assert unexpected_gaps == [], f"stages blocked for reasons outside the recorded product-code gaps: {unexpected_gaps}"
-    assert len(driven) >= len(expected_driven), (driven, expected_driven)
-    non_pipeline_driven = sorted(set(driven) & set(NON_PIPELINE_STAGES))
-    assert non_pipeline_driven == [], f"a non-pipeline stage leaked into the driven set: {non_pipeline_driven}"
-    print(f"PASS: PRECISION_GREASE_DEV route verified stage by stage; {len(driven)} of {len(EXPECTED_ROUTE)} "
-          "stages driven end to end (preflight -> build -> validate -> schema) and asserted as a coverage "
-          f"floor; {len(stage_gaps)} blocked by the recorded product-code gaps listed below; "
-          "chain audit clean over the built workspace, knowledge asset CLOSED_KNOWLEDGE with the six assets present")
-    for stage in EXPECTED_ROUTE:
-        if stage in stage_gaps:
-            if stage in NO_BUILDER_STAGES:
-                extra = (" (additionally: the skill ships no builder, so the stage is never counted as "
-                         "driven - the charter is a caller-assembled fixture)")
-            elif stage in NO_PRODUCER_STAGES:
-                extra = (" (additionally: no producing script exists in the pack, so the stage is never "
-                         "counted as driven - the record used downstream is a labelled fixture)")
-            else:
-                extra = ""
-            print(f"NOT COVERED: {stage}: {stage_gaps[stage]}{extra}")
-    for stage in NO_BUILDER_STAGES:
-        if stage not in stage_gaps:
-            print(f"NOT DRIVEN (the skill ships no builder): {stage}: the charter is caller-assembled per "
-                  "project-definition/SKILL.md Step 2 and only the validator + schema check it")
-    for stage in NO_PRODUCER_STAGES:
-        if stage not in stage_gaps:
-            print(f"NOT DRIVEN (no producing script exists in the pack): {stage}: the record used by the "
-                  "chain is a labelled fixture, never a skill output")
-    for reason in audit_topic_gaps:
-        print("NOT COVERED (audit_chain): " + reason)
+    # Coverage is an assertion, never just a print: all 20 stages must have been
+    # driven by the skill the router names, in route order, and ``stage_gaps`` (the
+    # escape hatch for a stage that had to be skipped) must be empty. A stage that
+    # silently drops out of the chain -- for any reason -- fails here.
+    assert stage_gaps == {}, f"stages were skipped instead of driven: {stage_gaps}"
+    assert driven_stages == list(EXPECTED_ROUTE), (
+        "the driven stages do not match the route exactly: "
+        f"driven={driven_stages} missing={sorted(set(EXPECTED_ROUTE) - set(driven_stages))}"
+    )
+    assert len(driven_stages) == len(EXPECTED_ROUTE) == 20, driven_stages
+    for stage in driven_stages:
+        print(f"DRIVEN: {stage} <- {STAGE_SKILL[stage]}")
+    print(
+        f"PASS: PRECISION_GREASE_DEV route verified stage by stage; {len(driven_stages)} of {len(EXPECTED_ROUTE)} "
+        "stages driven end to end (preflight -> build -> validate -> schema) and asserted as the coverage floor; "
+        "chain audit clean over the built workspace; knowledge asset CLOSED_KNOWLEDGE with all six asset "
+        "references resolving to real records; E2E-10 retrieval closure verified"
+    )
     return 0
 
 

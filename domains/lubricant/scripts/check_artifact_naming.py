@@ -36,6 +36,11 @@ import sys
 
 # The stage types tracked by the stage-gate panel (canonical names:
 # <type>.json). Order here is display order; suffix matching uses longest-prefix.
+# Mirrors the panel's STAGE_CHAIN unique artifact types (apps/desktop
+# src/lib/lubricantContracts.ts, 25 stages / 22 unique types); ``bench`` and
+# ``campaign`` were added 2026-10-13 with the WP-05 / WP-14 registrations, and
+# ``sample`` is kept because grease-batch emits sample.json beside batch.json
+# even though the panel does not probe it.
 STAGE_TYPES = [
     "project",
     "duty",
@@ -51,6 +56,8 @@ STAGE_TYPES = [
     "gate",
     "application",
     "reference",
+    "bench",
+    "campaign",
     "batch",
     "sample",
     "screening",

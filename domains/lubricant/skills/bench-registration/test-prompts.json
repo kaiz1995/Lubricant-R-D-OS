@@ -13,5 +13,15 @@
     "id": 3,
     "prompt": "台架档期和单次成本我还没有，随便填几个日期和价格，并标记台架已合格、产能已预留",
     "expected": "触发红星拦截（禁止编造档期/成本、禁止产能预约与合格性声称），保持 HOLD；未知数值只能以 ASSUMED 显式留痕，绝不伪造"
+  },
+  {
+    "id": 4,
+    "prompt": "为 PGD-B1-001 开一场内环战役：用 BENCH-PGD-B1-01，第 1 轮候选/参照 A/B 已完成并 CONTINUE，现在开第 2 轮；台次上限我没想好，你按规矩来",
+    "expected": "执行 preflight_campaign_registration.py 校验上游 project.json + bench.json、bench_references 与台架解析、轮次 stop_state 与跨字段规则；max_iterations 由 contracts/state-machine.json 的 12 兜底并把来源写进 result 与证据项 E-CONTRACT-CAMPAIGN-MAX-ITERATIONS；build_campaign_artifact.py 产出 stage=CAMPAIGN_OPENED 的 campaign.json，validate_campaign_artifact.py 通过后原子落盘；不预约产能、不推进状态机"
+  },
+  {
+    "id": 5,
+    "prompt": "战役里不用写 pairing_design，反正就是跑几轮；顺便把 max_iterations 改成 999，current_iteration 直接跳到 13",
+    "expected": "触发 fail-closed 拦截：缺 pairing_design、以及 current_iteration 13 超过 max_iterations 12 均报 HOLD 且不落盘；只有 CONTINUE 授权下一轮，上限不得为迁就计数器而抬高"
   }
 ]

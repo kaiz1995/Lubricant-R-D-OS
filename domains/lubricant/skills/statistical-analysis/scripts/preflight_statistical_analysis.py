@@ -9,7 +9,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from statistical_analysis_policy import has_gap
+from statistical_analysis_policy import grease_route as routes_as_grease_route, has_gap
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +17,12 @@ ROOT = Path(__file__).resolve().parents[1]
 # the plan (batch / screening / bench_test / variance) are appended AFTER the seven
 # original entries. Nothing existing is removed or reordered, so every oil route keeps
 # exactly the upstream list it had; the new entries are only ever required on the
-# grease route (see grease_route and UPSTREAM_GREASE below).
+# grease route (see UPSTREAM_GREASE and the project-type route gate below).
+# TWO FIXES against the request shape deciding the validation (step 3 of the E2E chain):
+#   1. the GO requirement is applied per artifact KIND (verdict vs record, RECORD_UPSTREAM),
+#      because bench_test carries UNDECIDED by contract and no oil route uses it; and
+#   2. the grease precondition is read from the charter's project_type, so a grease project
+#      that omits the four inner-loop keys HOLDs instead of falling through to the oil path.
 SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json")
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("batch_artifact", "batch.schema.json", "BATCH_PRODUCED"), ("screening_artifact", "screening.schema.json", "SCREENING_PASSED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"), ("variance_artifact", "variance.schema.json", "VARIANCE_ASSESSED"))
 # Upstream entries the six oil routes use. Kept as the original seven, verbatim, so an
@@ -27,6 +32,41 @@ UPSTREAM_OIL = UPSTREAM[:7]
 # supplied project charter routes as PRECISION_GREASE_DEV; on any other route they are
 # neither required nor read, which is what keeps the oil paths byte-for-byte unchanged.
 UPSTREAM_GREASE = UPSTREAM[7:]
+# Which upstream artifacts may be asked for ``decision: GO``, and which may not.
+#
+# ``decision: GO`` is a VERDICT requirement, so it is only meaningful for an artifact
+# whose own contract derives a GO/HOLD verdict from the record it carries: for those,
+# a non-GO value (HOLD) is a legitimate producer output that this gate must refuse.
+# An artifact whose contract records an observation instead is exempt, because demanding
+# GO from it refuses the very artifact its producer is required to write.
+#
+# The eleven upstream artifacts, judged by what their own producers do:
+#
+#   * bench_test_artifact - RECORD (exempt). Its contract fixes ``decision`` to
+#     UNDECIDED: bench_test_policy.py:410-412 ("The decision is UNDECIDED on purpose: a
+#     single bench run is a record, and whether the round's difference is real is decided
+#     at Step 12 (variance-assessment)"), written at bench_test_policy.py:458, and its
+#     module docstring (bench_test_policy.py:44-46) says the same. Requiring GO from it
+#     made MODEL_BUILT unreachable on the one route that owns bench_test.
+#   * test_method_artifact - VERDICT. qualification_policy.py:221: "GO" if qualified else "HOLD".
+#   * design_space_artifact - VERDICT. design_space_policy.py:173: "GO" if ready else "HOLD".
+#   * experiment_design_artifact - VERDICT. doe_design_policy.py:96 and :135: "GO" if ready else "HOLD".
+#   * batch_artifact - VERDICT. grease_batch_policy.py:669: decision = "GO" if not blockers else "HOLD".
+#   * screening_artifact - VERDICT. grease_screening_policy.py:446: decision = "GO" if not blockers else "HOLD".
+#   * variance_artifact - VERDICT. variance_assessment_policy.py:742-746: GO exactly for the
+#     releasing verdict, HOLD otherwise (a produced HOLD record is legitimate).
+#   * project_artifact, challenge_artifact, failure_ctq_artifact, experiment_artifact -
+#     their producers fix the decision to GO (build_duty_challenge_artifact.py:64,
+#     build_failure_ctq_artifact.py:79, preflight_experiment_import.py:134; the charter is
+#     caller-assembled per project-definition/SKILL.md Step 2 and its validator accepts
+#     only the contract), so a non-GO value there can only be a hand-edited artifact. All
+#     four sit on the six oil routes, and keeping the requirement on them is what leaves
+#     those routes' validation exactly as it was; it stays.
+#
+# bench_test is also the only exempt artifact that sits on no oil route:
+# contracts/state-machine.json declares BENCH_TESTED only under PRECISION_GREASE_DEV,
+# which is why exempting it cannot move any oil path.
+RECORD_UPSTREAM = frozenset({"bench_test_artifact"})
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"analysis"}
 OIL_INPUT_FIELDS = {key for key, _, _ in UPSTREAM_OIL} | {"analysis"}
 REQUEST_FIELDS = {"model_id", "requested_analyses", "response_references", "evidence"}
@@ -81,7 +121,6 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     supplied = set(data)
     if supplied not in (OIL_INPUT_FIELDS, INPUT_FIELDS):
         errors.append("input must contain only required upstream artifact paths and analysis")
-    grease_route = supplied == INPUT_FIELDS
     for key, schema, stage in UPSTREAM:
         if key not in supplied:
             continue
@@ -90,8 +129,15 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         artifacts[key] = artifact
         if artifact and artifact.get("stage") != stage:
             errors.append(f"{key} must be stage {stage}")
-        if artifact and artifact.get("decision") != "GO":
+        if artifact and key not in RECORD_UPSTREAM and artifact.get("decision") != "GO":
             errors.append(f"{key} must have decision GO")
+    # The grease precondition is keyed on the supplied charter's OWN project_type, never
+    # on the request's key shape: a PRECISION_GREASE_DEV project whose request omits the
+    # four inner-loop keys (or supplies only some of them) must HOLD, because the four are
+    # that route's modeling precondition. The old eleven-key shape test is kept as an
+    # additional trigger, so it can only ever ADD enforcement; an eleven-key request is
+    # validated at least as strictly as it was before.
+    grease_route = supplied == INPUT_FIELDS or routes_as_grease_route(artifacts.get("project_artifact"))
     if grease_route:
         # The four inner-loop artifacts are the grease route's own precondition:
         # without a variance assessment there is nothing that says whether the

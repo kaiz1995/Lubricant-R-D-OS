@@ -21,14 +21,21 @@ SKILLS = {
     "test-method-qualification": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json"),
     "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json"),
     "process-definition": ("common.schema.json", "design_space.schema.json", "process.schema.json"),
-    "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json"),
+    # 2026-10-13: doe-design also owns the sequential next-batch decision
+    # (preflight_next_batch.py / validate_next_batch_artifact.py), so the
+    # deploy list carries next_batch.schema.json like every other loaded schema.
+    "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "next_batch.schema.json"),
     "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "bench_test.schema.json"),
     "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json"),
     "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "variance.schema.json"),
     "process-scale-up": ("common.schema.json", "process.schema.json", "optimization.schema.json"),
     "application-definition": ("common.schema.json", "application.schema.json"),
     "application-validation": ("common.schema.json", "application.schema.json", "campaign.schema.json", "bench_test.schema.json"),
-    "bench-registration": ("common.schema.json", "bench.schema.json"),
+    # 2026-10-13: bench-registration now also opens the inner-loop bench
+    # campaign (preflight_campaign_registration.py / validate_campaign_artifact.py),
+    # which loads campaign.schema.json and reads the charter through
+    # project.schema.json; both must be deployed beside the skill.
+    "bench-registration": ("common.schema.json", "project.schema.json", "campaign.schema.json", "bench.schema.json"),
     "interface-definition": ("common.schema.json", "interface.schema.json"),
     "external-record-import": ("common.schema.json", "external_record.schema.json"),
     "reference-material": ("common.schema.json", "project.schema.json", "reference.schema.json"),

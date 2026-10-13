@@ -8,12 +8,17 @@ pack's own skill scripts (preflight -> build -> validate) and the pack's own dec
   E2E-2 inner-loop iteration (``scenario_inner_loop_iteration``)
     One full bench round: batch production (grease-batch) -> screening PASS
     (grease-screening) -> bench runs (experiment-import bench path) -> variance
-    CONSISTENT_DIFFERENCE (variance-assessment) -> model update -> next_batch
-    (round 2 proposed with its reason).
+    CONSISTENT_DIFFERENCE (variance-assessment) -> the bench registration and the
+    campaign carrier that bounds the loop (bench-registration, BENCH_RESOURCE_REGISTERED +
+    CAMPAIGN_OPENED) -> the next-batch decision that opens round 2 (doe-design,
+    NEXT_BATCH_DECIDED, with its declared competing explanations).
     Then the declared ring edge VARIANCE_ASSESSED -> BATCH_PRODUCED must be ALLOWed by
-    BOTH the router and the state machine, the iteration must advance 1 -> 2, and every
-    round-1 record must survive (evidence append-only; the ring is an edge, not a
-    ROLLBACK that voids the rounds it passes).
+    BOTH the router and the state machine, the iteration must advance 1 -> 2 by
+    RE-DRIVING the campaign producer with the round-1 entry taken from the built
+    iteration-1 artifact, and every round-1 record must survive on disk (evidence
+    append-only; the ring is an edge, not a ROLLBACK that voids the rounds it passes).
+    The campaign producer's own gate is exercised as a gate: a record that drops round 1,
+    or one whose current_iteration exceeds its cap, must be refused.
 
   E2E-3 inner-loop rework (``scenario_screening_rework``)
     The physical screen FAILs. The declared rework edge SCREENING_PASSED ->
@@ -27,17 +32,27 @@ pack's own skill scripts (preflight -> build -> validate) and the pack's own dec
     qualification) is NOT an inner-loop edge and must stay DENIED in the router and in
     the state machine; the contract publishes no BACKTRACK action. The negative
     counterparts (dropping round-1 evidence, a missing iteration counter, iteration
-    past max_iterations, the exemption leaking into an oil route) are locked here too,
-    so the ALLOW assertions above cannot pass against a validator that allows
-    everything.
+    past max_iterations, a version bump on a ring edge, the exemption leaking into an oil
+    route) are locked here too, so the ALLOW assertions above cannot pass against a
+    validator that allows everything.
 
-Records with no producing script in the pack (campaign / model / next_batch) are
-assembled inline against their schemas from ``fixtures/inner-loop/`` -- the same
-treatment ``tests/lubricant_e2e/test_precision_grease_chain.py`` gives campaign.json --
-and each such record says so in its own ``uncertainty`` text. The workspace's upstream
-scaffolding (project.json / design_space.json / experiment_design.json) is inline
-constructed too, because this acceptance test is about the inner loop and not about
-re-driving the six upstream oil stages. This file modifies no product code.
+State-machine events are supplied to ``validate()`` as (before, after) pairs, so the
+test has to assemble the pair. Where an assertion would only re-state that assembly
+(``after["version"] == before["version"]``, ``after["evidence"] == before["evidence"] +
+[new]``) the pair is NOT asserted against itself: the SAME rule is instead locked with
+a refusal the validator computes (a version bump, a dropped round-1 record, a missing
+counter), and the records the pair names are checked back on disk.
+
+Records with no producing script usable here are assembled inline against their schemas
+from ``fixtures/inner-loop/`` -- today that is the MODEL_BUILT record alone:
+statistical-analysis requires the oil-route upstream artifacts (challenge / failure_ctq /
+test_method / experiment) that this inner-loop-only workspace deliberately does not
+carry, and its REAL refusal is asserted below rather than printed. E2E-1
+(``test_precision_grease_chain.py``) drives MODEL_BUILT for real on the full route.
+The campaign and next_batch records used to be inline fixtures as well; both are now
+produced by their skills, so ``fixtures/inner-loop/campaign_iteration_*.json`` and
+``next_batch_round_1.json`` are no longer read by this test (they stay on disk as
+historical fixtures). This file modifies no product code.
 
 Run from the repository root::
 
@@ -92,8 +107,20 @@ ROUND_1_RUNS = (
 RING_EDGE = ("VARIANCE_ASSESSED", "BATCH_PRODUCED", "LOOP_BACK")
 REWORK_EDGE = ("SCREENING_PASSED", "BATCH_PRODUCED", "REWORK")
 
-# The recorded product-code gap that keeps MODEL_BUILT from being driven here.
+# The ring-edge rules the state machine enforces. The negative checks below pin the
+# validator's OWN wording, so a rule that silently relaxed would fail here instead of
+# passing on a pair the test assembled to satisfy it.
+RING_VERSION_REASON = "GO ring-edge advance must preserve the project version and decision question"
+RING_DROP_REASON = "GO ring-edge advance must retain prior evidence"
+RING_COUNTER_REASON = "GO ring-edge advance must carry the inner-loop iteration counter"
+
+# statistical-analysis's exact refusal of this route's own bench_test record (WP-14
+# exempted bench_test from the GO demand because its contract fixes UNDECIDED; the probe
+# below asserts this wording is GONE from the real output).
 MODEL_BUILT_GAP = "bench_test_artifact must have decision GO"
+# The campaign producer's own append-only / cap refusals the checks below pin.
+CAMPAIGN_ROUND_ORDER_GAP = "rounds are recorded oldest first and 1-based"
+CAMPAIGN_CAP_GAP = "must not exceed max_iterations"
 
 
 # ---------------------------------------------------------------------------
@@ -573,6 +600,153 @@ def variance_input(project_path: Path, bench_test_paths: list[Path]) -> dict:
     }
 
 
+def bench_registration_input() -> dict:
+    """The BENCH_RESOURCE_REGISTERED request for bench-registration's bench producer.
+
+    The campaign carrier may only draw its slots from a bench registered for the same
+    project and evidence scope, so the loop needs a real bench record: this request is
+    driven through the skill in E2E-2 before the campaign is opened.
+    """
+    return {
+        "bench": {
+            "bench_id": BENCH_ID,
+            "project_reference": PROJECT_ID,
+            "bench_name": "Precision-gear grease inner-loop bench (acceptance fixture)",
+            "location": "Synthetic bench location",
+            "availability_window": [
+                {"window_id": "W-1", "start": "2026-11-01", "end": "2026-12-30"},
+                {"window_id": "W-2", "start": "2027-01-01", "end": "2027-03-01"},
+            ],
+            "cycle_days": 30,
+            "cost_per_run": {"value": 12000, "unit": "CNY/run", "source": SIM},
+            "source": SIM,
+            "evidence_id": "EV-BENCH-PGD-IL-01",
+            "evidence_scope": "PHYSICAL",
+            "evidence": [
+                {
+                    "evidence_id": "EV-BENCH-PGD-IL-01",
+                    "statement": f"{SIM}: bench availability supplied for contract validation only; not a booked capacity.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                }
+            ],
+        }
+    }
+
+
+def round_entry(iteration: int, samples: list[str], *, stop_state: str = "CONTINUE",
+                screening: str | None = None, variance: str | None = None, model: str | None = None,
+                next_batch: str | None = None, bench_tests: list[str] | None = None) -> dict:
+    """One campaign round entry (campaign.schema.json's iteration shape)."""
+    return {
+        "iteration": iteration,
+        "samples": list(samples),
+        "stop_state": stop_state,
+        "screening_reference": screening,
+        "variance_reference": variance,
+        "model_reference": model,
+        "next_batch_reference": next_batch,
+        "bench_test_references": list(bench_tests or []),
+    }
+
+
+def campaign_request(current_iteration: int, iterations: list[dict]) -> dict:
+    """The CAMPAIGN_OPENED request for bench-registration's campaign producer.
+
+    ``max_iterations`` is omitted on purpose: the producer reads the contract's own
+    published cap and records that provenance on the artifact, so the loop's only bound is
+    never a number this test invented. The request references the bench record the
+    workspace itself produced (written as ``bench.json`` in the same directory).
+    """
+    return {
+        "project_artifact": "project.json",
+        "bench_artifacts": ["bench.json"],
+        "campaign": {
+            "campaign_id": CAMPAIGN_ID,
+            "project_reference": PROJECT_ID,
+            "bench_references": [BENCH_ID],
+            "current_iteration": current_iteration,
+            "iterations": iterations,
+            "pairing_design": {
+                "paired": True,
+                "description": f"{SIM}: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels.",
+            },
+            "evidence_scope": "PHYSICAL",
+            "source": SIM,
+            "evidence_id": "E-CMP-IL-001",
+            "evidence": [
+                {
+                    "evidence_id": "E-CMP-IL-001",
+                    "statement": f"{SIM}: campaign {CAMPAIGN_ID} records the rounds supplied above.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                }
+            ],
+        },
+    }
+
+
+def next_batch_request(campaign_name: str, design_name: str, variance_name: str) -> dict:
+    """The NEXT_BATCH_DECIDED request for doe-design's next_batch producer.
+
+    The two competing explanations are declared here and every proposed sample quotes its
+    discriminating pair from those declarations, because the producer refuses to compose a
+    hypothesis the input did not declare. The iteration pair is not supplied: the builder
+    derives it from the campaign carrier.
+    """
+    return {
+        "campaign_artifact": campaign_name,
+        "experiment_design_artifact": design_name,
+        "variance_artifact": variance_name,
+        "next_batch": {
+            "next_batch_id": "NEXT-PGD-IL-001",
+            "stop_state": "CONTINUE",
+            "bench_slots_required": 2,
+            "information_gain_basis": (
+                f"{SIM}: the round-2 pair is the round-1 pair swapped, so the A-minus-B contrast cancels "
+                "bench-to-bench drift instead of measuring it; no single arm separates the two explanations."
+            ),
+            "competing_explanations": [
+                {
+                    "explanation_id": "EXPL-FORMULATION-EFFECT",
+                    "statement": "The round-1 candidate/reference difference follows the formulation and travels with the formula.",
+                },
+                {
+                    "explanation_id": "EXPL-BENCH-DRIFT",
+                    "statement": "The round-1 difference is bench-to-bench drift that follows the run order.",
+                },
+            ],
+            "proposed_samples": [
+                {
+                    "sample_reference": BATCH_ROUND_2[1],
+                    "hypothesis": "EXPL-FORMULATION-EFFECT",
+                    "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"],
+                },
+                {
+                    "sample_reference": BATCH_REFERENCE[1],
+                    "hypothesis": "EXPL-BENCH-DRIFT",
+                    "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"],
+                },
+            ],
+            "next_round_budget": {"bench_slots_remaining": 2, "calendar_days_remaining": 60},
+            "evidence": [
+                {
+                    "evidence_id": "E-NB-IL-001",
+                    "statement": f"{SIM}: the round-1 variance assessment records a consistent arm difference and round 1 ended CONTINUE.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                },
+                {
+                    "evidence_id": "E-NB-IL-002",
+                    "statement": f"{SIM}: the round's design declares two bench positions for the next round.",
+                    "source": SIM,
+                    "status": "ASSUMED",
+                },
+            ],
+        },
+    }
+
+
 def model_probe_input(project_path: Path, artifact_names: dict[str, str]) -> dict:
     """The grease-route statistical-analysis request, used only to locate the MODEL_BUILT gap."""
     return {
@@ -633,16 +807,20 @@ ROUND_1_DECISION_QUESTION = "Does round 1 separate the candidate grease from the
 
 def ring_edge_event(validator, *, iteration: int | None, round_1_evidence: list[str],
                     appended: str = "ITER-2:batch.json", drop_round_1: bool = False,
-                    version_before: int = 7):
+                    version_before: int = 7, after_version: int | None = None):
     """The declared ring edge VARIANCE_ASSESSED -> BATCH_PRODUCED as a state-machine event.
 
     The before state's evidence list is the round-1 record set (one id per artifact the
     workspace actually produced), and the after state appends the new round's first
     record -- exactly the append-only shape the contract's ring-edge branch demands.
+    ``after_version`` overrides the after state's version so the version-preservation rule
+    can be exercised as a NEGATIVE (the validator's refusal), instead of being asserted
+    on a pair this helper built to satisfy it.
     """
     after_evidence = [appended] if drop_round_1 else [*round_1_evidence, appended]
     before = sm_state("VARIANCE_ASSESSED", version_before, round_1_evidence, ROUND_1_DECISION_QUESTION)
-    after = sm_state("BATCH_PRODUCED", version_before, after_evidence, ROUND_1_DECISION_QUESTION)
+    after = sm_state("BATCH_PRODUCED", version_before if after_version is None else after_version,
+                     after_evidence, ROUND_1_DECISION_QUESTION)
     return validator.validate(sm_event(before, after, iteration=iteration)), before, after
 
 
@@ -653,10 +831,13 @@ def ring_edge_event(validator, *, iteration: int | None, round_1_evidence: list[
 
 def stage_scripts() -> dict[str, Path]:
     return {
+        "bench": SKILLS / "bench-registration" / "scripts",
+        "campaign": SKILLS / "bench-registration" / "scripts",
         "batch": SKILLS / "grease-batch" / "scripts",
         "screening": SKILLS / "grease-screening" / "scripts",
         "bench_test": SKILLS / "experiment-import" / "scripts",
         "variance": SKILLS / "variance-assessment" / "scripts",
+        "next_batch": SKILLS / "doe-design" / "scripts",
         "model": SKILLS / "statistical-analysis" / "scripts",
     }
 
@@ -750,45 +931,118 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert variance["iteration"] == 1 and variance["campaign_reference"] == CAMPAIGN_ID, variance
         print("E2E-2 ok: VARIANCE_ASSESSED = CONSISTENT_DIFFERENCE (engine-computed), iteration 1")
 
-        # --- MODEL_BUILT / NEXT_BATCH_DECIDED: records with no pack producer --
-        for fixture_name, target in (("model_round_1.json", "model.json"), ("next_batch_round_1.json", "next_batch.json")):
-            write_json(ws / target, read_json(FIXTURES / fixture_name))
-            check_schema(target[: -len(".json")], ws / target)
-        model = read_json(ws / "model.json")
-        next_batch = read_json(ws / "next_batch.json")
-        assert model["stage"] == "MODEL_BUILT", model
-        assert next_batch["from_iteration"] == 1 and next_batch["to_iteration"] == 2, next_batch
-        assert next_batch["stop_state"] == "CONTINUE", next_batch
-        assert next_batch["information_gain_basis"].strip(), next_batch
-        assert all(item["hypothesis"].strip() and item["discriminates"].strip()
-                   for item in next_batch["proposed_samples"]), next_batch
-        assert next_batch["bench_slots_required"] >= 1, next_batch
-        print("E2E-2 ok: MODEL_BUILT and NEXT_BATCH_DECIDED records present and schema-valid")
-        print("E2E-2 ok: next_batch proposes round 2 (from_iteration 1 -> to_iteration 2, CONTINUE) with its reason")
+        # --- BENCH_RESOURCE_REGISTERED: the bench the campaign draws on --------
+        # The campaign gate only accepts slots from a REGISTERED bench of the same
+        # project and evidence scope, so the bench is produced by its skill as well.
+        bench_request = ws / "input-bench.json"
+        write_json(bench_request, bench_registration_input())
+        bench_path = ws / "bench.json"
+        run_ok(scripts["bench"] / "preflight_bench_registration.py", bench_request)
+        run_ok(scripts["bench"] / "build_bench_artifact.py", bench_request, bench_path)
+        run_ok(scripts["bench"] / "validate_bench_artifact.py", bench_path)
+        bench = check_schema("bench", bench_path)
+        assert bench["bench_id"] == BENCH_ID and bench["evidence_scope"] == "PHYSICAL", bench
+        assert bench["available_bench_slots"] >= 2, bench
+        print(f"E2E-2 ok: BENCH_RESOURCE_REGISTERED built and validated by bench-registration "
+              f"({bench['available_bench_slots']} derived slots)")
 
-        # The MODEL_BUILT producer cannot consume this route's own chain today: the
-        # refusal is located with the skill's real preflight so the inline record above
-        # is an accounted-for gap, not a silent substitution.
+        # --- MODEL_BUILT: the one record this workspace cannot produce ---------
+        # statistical-analysis requires the oil-route upstream artifacts (challenge /
+        # failure_ctq / test_method / experiment) that an inner-loop-only workspace does
+        # not carry, while the route's own contract-UNDECIDED bench_test record must NOT
+        # be refused (WP-14 exempted it; E2E-1 drives the stage for real on the full
+        # route). The record below is therefore a labelled fixture, and the probe asserts
+        # the skill's REAL refusal: exactly the four missing upstreams, and no
+        # bench_test-demand wording.
+        write_json(ws / "model.json", read_json(FIXTURES / "model_round_1.json"))
+        model = check_schema("model", ws / "model.json")
+        assert model["stage"] == "MODEL_BUILT", model
         probe = run(scripts["model"] / "preflight_statistical_analysis.py",
                     _probe_path(ws, project_path, design_space_path, experiment_design_path,
                                 batch_paths[BATCH_CANDIDATE[1]], screening_path, bench_test_paths[0],
                                 variance_path))
-        if MODEL_BUILT_GAP in probe.stdout:
-            print(f"E2E-2 KNOWN GAP (product code): statistical-analysis refuses the route's own chain: {MODEL_BUILT_GAP}")
-            result["model_built_gap"] = MODEL_BUILT_GAP
-        else:
-            print("E2E-2 NOTE: statistical-analysis no longer reports the bench_test decision gap "
-                  "(gap closed upstream); the MODEL_BUILT record above is still the inline fixture")
+        assert probe.returncode != 0, probe.stdout
+        assert probe.stdout.startswith("HOLD: missing or invalid:"), probe.stdout
+        for key in ("challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "experiment_artifact"):
+            assert f"{key} cannot be read" in probe.stdout, probe.stdout
+        assert MODEL_BUILT_GAP not in probe.stdout, (
+            "the contract-UNDECIDED bench_test record must not be refused (WP-14): " + probe.stdout
+        )
+        print("E2E-2 ok: statistical-analysis's real refusal on this workspace names only the four oil "
+              "upstreams it does not carry; the contract-UNDECIDED bench_test record is accepted "
+              "(MODEL_BUILT itself is a fixture here, driven for real by E2E-1)")
 
-        # --- campaign iteration 1: current_iteration lives in campaign.json --
+        # --- CAMPAIGN_OPENED: the loop's carrier, produced by its skill --------
+        # The round-1 entry is composed from the records THIS workspace produced (the
+        # sample ids the batches carry, the four bench-test run ids on disk, the
+        # screening and variance ids of this round), so the campaign record can be
+        # checked against the workspace instead of against another fixture.
+        round_1_entry = round_entry(
+            1,
+            [BATCH_CANDIDATE[1], BATCH_REFERENCE[1]],
+            screening=read_json(screening_path)["screening_id"],
+            variance=read_json(variance_path)["variance_id"],
+            model=model["model_id"],
+            next_batch="NEXT-PGD-IL-001",
+            bench_tests=[read_json(path)["run_id"] for path in bench_test_paths],
+        )
         campaign_path = ws / "campaign.json"
-        write_json(campaign_path, read_json(FIXTURES / "campaign_iteration_1.json"))
+        campaign_request_path = ws / "input-campaign-iteration-1.json"
+        write_json(campaign_request_path, campaign_request(1, [round_1_entry]))
+        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_request_path)
+        run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_request_path, campaign_path)
+        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
         campaign_1 = check_schema("campaign", campaign_path)
-        assert campaign_1["current_iteration"] == 1, campaign_1
-        assert campaign_1["iterations"][0]["stop_state"] == "CONTINUE", campaign_1["iterations"][0]
-        assert campaign_1["iterations"][0]["next_batch_reference"] == next_batch["next_batch_id"], campaign_1
-        assert campaign_1["iterations"][0]["variance_reference"] == variance["variance_id"], campaign_1
-        print("E2E-2 ok: campaign.json carries current_iteration=1 with round 1's own references")
+        assert campaign_1["campaign_id"] == CAMPAIGN_ID and campaign_1["current_iteration"] == 1, campaign_1
+        assert campaign_1["decision"] == "GO", campaign_1
+        # The request omitted the cap: the artifact must carry the contract's own figure
+        # and record where it came from (a cap this loop could see invented would be the
+        # one thing the bound cannot be).
+        assert campaign_1["max_iterations"] == read_json(CONTRACT)["max_iterations"], campaign_1
+        assert any(item.get("source") == "contracts/state-machine.json" for item in campaign_1["evidence"]), campaign_1
+        # Round 1's entry, as the product stored it, names records that exist on disk.
+        stored = campaign_1["iterations"][0]
+        assert stored == round_1_entry, stored
+        assert read_json(screening_path)["screening_id"] == stored["screening_reference"], stored
+        assert read_json(variance_path)["variance_id"] == stored["variance_reference"], stored
+        assert [read_json(path)["run_id"] for path in bench_test_paths] == stored["bench_test_references"], stored
+        assert all((ws / name).is_file() for name in (screening_path.name, variance_path.name)), stored
+        print("E2E-2 ok: CAMPAIGN_OPENED built and validated by bench-registration; round 1's entry names the "
+              "screening/variance/bench-test records that exist on disk")
+
+        # --- NEXT_BATCH_DECIDED: round 2 proposed by its skill -----------------
+        next_batch_request_path = ws / "input-next-batch.json"
+        write_json(next_batch_request_path, next_batch_request(campaign_path.name, experiment_design_path.name,
+                                                               variance_path.name))
+        next_batch_path = ws / "next_batch.json"
+        run_ok(scripts["next_batch"] / "preflight_next_batch.py", next_batch_request_path)
+        run_ok(scripts["next_batch"] / "build_next_batch_artifact.py", next_batch_request_path, next_batch_path)
+        run_ok(scripts["next_batch"] / "validate_next_batch_artifact.py", next_batch_path)
+        next_batch = check_schema("next_batch", next_batch_path)
+        assert next_batch["stage"] == "NEXT_BATCH_DECIDED", next_batch
+        # The iteration pair is DERIVED from the campaign carrier (the request never
+        # supplies it); the ids and the stop state must agree with the campaign's own
+        # round-1 entry, which is what authorises this decision.
+        assert (next_batch["from_iteration"], next_batch["to_iteration"]) == (1, 2), next_batch
+        assert next_batch["campaign_reference"] == campaign_1["campaign_id"], next_batch
+        assert next_batch["next_batch_id"] == campaign_1["iterations"][0]["next_batch_reference"], next_batch
+        assert next_batch["stop_state"] == campaign_1["iterations"][0]["stop_state"] == "CONTINUE", next_batch
+        assert next_batch["bench_slots_required"] == len(next_batch["proposed_samples"]) == 2, next_batch
+        assert next_batch["information_gain_basis"].strip(), next_batch
+        # Every proposed sample's discrimination text is COMPOSED from the explanations
+        # the request declared (statement text, joined by the schema's own " vs "
+        # separator): the gate never invents a hypothesis, it spells out the declared ones.
+        requested = read_json(next_batch_request_path)["next_batch"]
+        statement_by_id = {item["explanation_id"]: item["statement"] for item in requested["competing_explanations"]}
+        assert len(statement_by_id) >= 2, requested
+        for sample, requested_sample in zip(next_batch["proposed_samples"], requested["proposed_samples"]):
+            assert sample["sample_reference"] == requested_sample["sample_reference"], sample
+            assert sample["hypothesis"] == statement_by_id[requested_sample["hypothesis"]], sample
+            assert sample["discriminates"] == " vs ".join(
+                statement_by_id[item] for item in requested_sample["separates"]
+            ), sample
+        print("E2E-2 ok: NEXT_BATCH_DECIDED built and validated by doe-design; round 2 proposed "
+              "(from_iteration 1 -> to_iteration 2, CONTINUE) with its declared explanations")
 
         round_1_digests = artifact_digests(ws)
         # The round-1 record set the ring edge must carry forward, one evidence id per
@@ -829,50 +1083,81 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert round2_record["batch_id"] == BATCH_ROUND_2[0], round2_record
         print("E2E-2 ok: round 2's BATCH_PRODUCED record built and validated by grease-batch")
 
-        # The ring event carries the incremented iteration; the whole round-1 record set
-        # is retained verbatim and the round-2 batch record is appended (append-only).
+        # The ring event carries the incremented iteration; the round-1 record set is
+        # carried forward and the round-2 batch record is appended. The pair itself is
+        # assembled by this test (the validator takes an event, it does not advance a
+        # stored state), so the pair is NOT asserted against itself: what is asserted is
+        # (a) the validator's ALLOW verdict, (b) that every record the pair names exists
+        # on disk, and (c) below, that the SAME rules refuse a version bump and a dropped
+        # round -- the refusals are real product output.
         appended = f"ITER-2:{round2_batch.name}"
         assert campaign_1["current_iteration"] == 1
         assert next_batch["to_iteration"] == campaign_1["current_iteration"] + 1, next_batch
+        missing_round_1_records = [name for name in frozen_round_1 if not (ws / name).is_file()]
+        assert missing_round_1_records == [], missing_round_1_records
+        assert (ws / round2_batch.name).is_file(), round2_batch
         reason, before, after = ring_edge_event(
             validator, iteration=next_batch["to_iteration"], round_1_evidence=round_1_evidence, appended=appended
         )
         assert reason is None, f"ring edge must be ALLOWed by the state machine: {reason}"
-        assert before["version"] == after["version"], (before, after)
-        assert all(item in after["evidence"] for item in before["evidence"]), after["evidence"]
-        assert len(after["evidence"]) == len(before["evidence"]) + 1, after["evidence"]
-        assert after["evidence"][-1] == appended
-        assert len(round_1_evidence) == len(frozen_round_1)
-        assert next_batch["to_iteration"] == 2 == campaign_1["current_iteration"] + 1
         print("E2E-2 ok: state machine ALLOWs the ring edge at iteration "
-              f"{next_batch['to_iteration']} with all {len(round_1_evidence)} round-1 records retained "
-              "verbatim (version preserved, exactly the round-2 batch appended)")
+              f"{next_batch['to_iteration']} over all {len(round_1_evidence)} round-1 records "
+              f"(each named record exists on disk) with the round-2 batch appended")
 
         # Negative counterparts: the ALLOW above is a real gate, not a validator that
-        # accepts everything, and the ring is not a ROLLBACK (it may not void a round).
-        drop_reason, _, _ = ring_edge_event(validator, iteration=2, round_1_evidence=round_1_evidence,
-                                            appended=appended, drop_round_1=True)
-        assert drop_reason == "GO ring-edge advance must retain prior evidence", drop_reason
-        no_counter_reason, _, _ = ring_edge_event(validator, iteration=None, round_1_evidence=round_1_evidence,
-                                                  appended=appended)
-        assert no_counter_reason == "GO ring-edge advance must carry the inner-loop iteration counter", no_counter_reason
+        # accepts everything. Each refusal below is the validator's OWN wording for the
+        # rule the assembled ALLOW pair satisfies by construction, so a relaxed rule
+        # fails here instead of passing silently.
         contract = read_json(CONTRACT)
         cap = contract["max_iterations"]
+        drop_reason, _, _ = ring_edge_event(validator, iteration=2, round_1_evidence=round_1_evidence,
+                                            appended=appended, drop_round_1=True)
+        assert drop_reason == RING_DROP_REASON, drop_reason
+        no_counter_reason, _, _ = ring_edge_event(validator, iteration=None, round_1_evidence=round_1_evidence,
+                                                  appended=appended)
+        assert no_counter_reason == RING_COUNTER_REASON, no_counter_reason
         over_cap_reason, _, _ = ring_edge_event(validator, iteration=cap + 1, round_1_evidence=round_1_evidence,
                                                 appended=appended)
         assert over_cap_reason == f"iteration {cap + 1} exceeds max_iterations {cap}; stop the inner loop and record PIVOT or KILL", over_cap_reason
+        version_bump_reason, _, _ = ring_edge_event(validator, iteration=2, round_1_evidence=round_1_evidence,
+                                                    appended=appended, after_version=8)
+        assert version_bump_reason == RING_VERSION_REASON, version_bump_reason
         print("E2E-2 ok: dropping round-1 evidence / omitting the iteration counter / exceeding "
-              f"max_iterations={cap} are each REFUSED")
+              f"max_iterations={cap} / bumping the project version on the ring edge are each REFUSED")
 
-        # campaign.json now carries iteration 2 with round 1 appended-to, never voided.
-        write_json(campaign_path, read_json(FIXTURES / "campaign_iteration_2.json"))
+        # campaign iteration 2 is produced by the SAME skill, and its round-1 entry is the
+        # one the iteration-1 artifact recorded (read back from disk, never re-authored):
+        # the iteration advance runs through the producer, and the producer must refuse a
+        # record that drops round 1 or exceeds its own cap.
+        campaign_2_request_path = ws / "input-campaign-iteration-2.json"
+        round_2_entry = round_entry(2, [BATCH_ROUND_2[1]], next_batch=None)
+        write_json(campaign_2_request_path, campaign_request(2, [stored, round_2_entry]))
+        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_2_request_path)
+        run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_2_request_path, campaign_path)
+        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
         campaign_2 = check_schema("campaign", campaign_path)
-        assert campaign_2["current_iteration"] == 2 == campaign_1["current_iteration"] + 1, campaign_2
-        assert campaign_2["iterations"][: len(campaign_1["iterations"])] == campaign_1["iterations"], campaign_2["iterations"]
+        assert campaign_2["current_iteration"] == 2, campaign_2
+        assert campaign_2["decision"] == "GO", campaign_2
+        assert campaign_2["iterations"][0] == stored, campaign_2["iterations"]
         assert [entry["iteration"] for entry in campaign_2["iterations"]] == [1, 2], campaign_2["iterations"]
         assert campaign_2["iterations"][1]["samples"] == [BATCH_ROUND_2[1]], campaign_2["iterations"][1]
         assert campaign_2["max_iterations"] == cap, campaign_2
-        print("E2E-2 ok: campaign.json current_iteration incremented to 2; iteration 1's entry is carried over verbatim")
+
+        # (i) A campaign that records ONLY round 2 is refused: rounds are oldest first,
+        # so the loop cannot drop the round it advanced past.
+        dropped_request = ws / "input-campaign-dropped-round-1.json"
+        write_json(dropped_request, campaign_request(2, [round_entry(2, [BATCH_ROUND_2[1]])]))
+        dropped_probe = run(scripts["campaign"] / "preflight_campaign_registration.py", dropped_request)
+        assert dropped_probe.returncode != 0 and CAMPAIGN_ROUND_ORDER_GAP in dropped_probe.stdout, dropped_probe.stdout
+        # (ii) A campaign whose current_iteration exceeds its own cap is refused.
+        over_cap_request = ws / "input-campaign-over-cap.json"
+        over_cap_payload = campaign_request(2, [stored, round_2_entry])
+        over_cap_payload["campaign"]["max_iterations"] = 1
+        write_json(over_cap_request, over_cap_payload)
+        over_cap_probe = run(scripts["campaign"] / "preflight_campaign_registration.py", over_cap_request)
+        assert over_cap_probe.returncode != 0 and CAMPAIGN_CAP_GAP in over_cap_probe.stdout, over_cap_probe.stdout
+        print("E2E-2 ok: campaign iteration 2 built and validated by bench-registration; dropping round 1 and "
+              "exceeding the campaign's own cap are each REFUSED by its gate")
 
         # The round-1 records on disk are byte-identical after the ring advance.
         # campaign.json is the one record that legitimately moves: it is where
@@ -1002,7 +1287,12 @@ def scenario_screening_rework(router, validator) -> dict:
 
         # A rework consumes no bench round, so the counter stays at 1 (the contract's own
         # fixture go-precision-grease-ring-rework-remakes-the-batch uses iteration 1 too).
-        # The event's evidence names the records this workspace actually produced.
+        # The event's evidence names the records this workspace actually produced, and the
+        # rule the assembled ALLOW pair satisfies by construction -- version preserved,
+        # prior evidence retained -- is locked below with the validator's OWN refusals
+        # instead of being asserted on the pair itself.
+        for name in (batch_path.name, screening_path.name, rework_batch.name):
+            assert (ws / name).is_file(), name
         before = sm_state("SCREENING_PASSED", 6,
                           [f"ITER-1:{batch_path.name}", f"ITER-1:{screening_path.name}"],
                           "Can round 1 clear physical screening?")
@@ -1011,11 +1301,15 @@ def scenario_screening_rework(router, validator) -> dict:
                          "Can round 1 clear physical screening?")
         reason = validator.validate(sm_event(before, after, iteration=1))
         assert reason is None, f"rework edge must be ALLOWed by the state machine: {reason}"
-        assert before["version"] == after["version"], (before, after)
-        assert all(item in after["evidence"] for item in before["evidence"]), after["evidence"]
-        assert len(after["evidence"]) == len(before["evidence"]) + 1, after["evidence"]
-        print("E2E-3 ok: state machine ALLOWs the rework edge at iteration 1 "
-              "(the failed screen's record is retained, the remade batch is appended)")
+        dropped = sm_state("BATCH_PRODUCED", 6, [f"ITER-1:{rework_batch.name}"],
+                           "Can round 1 clear physical screening?")
+        dropped_reason = validator.validate(sm_event(before, dropped, iteration=1))
+        assert dropped_reason == RING_DROP_REASON, dropped_reason
+        bumped = sm_state("BATCH_PRODUCED", 7, after["evidence"], "Can round 1 clear physical screening?")
+        bumped_reason = validator.validate(sm_event(before, bumped, iteration=1))
+        assert bumped_reason == RING_VERSION_REASON, bumped_reason
+        print("E2E-3 ok: state machine ALLOWs the rework edge at iteration 1 (the failed screen's record is "
+              "retained, the remade batch is appended), and REFUSES dropping that record or bumping the version")
 
         # --- no bench_test record anywhere in this workspace -----------------
         found = bench_test_records(ws)
@@ -1150,15 +1444,18 @@ def main() -> int:
 
     print(
         "PASS: E2E-2 inner-loop iteration (ring edge ALLOW, iteration "
-        f"{inner_loop['campaign_1_iteration']} -> {inner_loop['campaign_2_iteration']}, round-1 records retained), "
+        f"{inner_loop['campaign_1_iteration']} -> {inner_loop['campaign_2_iteration']} advanced by re-driving the "
+        "bench-registration campaign producer, round-1 records retained on disk), "
         "E2E-3 screening rework (rework edge ALLOW, batch remade, 0 bench_test records), "
         "decision-3 boundary locked (inter-ring backtracking DENY)"
     )
     print(
-        "NOT COVERED: MODEL_BUILT is inline-assembled here because statistical-analysis refuses this route's own "
-        f"bench_test record ({inner_loop.get('model_built_gap', 'the gap was reported closed')}); NEXT_BATCH_DECIDED "
-        "and CAMPAIGN_OPENED have no producing script in the pack (both records are inline fixtures, schema-checked); "
-        "the oil-route upstream stages are not re-driven"
+        "NOT COVERED HERE: MODEL_BUILT is the one inline record (fixtures/inner-loop/model_round_1.json) because "
+        "statistical-analysis requires the oil-route upstream artifacts (challenge / failure_ctq / test_method / "
+        "experiment) that this inner-loop-only workspace does not carry; its real refusal names exactly those four "
+        "and no longer demands a verdict from the contract-UNDECIDED bench_test record, and E2E-1 "
+        "(test_precision_grease_chain.py) drives MODEL_BUILT for real on the full route. The oil-route upstream "
+        "stages themselves are not re-driven here."
     )
     return 0
 

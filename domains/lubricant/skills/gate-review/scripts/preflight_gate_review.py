@@ -67,6 +67,22 @@ INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"gate"}
 # through on an optimization artifact's PHYSICAL label.
 PROCESS_UPSTREAM = (("process_artifact", "process.schema.json", "DESIGN_SPACE_DEFINED"), ("process_window_artifact", "process.schema.json", "PROCESS_WINDOW_DEFINED"))
 OPTIONAL_INPUT_FIELDS = {key for key, _, _ in PROCESS_UPSTREAM}
+# WP-14 (2026-10-13): the precision-grease route's step-14 optimization artifact
+# legally lands at NON_INFERIORITY_PASSED instead of OPTIMIZED
+# (schemas/optimization.schema.json enumerates both). The expected stage of that
+# ONE input key is therefore dispatched on the project artifact's project_type,
+# the charter being the authority. Every other key, every other project_type and
+# an absent or unreadable project artifact keep the original constant, so the six
+# oil routes and the undecidable case behave exactly as before.
+GREASE_PROJECT_TYPE = "PRECISION_GREASE_DEV"
+GREASE_OPTIMIZATION_STAGE = "NON_INFERIORITY_PASSED"
+
+
+def expected_stage(key: str, stage: str, project: object) -> str:
+    """Stage constant the named upstream input must carry (oil behaviour by default)."""
+    if key == "optimization_artifact" and isinstance(project, dict) and project.get("project_type") == GREASE_PROJECT_TYPE:
+        return GREASE_OPTIMIZATION_STAGE
+    return stage
 REQUEST_FIELDS = {"gate_id", "scope", "gate_status", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks", "reason", "evidence"}
 # WP-08: the request may also carry the optional signoff record. It stays a
 # record only — no authority check happens here or downstream.
@@ -107,9 +123,12 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     missing = INPUT_FIELDS - set(data)
     if unexpected or missing:
         errors.append("input must contain only required upstream artifact paths and gate (process artifacts optional but permitted)")
+    project_value = None
     for key, schema, stage in UPSTREAM:
         item_errors, value = artifact(data.get(key), input_path, schema, key); errors.extend(item_errors); items[key] = value
-        if value and value.get("stage") != stage: errors.append(f"{key} must be stage {stage}")
+        if key == "project_artifact": project_value = value
+        expected = expected_stage(key, stage, project_value)
+        if value and value.get("stage") != expected: errors.append(f"{key} must be stage {expected}")
         if value and value.get("decision") != "GO": errors.append(f"{key} must have decision GO")
     for key, schema, stage in PROCESS_UPSTREAM:
         if key not in data: continue

@@ -62,8 +62,22 @@ KINDS = {
     "optimization-": ("OPTIMIZED", "optimization"),
     "gate.json": ("VERIFIED", "gate"),
     "gate-": ("VERIFIED", "gate"),
+    "application.json": ("APPLIED", "application"),
+    "application-": ("APPLIED", "application"),
     "reference.json": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
     "reference-": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
+    # 2026-10-13 (WP-14 / WP-06): the inner-loop campaign record is a stage
+    # artifact at CAMPAIGN_OPENED (build_campaign_artifact.py writes exactly
+    # that constant). It is the only kind added by this round: bench.json,
+    # interface-*.json and external_record*.json are resource objects whose own
+    # ``stage`` is the placeholder ``DRAFT`` (their builders write it; the stage
+    # they mark lives on the project, not on the record), and ``process`` has two
+    # legal shapes at two different stages (process-baseline.json at
+    # DESIGN_SPACE_DEFINED, process.json at PROCESS_WINDOW_DEFINED /
+    # PROCESS_SCALE_VALIDATED), so a single expected constant would be wrong.
+    # Those stay out of KINDS deliberately; naming is check_artifact_naming's job.
+    "campaign.json": ("CAMPAIGN_OPENED", "campaign"),
+    "campaign-": ("CAMPAIGN_OPENED", "campaign"),
     "batch.json": ("BATCH_PRODUCED", "batch"),
     "batch-": ("BATCH_PRODUCED", "batch"),
     "screening.json": ("SCREENING_PASSED", "screening"),
@@ -77,6 +91,24 @@ KINDS = {
     "knowledge_asset.json": ("KNOWLEDGE_ARCHIVED", "knowledge_asset"),
     "knowledge_asset-": ("KNOWLEDGE_ARCHIVED", "knowledge_asset"),
 }
+
+# WP-14 (2026-10-13): the precision-grease route's step-14 optimization artifact
+# legally lands at NON_INFERIORITY_PASSED instead of OPTIMIZED
+# (schemas/optimization.schema.json enumerates both). One artifact kind's stage
+# expectation is therefore dispatched on the charter's project_type, which the
+# audit can read because it sees the whole workspace. Every other kind, every
+# other project type and a workspace with no readable project artifact keep the
+# original constant, so the six oil routes audit byte for byte as before.
+GREASE_PROJECT_TYPE = "PRECISION_GREASE_DEV"
+GREASE_STAGE_BY_KIND = {"optimization": "NON_INFERIORITY_PASSED"}
+
+
+def expected_stage(stage, kind, project_type):
+    """Stage constant an artifact of ``kind`` must carry in this workspace."""
+    if project_type == GREASE_PROJECT_TYPE and kind in GREASE_STAGE_BY_KIND:
+        return GREASE_STAGE_BY_KIND[kind]
+    return stage
+
 
 # Free-text fields may embed a method id ("...record: HDG-TM-012"). The bare-id
 # linkage check is an exact string match downstream, so a prose mention that
@@ -116,6 +148,30 @@ def main(argv):
     notes = []
     recognized = {}
 
+    # WP-14: the stage expectation for one kind is dispatched on the charter's
+    # project_type. The charter is the canonical project.json; without one -- or
+    # without a readable project_type -- every expectation keeps its original
+    # constant.
+    #
+    # The canonical name is what decides, not "whichever file sorts first": an
+    # extra non-canonical json declaring artifact_type "project" used to win the
+    # lookup by filename order and silently flip this dispatch (and with it the
+    # route-dependent stage expectations). Such a file is not a stage artifact,
+    # so nothing else here would have noticed it. Two charters is an ambiguous
+    # workspace and is reported rather than resolved by luck.
+    charters = [
+        (name, artifact)
+        for name, artifact in arts.items()
+        if isinstance(artifact, dict) and artifact.get("artifact_type") == "project"
+    ]
+    canonical = [pair for pair in charters if pair[0] == "project.json"]
+    if len(charters) > 1:
+        problems.append(
+            "more than one artifact declares artifact_type 'project' "
+            f"({', '.join(name for name, _ in charters)}); the charter must be project.json"
+        )
+    project_type = (canonical[0][1] if canonical else (charters[0][1] if charters else {})).get("project_type")
+
     for name, artifact in arts.items():
         stage, kind = kind_of(name)
         if stage is None:
@@ -131,9 +187,10 @@ def main(argv):
         # ---- 1. every artifact carries the stage constant its consumers expect
         # project.json.stage is the CONSTANT PROJECT_DEFINED (charter marker);
         # advancing it breaks the preflights that hard-require the constant.
-        if artifact.get("stage") != stage:
+        required = expected_stage(stage, kind, project_type)
+        if artifact.get("stage") != required:
             problems.append(
-                f"{name}: stage is {artifact.get('stage')!r}, consumers require {stage!r}"
+                f"{name}: stage is {artifact.get('stage')!r}, consumers require {required!r}"
             )
 
     if not recognized:

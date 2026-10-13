@@ -23,11 +23,14 @@ Supported Development Project Types:
 4. `CUSTOMIZATION` (客户定制): 客户技术协议与OEM专属工况驱动，对齐协议技术指标与指定台架，匹配现有成熟平台并微调。
 5. `EXPLORATION` (机理/平台型探索): 科学假设驱动，允许失败，重点考察变量影响规律与机理模型，不以单一商业量产目标为死限。
 6. `PROCESS_ROBUSTNESS` (工艺稳健性): 配方已定，只考工艺。跳过工况定义与挑战推导，直接由失效/CTQ 与已评定方法切入设计空间；强化工艺空间（不做多目标优化，故不含 `OPTIMIZED`），以工艺窗口为主输出，末尾经 `APPLIED`（应用与整机验证）证明批次一致性。
+7. `PRECISION_GREASE_DEV` (精密传动脂开发): 配方与工艺共同定义产品（皂纤维骨架由皂化 / 转相 / 冷却 / 研磨决定），台架是瓶颈：小批序贯、内环循环 N 轮，最终判据只在整机（启动扭矩 / 回差 / 温升 / 寿命）。
+
+> 允许的 `project_type` 以 `schemas/project.schema.json` 的 `project_type` 枚举为唯一权威（上列 7 类是它的取值），preflight 直接读该枚举、不再另存第二份清单；枚举读不到即 fail-closed。
 
 ### Interaction Rule
 - **Mode A (自然语言预判与确认)**: 若用户已有初步描述，分析背景后推荐最可能类型并请用户确认：
-  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索 6. 工艺稳健性）"
-- **Mode B (主动提示用户选择)**: 若无足够背景，展示 6 种类型让用户选择后再索取输入。
+  > "根据您的项目信息，本项目判定为【XX】性质的开发工作。请确认是否以此类型启动？（1. 新产品正向开发 2. 已有产品性能优化 3. 降本替代 4. 客户定制 5. 机理/平台型探索 6. 工艺稳健性 7. 精密传动脂开发）"
+- **Mode B (主动提示用户选择)**: 若无足够背景，展示 7 种类型让用户选择后再索取输入。
 - **No Form Dumping**: 禁止一次性堆叠索取全部 10+ 字段或工况参数，仅按确认的项目类型逐步索取核心输入。
 
 ### Benchmark Sourcing Rule（基准产品提问纪律）
@@ -45,7 +48,7 @@ Supported Development Project Types:
 ## 2. Input Specification
 
 A valid input JSON requires:
-- `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the 6 valid types), `product_family`.
+- `project_id` (alphanumeric, `.`, `_`, `-`), `project_name`, `project_type` (one of the types declared by `schemas/project.schema.json` — the six oil routes plus `PRECISION_GREASE_DEV`), `product_family`.
 - `business_objective`, `technical_objective`, non-empty `hard_constraints`, and non-empty `success_criteria`.
 - `target_cost` containing complete measurement metadata (`value`, `unit`, `source`, `method_version`, `material_batch`, `formula_version`).
 - `benchmark_products` is **optional**: only fill it when a comparable benchmark genuinely exists. When absent, a non-empty `benchmark_waiver_reason` is mandatory (e.g. 全新品类无可比产品、机理探索不设商业对标、用户明确暂缓对标) — silent omission is not allowed.
@@ -62,20 +65,25 @@ All scripts reside in `skills/project-definition/scripts/` (or relative `scripts
 ```bash
 python skills/project-definition/scripts/preflight_project_definition.py <input.json>
 ```
-- Expected output on success: `READY: input can form one PROJECT_DEFINED record only` (exit code 0).
+- Expected output on success: `READY: input can form a PROJECT_DEFINED charter only` (exit code 0).
 - On failure: Outputs missing/invalid fields and exits with code 1.
 
 ### Step 2: Build Project Charter Artifact
-Create temporary candidate JSON with `stage: "PROJECT_DEFINED"`, `status: "ACTIVE"`, and the 7 canonical decision fields (`decision_question`, `hypothesis`, `uncertainty`, `decision_rule`, `result`, `decision: "GO"`, `next_action`).
+```bash
+python skills/project-definition/scripts/build_project_artifact.py <input.json> <temporary-file.json>
+```
+- Deterministically assembles the candidate charter: `stage: "PROJECT_DEFINED"` (constant marker), `status: "ACTIVE"`, the 7 canonical decision fields (`decision_question`, `hypothesis`, `uncertainty`, `decision_rule`, `result`, `decision`, `next_action`), and the input's project fields and `source_evidence` verbatim — no value is invented. Expected output on success: `BUILT: <temporary-file.json>` (exit code 0).
+- On failure: Refuses with the same `HOLD: missing or invalid: ...` findings as Step 1 and writes no artifact.
 
 ### Step 3: Validate Artifact
 ```bash
 python skills/project-definition/scripts/validate_project_artifact.py <temporary-file.json>
 ```
-- Expected output on success: `PASS: project artifact conforms to the Stage 0 contract` (exit code 0).
+- Expected output on success: `PASS: project artifact conforms to Project Charter schema` (exit code 0).
 
 ### Step 4: Atomic Commit & Checkpoint
-Atomically copy/move `<temporary-file.json>` to `<output.json>` (defaults to `project.json`) only after Step 3 passes.
+Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
+- The landed name must be the canonical stage name `project.json` (or the legal suffixed form `project-<project_id>-<id>.json`), directly under the workspace root. The panel and `scripts/check_artifact_naming.py` match it exactly; a name like `project.grease.json` is classified as a mangled stage artifact and the stage would read as missing. A temp/suffixed candidate name used for Step 2/3 must not be the name that lands.
 ```bash
 # 🔴 CHECKPOINT · STOP: Stage 0 stops here at PROJECT_DEFINED. Route to next stage according to project_type.
 ```

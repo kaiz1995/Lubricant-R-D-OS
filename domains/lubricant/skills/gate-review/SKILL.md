@@ -1,6 +1,6 @@
 ---
 name: gate-review
-description: Record one evidence-bound review Gate at VERIFIED; preflight verifies the complete 9-artifact upstream chain through OPTIMIZED; HOLDs GO requests with unresolved conditions or evidence gaps and rejects unsupported dispositions. Use when user mentions "gate-review", "阶段门禁评审", "Stage Gate", "VERIFIED", "门禁决策", "GO/HOLD决议", or finalizing Stage 9 in lubricant R&D.
+description: Record one evidence-bound review Gate at VERIFIED; preflight verifies the complete 9-artifact upstream chain through OPTIMIZED (stage NON_INFERIORITY_PASSED on the precision-grease route, per project_artifact.project_type); HOLDs GO requests with unresolved conditions or evidence gaps and rejects unsupported dispositions. Use when user mentions "gate-review", "阶段门禁评审", "Stage Gate", "VERIFIED", "门禁决策", "GO/HOLD决议", or finalizing Stage 9 in lubricant R&D.
 ---
 
 # Gate Review (Stage 9)
@@ -14,7 +14,9 @@ Authority schema: `../../schemas/gate.schema.json` (or local `references/gate.sc
 
 ## 1. Input Specification & Gating Disposition Invariants
 
-A single JSON input object providing the complete 9 upstream stage artifacts through `OPTIMIZED` and the `gate` review submission:
+A single JSON input object providing the complete 9 upstream stage artifacts through `OPTIMIZED` and the `gate` review submission.
+
+**Upstream stage expectation (WP-14, additive)**: the expected stage of `optimization_artifact` is dispatched on `project_artifact.project_type`. On the precision-grease route (`PRECISION_GREASE_DEV`) the route's step-14 optimization artifact legally lands at `NON_INFERIORITY_PASSED` (both values are enumerated by `schemas/optimization.schema.json`), so that stage is accepted there. Every oil project type — and a project artifact that is missing, unreadable, or carries no decidable `project_type` — keeps the original `OPTIMIZED` requirement unchanged, message included.
 
 ```json
 {

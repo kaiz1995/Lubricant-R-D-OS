@@ -302,6 +302,69 @@ def main() -> int:
     returncode, stdout = run_cli_args("--list-loop-edges", "NOT_A_TYPE")
     assert returncode == 1 and "no routed stage chain" in stdout, (returncode, stdout)
 
+    # 23. The contract's max_iterations bounds the ring in the router too: a
+    #     ring-edge request whose project_state declares a `current_iteration`
+    #     at or past the cap is DENIED with the same stop-the-loop guidance the
+    #     state machine gives. Below the cap — and when the counter is not
+    #     declared at all — the ring keeps its ALLOW and its verbatim reason.
+    #     The cap governs the back edge only (the forward step stays legal), and
+    #     the six oil routes are unaffected: no oil route exposes a ring target.
+    capped_ring = physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS)
+    result = router.decide(capped_ring, "BATCH_PRODUCED")
+    assert result["decision"] == "DENY", result
+    assert result["reason"] == (
+        f"current_iteration {router.MAX_ITERATIONS} has reached max_iterations {router.MAX_ITERATIONS}; "
+        "stop the inner loop and record PIVOT or KILL"
+    ), result
+    for stage in ("VARIANCE_ASSESSED", "SCREENING_PASSED"):
+        result = router.decide(
+            physical_state(stage, project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS + 1),
+            "BATCH_PRODUCED",
+        )
+        assert result["decision"] == "DENY" and "PIVOT or KILL" in result["reason"], (stage, result)
+    # The ordinary next step is not a back edge: the cap never blocks it.
+    result = router.decide(
+        physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS + 1),
+        "MODEL_BUILT",
+    )
+    assert result["decision"] == "ALLOW" and result["reason"] == "single-step advancement permitted", result
+    # A counter below the cap, and no counter at all, behave exactly as before.
+    for extra in ({"current_iteration": router.MAX_ITERATIONS - 1}, {}):
+        result = router.decide(
+            physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV", **extra),
+            "BATCH_PRODUCED",
+        )
+        assert result["decision"] == "ALLOW" and result["skill"] == "grease-batch", (extra, result)
+        assert result["reason"] == "declared inner-loop edge permitted", (extra, result)
+    # CLI parity: a capped ring request exits 1 through the script as well.
+    returncode, stdout = run_cli({
+        "project_state": physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS),
+        "requested_stage": "BATCH_PRODUCED",
+    })
+    assert returncode == 1 and "DENY" in stdout and "PIVOT or KILL" in stdout, (returncode, stdout)
+    # Oil routes are untouched: a declared counter changes nothing there, for the
+    # route's own step (ALLOW, verbatim reason) or for a cross-stage jump (DENY).
+    for oil_type, oil_route in router.TYPE_ROUTES.items():
+        if oil_type == "PRECISION_GREASE_DEV":
+            continue
+        result = router.decide(
+            physical_state(oil_route[0], project_type=oil_type, current_iteration=router.MAX_ITERATIONS + 87),
+            oil_route[1],
+        )
+        assert result["decision"] == "ALLOW" and result["reason"] == "single-step advancement permitted", (oil_type, result)
+        result = router.decide(
+            physical_state(oil_route[0], project_type=oil_type, current_iteration=router.MAX_ITERATIONS + 87),
+            oil_route[-1],
+        )
+        assert result["decision"] == "DENY" and "cross-stage" in result["reason"], (oil_type, result)
+    # An oil route cannot even reach the cap branch: its request never is a ring
+    # target, so the DENY text keeps its pre-existing reason.
+    result = router.decide(
+        physical_state("VARIANCE_ASSESSED", project_type="NEW_PRODUCT", current_iteration=router.MAX_ITERATIONS + 87),
+        "BATCH_PRODUCED",
+    )
+    assert result["decision"] == "DENY" and "max_iterations" not in result["reason"], result
+
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages, {len(router.TYPE_ROUTES)} project types)")
     return 0
 

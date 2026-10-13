@@ -1,0 +1,37 @@
+{
+  "project_artifact": "../precision-grease/project-active.json",
+  "bench_artifacts": ["bench.json"],
+  "campaign": {
+    "campaign_id": "CMP-PGD-B1-001",
+    "project_reference": "PGD-B1-001",
+    "bench_references": ["BENCH-PGD-B1-01"],
+    "current_iteration": 2,
+    "iterations": [
+      {
+        "iteration": 1,
+        "samples": ["SMP-PGD-B1-R1A", "SMP-PGD-B1-R1B"],
+        "stop_state": "CONTINUE",
+        "screening_reference": "SCR-PGD-B1-R1",
+        "variance_reference": "VAR-PGD-B1-R1",
+        "model_reference": null,
+        "next_batch_reference": "NEXT-PGD-B1-R1",
+        "bench_test_references": ["BT-PGD-B1-R1A-1", "BT-PGD-B1-R1B-1"]
+      }
+    ],
+    "pairing_design": {
+      "paired": true,
+      "description": "Synthetic fixture: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels; at a fixed sigma, pairing buys more resolution than measuring sigma precisely."
+    },
+    "evidence_scope": "SYNTHETIC",
+    "source": "Synthetic campaign-registration fixture",
+    "evidence_id": "EV-CMP-PGD-B1-001",
+    "evidence": [
+      {
+        "evidence_id": "EV-CMP-PGD-B1-001",
+        "statement": "Synthetic campaign request supplied for contract validation only; round 1 is a synthetic record and this is not product evidence.",
+        "source": "Synthetic campaign fixture (fixtures/bench-registration/campaign-input.json)",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

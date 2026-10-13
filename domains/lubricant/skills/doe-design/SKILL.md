@@ -1,6 +1,6 @@
 ---
 name: doe-design
-description: Record one evidence-bound experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, the mixture↔factor bridge (constraint_role routes variables to components or factors), and bound constraints before building the artifact. On the PRECISION_GREASE_DEV route it defaults to a small sequential round (3–6 samples per round) and enforces the registered bench schedule. Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "因子设计", "裂区", "小批序贯", "序贯实验", "资源受限贪心序贯", "台架档期约束", "CONSTRAINED_MIXTURE", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL", or advancing to Stage 5 in lubricant R&D.
+description: Record one evidence-bound experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, the mixture↔factor bridge (constraint_role routes variables to components or factors), and bound constraints before building the artifact. On the PRECISION_GREASE_DEV route it defaults to a small sequential round (3–6 samples per round) and enforces the registered bench schedule. It also produces the inner-loop step-13b sequential decision (`next_batch.json`, stage `NEXT_BATCH_DECIDED`): which samples the next round runs — each one separating a pair of competing explanations the input must declare — and whether the loop continues at all (see §3). Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "因子设计", "裂区", "小批序贯", "序贯实验", "资源受限贪心序贯", "台架档期约束", "序贯决策", "下一批跑哪些样", "next_batch", "NEXT_BATCH_DECIDED", "CONSTRAINED_MIXTURE", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL", or advancing to Stage 5 in lubricant R&D.
 ---
 
 # DOE Design (Stage 5)
@@ -208,6 +208,105 @@ and whether the schedule came from the bench artifact or from the hand-filled en
 
 ---
 
+## 3. Step 13b: the sequential decision (`next_batch.json`, stage `NEXT_BATCH_DECIDED`)
+
+On the grease route the router maps `NEXT_BATCH_DECIDED` to this skill: the inner loop's
+step 13b decides **which samples the NEXT bench round runs, and why those are the
+informative ones** — and **whether the loop continues at all**. Same three-step pipeline as
+§2, from three upstream artifacts and one request block:
+
+```json
+{
+  "campaign_artifact": "path/to/campaign.json",
+  "experiment_design_artifact": "path/to/experiment_design.json",
+  "variance_artifact": "path/to/variance.json",
+  "next_batch": {
+    "next_batch_id": "NEXT-PGD-NB-002",
+    "stop_state": "CONTINUE",
+    "bench_slots_required": 2,
+    "information_gain_basis": "…why these are the informative samples rather than the alternatives…",
+    "competing_explanations": [
+      { "explanation_id": "EXPL-A", "statement": "…competitor A explains the last round…" },
+      { "explanation_id": "EXPL-B", "statement": "…competitor B explains the last round…" }
+    ],
+    "proposed_samples": [
+      { "formula_reference": "FORM-…@v1", "hypothesis": "EXPL-A", "separates": ["EXPL-A", "EXPL-B"] },
+      { "sample_reference": "SAM-…", "hypothesis": "EXPL-B", "separates": ["EXPL-A", "EXPL-B"] }
+    ],
+    "next_round_budget": { "bench_slots_remaining": 6, "calendar_days_remaining": 240 },
+    "evidence": [ { "evidence_id": "E-…", "statement": "…", "source": "…", "status": "ASSUMED" } ]
+  }
+}
+```
+
+**NO Invented Discrimination (the point of this stage).** The whole inner loop exists
+because the next batch is chosen to be *informative*: a sample that cannot separate two
+competing explanations is not worth a bench slot. So the competing explanations are
+declared by the input (`competing_explanations`), each sample cites the pair it separates
+(`separates`, two declared ids), and the artifact is **composed** from those declarations —
+`hypothesis` is the declared statement of the one hypothesis the sample discriminates and
+`discriminates` is the two declared statements joined by the ` vs ` form the schema's own
+example uses. This skill never writes a hypothesis of its own: an input that declares no
+competing explanations, or cites an id it did not declare, is refused with `HOLD` and
+nothing is written. `stop_rationale` is the same kind of rule: any `stop_state` other than
+`CONTINUE` must record why the loop stopped, and a record that continues must not carry one.
+
+**Why the variance record is required.** Step 13b is taken *after* step 12 said whether the
+last round's difference is real or noise: the same bench slots cannot be spent re-learning a
+difference the model already predicts (`NO_NEW_INFORMATION` is the variance record's routing
+by its own contract), and an incapable design (`UNDERPOWERED`) must be answered by changing
+the method or the criterion, never by adding samples. A next-batch decision taken without
+that verdict could contradict it silently, so the variance record is a hard upstream and
+`variance.iteration` must equal the campaign's current iteration — one assessment per round.
+
+**Cross-checks that bind this record to its round** (all refused with `HOLD` by name):
+
+| Check | Rule |
+|---|---|
+| Campaign carrier | `campaign_artifact` is `CAMPAIGN_OPENED`; `from_iteration` is derived from its `current_iteration` (never asserted by the caller); its entry for that iteration carries the same `stop_state`, the same `next_batch_reference` and the same `variance_reference` as this record. |
+| Loop cap | `stop_state: CONTINUE` may not open an iteration beyond `campaign.max_iterations` (the state machine refuses that advance). |
+| Bench bound | `bench_slots_required` must not exceed the availability the round's design declares (`resource_envelope.bench_slots`, or the registered bench's derived `available_bench_slots` when doe-design recorded one); `available_bench_slots: 0` cannot host any round. No declared availability is reported as a `NOTE`, not silently treated as unlimited. |
+| Slots vs samples | every proposed sample runs in the next round, so `len(proposed_samples) <= bench_slots_required`. |
+| Identity | all three upstream artifacts share one `project_id` and one `evidence_scope`; the artifact inherits both. |
+
+### Workflow (identical shape to §2)
+
+```bash
+python -B skills/doe-design/scripts/preflight_next_batch.py <input.json>
+python -B skills/doe-design/scripts/build_next_batch_artifact.py <input.json> <temporary-file.json>
+python -B skills/doe-design/scripts/validate_next_batch_artifact.py <temporary-file.json>
+```
+
+- Preflight success: `READY: input can form one NEXT_BATCH_DECIDED record only`, then a
+  `GATE:` line and one `NOTE:` line per declared boundary / variance routing. Failure:
+  `HOLD: missing or invalid: …; no artifact generated` (exit 1), nothing written.
+- Builder: writes the composed record, prints `BUILT: … stage=NEXT_BATCH_DECIDED`.
+- Validator: `PASS: deterministic next-batch artifact conforms to the step-13b contract`,
+  or `FAIL:` lines. It re-derives the decision block from the artifact's own fields (only
+  `CONTINUE` is a `GO`; every stop is a truthful `HOLD`) so a hand-edited record cannot pass.
+- **Naming rule**: if `next_batch.json` does not yet exist in the workspace root, commit
+  this record as `next_batch.json`; otherwise commit it as
+  `next_batch-<project_id>-<next_batch_id>.json`. Then run
+  `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD`.
+
+```bash
+# 🔴 CHECKPOINT · STOP: step 13b stops here at NEXT_BATCH_DECIDED. CONTINUE hands the proposed
+# samples to the next round's doe-design step; any other stop_state hands off to the campaign's stop path.
+```
+
+**Route scope.** `NEXT_BATCH_DECIDED` sits on no `type_route` of the six oil project types
+(only `PRECISION_GREASE_DEV` declares it), and this stage's upstream set is that route's own
+records — a `CAMPAIGN_OPENED` carrier exists on no oil route. The existing
+`EXPERIMENT_DESIGNED` behaviour of this skill is untouched byte for byte.
+
+**Deployment note (owner action).** This stage loads `schemas/next_batch.schema.json`
+(beside `common.schema.json`). A deployed bundle must ship it in the skill's `references/`
+directory, i.e. `scripts/install_domain_skill.py`'s `doe-design` entry must list
+`next_batch.schema.json`; until it does, `scripts/check_double_list.py` reports exactly that
+drift and the deployed copy of these three scripts cannot load the contract.
+
+---
+
 ## 4. Failure Modes & Fallback Recovery (Fail-Closed)
 
 | Failure Symptom | Root Cause | Fallback Recovery Action |
@@ -225,6 +324,17 @@ and whether the schedule came from the bench artifact or from the hand-filled en
 | `HOLD: resource_envelope.bench_slots=… contradicts the supplied bench artifact's derived available_bench_slots=…` | 手填资源包络与 `bench.json` 推导出的可用台架位数不一致 | **STOP**。脂路线上以已登记台架档期为准；把手填值改为与推导值一致，或撤销 `bench_artifact` 回到纯手填路径。 |
 | `HOLD: bench_artifact.available_bench_slots must be the integer derived by bench-registration` | 台架工件缺少（或被手改）推导位数 | **STOP**。用 `bench-registration` 重新生成台架工件，不要手填该字段。 |
 | `FAIL: cannot read artifact or schemas` | 输入损坏或 Schema 错误 | 检查输入文件与 `../../schemas/experiment_design.schema.json`。 |
+| `HOLD: next_batch.competing_explanations must declare at least two competing explanations …` | 第 13b 步没有给出本轮要区分的竞争假设（或只给了一条） | **STOP**。把本轮真正待区分的两个解释写进输入（每条 `explanation_id` + `statement`）；**不得**由模型代填假设。 |
+| `HOLD: next_batch.proposed_samples[i].separates cites … which next_batch.competing_explanations does not declare` | 样品的区分对象引用了未声明的解释 id | **STOP**。改为引用已声明的两个 id；"区分哪一对"必须来自输入。 |
+| `HOLD: next_batch.stop_rationale is required when stop_state is …` | 停轮没有记录原因（`NO_NEW_INFORMATION` / `GOAL_MET` / `RESOURCE_EXHAUSTED` / `PIVOT` / `KILL`） | **STOP**。补写停止原因；停轮与继续一样是决策，必带理由。 |
+| `HOLD: next_batch.stop_rationale must be omitted while stop_state is CONTINUE` | 继续的轮次却带了停止理由 | **STOP**。一条记录只表达一种状态：继续就不写 `stop_rationale`。 |
+| `HOLD: … .stop_state=… contradicts the supplied next_batch.stop_state=…` | campaign 载体里的本轮 stop_state 与本决策不一致 | **STOP**。先把 campaign 的本轮条目更新到同一结论，再落盘本记录（载体与决策必须讲同一个故事）。 |
+| `HOLD: next_batch.stop_state=CONTINUE would open iteration N beyond campaign_artifact.max_iterations=M` | 继续会超出战役轮次上限 | **STOP**。循环必须停：改写 `stop_state` 为 `PIVOT` 或 `KILL` 并给出 `stop_rationale`。 |
+| `HOLD: next_batch.bench_slots_required=… exceeds the round's declared bench availability …` | 本轮排产超过设计声明的台架可用位数 | **STOP**。缩小本轮规模，或先扩宽并重新登记台架档期（`available_bench_slots` 为推导值，不得手填）。 |
+| `HOLD: next_batch proposes N sample(s) but requires only M bench slot(s)` | 提出的样品数多于台架位 | **STOP**。每个"下一轮要跑的样"都要占一个位；删减样品或补足位次。 |
+| `HOLD: variance_artifact.iteration=… must equal the campaign's current iteration …` | 方差判定与本轮不是同一轮 | **STOP**。一次方差判定只覆盖一轮；用同一轮的第 12 步记录。 |
+| `HOLD: the next_batch schemas cannot be read: …`（缺 `references/next_batch.schema.json`） | 部署包未随附 step-13b 契约 | **STOP**。部署侧把 `next_batch.schema.json` 加进 `scripts/install_domain_skill.py` 的 doe-design 部署清单后重新部署。 |
+| `FAIL: … must equal the deterministic next-batch policy` | 落盘工件被手工改写（例如把停止改成"继续"，或换掉 decision 块） | **STOP**。用 builder 重新生成；不得手改工件。 |
 
 ---
 
@@ -246,4 +356,20 @@ and whether the schedule came from the bench artifact or from the hand-filled en
    model-driven (Bayesian) design. The engine performs deterministic greedy selection from candidate
    lattice points and reports `RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL_V1`. The legacy alias still runs
    and still reports its legacy string, but the honest name is the one to use.
+8. **NO Invented Discrimination (step 13b)**: DO NOT write a hypothesis, a competing explanation or a
+   discrimination pair that the input did not declare, and DO NOT decide a next batch on an input that
+   declares none — that input is held, not completed by the model. The record's `hypothesis` and
+   `discriminates` are compositions of declared statements, never new claims.
+9. **NO Unrecorded Stop (step 13b)**: DO NOT record a `stop_state` other than `CONTINUE` without a
+   non-empty `stop_rationale`, and DO NOT carry a rationale on a round that continues. Stopping the
+   loop is a decision like any other and must state why.
+10. **NO Round Outside the Registered Bench (step 13b)**: DO NOT plan more bench slots than the
+   round declares available, and DO NOT let a `CONTINUE` authorize an iteration beyond the campaign's
+   `max_iterations`. The bench is the bottleneck and the campaign cap is the loop's own bound.
+11. **NO Next-Batch Decision Without the Round's Verdict (step 13b)**: DO NOT take the decision
+   without the round's `VARIANCE_ASSESSED` record — the verdict is what makes a sample informative
+   rather than redundant, so it is a hard upstream and its `iteration` must equal the campaign's
+   current round. An `UNDERPOWERED` or `REPLICATE_INCONSISTENT` verdict is printed with the recovery
+   its own contract requires (change the method or the criterion / repair the replicate structure):
+   the next round is not the place to buy back a resolution the bench cannot deliver.
 

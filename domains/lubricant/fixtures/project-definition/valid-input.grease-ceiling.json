@@ -1,0 +1,36 @@
+{
+  "project_id": "PGD-E2E-001",
+  "project_name": "Precision-gear grease E2E campaign",
+  "project_type": "PRECISION_GREASE_DEV",
+  "product_family": "Precision-gear (harmonic drive) grease",
+  "business_objective": "Qualify a precision-gear grease against the OEM reference grease.",
+  "technical_objective": "Maintain the required CTQ and risk boundaries under the harmonic-drive duty.",
+  "hard_constraints": [
+    "Reference materials must exist as physical samples before method qualification."
+  ],
+  "benchmark_products": [
+    "Synthetic OEM precision-gear grease reference"
+  ],
+  "success_criteria": [
+    "Critical CTQs have evidence."
+  ],
+  "risk_class": "STRATEGIC",
+  "owner": "R&D owner",
+  "source_evidence": [
+    {
+      "evidence_id": "E-PGD-E2E-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: approved brief requests a precision-gear grease with an OEM grease as the performance benchmark.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "cost_ceiling": {
+    "value": 220,
+    "unit": "CNY/kg",
+    "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+    "method_version": "n/a",
+    "material_batch": "n/a",
+    "formula_version": "n/a"
+  },
+  "cost_basis_reason": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: performance-first grease charter sets a cost ceiling, not a reduction target."
+}

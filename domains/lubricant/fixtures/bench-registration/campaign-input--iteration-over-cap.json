@@ -1,0 +1,34 @@
+{
+  "project_artifact": "../precision-grease/project-active.json",
+  "bench_artifacts": ["bench.json"],
+  "campaign": {
+    "campaign_id": "CMP-PGD-B1-001-BAD-OVER-CAP",
+    "project_reference": "PGD-B1-001",
+    "bench_references": ["BENCH-PGD-B1-01"],
+    "max_iterations": 12,
+    "current_iteration": 13,
+    "iterations": [
+      {
+        "iteration": 1,
+        "samples": ["SMP-PGD-B1-R1A", "SMP-PGD-B1-R1B"],
+        "stop_state": "CONTINUE",
+        "bench_test_references": ["BT-PGD-B1-R1A-1", "BT-PGD-B1-R1B-1"]
+      }
+    ],
+    "pairing_design": {
+      "paired": true,
+      "description": "Negative fixture: the pair design is recorded, but the iteration counter is one round past the cap."
+    },
+    "evidence_scope": "SYNTHETIC",
+    "source": "Synthetic campaign-registration fixture (INVALID: current_iteration past max_iterations)",
+    "evidence_id": "EV-CMP-PGD-B1-BAD-002",
+    "evidence": [
+      {
+        "evidence_id": "EV-CMP-PGD-B1-BAD-002",
+        "statement": "Negative fixture: current_iteration 13 exceeds max_iterations 12, the cross-field rule campaign.schema.json states but cannot express structurally. Not product evidence.",
+        "source": "Synthetic campaign fixture (fixtures/bench-registration/campaign-input--iteration-over-cap.json)",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

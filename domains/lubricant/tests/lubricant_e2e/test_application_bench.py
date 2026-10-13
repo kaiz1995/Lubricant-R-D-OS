@@ -462,7 +462,9 @@ def main() -> int:
     assert len(SKILLS) == 24, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
     assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json", "campaign.schema.json", "bench_test.schema.json"), SKILLS["application-validation"]
-    assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]
+    # The skill grew a second producer (the grease route's CAMPAIGN_OPENED), so its
+    # deployed set is the union of what both script families load.
+    assert SKILLS["bench-registration"] == ("common.schema.json", "project.schema.json", "campaign.schema.json", "bench.schema.json"), SKILLS["bench-registration"]
 
     print("PASS: WP-05 application + bench objects, fail-closed verdict, and bench slot conversion")
     return 0
