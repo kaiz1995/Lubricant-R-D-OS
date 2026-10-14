@@ -98,10 +98,15 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     artifactType: "project",
     file: "project.json",
     titleZh: "立项与项目定义",
-    description: "确定项目代号、应用场景目标、成本上限约束与团队权责。",
+    description:
+      "按七板块立项：① 项目基本信息与性质 ② 减速器机型与硬件载体 ③ 商业诉求与交付形态 " +
+      "④ 技术攻关焦点 ⑤ 边界与硬约束 ⑥ 成本天花板 ⑦ 成功判据与风险评级。",
     criteria: [
-      "明确应用机型与工况环境",
-      "锁定 target_cost（含单位）",
+      "七板块齐备：基本信息与性质、机型与硬件载体、商业诉求与交付形态、技术攻关焦点、边界与硬约束、成本天花板、成功判据与风险评级",
+      "机型与硬件载体（reducer_model）声明的三个必填子字段齐全：model_size（14/17/20/25/32）、structure_form（CUP/HAT/ULTRA_FLAT/OTHER）、friction_pair_materials（摩擦副材质）",
+      "对标是可选背景（benchmark_products 不填合法，无需豁免理由）；真正的对标在第 4 步参照物卷宗按实物建档",
+      "成本是天花板：cost_position = CEILING（性能与寿命优先，不设主动降本目标）",
+      "成功判据可暂定：success_criteria_status = PROVISIONAL 或 FIXED，暂定态在第 3 步细化",
       "完成立项评审批准",
     ],
   },
@@ -638,7 +643,8 @@ const OWN_REQUIRED: Record<string, readonly string[]> = {
     // target_cost 已由领域包移出 required（成本是天花板不是目标）：改由
     // cost_basis_reason 条件必填（schema 走 allOf if/then），且可改用 cost_ceiling。
     // lite 校验只做结构必填、不复刻业务条件（见上方「轻量结构校验」说明）。
-    // benchmark_products 同理：条件必填，凭 benchmark_waiver_reason 豁免。
+    // benchmark_products 自 2026-10-15 立项重构起是纯可选背景（对标在第 4 步参照物
+    // 卷宗按实物建档），benchmark_waiver_reason 降为 legacy 字段，二者都不进本表。
     "success_criteria", "risk_class", "owner"],
   duty: ["artifact_type", "duty_id", "project_reference", "duty"],
   challenge: ["artifact_type", "duty_reference", "challenge_id", "category", "description",

@@ -480,7 +480,7 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 
 | Skill 名称 | 产出 stage / 角色 | 输出状态 / 工件 | 关键功能与职责 |
 |---|---|---|---|
-| `project-definition` | `PROJECT_DEFINED` | `PROJECT_DEFINED` / `project.json` | 引导用户确认 **7 类研发性质**（`type_routes` 路由），定义商业/技术目标、硬约束与项目章程。 |
+| `project-definition` | `PROJECT_DEFINED` | `PROJECT_DEFINED` / `project.json` | 引导用户确认 **7 类研发性质**（`type_routes` 路由），按**七板块**定义项目章程：基本信息与性质 / 减速器机型与硬件载体 / 商业诉求与交付形态 / 技术攻关焦点 / 边界与硬约束 / 成本天花板 / 成功判据与风险评级。对标是可选背景（真正的对标在第 4 步按实物建档）。 |
 | `duty-definition` | `DUTY_DEFINED` | `DUTY_DEFINED` / `duty.json` | 结构化录入 7 大工况（设备、工况谱、维护、温度、负荷、污染、寿命）。 |
 | `duty-challenge-analysis` | `CHALLENGES_DEFINED` | `CHALLENGES_DEFINED` / `challenge.json` | 从工况推导润滑挑战 Map（严重度、暴露度、敏感度分级）。 |
 | `failure-ctq-analysis` | `FAILURE_CTQ_DEFINED` | `FAILURE_CTQ_DEFINED` / `failure_ctq.json` | 梳理失效机制与关键质量特性（CTQ），建立挑战到性能的映射链；支持可选接口失效模式（`interface_failure_modes`）。 |

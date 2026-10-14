@@ -35,6 +35,43 @@ RISK_CLASSES = {"LOW", "MEDIUM", "HIGH", "STRATEGIC"}
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
 EVIDENCE_FIELDS = ("evidence_id", "statement", "source", "status")
 
+# Block 2's enumerations, mirroring project.schema.json. Held here as a set so the
+# preflight reports a readable message instead of the schema's raw enum dump.
+REDUCER_MODEL_SIZES = {"14", "17", "20", "25", "32"}
+STRUCTURE_FORMS = {"CUP", "HAT", "ULTRA_FLAT", "OTHER"}
+REDUCER_REQUIRED_FIELDS = ("model_size", "structure_form", "friction_pair_materials")
+REDUCER_FIELDS = set(REDUCER_REQUIRED_FIELDS) | {"reduction_ratio", "surface_treatment"}
+APPLICATION_SCENARIOS = {"INDUSTRIAL_ROBOT", "COBOT", "SEMICONDUCTOR_MEDICAL", "AEROSPACE_DEFENSE"}
+DELIVERY_FORMS = {"LAB", "PILOT", "PRODUCTION"}
+CRITERIA_STATUSES = {"PROVISIONAL", "FIXED"}
+
+
+def reducer_model_errors(value: object) -> list[str]:
+    """Block 2 (reducer model and hardware carrier) shape, when it is supplied.
+
+    Supplied means declared: a carrier that names its frame size but not its friction
+    pair would let the duty step fill the gap with an assumption, so a partial block is
+    refused rather than completed here.
+    """
+    if not isinstance(value, dict):
+        return ["reducer_model must be an object"]
+    errors: list[str] = []
+    unknown = sorted(set(value) - REDUCER_FIELDS)
+    if unknown:
+        errors.append(f"reducer_model: unexpected={unknown}")
+    for field in REDUCER_REQUIRED_FIELDS:
+        if field == "friction_pair_materials":
+            materials = value.get(field)
+            if not isinstance(materials, list) or not materials or not all(has_text(item) for item in materials):
+                errors.append(f"reducer_model.{field}")
+        elif not has_text(value.get(field)):
+            errors.append(f"reducer_model.{field}")
+    if has_text(value.get("model_size")) and value["model_size"] not in REDUCER_MODEL_SIZES:
+        errors.append("reducer_model.model_size is invalid")
+    if has_text(value.get("structure_form")) and value["structure_form"] not in STRUCTURE_FORMS:
+        errors.append("reducer_model.structure_form is invalid")
+    return errors
+
 
 def has_text(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
@@ -84,16 +121,31 @@ def errors_for(data: object) -> list[str]:
         if not isinstance(value, list) or not value or not all(has_text(item) for item in value):
             errors.append(field)
 
-    # benchmark_products is optional: a benchmark is only mandatory when one exists.
-    # Without it, an explicit, recorded waiver reason is required (no silent skip).
+    # A benchmark is OPTIONAL background (2026-10-15 refactor): the real comparator is
+    # built as a physical dossier at step 4, so naming one here is never a gate. The
+    # legacy waiver field stays legal on charters that already carry it, and a grease
+    # project that names no benchmark at all is now accepted without one -- the previous
+    # rule made an absent benchmark a HOLD, which the user's own project could not satisfy.
     benchmarks = data.get("benchmark_products")
-    benchmarks_valid = (
-        isinstance(benchmarks, list)
-        and bool(benchmarks)
-        and all(has_text(item) for item in benchmarks)
-    )
-    if not benchmarks_valid and not has_text(data.get("benchmark_waiver_reason")):
-        errors.append("benchmark_products (or benchmark_waiver_reason when no benchmark applies)")
+    if benchmarks is not None:
+        if not isinstance(benchmarks, list) or not all(has_text(item) for item in benchmarks):
+            errors.append("benchmark_products must be a list of non-empty strings when supplied")
+
+    # Block 2 (the reducer model and hardware carrier) is the grease route's real starting
+    # point, so when it is supplied it must be complete: a half-declared carrier would let
+    # the duty step invent the rest. It stays OPTIONAL here so every oil charter is
+    # unaffected.
+    reducer = data.get("reducer_model")
+    if reducer is not None:
+        errors.extend(reducer_model_errors(reducer))
+    if data.get("application_scenario") is not None and data["application_scenario"] not in APPLICATION_SCENARIOS:
+        errors.append("application_scenario is invalid")
+    if data.get("delivery_form") is not None and data["delivery_form"] not in DELIVERY_FORMS:
+        errors.append("delivery_form is invalid")
+    if data.get("cost_position") is not None and data["cost_position"] != "CEILING":
+        errors.append("cost_position must be CEILING when supplied: a precision-gear grease charter holds cost as a ceiling, never as a reduction target")
+    if data.get("success_criteria_status") is not None and data["success_criteria_status"] not in CRITERIA_STATUSES:
+        errors.append("success_criteria_status must be PROVISIONAL or FIXED")
 
     # Cost is a CONSTRAINT, never a CRITERION. The schema makes target_cost optional
     # and requires cost_basis_reason in its place, so this mirrors that rule instead

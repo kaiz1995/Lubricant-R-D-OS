@@ -68,8 +68,18 @@ PROJECT_FIELDS = (
     "benchmark_products",
     "benchmark_waiver_reason",
     "success_criteria",
+    "success_criteria_status",
     "risk_class",
     "owner",
+    # Block 2 (2026-10-15 refactor): the reducer model and hardware carrier. These are the
+    # fields that make a grease charter a grease charter - the duty, the friction pair and
+    # the surface treatment all follow from the machine the grease goes into.
+    "reducer_model",
+    # Block 3: commercial intent and delivery form.
+    "application_scenario",
+    "delivery_form",
+    # Block 6: the cost posture (CEILING on a grease charter).
+    "cost_position",
 )
 
 # project.schema.json#/$defs/artifact.evidence items (common.schema.json evidence_item).
@@ -154,7 +164,12 @@ def evidence_for(data: dict) -> list[dict]:
 
 
 def expected_decision_fields(data: dict) -> dict[str, str]:
-    """The seven canonical decision fields, derived from the input only."""
+    """The seven canonical decision fields, derived from the input only.
+
+    2026-10-15 refactor: the benchmark is no longer part of the decision rule. It is
+    optional background, and what a project is actually measured against is the physical
+    dossier built at step 4 -- so a charter is complete without naming a competitor.
+    """
     project_id = data.get("project_id", "")
     project_type = data.get("project_type", "")
     ready = not has_gap(data)
@@ -163,16 +178,16 @@ def expected_decision_fields(data: dict) -> dict[str, str]:
             f"Is the supplied brief sufficient to open project {project_id} as a {project_type} charter?"
         ),
         "hypothesis": (
-            f"{project_id} records the classification, objectives, constraints, cost target, "
-            "benchmark and evidence a Project Charter requires."
+            f"{project_id} records the classification, objectives, constraints, cost ceiling "
+            "and evidence a Project Charter requires."
         ),
         "uncertainty": (
-            "The supplied objectives, constraints, cost target, benchmark and evidence are not "
+            "The supplied objectives, constraints, cost ceiling and evidence are not "
             "independently verified by this skill; the record makes no performance claim."
         ),
         "decision_rule": (
             "Record the charter only when the classification, objectives, constraints, cost "
-            "target, benchmark (or an explicit waiver reason) and OBSERVED evidence are supplied."
+            "basis and OBSERVED evidence are supplied."
         ),
         "result": f"{project_id} is {'sufficient' if ready else 'not sufficient'} to open a {project_type} Project Charter.",
         "decision": "GO" if ready else "HOLD",

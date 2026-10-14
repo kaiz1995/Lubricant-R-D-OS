@@ -13,10 +13,10 @@ Determinism and honesty
   not written by hand here.
 * Nothing is invented: project-content fields are copied verbatim from the input, and
   the input's ``source_evidence`` becomes the charter's ``evidence`` unchanged. A datum
-  the input does not supply stays absent (``target_cost`` / ``benchmark_products`` are
-  the schema's own if/then cases), so a missing benchmark needs a recorded
-  ``benchmark_waiver_reason`` and an unmeasured cost needs its own recorded reason --
-  exactly as in the schema, never a fabricated value.
+  the input does not supply stays absent, so a charter that names no benchmark simply
+  carries no ``benchmark_products`` (optional background since the 2026-10-15 refactor:
+  the comparator that matters is the physical dossier built at step 4) and an unmeasured
+  cost needs its own recorded reason -- exactly as in the schema, never a fabricated value.
 * Business rules are not duplicated: this script refuses input with the very same
   ``errors_for`` the preflight uses, so preflight and build can never disagree.
 * The output path is the caller's temporary candidate, exactly as in bench-registration:

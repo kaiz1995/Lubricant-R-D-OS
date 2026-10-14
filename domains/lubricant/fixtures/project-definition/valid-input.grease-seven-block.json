@@ -1,0 +1,47 @@
+{
+  "project_id": "PGD-E2E-001",
+  "project_name": "Harmonic-drive grease, 20-frame cobot, provisional criteria",
+  "project_type": "PRECISION_GREASE_DEV",
+  "product_family": "Precision-gear (harmonic drive) grease",
+  "business_objective": "Qualify a precision-gear grease against the OEM reference grease.",
+  "technical_objective": "Maintain the required CTQ and risk boundaries under the harmonic-drive duty.",
+  "hard_constraints": [
+    "Reference materials must exist as physical samples before method qualification."
+  ],
+  "success_criteria": [
+    "Provisional: start-up torque and backlash are within the OEM envelope once the customer fixes the thresholds."
+  ],
+  "risk_class": "STRATEGIC",
+  "owner": "R&D owner",
+  "source_evidence": [
+    {
+      "evidence_id": "E-PGD-E2E-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: approved brief requests a precision-gear grease with an OEM grease as the performance benchmark.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "cost_ceiling": {
+    "value": 220,
+    "unit": "CNY/kg",
+    "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+    "method_version": "n/a",
+    "material_batch": "n/a",
+    "formula_version": "n/a"
+  },
+  "cost_basis_reason": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: performance-first grease charter sets a cost ceiling, not a reduction target.",
+  "reducer_model": {
+    "model_size": "20",
+    "reduction_ratio": "100:1",
+    "structure_form": "HAT",
+    "friction_pair_materials": [
+      "flexspline: 40CrNiMoA",
+      "circular spline: GCr15"
+    ],
+    "surface_treatment": "no DLC; phosphating on the circular spline"
+  },
+  "application_scenario": "COBOT",
+  "delivery_form": "LAB",
+  "cost_position": "CEILING",
+  "success_criteria_status": "PROVISIONAL"
+}

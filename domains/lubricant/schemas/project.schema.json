@@ -2,14 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/project.schema.json",
   "title": "Project charter",
+  "description": "The seven-block charter (2026-10-15 refactor). Block 1 basic identity and nature; block 2 the reducer model and hardware carrier (grease-specific, and the real starting point of a grease project); block 3 commercial intent and delivery form; block 4 the technical focus; block 5 boundaries and hard constraints; block 6 the cost CEILING; block 7 success criteria, their provisional state and the risk class. A benchmark is optional BACKGROUND only: the real comparator is built as a physical dossier at step 4, so naming one here is never a gate.",
   "allOf": [
     { "$ref": "common.schema.json#/$defs/artifact" },
     {
-      "if": { "not": { "required": ["benchmark_products"] } },
-      "then": { "required": ["benchmark_waiver_reason"] }
-    },
-    {
-      "$comment": "Cost is a CONSTRAINT, never a CRITERION. A charter may legitimately declare no cost target and explain why instead - on a grease project the cost is a ceiling to respect, not a target to optimise toward - exactly as a missing benchmark requires a waiver reason. target_cost stays legal when supplied (it keeps its historical meaning on the six oil routes); a grease charter records cost_ceiling and writes cost_basis_reason.",
+      "$comment": "Cost is a CONSTRAINT, never a CRITERION. A charter may legitimately declare no cost target and explain why instead - on a grease project the cost is a ceiling to respect, not a target to optimise toward. target_cost stays legal when supplied (it keeps its historical meaning on the six oil routes); a grease charter records cost_ceiling and writes cost_basis_reason.",
       "if": { "not": { "required": ["target_cost"] } },
       "then": { "required": ["cost_basis_reason"] }
     }
@@ -27,11 +24,29 @@
     "target_cost": { "$ref": "common.schema.json#/$defs/measurement" },
     "cost_ceiling": { "$ref": "common.schema.json#/$defs/measurement", "description": "Optional cost ceiling: the highest unit cost the product may carry before the project is not worth doing. This is the cost semantics a precision-gear grease charter uses - a limit to respect, NOT a reduction target to optimise toward. Cost is a constraint (step 6 filter / step 14 constraint / step 16 ceiling check); it must never enter a CTQ criterion." },
     "cost_basis_reason": { "type": "string", "minLength": 1, "description": "Mandatory when target_cost is absent: why this project sets no cost target (e.g. performance-first, customer-specified price, supply-security driven). A project that declares neither a target cost nor a reason is rejected, exactly as with benchmark_waiver_reason." },
-    "benchmark_products": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-    "benchmark_waiver_reason": { "type": "string", "minLength": 1, "description": "Mandatory when benchmark_products is absent: why no competitive benchmark applies (e.g. brand-new category, mechanism exploration, no comparable product)." },
+    "benchmark_products": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "OPTIONAL background only (2026-10-15 refactor): a name or two recorded for context. It is never a gate - the comparator that matters is the physical dossier built at step 4 (REFERENCE_MATERIAL_RESOLVED), where a Known Good / Known Bad sample is docketed with its identity, storage and failure evidence. An empty or absent list is legal on every route." },
+    "benchmark_waiver_reason": { "type": "string", "minLength": 1, "description": "Legacy field, kept so charters that already carry it stay valid. No longer required: since the 2026-10-15 refactor an absent benchmark needs no waiver, because a benchmark is optional background and the step-4 dossier is what a project is actually measured against." },
     "success_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "success_criteria_status": { "enum": ["PROVISIONAL", "FIXED"], "description": "Whether the success criteria are settled or still provisional. PROVISIONAL is legal and expected at charter time: a precision-gear grease project often starts before the customer's machine-level thresholds are agreed, and recording that honestly is better than inventing a number. Step 3 (FAILURE_MECHANISM_DEFINED) refines them; a provisional set must be re-visited there rather than silently treated as final." },
     "risk_class": { "enum": ["LOW", "MEDIUM", "HIGH", "STRATEGIC"] },
-    "owner": { "type": "string", "minLength": 1 }
+    "owner": { "type": "string", "minLength": 1 },
+
+    "reducer_model": {
+      "description": "Block 2: the hardware the grease is developed for. This is a grease project's real starting point - the duty, the materials and the geometry all follow from it.",
+      "type": "object",
+      "properties": {
+        "model_size": { "enum": ["14", "17", "20", "25", "32"], "description": "Reducer frame size (谐波减速器机型规格)." },
+        "reduction_ratio": { "type": "string", "minLength": 1, "description": "Reduction ratio as the OEM states it, e.g. '100:1'." },
+        "structure_form": { "enum": ["CUP", "HAT", "ULTRA_FLAT", "OTHER"], "description": "Structure form: 杯形 (CUP) / 礼帽形 (HAT) / 超扁平 (ULTRA_FLAT)." },
+        "friction_pair_materials": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "Friction-pair materials, e.g. 柔轮 flexspline / 刚轮 circular spline, with their surface treatment." },
+        "surface_treatment": { "type": "string", "description": "Surface treatment of the friction pair, including whether a DLC coating is present." }
+      },
+      "required": ["model_size", "structure_form", "friction_pair_materials"],
+      "additionalProperties": false
+    },
+    "application_scenario": { "enum": ["INDUSTRIAL_ROBOT", "COBOT", "SEMICONDUCTOR_MEDICAL", "AEROSPACE_DEFENSE"], "description": "Block 3: the application sub-scenario." },
+    "delivery_form": { "enum": ["LAB", "PILOT", "PRODUCTION"], "description": "Block 3: the delivery form and batch magnitude - LAB is 500 g to 2 kg, PILOT is 20 to 50 kg, PRODUCTION is tonne-scale." },
+    "cost_position": { "enum": ["CEILING"], "description": "Block 6: the cost posture. CEILING is the only legal value on a precision-gear grease charter: fill volume is 10 to 50 g per unit, performance and life come first, and no active cost-reduction target is set. The cost still appears as a filter at step 6, a constraint at step 14 and a ceiling check at step 16, and it never enters a CTQ." }
   },
   "required": ["artifact_type", "status", "project_name", "project_type", "product_family", "business_objective", "technical_objective", "hard_constraints", "success_criteria", "risk_class", "owner"],
   "unevaluatedProperties": false
