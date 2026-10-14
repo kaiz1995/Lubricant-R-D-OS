@@ -205,7 +205,7 @@ async function probeOne(
 }
 
 /**
- * 探测当前活动工作区中的全部链上工件（STAGE_CHAIN 25 个 stage / 22 个唯一
+ * 探测当前活动工作区中的全部链上工件（STAGE_CHAIN 24 个 stage / 21 个唯一
  * 工件类型；failure_ctq / optimization / process 被两条路线共用，probes 以
  * artifactType 为键只留一个探针，两个 stage 的探针本就相同）。
  *
@@ -252,10 +252,10 @@ export interface StepView extends StageContract {
  *
  * - `process` 特判（G-3/L6）：两条路线共用一个 process.json 探针 —— 同一
  *   artifactType 服务两个语义（脂路线第 6 步的固定基准 `process-baseline.json`
- *   报 DESIGN_SPACE_DEFINED，第 17 步的固定窗口 `process.json` 报
+ *   报 DESIGN_SPACE_DEFINED，第 16 步的固定窗口 `process.json` 报
  *   PROCESS_SCALE_VALIDATED）。精确名 `process.json` 永远压过前缀名
  *   `process-baseline.json`，所以 `probe.data` 只会装当前代表记录一份。只按
- *   `probe.valid` 判定的话，第 6 步一落盘基线文件就会把第 17 步提前点亮；用
+ *   `probe.valid` 判定的话，第 6 步一落盘基线文件就会把第 16 步提前点亮；用
  *   `data.stage` 区分它代表的是哪一份，stage 等于本契约 stage 才算完成。
  *   （跨记录链路检查与「脂路线必交工艺窗口」是命令行侧能力，面板只有单探针
  *   拿不到两份记录的数据 —— 已知的不对称，不做。）

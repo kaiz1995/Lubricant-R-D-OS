@@ -61,7 +61,9 @@ One **optional** extra path may be supplied beside the five upstream artifacts:
 { "bench_artifact": "path/to/bench.json" }
 ```
 
-`bench_artifact` is the registered bench object (`bench.schema.json`) and it is read only on the
+`bench_artifact` is the registered bench object (`bench.schema.json`) — after the bench and
+round-plan merge it may also carry the inner-loop round ledger (`campaign_id`, `iterations`,
+stage `BENCH_RESOURCE_REGISTERED`), which this stage does not read — and it is read only on the
 grease route (see §1.3). When it is absent, the design keeps the hand-filled
 `resource_envelope.bench_slots` path it always had; nothing about the six oil routes changes.
 
@@ -224,7 +226,7 @@ informative ones** — and **whether the loop continues at all**. Same three-ste
 
 ```json
 {
-  "campaign_artifact": "path/to/campaign.json",
+  "campaign_artifact": "path/to/bench.json",
   "experiment_design_artifact": "path/to/experiment_design.json",
   "variance_artifact": "path/to/variance.json",
   "next_batch": {
@@ -270,7 +272,8 @@ that verdict could contradict it silently, so the variance record is a hard upst
 
 | Check | Rule |
 |---|---|
-| Campaign carrier | `campaign_artifact` is `CAMPAIGN_OPENED`; `from_iteration` is derived from its `current_iteration` (never asserted by the caller); its entry for that iteration carries the same `stop_state`, the same `next_batch_reference` and the same `variance_reference` as this record. |
+| Campaign carrier | `campaign_artifact` is the merged bench artifact (`bench.json`, stage `BENCH_RESOURCE_REGISTERED`); `from_iteration` is derived from its newest recorded round entry (never asserted by the caller), and that entry must tell the same story as this record: same `stop_state`, same `variance_reference`. The carrier's own `next_batch_reference` is a record kept for the reader and is not compared — by E2=B it is written only on the round that exits the loop. |
+| Open round boundary | the carrier's newest recorded round entry must be `CONTINUE`: only a round that looped back has a next-batch decision to take, so a carrier standing on a stop is refused as having no boundary to decide at. |
 | Loop cap | `stop_state: CONTINUE` may not open an iteration beyond `campaign.max_iterations` (the state machine refuses that advance). |
 | Bench bound | `bench_slots_required` must not exceed the availability the round's design declares (`resource_envelope.bench_slots`, or the registered bench's derived `available_bench_slots` when doe-design recorded one); `available_bench_slots: 0` cannot host any round. No declared availability is reported as a `NOTE`, not silently treated as unlimited. |
 | Slots vs samples | every proposed sample runs in the next round, so `len(proposed_samples) <= bench_slots_required`. |
@@ -303,7 +306,8 @@ python -B skills/doe-design/scripts/validate_next_batch_artifact.py <temporary-f
 
 **Route scope.** `NEXT_BATCH_DECIDED` sits on no `type_route` of the six oil project types
 (only `PRECISION_GREASE_DEV` declares it), and this stage's upstream set is that route's own
-records — a `CAMPAIGN_OPENED` carrier exists on no oil route. The existing
+records — the merged carrier (`bench.json`, stage `BENCH_RESOURCE_REGISTERED`) exists on no
+oil route. The existing
 `EXPERIMENT_DESIGNED` behaviour of this skill is untouched byte for byte.
 
 **Deployment note (owner action).** This stage loads `schemas/next_batch.schema.json`
@@ -336,7 +340,7 @@ drift and the deployed copy of these three scripts cannot load the contract.
 | `HOLD: next_batch.stop_rationale is required when stop_state is …` | 停轮没有记录原因（`NO_NEW_INFORMATION` / `GOAL_MET` / `RESOURCE_EXHAUSTED` / `PIVOT` / `KILL`） | **STOP**。补写停止原因；停轮与继续一样是决策，必带理由。 |
 | `HOLD: next_batch.stop_rationale must be omitted while stop_state is CONTINUE` | 继续的轮次却带了停止理由 | **STOP**。一条记录只表达一种状态：继续就不写 `stop_rationale`。 |
 | `HOLD: … .stop_state=… contradicts the supplied next_batch.stop_state=…` | campaign 载体里的本轮 stop_state 与本决策不一致 | **STOP**。先把 campaign 的本轮条目更新到同一结论，再落盘本记录（载体与决策必须讲同一个故事）。 |
-| `HOLD: next_batch.stop_state=CONTINUE would open iteration N beyond campaign_artifact.max_iterations=M` | 继续会超出战役轮次上限 | **STOP**。循环必须停：改写 `stop_state` 为 `PIVOT` 或 `KILL` 并给出 `stop_rationale`。 |
+| `HOLD: next_batch.stop_state=CONTINUE would open iteration N beyond campaign_artifact.max_iterations=M` | 继续会超出内环轮次上限 | **STOP**。循环必须停：改写 `stop_state` 为 `PIVOT` 或 `KILL` 并给出 `stop_rationale`。 |
 | `HOLD: next_batch.bench_slots_required=… exceeds the round's declared bench availability …` | 本轮排产超过设计声明的台架可用位数 | **STOP**。缩小本轮规模，或先扩宽并重新登记台架档期（`available_bench_slots` 为推导值，不得手填）。 |
 | `HOLD: next_batch proposes N sample(s) but requires only M bench slot(s)` | 提出的样品数多于台架位 | **STOP**。每个"下一轮要跑的样"都要占一个位；删减样品或补足位次。 |
 | `HOLD: variance_artifact.iteration=… must equal the campaign's current iteration …` | 方差判定与本轮不是同一轮 | **STOP**。一次方差判定只覆盖一轮；用同一轮的第 12 步记录。 |

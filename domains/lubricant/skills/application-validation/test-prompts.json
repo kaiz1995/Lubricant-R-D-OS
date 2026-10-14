@@ -22,7 +22,7 @@
   {
     "id": 5,
     "prompt": "精密传动脂项目（PRECISION_GREASE_DEV）已到 VERIFIED，应用验证结论 PASS，判据里有启动扭矩、回差、温升，寿命边界非空——直接出 APPLIED 门禁结论",
-    "expected": "触发 HOLD：grease 路线要求 machine_indicators 声明全部四个整机指标（START_UP_TORQUE / BACKLASH / TEMPERATURE_RISE / LIFE），缺 LIFE 的绑定即报 machine_indicators must cover every whole-machine indicator；且必须提供分别处于 CAMPAIGN_OPENED / BENCH_TESTED 阶段且同项目的 campaign_artifact / bench_test_artifact，bench_test.bench_reference 必须出现在 application.bench_references 中"
+    "expected": "触发 HOLD：grease 路线要求 machine_indicators 声明全部四个整机指标（START_UP_TORQUE / BACKLASH / TEMPERATURE_RISE / LIFE），缺 LIFE 的绑定即报 machine_indicators must cover every whole-machine indicator；且必须提供分别处于 BENCH_RESOURCE_REGISTERED / BENCH_TESTED 阶段且同项目的 campaign_artifact / bench_test_artifact，bench_test.bench_reference 必须出现在 application.bench_references 中"
   },
   {
     "id": 6,

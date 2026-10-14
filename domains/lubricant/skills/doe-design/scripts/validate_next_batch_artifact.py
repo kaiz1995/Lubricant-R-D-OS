@@ -13,10 +13,10 @@ Two independent checks, both fail-closed:
    but not policy-legal: a decision block that claims another round while stop_state says
    the loop has stopped, or a reason attached to a round that continues.
 
-The cross-artifact checks (the campaign carrier, the round's design and the round's
-variance record must agree with this record) live in the preflight and the builder, which
-are the only steps that see the upstream artifacts; this validator re-derives everything
-that the record itself carries.
+The cross-artifact checks (the campaign carrier - the merged bench artifact
+``bench.json`` - the round's design and the round's variance record must agree with this
+record) live in the preflight and the builder, which are the only steps that see the
+upstream artifacts; this validator re-derives everything that the record itself carries.
 """
 
 from __future__ import annotations

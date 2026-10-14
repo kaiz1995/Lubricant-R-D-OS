@@ -1,16 +1,16 @@
 {
   "schema_version": "0.1.0",
-  "artifact_type": "campaign",
+  "artifact_type": "bench",
   "project_id": "PGD-IL-001",
-  "stage": "CAMPAIGN_OPENED",
+  "stage": "BENCH_RESOURCE_REGISTERED",
   "evidence_scope": "PHYSICAL",
   "decision_question": "Does the inner bench loop continue past iteration 2?",
   "hypothesis": "The swapped pair in round 2 separates a formulation effect from bench-to-bench drift.",
-  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: iteration 1 is carried over verbatim (append-only round history); this record is a contract record, not product evidence.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: iteration 1 is carried over verbatim (append-only round history); this historical merged bench record is a contract record, not product evidence.",
   "evidence": [
     {
       "evidence_id": "E-CMP-IL-001",
-      "statement": "Inner-loop acceptance fixture: campaign CMP-PGD-IL-001 is opened with a two-sample paired round.",
+      "statement": "Inner-loop acceptance fixture: bench record BENCH-PGD-IL-01 is registered with campaign CMP-PGD-IL-001 and a two-sample paired round.",
       "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
       "status": "ASSUMED"
     },
@@ -26,9 +26,6 @@
   "decision": "GO",
   "next_action": "Produce the round-2 batch and run the swapped pair.",
   "campaign_id": "CMP-PGD-IL-001",
-  "bench_references": [
-    "BENCH-PGD-IL-01"
-  ],
   "max_iterations": 12,
   "current_iteration": 3,
   "iterations": [

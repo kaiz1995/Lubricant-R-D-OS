@@ -1,15 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/bench.schema.json",
-  "title": "Lubricant R&D bench (test stand) registration",
-  "description": "Bench resource object (WP-05). A bench is shared test-stand capacity, not a chain stage: it records when it is available, how long one run occupies it, and what one run costs. `available_bench_slots` is DERIVED from availability_window and cycle_days by the single conversion in skills/bench-registration/scripts/bench_policy.py (`available_bench_slots`); the WP-04b/doe_input.resource_envelope.bench_slots must be cross-checked against this same figure (end-to-end linkage recorded as a TODO in tests/lubricant_e2e/test_application_bench.py).",
+  "title": "Lubricant R&D bench (test stand) registration and round plan",
+  "description": "Merged bench object (WP-05 + WP-14, contract v1.0.0): one record that both registers shared test-stand capacity and carries the inner-loop round plan that capacity is spent on. As a resource record it says when the bench is available, how long one run occupies it, and what one run costs; as a stage artifact it is the ledger the inner-loop rounds are appended to at stage BENCH_RESOURCE_REGISTERED. `available_bench_slots` is DERIVED from availability_window and cycle_days by the single conversion in skills/bench-registration/scripts/bench_policy.py (`available_bench_slots`); the WP-04b/doe_input.resource_envelope.bench_slots must be cross-checked against this same figure (end-to-end linkage recorded as a TODO in tests/lubricant_e2e/test_application_bench.py). The ledger is opened empty before round 1's boundary is reached (no round has run yet, W0) and is appended per round boundary, oldest first. The exit round carries model_reference/next_batch_reference; a round that ended CONTINUE carries null for both (E2=B, validator-enforced). Cross-field rules: current_iteration must not exceed max_iterations, and it must equal the round the ledger stands at (1 while no round is recorded; len(iterations) + 1 while the newest recorded round ended CONTINUE; len(iterations) otherwise). Pure JSON Schema cannot compare instance values, so those checks are NOT expressed structurally here -- the validator enforces them and reports them; this description and the $comment on max_iterations record the rules for the reader (no fake constraint is invented). pairing_design exists because paired comparison (an A/B pair run in the same round and swapped in the next round) is the design this project should prefer: at a fixed sigma, pairing buys more resolution than trying to measure sigma precisely.",
+  "$comment": "Cross-field rules current_iteration <= max_iterations and current_iteration == the round the ledger stands at: pure JSON Schema has no keyword that compares instance values, so these rules are deliberately NOT expressed structurally and no fake if/then is invented. The validator enforces them and reports them; they are recorded here, in the top-level description, and in the $comment on max_iterations.",
   "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
   "type": "object",
   "properties": {
     "artifact_type": { "const": "bench" },
+    "stage": { "const": "BENCH_RESOURCE_REGISTERED" },
     "bench_id": { "type": "string", "minLength": 1 },
     "project_reference": {
-      "description": "Project this registration is made for; also used as the artifact project_id by the builder.",
+      "description": "Project this registration is made for; also used as the artifact project_id by the builder, and the single project source the merged round plan shares (a supplied campaign project_reference must equal it).",
       "type": "string",
       "minLength": 1
     },
@@ -33,7 +35,30 @@
     },
     "source": { "type": "string", "minLength": 1 },
     "evidence_id": { "type": "string", "minLength": 1 },
-    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" },
+    "campaign_id": {
+      "description": "Identity of the inner-loop round plan this registration carries; downstream variance/model records point their campaign_reference at this value.",
+      "type": "string",
+      "minLength": 1
+    },
+    "pairing_design": { "$ref": "#/$defs/pairing_design" },
+    "max_iterations": {
+      "description": "Maximum number of bench rounds this round plan may use. Validator-enforced: current_iteration must not exceed this value.",
+      "$comment": "Validator-enforced cross-field rule (not expressible in JSON Schema): current_iteration must be less than or equal to max_iterations.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "current_iteration": {
+      "description": "Bench round the ledger stands at, 1-based. Validator-enforced (not structurally expressible): with an empty ledger it is 1, and otherwise it is len(iterations) + 1 when the newest recorded round ended CONTINUE (that round opened the next one) and len(iterations) when the newest recorded round ended otherwise (the ledger closed at that round). It must never exceed max_iterations.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "iterations": {
+      "description": "One entry per inner-loop round whose boundary has been recorded, oldest first. The ledger is opened BEFORE round 1 is run (stage BENCH_RESOURCE_REGISTERED), so it is legitimately empty until round 1's boundary is reached; every recorded round states how it ended through stop_state; capped by max_iterations (validator-enforced).",
+      "type": "array",
+      "minItems": 0,
+      "items": { "$ref": "#/$defs/iteration_entry" }
+    }
   },
   "required": [
     "artifact_type",
@@ -47,7 +72,12 @@
     "available_bench_slots",
     "source",
     "evidence_id",
-    "evidence_scope"
+    "evidence_scope",
+    "campaign_id",
+    "pairing_design",
+    "current_iteration",
+    "max_iterations",
+    "iterations"
   ],
   "unevaluatedProperties": false,
   "$defs": {
@@ -74,6 +104,59 @@
         "source": { "type": "string", "minLength": 1 }
       },
       "required": ["value", "unit", "source"],
+      "additionalProperties": false
+    },
+    "pairing_design": {
+      "description": "How samples are paired across rounds. paired=true means each A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels: at a fixed sigma, pairing buys more resolution than trying to measure sigma precisely.",
+      "type": "object",
+      "properties": {
+        "paired": { "type": "boolean" },
+        "description": { "type": "string", "minLength": 1 }
+      },
+      "required": ["paired", "description"],
+      "additionalProperties": false
+    },
+    "iteration_entry": {
+      "type": "object",
+      "properties": {
+        "iteration": { "type": "integer", "minimum": 1 },
+        "samples": {
+          "description": "Samples run in this round, as sample references.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "stop_state": {
+          "description": "How this round ended: CONTINUE (another round is planned), GOAL_MET, NO_NEW_INFORMATION, RESOURCE_EXHAUSTED, PIVOT or KILL. Only CONTINUE authorizes another round.",
+          "enum": ["CONTINUE", "GOAL_MET", "NO_NEW_INFORMATION", "RESOURCE_EXHAUSTED", "PIVOT", "KILL"]
+        },
+        "screening_reference": {
+          "description": "Optional screening artifact for this round (RELEASED gate into the bench).",
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "variance_reference": {
+          "description": "Optional variance assessment produced from this round's runs.",
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "model_reference": {
+          "description": "Exit round only: written only on the round that exits the inner loop (stop_state other than CONTINUE). A round that looped back (stop_state=CONTINUE) must carry null here - the model is updated after the round that closes the loop, never on every round. Validator-enforced.",
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "next_batch_reference": {
+          "description": "Exit round only: written only on the round that exits the inner loop (stop_state other than CONTINUE), and it is a reference kept for the record - the next-batch record itself carries its own id. A round that looped back (stop_state=CONTINUE) must carry null here. Validator-enforced.",
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "bench_test_references": {
+          "description": "Bench test runs belonging to this round. Optional; may be empty while a round is still executing.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "required": ["iteration", "samples", "stop_state"],
       "additionalProperties": false
     }
   }

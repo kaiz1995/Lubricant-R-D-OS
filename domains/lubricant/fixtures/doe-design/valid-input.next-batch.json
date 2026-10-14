@@ -1,5 +1,5 @@
 {
-  "campaign_artifact": "campaign-opened.json",
+  "campaign_artifact": "bench-opened.json",
   "experiment_design_artifact": "next-batch-round-design.json",
   "variance_artifact": "next-batch-variance.json",
   "next_batch": {
@@ -37,7 +37,7 @@
       {
         "evidence_id": "E-NB-SYN-001",
         "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the round-1 variance assessment records a consistent difference between the candidate and the reference, and round 1 ended with stop_state CONTINUE.",
-        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: campaign-opened.json + next-batch-variance.json",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: bench-opened.json + next-batch-variance.json",
         "status": "ASSUMED"
       },
       {

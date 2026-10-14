@@ -1,37 +1,36 @@
 {
   "schema_version": "0.1.0",
-  "artifact_type": "campaign",
+  "artifact_type": "bench",
   "project_id": "PGD-NB-001",
-  "stage": "CAMPAIGN_OPENED",
+  "stage": "BENCH_RESOURCE_REGISTERED",
   "evidence_scope": "SYNTHETIC",
   "decision_question": "Does the inner bench loop continue past iteration 1?",
   "hypothesis": "The paired round-1 run separates the candidate grease from the reference inside one bench window, so bench-to-bench drift cannot explain the difference.",
-  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this is the stopped variant of the carrier, supplied for the negative next-batch fixture (a round whose variance routing says the model already predicts the difference).",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this merged bench record (bench resource + inner-loop ledger) is supplied so the next-batch producer has a carrier to read; it is a contract record, not product evidence.",
   "evidence": [
     {
-      "evidence_id": "E-CMP-NB-STOP-001",
-      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: round 1 ended with NO_NEW_INFORMATION because the recorded difference sits inside the model's prediction interval.",
+      "evidence_id": "E-CMP-NB-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: bench BENCH-SZ-NB-01 is registered with campaign CMP-PGD-NB-001 and a two-sample paired round plan.",
       "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
       "status": "ASSUMED"
     }
   ],
   "decision_rule": "Continue only while stop_state is CONTINUE and current_iteration stays within max_iterations.",
-  "result": "Iteration 1 opened with the candidate/reference pair and ended with stop_state NO_NEW_INFORMATION.",
+  "result": "Iteration 1 opened with the candidate/reference pair.",
   "decision": "GO",
-  "next_action": "Stop the inner loop and close out with the round-1 evidence.",
+  "next_action": "Run iteration 1 and decide the next round from its variance assessment.",
   "campaign_id": "CMP-PGD-NB-001",
-  "bench_references": ["BENCH-SZ-NB-01"],
   "max_iterations": 12,
   "current_iteration": 1,
   "iterations": [
     {
       "iteration": 1,
       "samples": ["SMP-PGD-NB-R1A", "SMP-PGD-NB-R1B"],
-      "stop_state": "NO_NEW_INFORMATION",
+      "stop_state": "CONTINUE",
       "screening_reference": "SCR-PGD-NB-001",
       "variance_reference": "VAR-PGD-NB-001",
-      "model_reference": "MODEL-PGD-NB-001",
-      "next_batch_reference": "NEXT-PGD-NB-002",
+      "model_reference": null,
+      "next_batch_reference": null,
       "bench_test_references": [
         "RUN-PGD-NB-R1A-1",
         "RUN-PGD-NB-R1A-2",
@@ -42,6 +41,6 @@
   ],
   "pairing_design": {
     "paired": true,
-    "description": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the A/B pair ran in the same round; no swapped round follows because the loop stopped."
+    "description": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels."
   }
 }

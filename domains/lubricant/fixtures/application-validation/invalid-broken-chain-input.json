@@ -93,7 +93,7 @@
     },
     "application_artifact": "application-grease.json",
     "project_type": "PRECISION_GREASE_DEV",
-    "campaign_artifact": "campaign-grease.json",
+    "campaign_artifact": "bench-grease.json",
     "bench_test_artifact": "bench-test-grease.json",
     "machine_indicators": [
       {

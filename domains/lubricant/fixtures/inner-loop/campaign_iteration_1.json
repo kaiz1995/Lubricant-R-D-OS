@@ -1,16 +1,16 @@
 {
   "schema_version": "0.1.0",
-  "artifact_type": "campaign",
+  "artifact_type": "bench",
   "project_id": "PGD-IL-001",
-  "stage": "CAMPAIGN_OPENED",
+  "stage": "BENCH_RESOURCE_REGISTERED",
   "evidence_scope": "PHYSICAL",
   "decision_question": "Does the inner bench loop continue past iteration 1?",
   "hypothesis": "The paired A/B round separates the candidate grease from the known-good reference.",
-  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: this campaign record is assembled inline against schemas/campaign.schema.json because no script in the pack produces a campaign artifact; it is a contract record, not product evidence.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: this historical merged bench record is assembled inline against schemas/bench.schema.json; it is a contract record, not product evidence.",
   "evidence": [
     {
       "evidence_id": "E-CMP-IL-001",
-      "statement": "Inner-loop acceptance fixture: campaign CMP-PGD-IL-001 is opened with a two-sample paired round.",
+      "statement": "Inner-loop acceptance fixture: bench record BENCH-PGD-IL-01 is registered with campaign CMP-PGD-IL-001 and a two-sample paired round.",
       "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
       "status": "ASSUMED"
     }
@@ -20,9 +20,6 @@
   "decision": "GO",
   "next_action": "Run iteration 1 and decide the next round from its variance assessment.",
   "campaign_id": "CMP-PGD-IL-001",
-  "bench_references": [
-    "BENCH-PGD-IL-01"
-  ],
   "max_iterations": 12,
   "current_iteration": 2,
   "iterations": [

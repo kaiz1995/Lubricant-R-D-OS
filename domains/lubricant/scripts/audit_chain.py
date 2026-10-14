@@ -66,18 +66,18 @@ KINDS = {
     "application-": ("APPLIED", "application"),
     "reference.json": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
     "reference-": ("REFERENCE_MATERIAL_RESOLVED", "reference"),
-    # 2026-10-13 (WP-14 / WP-06): the inner-loop campaign record is a stage
-    # artifact at CAMPAIGN_OPENED (build_campaign_artifact.py writes exactly
-    # that constant). It is the only kind added by this round: bench.json,
-    # interface-*.json and external_record*.json are resource objects whose own
-    # ``stage`` is the placeholder ``DRAFT`` (their builders write it; the stage
-    # they mark lives on the project, not on the record), and ``process`` has two
-    # legal shapes at two different stages (process-baseline.json at
-    # DESIGN_SPACE_DEFINED, process.json at PROCESS_WINDOW_DEFINED /
-    # PROCESS_SCALE_VALIDATED), so a single expected constant would be wrong.
-    # Those stay out of KINDS deliberately; naming is check_artifact_naming's job.
-    "campaign.json": ("CAMPAIGN_OPENED", "campaign"),
-    "campaign-": ("CAMPAIGN_OPENED", "campaign"),
+    # Deliberately NOT in KINDS: bench.json -- contract v1.0.0 merged the former
+    # bench-registration + campaign-opening pair into this one record, and
+    # its own validator (validate_bench_artifact.py, mapped in
+    # validate_workspace.py) already checks its stage constant end to end, so this
+    # cross-file walk does not duplicate that check. Same for interface-*.json and
+    # external_record*.json: resource objects whose own ``stage`` is the
+    # placeholder ``DRAFT`` (their builders write it; the stage they mark lives on
+    # the project, not on the record). ``process`` has two legal shapes at two
+    # different stages (process-baseline.json at DESIGN_SPACE_DEFINED, process.json
+    # at PROCESS_WINDOW_DEFINED / PROCESS_SCALE_VALIDATED), so a single expected
+    # constant would be wrong. Those stay out of KINDS deliberately; naming is
+    # check_artifact_naming's job.
     "batch.json": ("BATCH_PRODUCED", "batch"),
     "batch-": ("BATCH_PRODUCED", "batch"),
     "screening.json": ("SCREENING_PASSED", "screening"),

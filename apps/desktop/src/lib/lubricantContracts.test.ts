@@ -25,7 +25,7 @@ describe("lubricant 契约映射", () => {
   it("STAGE_CHAIN 的 chainIndex 连续且唯一", () => {
     expect(STAGE_CHAIN.map((c) => c.chainIndex)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
   });
 
@@ -86,22 +86,22 @@ describe("lubricant 契约映射", () => {
     }
   });
 
-  it("精密脂的 12 个新 stage 按路线首次出现顺序登记在 STAGE_CHAIN 尾部（chainIndex 14..25）", () => {
+  it("精密脂的 11 个新 stage 按路线首次出现顺序登记在 STAGE_CHAIN 尾部（chainIndex 14..24）", () => {
     // PRECISION_GREASE_DEV 把新 stage 与油品台阶交叉排列（FAILURE_MECHANISM_DEFINED
     // → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED
     // → BENCH_RESOURCE_REGISTERED → …），所以它**不是** STAGE_CHAIN 的单调子序列：
     // STAGE_CHAIN 的顺序是登记顺序（新 stage 追加在 1..13 之后），不是该路线的执行
     // 顺序。面板步骤序列用 routeFor() 的路由顺序，与登记顺序无关。这里同时钉住
-    // 「新 stage 是链尾 12 个、编号 14..25」与「登记顺序 = 路线首次出现顺序」。
+    // 「新 stage 是链尾 11 个、编号 14..24」与「登记顺序 = 路线首次出现顺序」。
     const NEW_STAGES = [
       "FAILURE_MECHANISM_DEFINED", "REFERENCE_MATERIAL_RESOLVED", "BENCH_RESOURCE_REGISTERED",
-      "CAMPAIGN_OPENED", "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED",
+      "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED",
       "VARIANCE_ASSESSED", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED",
       "PROCESS_SCALE_VALIDATED", "KNOWLEDGE_ARCHIVED",
     ];
-    expect(STAGE_CHAIN.slice(-12).map((c) => c.stage)).toEqual(NEW_STAGES);
-    expect(STAGE_CHAIN.slice(-12).map((c) => c.chainIndex)).toEqual(
-      Array.from({ length: 12 }, (_, i) => i + 14),
+    expect(STAGE_CHAIN.slice(-11).map((c) => c.stage)).toEqual(NEW_STAGES);
+    expect(STAGE_CHAIN.slice(-11).map((c) => c.chainIndex)).toEqual(
+      Array.from({ length: 11 }, (_, i) => i + 14),
     );
     const firstSeen = [...new Set(TYPE_ROUTES.PRECISION_GREASE_DEV)].filter((s) =>
       (NEW_STAGES as readonly string[]).includes(s),
@@ -118,9 +118,9 @@ describe("lubricant 契约映射", () => {
     // 生产复现验证：8 步，配方不重新优化，且不带 VERIFIED（MODEL_BUILT 直接到 APPLIED）。
     expect(routeFor("PROCESS_ROBUSTNESS")).toHaveLength(8);
     expect(routeFor("PROCESS_ROBUSTNESS").map((c) => c.stage)).not.toContain("VERIFIED");
-    // 精密传动脂开发：20 步（契约 type_routes 的新第 7 类；12 个新 stage 全在链上，
-    // 缺任何一条这里都会短于 20 —— 下方还有逐项对齐契约的用例）。
-    expect(routeFor("PRECISION_GREASE_DEV")).toHaveLength(20);
+    // 精密传动脂开发：19 步（契约 type_routes 的新第 7 类；11 个新 stage 全在链上，
+    // 缺任何一条这里都会短于 19 —— 下方还有逐项对齐契约的用例）。
+    expect(routeFor("PRECISION_GREASE_DEV")).toHaveLength(19);
     expect(routeFor("PRECISION_GREASE_DEV").map((c) => c.stage)).toContain("KNOWLEDGE_ARCHIVED");
     expect(routeFor("UNKNOWN_TYPE")).toHaveLength(12);
     expect(routeFor(null)).toHaveLength(12);
@@ -184,7 +184,7 @@ describe("lubricant 契约映射", () => {
     // The pack documents exactly seven workflows and project.schema.json
     // enumerates the same seven. CORRECTIVE_ACTION used to sit in the enum with
     // no route and no documentation — vestigial, removed 2026-09-20.
-    // PRECISION_GREASE_DEV is the v0.8.0 seventh: 精密传动脂开发, 20 步。
+    // PRECISION_GREASE_DEV is the v0.8.0 seventh: 精密传动脂开发, 19 步。
     expect([...PROJECT_TYPES].sort()).toEqual([
       "COST_DOWN", "CUSTOMIZATION", "EXPLORATION", "IMPROVEMENT", "NEW_PRODUCT",
       "PRECISION_GREASE_DEV", "PROCESS_ROBUSTNESS",
@@ -253,7 +253,7 @@ describe("步骤展示文案（G-2 / G-4 / G-5 / H-1 的面板侧）", () => {
 
   it("G-2：APPLIED 是唯一登记「产出技能 ≠ 准入技能」的步骤", () => {
     const applied = contractOf("APPLIED");
-    // skill 保持准入技能不动（ROUTE_TABLE 的 25 组逐一对应断言钉死它）
+    // skill 保持准入技能不动（ROUTE_TABLE 的 24 组逐一对应断言钉死它）
     expect(applied.skill).toBe("application-validation");
     expect(applied.producerSkill).toBe("application-definition");
     expect(applied.admissionSkill).toBe("application-validation");
@@ -343,16 +343,16 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
   // 保留空集合与守卫本身，以便后续新增 artifactType 时仍有显式登记位。
   const SCHEMA_NOT_SHIPPED = new Set<string>();
 
-  /** route_step.py 的 ROUTE_TABLE：25 组 (skill, stage)。 */
+  /** route_step.py 的 ROUTE_TABLE：24 组 (skill, stage)。 */
   const routeTable = () =>
     [...slice("ROUTE_TABLE = (", "\n)").matchAll(/\(\s*"([^"]+)",\s*"([^"]+)"\s*\)/g)].map((m) => ({
       skill: m[1],
       stage: m[2],
     }));
 
-  it("ROUTE_TABLE 有 25 组，且 skill / stage 顺序与本模块逐一对应", () => {
+  it("ROUTE_TABLE 有 24 组，且 skill / stage 顺序与本模块逐一对应", () => {
     const table = routeTable();
-    expect(table).toHaveLength(25);
+    expect(table).toHaveLength(24);
     expect(table.map((r) => r.skill)).toEqual(STAGE_CHAIN.map((c) => c.skill));
     expect(table.map((r) => r.stage)).toEqual(STAGE_CHAIN.map((c) => c.stage));
   });
@@ -418,12 +418,12 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     // 尚无 fixtures/valid 样例的链上工件：
     //   process.json / application.json —— WP 新增工件，只有 schema + skill 内
     //     构建脚本的测试覆盖；
-    //   bench.json —— 台架登记由 e2e 在临时工作区现搭
-    //     （tests/lubricant_e2e/test_application_bench.py）；
     //   next_batch.json —— 连 schema 都未发货（见上一条）。
     // 显式登记；领域包补货后必须删条目（反向断言会红）。
+    // 2026-10-14：bench.json 的合并工件样例（原 campaign.json 改造）已随包
+    //   落盘，移出登记表。
     const noFixtureShipped = new Set([
-      "process.json", "application.json", "bench.json",
+      "process.json", "application.json",
       // 2026-10-12：next_batch.json 样例已补，移出登记表。
     ]);
     for (const c of STAGE_CHAIN) {
@@ -439,7 +439,7 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
   });
 
   it("每个 skill 目录都存在（未随包发货者显式登记）", () => {
-    // route_step.py 把 12 个新 stage 派给技能，技能名逐字来自 route_step.py，
+    // route_step.py 把 11 个新 stage 派给技能，技能名逐字来自 route_step.py，
     // 由上面 ROUTE_TABLE 用例强制。目录尚未随领域包落盘的显式登记在此；
     // 补货后必须删条目（反向断言会红）。
     //
@@ -557,8 +557,8 @@ describePack("与 domains/lubricant 领域包的一致性", () => {
     // 内环的重复落盘（第二轮 screening.json）不会让步骤表变长：步骤序列仍由
     // TYPE_ROUTES 决定，环边只在路由时提供"额外合法目标"。
     const stages = routeFor("PRECISION_GREASE_DEV").map((c) => c.stage);
-    expect(stages).toHaveLength(20);
-    expect(new Set(stages).size).toBe(20);
+    expect(stages).toHaveLength(19);
+    expect(new Set(stages).size).toBe(19);
     for (const edge of LOOP_EDGES) {
       expect(stages).toContain(edge.from);
       expect(stages).toContain(edge.to);

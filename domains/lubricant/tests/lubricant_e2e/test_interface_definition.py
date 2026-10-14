@@ -124,10 +124,10 @@ def freeze_errors(policy, condition: dict, interfaces: dict) -> list[str]:
 def main() -> int:
     # 1. validate_schemas green with the new schema in place (inventory arithmetic
     #    is asserted in test_application_bench.py; 19 -> 20 with interface, then
-    #    PRECISION_GREASE_DEV brings the inventory to 30).
+    #    PRECISION_GREASE_DEV brings the inventory to 31, and the bench/campaign merge (2026-10-14) drops it to 30).
     schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.schema.json"))
     assert "interface.schema.json" in schema_names, schema_names
-    assert len(schema_names) == 31, (len(schema_names), schema_names)
+    assert len(schema_names) == 30, (len(schema_names), schema_names)
     validated = subprocess.run(
         [sys.executable, "-B", "scripts/validate_schemas.py"], cwd=ROOT, capture_output=True, text=True
     )

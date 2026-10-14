@@ -8,16 +8,16 @@ pack's own skill scripts (preflight -> build -> validate) and the pack's own dec
   E2E-2 inner-loop iteration (``scenario_inner_loop_iteration``)
     One full bench round: batch production (grease-batch) -> screening PASS
     (grease-screening) -> bench runs (experiment-import bench path) -> variance
-    CONSISTENT_DIFFERENCE (variance-assessment) -> the bench registration and the
-    campaign carrier that bounds the loop (bench-registration, BENCH_RESOURCE_REGISTERED +
-    CAMPAIGN_OPENED) -> the next-batch decision that opens round 2 (doe-design,
-    NEXT_BATCH_DECIDED, with its declared competing explanations).
+    CONSISTENT_DIFFERENCE (variance-assessment) -> the bench registration that bounds
+    the loop (bench-registration, BENCH_RESOURCE_REGISTERED, carrying the bench resource
+    and the round ledger in ONE artifact) -> the next-batch decision that opens round 2
+    (doe-design, NEXT_BATCH_DECIDED, with its declared competing explanations).
     Then the declared ring edge VARIANCE_ASSESSED -> BATCH_PRODUCED must be ALLOWed by
     BOTH the router and the state machine, the iteration must advance 1 -> 2 by
-    RE-DRIVING the campaign producer with the round-1 entry taken from the built
+    RE-DRIVING the merged bench producer with the round-1 entry taken from the built
     iteration-1 artifact, and every round-1 record must survive on disk (evidence
     append-only; the ring is an edge, not a ROLLBACK that voids the rounds it passes).
-    The campaign producer's own gate is exercised as a gate: a record that drops round 1,
+    The producer's own gate is exercised as a gate: a record that drops round 1,
     or one whose current_iteration exceeds its cap, must be refused.
 
   E2E-3 inner-loop rework (``scenario_screening_rework``)
@@ -120,7 +120,7 @@ RING_COUNTER_REASON = "GO ring-edge advance must carry the inner-loop iteration 
 # exempted bench_test from the GO demand because its contract fixes UNDECIDED; the probe
 # below asserts this wording is GONE from the real output).
 MODEL_BUILT_GAP = "bench_test_artifact must have decision GO"
-# The campaign producer's own append-only / cap refusals the checks below pin.
+# The merged producer's own append-only / cap refusals the checks below pin.
 CAMPAIGN_ROUND_ORDER_GAP = "rounds are recorded oldest first and 1-based"
 CAMPAIGN_CAP_GAP = "must not exceed max_iterations"
 
@@ -609,11 +609,11 @@ def variance_input(project_path: Path, bench_test_paths: list[Path]) -> dict:
 
 
 def bench_registration_input() -> dict:
-    """The BENCH_RESOURCE_REGISTERED request for bench-registration's bench producer.
+    """The ``bench`` block of the merged BENCH_RESOURCE_REGISTERED request.
 
-    The campaign carrier may only draw its slots from a bench registered for the same
-    project and evidence scope, so the loop needs a real bench record: this request is
-    driven through the skill in E2E-2 before the campaign is opened.
+    Since the bench/campaign merge (contract 1.0.0) bench-registration produces ONE
+    artifact carrying both the bench resource and the inner-loop ledger, so the request
+    carries the resolved bench here beside the campaign block (see campaign_request).
     """
     return {
         "bench": {
@@ -645,7 +645,7 @@ def bench_registration_input() -> dict:
 def round_entry(iteration: int, samples: list[str], *, stop_state: str = "CONTINUE",
                 screening: str | None = None, variance: str | None = None, model: str | None = None,
                 next_batch: str | None = None, bench_tests: list[str] | None = None) -> dict:
-    """One campaign round entry (campaign.schema.json's iteration shape)."""
+    """One round entry (bench.schema.json's iteration shape)."""
     return {
         "iteration": iteration,
         "samples": list(samples),
@@ -659,20 +659,19 @@ def round_entry(iteration: int, samples: list[str], *, stop_state: str = "CONTIN
 
 
 def campaign_request(current_iteration: int, iterations: list[dict]) -> dict:
-    """The CAMPAIGN_OPENED request for bench-registration's campaign producer.
+    """The BENCH_RESOURCE_REGISTERED request for bench-registration's merged producer.
 
-    ``max_iterations`` is omitted on purpose: the producer reads the contract's own
-    published cap and records that provenance on the artifact, so the loop's only bound is
-    never a number this test invented. The request references the bench record the
-    workspace itself produced (written as ``bench.json`` in the same directory).
+    The merged artifact carries the bench resource AND the inner-loop ledger, so the
+    request has exactly the two blocks ``bench`` (the workspace's own registration
+    input) and ``campaign`` (the round plan). ``max_iterations`` is omitted on purpose:
+    the producer reads the contract's own published cap and records that provenance on
+    the artifact, so the loop's only bound is never a number this test invented.
     """
     return {
-        "project_artifact": "project.json",
-        "bench_artifacts": ["bench.json"],
+        **bench_registration_input(),
         "campaign": {
             "campaign_id": CAMPAIGN_ID,
             "project_reference": PROJECT_ID,
-            "bench_references": [BENCH_ID],
             "current_iteration": current_iteration,
             "iterations": iterations,
             "pairing_design": {
@@ -845,7 +844,6 @@ def ring_edge_event(validator, *, iteration: int | None, round_1_evidence: list[
 def stage_scripts() -> dict[str, Path]:
     return {
         "bench": SKILLS / "bench-registration" / "scripts",
-        "campaign": SKILLS / "bench-registration" / "scripts",
         "batch": SKILLS / "grease-batch" / "scripts",
         "screening": SKILLS / "grease-screening" / "scripts",
         "bench_test": SKILLS / "experiment-import" / "scripts",
@@ -978,32 +976,23 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert variance["iteration"] == 1 and variance["campaign_reference"] == CAMPAIGN_ID, variance
         print("E2E-2 ok: VARIANCE_ASSESSED = CONSISTENT_DIFFERENCE (engine-computed), iteration 1")
 
-        # --- BENCH_RESOURCE_REGISTERED: the bench the campaign draws on --------
-        # The campaign gate only accepts slots from a REGISTERED bench of the same
-        # project and evidence scope, so the bench is produced by its skill as well.
-        bench_request = ws / "input-bench.json"
-        write_json(bench_request, bench_registration_input())
-        bench_path = ws / "bench.json"
-        run_ok(scripts["bench"] / "preflight_bench_registration.py", bench_request)
-        run_ok(scripts["bench"] / "build_bench_artifact.py", bench_request, bench_path)
-        run_ok(scripts["bench"] / "validate_bench_artifact.py", bench_path)
-        bench = check_schema("bench", bench_path)
-        assert bench["bench_id"] == BENCH_ID and bench["evidence_scope"] == "PHYSICAL", bench
-        assert bench["available_bench_slots"] >= 2, bench
-        print(f"E2E-2 ok: BENCH_RESOURCE_REGISTERED built and validated by bench-registration "
-              f"({bench['available_bench_slots']} derived slots)")
-
-        # --- CAMPAIGN_OPENED: the loop's carrier, produced by its skill --------
-        # W0 (D-1): the campaign is OPENED before round 1 runs, so its ledger is
-        # legitimately EMPTY here and current_iteration is 1. The round entries are
-        # appended at each round boundary (below), never pre-written at open time.
-        campaign_path = ws / "campaign.json"
-        campaign_request_path = ws / "input-campaign-opened.json"
+        # --- BENCH_RESOURCE_REGISTERED: the bench and its round plan -----------
+        # The bench resource and the inner-loop ledger are ONE stage and ONE artifact
+        # since the bench/campaign merge (contract 1.0.0): the workspace registers the
+        # bench and opens its round plan in a SINGLE drive through the skill.
+        # W0 (D-1): the ledger is legitimately EMPTY here and current_iteration is 1;
+        # the round entries are appended at each round boundary (below), never
+        # pre-written at open time.
+        campaign_path = ws / "bench.json"
+        campaign_request_path = ws / "input-bench-opened.json"
         write_json(campaign_request_path, campaign_request(1, []))
-        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_request_path)
-        run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_request_path, campaign_path)
-        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
-        campaign_1 = check_schema("campaign", campaign_path)
+        run_ok(scripts["bench"] / "preflight_bench_registration.py", campaign_request_path)
+        run_ok(scripts["bench"] / "build_bench_artifact.py", campaign_request_path, campaign_path)
+        run_ok(scripts["bench"] / "validate_bench_artifact.py", campaign_path)
+        campaign_1 = check_schema("bench", campaign_path)
+        assert campaign_1["stage"] == "BENCH_RESOURCE_REGISTERED", campaign_1["stage"]
+        assert campaign_1["bench_id"] == BENCH_ID and campaign_1["evidence_scope"] == "PHYSICAL", campaign_1
+        assert campaign_1["available_bench_slots"] >= 2, campaign_1
         assert campaign_1["campaign_id"] == CAMPAIGN_ID and campaign_1["current_iteration"] == 1, campaign_1
         assert campaign_1["decision"] == "GO", campaign_1
         assert campaign_1["iterations"] == [], campaign_1["iterations"]
@@ -1012,8 +1001,9 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         # one thing the bound cannot be).
         assert campaign_1["max_iterations"] == read_json(CONTRACT)["max_iterations"], campaign_1
         assert any(item.get("source") == "contracts/state-machine.json" for item in campaign_1["evidence"]), campaign_1
-        print("E2E-2 ok: CAMPAIGN_OPENED built and validated by bench-registration with an EMPTY ledger "
-              "(W0: the campaign is opened before round 1 runs)")
+        print(f"E2E-2 ok: BENCH_RESOURCE_REGISTERED built and validated by bench-registration "
+              f"({campaign_1['available_bench_slots']} derived slots) with an EMPTY ledger "
+              "(W0: the bench and its round plan are registered before round 1 runs)")
 
         # --- the round-1 boundary: the ledger gains round 1 (W1) ---------------
         # The entry is composed from the records THIS workspace produced (the sample ids
@@ -1028,12 +1018,12 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
             variance=read_json(variance_path)["variance_id"],
             bench_tests=[read_json(path)["run_id"] for path in bench_test_paths],
         )
-        round_1_request_path = ws / "input-campaign-iteration-1.json"
+        round_1_request_path = ws / "input-bench-round-1.json"
         write_json(round_1_request_path, campaign_request(2, [round_1_entry]))
-        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", round_1_request_path)
-        run_ok(scripts["campaign"] / "build_campaign_artifact.py", round_1_request_path, campaign_path)
-        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
-        campaign_1 = check_schema("campaign", campaign_path)
+        run_ok(scripts["bench"] / "preflight_bench_registration.py", round_1_request_path)
+        run_ok(scripts["bench"] / "build_bench_artifact.py", round_1_request_path, campaign_path)
+        run_ok(scripts["bench"] / "validate_bench_artifact.py", campaign_path)
+        campaign_1 = check_schema("bench", campaign_path)
         assert campaign_1["current_iteration"] == 2, campaign_1
         assert campaign_1["decision"] == "GO", campaign_1
         # Round 1's entry, as the product stored it, names records that exist on disk.
@@ -1046,11 +1036,11 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         print("E2E-2 ok: the round-1 boundary appended round 1's entry; the ledger stands at iteration 2 "
               "(W1: a CONTINUE round opened the next one)")
 
-        # --- MODEL_BUILT: the probe, on the W1-shape campaign -------------------
+        # --- MODEL_BUILT: the probe, on the W1-shape merged bench record --------
         # E-2: the modeling entry consumes the round's own ledger, and it runs after the
         # round boundary has recorded the round (W1 above: the counter stands at 2, the
         # newest entry is round 1 ending CONTINUE with both exit-round references null) --
-        # exactly the shape step 14 sees in the real loop. The record below is a labelled
+        # exactly the shape step 13 sees in the real loop. The record below is a labelled
         # fixture (the workspace produces no model), and the probe asserts the skill's REAL
         # refusal: only the two oil-path upstreams this inner-loop-only workspace does not
         # carry. The challenge path (C-1) and the experiment path (E-2) are legal omissions
@@ -1078,8 +1068,8 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         print("E2E-2 ok: statistical-analysis's real refusal on this workspace names only the two oil "
               "upstreams it does not carry (failure_ctq / test_method); the challenge and experiment "
               "paths are legal omissions on the grease route, the contract-UNDECIDED bench_test record "
-              "is accepted, and the campaign ledger is consumed (MODEL_BUILT itself is a fixture here, "
-              "driven for real by E2E-1)")
+              "is accepted, and the merged bench ledger is consumed (MODEL_BUILT itself is a fixture "
+              "here, driven for real by E2E-1)")
 
         # --- NEXT_BATCH_DECIDED: round 2 proposed by its skill -----------------
         next_batch_request_path = ws / "input-next-batch.json"
@@ -1119,9 +1109,9 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
 
         round_1_digests = artifact_digests(ws)
         # The round-1 record set the ring edge must carry forward, one evidence id per
-        # artifact this workspace actually produced (the campaign counter record is the
+        # artifact this workspace actually produced (the merged bench record is the
         # iteration bookkeeping, not a round record).
-        frozen_round_1 = sorted(name for name in round_1_digests if name != "campaign.json")
+        frozen_round_1 = sorted(name for name in round_1_digests if name != "bench.json")
         round_1_evidence = [f"ITER-1:{name}" for name in frozen_round_1]
 
         # --- the ring edge: router ALLOW + state machine ALLOW ---------------
@@ -1200,18 +1190,18 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         print("E2E-2 ok: dropping round-1 evidence / omitting the iteration counter / exceeding "
               f"max_iterations={cap} / bumping the project version on the ring edge are each REFUSED")
 
-        # campaign iteration 2 is produced by the SAME skill, and its round-1 entry is the
-        # one the iteration-1 artifact recorded (read back from disk, never re-authored):
-        # the iteration advance runs through the producer, and the producer must refuse a
-        # record that drops round 1 or exceeds its own cap. Round 2 ends CONTINUE, so the
-        # counter stands at the round that round opened (W1: 3).
-        campaign_2_request_path = ws / "input-campaign-iteration-2.json"
+        # The round-2 ledger entry is produced by the SAME skill, and its round-1 entry is
+        # the one the iteration-1 artifact recorded (read back from disk, never re-authored):
+        # the iteration advance runs through the merged producer, and the producer must
+        # refuse a record that drops round 1 or exceeds its own cap. Round 2 ends CONTINUE,
+        # so the counter stands at the round that round opened (W1: 3).
+        campaign_2_request_path = ws / "input-bench-iteration-2.json"
         round_2_entry = round_entry(2, [BATCH_ROUND_2[1]], next_batch=None)
         write_json(campaign_2_request_path, campaign_request(3, [stored, round_2_entry]))
-        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_2_request_path)
-        run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_2_request_path, campaign_path)
-        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
-        campaign_2 = check_schema("campaign", campaign_path)
+        run_ok(scripts["bench"] / "preflight_bench_registration.py", campaign_2_request_path)
+        run_ok(scripts["bench"] / "build_bench_artifact.py", campaign_2_request_path, campaign_path)
+        run_ok(scripts["bench"] / "validate_bench_artifact.py", campaign_path)
+        campaign_2 = check_schema("bench", campaign_path)
         assert campaign_2["current_iteration"] == 3, campaign_2
         assert campaign_2["decision"] == "GO", campaign_2
         assert campaign_2["iterations"][0] == stored, campaign_2["iterations"]
@@ -1219,36 +1209,36 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert campaign_2["iterations"][1]["samples"] == [BATCH_ROUND_2[1]], campaign_2["iterations"][1]
         assert campaign_2["max_iterations"] == cap, campaign_2
 
-        # (i) A campaign that records ONLY round 2 is refused: rounds are oldest first,
+        # (i) A record that keeps ONLY round 2 is refused: rounds are oldest first,
         # so the loop cannot drop the round it advanced past.
-        dropped_request = ws / "input-campaign-dropped-round-1.json"
+        dropped_request = ws / "input-bench-dropped-round-1.json"
         write_json(dropped_request, campaign_request(3, [round_entry(2, [BATCH_ROUND_2[1]])]))
-        dropped_probe = run(scripts["campaign"] / "preflight_campaign_registration.py", dropped_request)
+        dropped_probe = run(scripts["bench"] / "preflight_bench_registration.py", dropped_request)
         assert dropped_probe.returncode != 0 and CAMPAIGN_ROUND_ORDER_GAP in dropped_probe.stdout, dropped_probe.stdout
-        # (ii) A campaign whose current_iteration exceeds its own cap is refused.
-        over_cap_request = ws / "input-campaign-over-cap.json"
+        # (ii) A record whose current_iteration exceeds its own cap is refused.
+        over_cap_request = ws / "input-bench-over-cap.json"
         over_cap_payload = campaign_request(2, [stored, round_2_entry])
         over_cap_payload["campaign"]["max_iterations"] = 1
         write_json(over_cap_request, over_cap_payload)
-        over_cap_probe = run(scripts["campaign"] / "preflight_campaign_registration.py", over_cap_request)
+        over_cap_probe = run(scripts["bench"] / "preflight_bench_registration.py", over_cap_request)
         assert over_cap_probe.returncode != 0 and CAMPAIGN_CAP_GAP in over_cap_probe.stdout, over_cap_probe.stdout
-        print("E2E-2 ok: campaign iteration 2 built and validated by bench-registration; dropping round 1 and "
-              "exceeding the campaign's own cap are each REFUSED by its gate")
+        print("E2E-2 ok: the iteration-2 ledger built and validated by bench-registration; dropping round 1 and "
+              "exceeding the record's own cap are each REFUSED by its gate")
 
         # The round-1 records on disk are byte-identical after the ring advance.
-        # campaign.json is the one record that legitimately moves: it is where
+        # bench.json is the one record that legitimately moves: it is where
         # current_iteration lives, and its round-1 entry was asserted unchanged above.
         after_digests = artifact_digests(ws)
         changed = {
             name: (round_1_digests[name], after_digests[name])
             for name in round_1_digests
-            if name != "campaign.json" and name in after_digests and round_1_digests[name] != after_digests[name]
+            if name != "bench.json" and name in after_digests and round_1_digests[name] != after_digests[name]
         }
         assert changed == {}, changed
         missing = sorted(name for name in round_1_digests if name not in after_digests)
         assert missing == [], missing
-        frozen_round_1 = [name for name in round_1_digests if name != "campaign.json"]
-        print(f"E2E-2 ok: all {len(frozen_round_1)} round-1 artifacts other than the campaign counter record "
+        frozen_round_1 = [name for name in round_1_digests if name != "bench.json"]
+        print(f"E2E-2 ok: all {len(frozen_round_1)} round-1 artifacts other than the merged bench record "
               "are byte-identical after the ring advance (nothing was voided)")
 
         result["workspace"] = str(ws)
@@ -1545,7 +1535,7 @@ def main() -> int:
     print(
         "PASS: E2E-2 inner-loop iteration (ring edge ALLOW, iteration "
         f"{inner_loop['campaign_1_iteration']} -> {inner_loop['campaign_2_iteration']} advanced by re-driving the "
-        "bench-registration campaign producer, round-1 records retained on disk), "
+        "bench-registration merged bench producer, round-1 records retained on disk), "
         "E2E-3 screening rework (rework edge ALLOW, batch remade, 0 bench_test records), "
         "decision-3 boundary locked (inter-ring backtracking DENY)"
     )

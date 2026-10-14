@@ -3,8 +3,8 @@
  *
  * 派生自：
  *   - contracts/state-machine.json 的 stages / type_routes / on_demand_stages
- *     （v0.8.0：28 段、7 类路由 + 1 个按需阶段；第 7 类 PRECISION_GREASE_DEV
- *     是精密传动脂开发路线，独占 12 个新 stage）
+ *     （v1.0.0：27 段、7 类路由 + 1 个按需阶段；第 7 类 PRECISION_GREASE_DEV
+ *     是精密传动脂开发路线，独占 11 个新 stage）
  *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE（skill → stage 顺序）
  *   - schemas/<artifact_type>.schema.json 的 artifact_type const 与 required
  *   - fixtures/valid/*.json 的文件名
@@ -36,11 +36,11 @@ export type ChainStage =
   | "PROCESS_WINDOW_DEFINED"
   | "VERIFIED"
   | "APPLIED"
-  // v0.8.0 精密传动脂（PRECISION_GREASE_DEV）路线的 12 个新 stage。
+  // v0.8.0 精密传动脂（PRECISION_GREASE_DEV）路线的新 stage（v1.0.0 合并台架
+  // 资源与轮次计划两步后共 11 个）。
   | "FAILURE_MECHANISM_DEFINED"
   | "REFERENCE_MATERIAL_RESOLVED"
   | "BENCH_RESOURCE_REGISTERED"
-  | "CAMPAIGN_OPENED"
   | "BATCH_PRODUCED"
   | "SCREENING_PASSED"
   | "BENCH_TESTED"
@@ -65,7 +65,7 @@ export interface StageContract {
   readonly skill: string;
   /**
    * 产出工件的技能目录名。缺省时等于 skill。
-   * 只在产出者与准入者不是同一个目录时填写（当前仅第 19 步 APPLIED）。
+   * 只在产出者与准入者不是同一个目录时填写（当前仅第 18 步 APPLIED）。
    */
   readonly producerSkill?: string;
   /** 准入考核该步的技能目录名；存在时提示词里显式说明。 */
@@ -269,7 +269,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     skill: "application-validation",
     // 产出者与准入者不是同一个目录（M4 / F-3）：application.json 由
     // application-definition 生成，application-validation 只做准入考核。
-    // skill 保持准入技能不动 —— ROUTE_TABLE 的 25 组逐一对应断言钉死它。
+    // skill 保持准入技能不动 —— ROUTE_TABLE 的 24 组逐一对应断言钉死它。
     producerSkill: "application-definition",
     admissionSkill: "application-validation",
     stage: "APPLIED",
@@ -284,12 +284,13 @@ export const STAGE_CHAIN: readonly StageContract[] = [
       "bench_references 至少引用一个已登记台架",
     ],
   },
-  /* ---- v0.8.0 精密传动脂路线（PRECISION_GREASE_DEV）独享的 12 个 stage ---- *
-   * 前 7 条（14~20）是调和油路线跳过或折叠掉的工序，后 5 条（21~25）是
-   * 内环迭代与知识封存的闭环工序。注意三条**共用工件**（跨路线复用，同一
-   * 条 route 内不会重复出现）：failure_ctq.json（失效机制 + CTQ 两段共享）、
-   * optimization.json（优化 + 非劣效共享）、process.json（工艺窗口按需阶段 +
-   * 工艺放大共享）。routeFor() 按 stage 取契约，共用不影响进度推导。          */
+  /* ---- v0.8.0 精密传动脂路线（PRECISION_GREASE_DEV）独享的 11 个 stage ---- *
+   * v1.0.0 合并台架资源与轮次计划后：前 6 条（14~19）是调和油路线跳过或折叠
+   * 掉的工序，后 5 条（20~24）是内环迭代与知识封存的闭环工序。注意三条**共用
+   * 工件**（跨路线复用，同一条 route 内不会重复出现）：failure_ctq.json（失效
+   * 机制 + CTQ 两段共享）、optimization.json（优化 + 非劣效共享）、
+   * process.json（工艺窗口按需阶段 + 工艺放大共享）。routeFor() 按 stage 取
+   * 契约，共用不影响进度推导。                                              */
   {
     chainIndex: 14,
     skill: "failure-ctq-analysis",
@@ -326,30 +327,18 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     stage: "BENCH_RESOURCE_REGISTERED",
     artifactType: "bench",
     file: "bench.json",
-    titleZh: "台架资源与档期登记",
-    description: "登记可用台架位数、单轮占用天数与单轮成本，作为台架战役的资源包络。",
+    titleZh: "台架资源与轮次计划",
+    description: "登记可用台架位数、单轮占用天数与单轮成本，并声明内环轮次计划与上限，作为台架迭代的资源包络。",
     criteria: [
       "可用位数由档期与单轮天数换算得出，不得手填",
       "单轮成本含数值、单位与来源",
       "availability_window 起止合法（start 早于 end），reserved_days 已扣除",
-    ],
-  },
-  {
-    chainIndex: 17,
-    skill: "bench-registration",
-    stage: "CAMPAIGN_OPENED",
-    artifactType: "campaign",
-    file: "campaign.json",
-    titleZh: "台架战役开启（内环迭代）",
-    description: "开启内环迭代的台架战役载体，含成对比较设计与迭代轮次上限。",
-    criteria: [
-      "pairing_design 成对比较设计齐备，缺失不得开战",
-      "bench_references 指向已登记台架",
+      "pairing_design 成对比较设计齐备，缺失不得进入内环",
       "iterations 每轮记录 stop_state，且不得超过 max_iterations",
     ],
   },
   {
-    chainIndex: 18,
+    chainIndex: 17,
     skill: "grease-batch",
     stage: "BATCH_PRODUCED",
     artifactType: "batch",
@@ -363,7 +352,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 19,
+    chainIndex: 18,
     skill: "grease-screening",
     stage: "SCREENING_PASSED",
     artifactType: "screening",
@@ -377,7 +366,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 20,
+    chainIndex: 19,
     skill: "experiment-import",
     stage: "BENCH_TESTED",
     artifactType: "bench_test",
@@ -391,7 +380,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 21,
+    chainIndex: 20,
     skill: "variance-assessment",
     stage: "VARIANCE_ASSESSED",
     artifactType: "variance",
@@ -405,7 +394,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 22,
+    chainIndex: 21,
     skill: "doe-design",
     stage: "NEXT_BATCH_DECIDED",
     artifactType: "next_batch",
@@ -419,7 +408,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 23,
+    chainIndex: 22,
     skill: "optimization",
     stage: "NON_INFERIORITY_PASSED",
     artifactType: "optimization",
@@ -433,7 +422,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 24,
+    chainIndex: 23,
     skill: "process-scale-up",
     stage: "PROCESS_SCALE_VALIDATED",
     artifactType: "process",
@@ -447,7 +436,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     ],
   },
   {
-    chainIndex: 25,
+    chainIndex: 24,
     skill: "knowledge-archive",
     stage: "KNOWLEDGE_ARCHIVED",
     artifactType: "knowledge_asset",
@@ -475,7 +464,7 @@ const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
  * （物理混合，不生成产品结构）。把它排进每条油品链会迫使研发员为走完流程
  * 填写一个无意义的工件 —— 与本领域包 NO Invented Process Data 红线直接冲突。
  *
- * 第 7 类 PRECISION_GREASE_DEV（精密传动脂）是唯一走满 20 步的路线：它用
+ * 第 7 类 PRECISION_GREASE_DEV（精密传动脂）是唯一走满 19 步的路线：它用
  * 独立的 PROCESS_SCALE_VALIDATED 表达工艺放大，不复用按需阶段
  * PROCESS_WINDOW_DEFINED（契约 on_demand_stages 的 note 明确此事）。
  */
@@ -507,13 +496,13 @@ export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
     "MODEL_BUILT", "APPLIED",
   ],
-  // 精密传动脂开发：20 步，逐项照抄契约 type_routes（含 12 个新 stage）。
-  // 与油品路线并列，不是它的延长线：内环迭代（战役 → 制脂 → 筛测 → 台架 →
+  // 精密传动脂开发：19 步，逐项照抄契约 type_routes（含 11 个新 stage）。
+  // 与油品路线并列，不是它的延长线：内环迭代（轮次计划 → 制脂 → 筛测 → 台架 →
   // 方差 → 下一批）插在 DOE 与模型之间，末端多出非劣效 / 工艺放大 / 知识入库。
   PRECISION_GREASE_DEV: [
     "PROJECT_DEFINED", "DUTY_DEFINED", "FAILURE_MECHANISM_DEFINED",
     "REFERENCE_MATERIAL_RESOLVED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
-    "BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED", "EXPERIMENT_DESIGNED",
+    "BENCH_RESOURCE_REGISTERED", "EXPERIMENT_DESIGNED",
     "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED",
     "MODEL_BUILT", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED",
     "PROCESS_SCALE_VALIDATED", "VERIFIED", "APPLIED", "KNOWLEDGE_ARCHIVED",
@@ -568,8 +557,8 @@ export const LOOP_EDGES: readonly LoopEdge[] = [
 ];
 
 /**
- * 内环轮次上限（契约 max_iterations）。单位：每战役的台架轮次 —— 12 ≈ 一年
- * 12 轮台架战役。超限必须退出内环（PIVOT / KILL），不得再开新一轮。
+ * 内环轮次上限（契约 max_iterations）。单位：内环迭代的台架轮次 —— 12 ≈ 一年
+ * 12 轮台架迭代。超限必须退出内环（PIVOT / KILL），不得再开新一轮。
  */
 export const MAX_ITERATIONS = 12;
 

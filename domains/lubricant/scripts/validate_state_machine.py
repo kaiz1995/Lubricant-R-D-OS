@@ -120,7 +120,7 @@ def loop_edge(before_stage: object, after_stage: object) -> dict | None:
 def iteration_error(event: dict) -> str | None:
     """Validate the inner-loop iteration counter when an event carries one.
 
-    The counter is 1-based, matching `schemas/campaign.schema.json`'s
+    The counter is 1-based, matching `schemas/bench.schema.json`'s
     `current_iteration`, and is capped by the contract's `max_iterations`
     (unit: bench rounds per campaign, ≈12 rounds in a year — plan §4.3). This
     validator is stateless, so it can only bound the number carried by the

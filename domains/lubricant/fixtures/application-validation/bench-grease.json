@@ -1,28 +1,25 @@
 {
   "schema_version": "0.1.0",
-  "artifact_type": "campaign",
+  "artifact_type": "bench",
   "project_id": "PGD-APP-001",
-  "stage": "CAMPAIGN_OPENED",
+  "stage": "BENCH_RESOURCE_REGISTERED",
   "evidence_scope": "SYNTHETIC",
-  "decision_question": "May the campaign open?",
+  "decision_question": "May the merged bench record (bench resource + round plan) be registered?",
   "hypothesis": "Scarce bench slots are allocated across rounds.",
   "uncertainty": "Synthetic fixture only.",
   "evidence": [
     {
       "evidence_id": "E-CMP-001",
-      "statement": "Synthetic campaign fixture.",
+      "statement": "Synthetic bench fixture (merged bench resource + inner-loop ledger).",
       "source": "synthetic fixture only",
       "status": "ASSUMED"
     }
   ],
-  "decision_rule": "Open the campaign with recorded bench references.",
-  "result": "Synthetic campaign recorded.",
+  "decision_rule": "Register the bench with the recorded round plan.",
+  "result": "Synthetic bench record registered.",
   "decision": "GO",
   "next_action": "Run round 1.",
   "campaign_id": "CMP-APP-001",
-  "bench_references": [
-    "BENCH-SZ-01"
-  ],
   "max_iterations": 12,
   "current_iteration": 3,
   "iterations": [
@@ -36,8 +33,8 @@
         "BT-1"
       ],
       "variance_reference": "VAR-1",
-      "model_reference": "MODEL-1",
-      "next_batch_reference": "NB-1",
+      "model_reference": null,
+      "next_batch_reference": null,
       "stop_state": "CONTINUE"
     }
   ],

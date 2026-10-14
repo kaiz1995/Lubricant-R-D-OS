@@ -35,8 +35,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # E-2 (step 14 modeling entry): the grease route also supplies the CAMPAIGN ledger, and its
 # EXPERIMENT_RUNNING artifact becomes OPTIONAL -- EXPERIMENT_RUNNING is on no grease route,
 # so the route's measurements live in its bench records instead (see ROUTE_OBSERVED below).
-SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json", "campaign.schema.json")
-UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("batch_artifact", "batch.schema.json", "BATCH_PRODUCED"), ("screening_artifact", "screening.schema.json", "SCREENING_PASSED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"), ("variance_artifact", "variance.schema.json", "VARIANCE_ASSESSED"), ("campaign_artifact", "campaign.schema.json", "CAMPAIGN_OPENED"))
+SCHEMAS = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json", "bench.schema.json")
+UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"), ("experiment_artifact", "experiment.schema.json", "EXPERIMENT_RUNNING"), ("batch_artifact", "batch.schema.json", "BATCH_PRODUCED"), ("screening_artifact", "screening.schema.json", "SCREENING_PASSED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"), ("variance_artifact", "variance.schema.json", "VARIANCE_ASSESSED"), ("campaign_artifact", "bench.schema.json", "BENCH_RESOURCE_REGISTERED"))
 # Upstream entries the six oil routes use. Kept as the original seven, verbatim, so an
 # oil request is validated against exactly the list it was validated against before.
 UPSTREAM_OIL = UPSTREAM[:7]
@@ -65,6 +65,10 @@ UPSTREAM_GREASE = UPSTREAM[7:]
 #     CONTINUE stands open (its producer writes GO), while the exit-round ledger is a
 #     record of the loop having closed. Demanding GO from it would make the modeling
 #     entry depend on the W2 write timing (D-1/D-2) instead of on the round's records.
+#     Since the bench/campaign merge (contract 1.0.0) this key points at the merged bench
+#     artifact (bench.json, stage BENCH_RESOURCE_REGISTERED); the ledger fields it reads
+#     (campaign_id / current_iteration / iterations) are unchanged, only the schema and
+#     the stage constant moved.
 #   * test_method_artifact - VERDICT. qualification_policy.py:221: "GO" if qualified else "HOLD".
 #   * design_space_artifact - VERDICT. design_space_policy.py:173: "GO" if ready else "HOLD".
 #   * experiment_design_artifact - VERDICT. doe_design_policy.py:96 and :135: "GO" if ready else "HOLD".
@@ -86,7 +90,7 @@ UPSTREAM_GREASE = UPSTREAM[7:]
 #     those routes' validation exactly as it was; it stays.
 #
 # bench_test and campaign are also the only exempt artifacts that sit on no oil route:
-# contracts/state-machine.json declares BENCH_TESTED and CAMPAIGN_OPENED only under
+# contracts/state-machine.json declares BENCH_TESTED and BENCH_RESOURCE_REGISTERED only under
 # PRECISION_GREASE_DEV, which is why exempting them cannot move any oil path.
 RECORD_UPSTREAM = frozenset({"bench_test_artifact", "campaign_artifact"})
 # The one upstream key the grease route may legally omit. CHALLENGES_DEFINED is on no

@@ -109,11 +109,11 @@ def schema_validator(*names: str) -> Draft202012Validator:
 
 
 def main() -> int:
-    # 1. Schema inventory 20 -> 21, then 30 with PRECISION_GREASE_DEV;
+    # 1. Schema inventory 20 -> 21, then 31 with PRECISION_GREASE_DEV, and the bench/campaign merge (2026-10-14) drops it back to 30;
     #    validate_schemas stays green.
     schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.schema.json"))
     assert "external_record.schema.json" in schema_names, schema_names
-    assert len(schema_names) == 31, (len(schema_names), schema_names)
+    assert len(schema_names) == 30, (len(schema_names), schema_names)
     validated = subprocess.run(
         [sys.executable, "-B", "scripts/validate_schemas.py"], cwd=ROOT, capture_output=True, text=True
     )

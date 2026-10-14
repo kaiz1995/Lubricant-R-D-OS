@@ -25,5 +25,25 @@
         "status": "ASSUMED"
       }
     ]
+  },
+  "campaign": {
+    "campaign_id": "CMP-PGD-B1-001",
+    "current_iteration": 1,
+    "iterations": [],
+    "pairing_design": {
+      "paired": true,
+      "description": "Synthetic fixture: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels; at a fixed sigma, pairing buys more resolution than measuring sigma precisely."
+    },
+    "evidence_scope": "SYNTHETIC",
+    "source": "Synthetic round-plan fixture",
+    "evidence_id": "EV-CMP-PGD-B1-001",
+    "evidence": [
+      {
+        "evidence_id": "EV-CMP-PGD-B1-001",
+        "statement": "Synthetic round plan supplied for contract validation only; the ledger is opened before round 1 runs (W0) and no round is recorded yet.",
+        "source": "Synthetic round-plan fixture (fixtures/bench-registration/bench-input.json)",
+        "status": "ASSUMED"
+      }
+    ]
   }
 }

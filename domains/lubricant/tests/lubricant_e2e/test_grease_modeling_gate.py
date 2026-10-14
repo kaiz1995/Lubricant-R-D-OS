@@ -52,11 +52,12 @@ Cases (numbered as in the fix request):
       is on no grease route), and the analysis responses are linked against the CTQ each
       bench run recorded -- a bench_test.ctq_reference outside the round is refused.
 
-   The campaign ledger and the bench records are part of the grease precondition (D-1/E-2):
+   The inner-loop ledger and the bench records are part of the grease precondition (D-1/E-2):
    the request names ``campaign_artifact`` (exempt from the GO demand like bench_test,
    because a ledger records the loop's state; its binding to the variance record is checked
-   entry-level), and ``fixtures/statistical-analysis/grease-modeling-gate/campaign.json``
-   is its fixture.
+   entry-level), and ``fixtures/statistical-analysis/grease-modeling-gate/bench.json``
+   is its fixture -- the merged bench record (bench resource + inner-loop ledger) that the
+   ``campaign_artifact`` key points at since the bench/campaign merge (contract 1.0.0).
 """
 
 from __future__ import annotations
@@ -95,7 +96,7 @@ GREASE_UPSTREAM = (
     ("screening_artifact", "screening.json", "screening"),
     ("bench_test_artifact", "bench_test.json", "bench_test"),
     ("variance_artifact", "variance.json", "variance"),
-    ("campaign_artifact", "campaign.json", "campaign"),
+    ("campaign_artifact", "bench.json", "bench"),
 )
 OIL_FIXTURE_NAMES = {
     "project_artifact": "project-active.json",
@@ -177,7 +178,7 @@ def grease_request() -> dict:
         "screening_artifact": "screening.json",
         "bench_test_artifact": "bench_test.json",
         "variance_artifact": "variance.json",
-        "campaign_artifact": "campaign.json",
+        "campaign_artifact": "bench.json",
         "analysis": {
             "model_id": "MODEL-PG-B1-001",
             "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL"],
@@ -245,10 +246,10 @@ def fixture_set_is_contract_conform() -> None:
         assert instance.get("project_id") == PROJECT_ID, (name, instance.get("project_id"))
     decisions = {name: read_json(GREASE_FIXTURES / name).get("decision") for _key, name, _kind in GREASE_UPSTREAM}
     assert decisions["bench_test.json"] == "UNDECIDED", decisions
-    for name in ("batch.json", "screening.json", "variance.json", "campaign.json"):
+    for name in ("batch.json", "screening.json", "variance.json", "bench.json"):
         assert decisions[name] == "GO", decisions
     print("ok fixtures: 12 producer-built upstreams are schema-valid for " + PROJECT_ID
-          + "; bench_test decision=UNDECIDED, batch/screening/variance/campaign decision=GO")
+          + "; bench_test decision=UNDECIDED, batch/screening/variance/merged-bench decision=GO")
 
 
 def case_a_and_d(workspace: Path) -> None:
@@ -435,7 +436,7 @@ def case_g(workspace: Path) -> None:
     grease_dir = workspace / "grease"
     grease_dir.mkdir(parents=True)
     stage_grease_workspace(grease_dir)
-    campaign = read_json(grease_dir / "campaign.json")
+    campaign = read_json(grease_dir / "bench.json")
     rounds = campaign.get("iterations") if isinstance(campaign.get("iterations"), list) else []
     newest = rounds[-1] if rounds and isinstance(rounds[-1], dict) else {}
     request = grease_request()

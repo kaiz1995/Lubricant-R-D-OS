@@ -378,7 +378,7 @@ Local-First 给的是**选择权**：
 | **4. 客户定制**<br>(`CUSTOMIZATION`) | 技术协议/OEM规范驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → VERIFIED → APPLIED`（8 步） | 以客户技术协议和指定认证台架为准绳，快速匹配成熟平台做微调验证。 |
 | **5. 机理/平台型探索**<br>(`EXPLORATION`) | 科学假设驱动 | `PROJECT_DEFINED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → VERIFIED → APPLIED`（7 步） | **不考核商业 target_cost 和量产**。允许试错，重点提取变量影响规律与知识资产沉淀。 |
 | **6. 生产复现验证**<br>(`PROCESS_ROBUSTNESS`) | 换釜/换批复现驱动 | `PROJECT_DEFINED → FAILURE_CTQ_DEFINED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → EXPERIMENT_DESIGNED → EXPERIMENT_RUNNING → MODEL_BUILT → APPLIED`（8 步） | 配方冻结后换生产釜/换批复现。**不做重新优化**，以实验与建模确认新批次/新产线复现原配方（段内迭代见 §9.5.1）。 |
-| **7. 精密传动脂开发**<br>(`PRECISION_GREASE_DEV`) | 配方 + 工艺共同定义产品<br>（皂纤维骨架由皂化 / 转相 / 冷却 / 研磨决定） | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → CAMPAIGN_OPENED → EXPERIMENT_DESIGNED → BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED → NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED`（20 步 / 17 个工艺步骤） | **台架是瓶颈**（约 2 位/轮）：小批序贯、内环循环 N 轮，先判"差异是否为真"再更新模型；**最终判据只在整机**（启动扭矩 / 回差 / 温升 / 寿命）。17 步全部为独立 stage，其中第 7、13、16 步各落两个 stage，故 17 步 → 20 个 stage。**详见 §5.1**。 |
+| **7. 精密传动脂开发**<br>(`PRECISION_GREASE_DEV`) | 配方 + 工艺共同定义产品<br>（皂纤维骨架由皂化 / 转相 / 冷却 / 研磨决定） | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → EXPERIMENT_DESIGNED → BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED → NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED`（19 步 / 17 个工艺步骤） | **台架是瓶颈**（约 2 位/轮）：小批序贯、内环循环 N 轮，先判"差异是否为真"再更新模型；**最终判据只在整机**（启动扭矩 / 回差 / 温升 / 寿命）。17 步全部为独立 stage，其中第 13、16 步各落两个 stage，第 7 步的台架资源与内环轮次计划合并为一个 stage，故 17 步 → 19 个 stage。**详见 §5.1**。 |
 
 > **关于 `PROCESS_WINDOW_DEFINED`（工艺窗口固化）** —— 它**不在任何一条路线上**，属契约的 `on_demand_stages`，由 `process-scale-up` 按需产出。
 > 原因：该窗口固化的是**由工艺生成的产品结构**（润滑脂的皂化 / 转相 / 冷却速率 / 研磨决定皂纤维骨架，同配方换釜可出不同产品），对润滑脂是一等维度；而调和油是物理混合，不生成产品结构，工艺只是二阶变量。
@@ -387,9 +387,9 @@ Local-First 给的是**选择权**：
 
 > 段内迭代不移动 stage：已冻结配方的换釜复现走 `REVISE` 动作（同 stage 内 `version` 递增），见 §9.5.1。`FROZEN` / `CLOSED` 属于终态，不属于任何路由链。
 
-### 5.1 精密传动脂路线（`PRECISION_GREASE_DEV`）：17 个工艺步骤 = 20 个 stage，三环结构
+### 5.1 精密传动脂路线（`PRECISION_GREASE_DEV`）：17 个工艺步骤 = 19 个 stage，三环结构
 
-该路线服务"**配方 + 工艺 = 产品**"的精密传动脂（首个课题为谐波减速器润滑脂；RV 减速器脂、丝杠导轨脂可复用同一条路线，据《交接文档》§6.2 决策 1）。17 个工艺步骤全部落为独立 stage：第 7、13、16 步各产出两份工件而各占两个 stage（`BENCH_RESOURCE_REGISTERED`+`CAMPAIGN_OPENED`、`MODEL_BUILT`+`NEXT_BATCH_DECIDED`、`VERIFIED`+`APPLIED`），故 **17 步 → 20 个 stage**。口径提醒：本节（及全仓库）的「第 N 步」一律是 **17 个工艺步骤**口径，与契约的「stage 序号」（`route_step.py --list-stages` 输出的 20 项顺序）数字不同，不得混用——例如 `SCREENING_PASSED` 是工艺步骤 10/17、却是第 11 个 stage。序列以 `type_routes` 为准，读它、别手抄：
+该路线服务"**配方 + 工艺 = 产品**"的精密传动脂（首个课题为谐波减速器润滑脂；RV 减速器脂、丝杠导轨脂可复用同一条路线，据《交接文档》§6.2 决策 1）。17 个工艺步骤全部落为独立 stage：第 13、16 步各产出两份工件而各占两个 stage（`MODEL_BUILT`+`NEXT_BATCH_DECIDED`、`VERIFIED`+`APPLIED`），第 7 步的台架资源登记与内环轮次计划合并为一个 stage（`BENCH_RESOURCE_REGISTERED`，工件 `bench.json`），故 **17 步 → 19 个 stage**。口径提醒：本节（及全仓库）的「第 N 步」一律是 **17 个工艺步骤**口径，与契约的「stage 序号」（`route_step.py --list-stages` 输出的 19 项顺序）数字不同，不得混用——例如 `SCREENING_PASSED` 是工艺步骤 10/17、却是第 10 个 stage。序列以 `type_routes` 为准，读它、别手抄：
 
 ```bash
 python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISION_GREASE_DEV
@@ -397,11 +397,11 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 
 | 环 | 步 / stage 序号 | stage 序列 | 迭代形态 |
 |---|---|---|---|
-| **外环 · 配方与工艺设计** | 1–8 / 1–9 | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → CAMPAIGN_OPENED → EXPERIMENT_DESIGNED` | 做一次 |
-| **内环 · 台架战役** | 9–13 / 10–15 | `BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED` | 循环 N 轮，有退出判据 |
-| **收口** | 14–17 / 16–20 | `NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED` | 判据满足 / 止损后各一次 |
+| **外环 · 配方与工艺设计** | 1–8 / 1–8 | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → EXPERIMENT_DESIGNED` | 做一次 |
+| **内环 · 台架迭代** | 9–13 / 9–14 | `BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED` | 循环 N 轮，有退出判据 |
+| **收口** | 14–17 / 15–19 | `NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED` | 判据满足 / 止损后各一次 |
 
-该路线的 5 个 ★ 新增环节（据《交接文档》§6.3；以下「第 N 步」均为 **17 个工艺步骤**口径）：第 4 步参照物卷宗、第 7 步台架资源与档期、第 10 步理化筛测、第 12 步方差与重复性判定、第 17 步知识入库。第 15 步落在该路线独有的 `PROCESS_SCALE_VALIDATED` 上，**不复用**按需阶段 `PROCESS_WINDOW_DEFINED`。
+该路线的 5 个 ★ 新增环节（据《交接文档》§6.3；以下「第 N 步」均为 **17 个工艺步骤**口径）：第 4 步参照物卷宗、第 7 步台架资源与轮次计划、第 10 步理化筛测、第 12 步方差与重复性判定、第 17 步知识入库。第 15 步落在该路线独有的 `PROCESS_SCALE_VALIDATED` 上，**不复用**按需阶段 `PROCESS_WINDOW_DEFINED`。
 
 #### 5.1.1 内环：两条契约声明的回边（`loop_edges`）
 
@@ -413,7 +413,7 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 | `VARIANCE_ASSESSED → BATCH_PRODUCED` | `LOOP_BACK` | 本轮无结论、判据未满足而信息仍可期：开下一轮台架 | +1 |
 
 - 回边是"**额外**合法目标"，不取代路线本来的下一步（在 `SCREENING_PASSED`，`BENCH_TESTED` 与 `BATCH_PRODUCED` 同时合法）；**豁免是路线局部的** —— 同一对 stage 放到油品路线上仍被拒（6 条油品路线不声明任何回边）。
-- `max_iterations = 12`，单位是**每战役的台架轮次**（1-based，≈ 一年 12 轮）。超限即拒绝，只能 `PIVOT` 或 `KILL`，不再开新一轮。
+- `max_iterations = 12`，即**内环上限 12 轮**（1-based 台架轮次，≈ 一年 12 轮）。超限即拒绝，只能 `PIVOT` 或 `KILL`，不再开新一轮。
 - 回边推进 `iteration` 而**不改写** `version` 与 stage 序列历史；每轮证据只增不减。
 - 第 12 步的判定落在 `variance.json` 上：重复性 σ、效应量、功效与 `SIGMA_MAX` 判据由确定性统计引擎算出（四个冻结结论：`CONSISTENT_DIFFERENCE` / `NO_DETECTABLE_DIFFERENCE` / `UNDERPOWERED` / `REPLICATE_INCONSISTENT`）。
 
@@ -455,9 +455,9 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 │  - hello-lubricant (环境自检)                                          │
 │                                                                        │
 │  [数据契约与状态机]                                                    │
-│  - Draft 2020-12 JSON Schemas (31 个研发工件标准契约)                  │
+│  - Draft 2020-12 JSON Schemas (30 个研发工件标准契约)                  │
 │  - 阶段状态机 (contracts/state-machine.json: ALLOW/DENY/HOLD 门控,     │
-│    28 stages / 7 条 type_routes / 1 个按需阶段 / REVISE 段内迭代 /     │
+│    27 stages / 7 条 type_routes / 1 个按需阶段 / REVISE 段内迭代 /     │
 │    内环 loop_edges + max_iterations)                                   │
 │                                                                        │
 │  [数据层与计算引擎 (Phase 4)]                                          │
@@ -495,7 +495,7 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 | `gate-review` | `VERIFIED` | `VERIFIED` / `gate.json` | 汇总阶段证据链，执行正式审查决策（GO / HOLD / PIVOT / KILL / FREEZE），fail-closed；记录签批与异议（signoff / dissent，仅记录字段；FREEZE 前置 —— 技术复核人在场、无未决异议 —— 由 `validate_state_machine.py` 裁决）。 |
 | `application-validation` | `APPLIED` | `APPLIED` / `application.json` 复检 | 对 `application-definition` 构建的应用工件按验收准则做准入复检（PASS / FAIL / INCONCLUSIVE / GAP），给出寿命声明边界。 |
 | `application-definition` | 应用工件构建 | `application.json` | 构建应用验证工件：`application_id`、`acceptance_criteria`、`bench_references`、`life_claim_boundary` 等。 |
-| `bench-registration` | 台架登记 | `bench.json`（`bench.schema.json`） | 登记台架/试验装置档案，供应用验证与工况关联引用。 |
+| `bench-registration` | 台架资源登记 + 内环轮次计划 | `bench.json`（`bench.schema.json`） | 登记台架/试验装置档案，并声明内环轮次计划与上限（`campaign_id` / `max_iterations` / `iterations` 账本），供内环与下游引用。 |
 | `interface-definition` | 接口契约 | interface 工件 + 兼容性判定 | 定义跨工件/跨技能接口契约（`interface.schema.json`），fail-closed 输出兼容性判定（仅 `COMPATIBILITY_PASSED` 放行）。 |
 | `external-record-import` | 外部协作记录 | `external_record.json`（`external_record.schema.json`） | 导入外委测试 / 代工 / 厂商数据表等外部协作记录，强制数据使用权限（usage-rights）锚点，fail-closed。 |
 | `reference-material` **（脂路线）** | 脂路线第 4 步（工艺步骤 4/17）`REFERENCE_MATERIAL_RESOLVED` | `REFERENCE_MATERIAL_RESOLVED` / `reference.json` | 建立物理参照物卷宗：Known Good（必须通过）与 Known Bad（必须失败）各自带材料身份、配方身份、机理绑定的历史证据、存储 SOP 与安全参照。 |
@@ -506,7 +506,7 @@ python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISIO
 | `lubricant-rd-agent` | 元路由（不产出 stage） | ALLOW / DENY / HOLD + 指路技能 | 元技能（Meta-Skill）路由器：按 `type_routes` 执行跨阶段拦截、性质分流与证据门控；同 stage 的换釜复现走 `REVISE`；脂路线内环回边（`loop_edges`）只在本路线上放行，环间回退仍 `DENY`（详见 §5.1）。 |
 | `hello-lubricant` | 环境自检（不在 `SKILLS` 安装表内） | — | 冒烟自检技能，验证运行时技能扫描与部署链路。 |
 
-> **脂路线的其余新增 stage 由既有技能产出**（据 `route_step.py` 的 `ROUTE_TABLE`）：`failure-ctq-analysis` → `FAILURE_MECHANISM_DEFINED`、`bench-registration` → `BENCH_RESOURCE_REGISTERED` / `CAMPAIGN_OPENED`、`experiment-import` → `BENCH_TESTED`、`doe-design` → `NEXT_BATCH_DECIDED`、`optimization` → `NON_INFERIORITY_PASSED`、`process-scale-up` → `PROCESS_SCALE_VALIDATED`。这些技能在 6 条油品路线上的行为不变：脂路线的加宽条款按上游 `project_type == "PRECISION_GREASE_DEV"` 门控在策略层。
+> **脂路线的其余新增 stage 由既有技能产出**（据 `route_step.py` 的 `ROUTE_TABLE`）：`failure-ctq-analysis` → `FAILURE_MECHANISM_DEFINED`、`bench-registration` → `BENCH_RESOURCE_REGISTERED`、`experiment-import` → `BENCH_TESTED`、`doe-design` → `NEXT_BATCH_DECIDED`、`optimization` → `NON_INFERIORITY_PASSED`、`process-scale-up` → `PROCESS_SCALE_VALIDATED`。这些技能在 6 条油品路线上的行为不变：脂路线的加宽条款按上游 `project_type == "PRECISION_GREASE_DEV"` 门控在策略层。
 
 ---
 
@@ -543,7 +543,7 @@ foreach ($s in $skills) { python scripts/install_domain_skill.py $s --target $ta
 |---|---|---|
 | 左 | Lubricant Science 原生 | 项目 / 会话 / 技能导航 |
 | 中 | Lubricant Science 原生 | 多模型对话流 + 工具调用 + 输入框 |
-| **右** | **本领域包** | **「研发阶段与门禁」：工件链（按路线 7–20 步）+ 整体进度 + 门禁决议** |
+| **右** | **本领域包** | **「研发阶段与门禁」：工件链（按路线 7–19 步）+ 整体进度 + 门禁决议** |
 
 **进入方式**：左侧边栏点「润滑研发 Copilot」，或访问 `/lubricant` 路由。
 
@@ -554,7 +554,7 @@ foreach ($s in $skills) { python scripts/install_domain_skill.py $s --target $ta
 | 工件存在且结构合规 | 该步标记「已完成」 |
 | 第一个缺失的工件 | 自动成为「进行中」 |
 | 结构不合规（如 `artifact_type` 写错） | 该步标红「不合规」并列出原因，**不点亮** |
-| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（12 / 10 / 8 / 8 / 7 / 8 / 20，对应 7 条 `type_routes`） |
+| `project.json` 存在 | 其 `project_type` **锁定**研发类型选择器，并决定步骤数（12 / 10 / 8 / 8 / 7 / 8 / 19，对应 7 条 `type_routes`） |
 
 门禁卡片汇总上游证据链并逐条展示前置校验；存在阻塞项时**禁止签发 GO**（fail-closed），决议值域严格为 `GO / HOLD / PIVOT / KILL / FREEZE`。
 
@@ -626,9 +626,9 @@ python -B tests/test_release_preflight.py
 
 <img src="./docs/assets/stage-pane.webp" alt="研发阶段与门禁面板实机界面" width="340">
 
-> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）与工件链（图示为 `精密脂` 链路，**20 阶段**）。图中为**桌面版实机界面**（数据源条显示工作区会话路径与「距上次扫描多久」）。
+> **上图**：右栏面板实机界面 —— 研发类型选择器、当前工序与完成度、门禁决议（含前置校验）与工件链（图示为 `精密脂` 链路，**19 阶段**）。图中为**桌面版实机界面**（数据源条显示工作区会话路径与「距上次扫描多久」）。
 
-### 9.3 工件链：7 条路线（`NEW_PRODUCT` 12 步，精密传动脂 20 步）
+### 9.3 工件链：7 条路线（`NEW_PRODUCT` 12 步，精密传动脂 19 步）
 
 面板的核心是一条**工件链**。每一步的产出是一个结构化 JSON 工件，落盘在工作区；面板**读磁盘**判断该步状态，不依赖会话记忆。
 
@@ -651,7 +651,7 @@ python -B tests/test_release_preflight.py
 
 > **不在任何油品路线上的按需能力**：`process-definition` / `process-scale-up` 的工艺记录与工艺窗口固化（`PROCESS_WINDOW_DEFINED`，工件 `process.json`）。它由 `on_demand_stages` 发布，6 条油品路线都不包含它，只对"工艺生成产品结构"的品类（润滑脂）成立，见 §5 说明；精密传动脂路线的第 15 步则落在该路线独有的 `PROCESS_SCALE_VALIDATED` 上（见 §5.1）。
 
-其余六类研发性质按 §5 的裁剪规则取子集（与 `type_routes` 逐一对应）：`IMPROVEMENT` **10 步**（跳过工况与挑战两步）、`COST_DOWN` **8 步**、`CUSTOMIZATION` **8 步**（无建模与优化步）、`EXPLORATION` **7 步**、`PROCESS_ROBUSTNESS` **8 步**（配方不重新优化，建模后直接进入应用验证）、`PRECISION_GREASE_DEV` **20 步**（精密传动脂：17 个工艺步骤 / 20 个 stage，三环 + 内环两条回边，见 §5.1）。
+其余六类研发性质按 §5 的裁剪规则取子集（与 `type_routes` 逐一对应）：`IMPROVEMENT` **10 步**（跳过工况与挑战两步）、`COST_DOWN` **8 步**、`CUSTOMIZATION` **8 步**（无建模与优化步）、`EXPLORATION` **7 步**、`PROCESS_ROBUSTNESS` **8 步**（配方不重新优化，建模后直接进入应用验证）、`PRECISION_GREASE_DEV` **19 步**（精密传动脂：17 个工艺步骤 / 19 个 stage，三环 + 内环两条回边，见 §5.1）。
 
 **每一步的四种状态**：
 
@@ -743,14 +743,14 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
     ├── docs/assets/                 # 文档配图（工作台与面板实机截图）
     ├── contracts/
     │   └── state-machine.json       # 阶段状态机（ALLOW / DENY / HOLD 门控）
-    ├── schemas/                     # 31 个工件 JSON Schema (Draft 2020-12)
+    ├── schemas/                     # 30 个工件 JSON Schema (Draft 2020-12)
     │   ├── common.schema.json       #   所有工件的公共契约（$defs: artifact / measurement / evidence_item.claim_class / signoff-dissent）
     │   ├── project.schema.json      #   主链核心工件契约（7 条路线均自 PROJECT_DEFINED 起步）
     │   ├── duty / challenge / failure_ctq / test_method / design_space
     │   ├── experiment_design / experiment / model / optimization / gate
     │   ├── process / bench / interface                  # 按需工艺窗口 / 台架 / 接口契约
     │   ├── reference / material / formula / batch / sample / screening
-    │   ├── campaign / bench_test / next_batch           # 精密传动脂路线对象（批 0 / 批 2）
+    │   ├── bench / bench_test / next_batch           # 精密传动脂路线对象（批 0 / 批 2；台架资源与轮次计划合并为 bench.json）
     │   ├── application / benchmark / evidence_qualification / design_freeze / knowledge_asset
     │   └── external_record                              # 外部协作记录（usage-rights 锚点）
     ├── skills/                      # 25 个技能目录（24 个可经 installer 部署）
@@ -768,7 +768,7 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
     │   ├── process-scale-up/        #   PROCESS_WINDOW_DEFINED（按需，油品）/ PROCESS_SCALE_VALIDATED（脂路线第 15 步）
     │   ├── application-definition/  #   应用工件构建
     │   ├── application-validation/  #   APPLIED
-    │   ├── bench-registration/      #   台架登记（脂路线：+ BENCH_RESOURCE_REGISTERED / CAMPAIGN_OPENED）
+    │   ├── bench-registration/      #   台架资源登记 + 内环轮次计划（脂路线：+ BENCH_RESOURCE_REGISTERED）
     │   ├── interface-definition/    #   接口契约与兼容性判定
     │   ├── external-record-import/  #   外部协作记录（usage-rights 锚点）
     │   ├── reference-material/      #   脂路线第 4 步 REFERENCE_MATERIAL_RESOLVED

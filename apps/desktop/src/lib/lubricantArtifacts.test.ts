@@ -86,7 +86,7 @@ const OWN_EXTRAS: Record<string, Record<string, unknown>> = {
     factor_references: [], design: {}, run_plan: [], responses: [],
     guardrails: [], expected_information_value: "v",
   },
-  // 第 6 步基线与第 17 步窗口共用这个键集（stage 由记录自身携带）。
+  // 第 6 步基线与第 16 步窗口共用这个键集（stage 由记录自身携带）。
   process: {
     process_id: "PROC-1", project_reference: "P-1", process_step: "s",
     batch_scale: {}, amplification_factor: {}, process_window: {},
@@ -200,7 +200,7 @@ describe("probeWorkspace", () => {
     await probeWorkspace();
     const asked = readArtifact.mock.calls.map((c) => c[0]);
     expect(asked).toEqual(["project.json", "docs/duty.json"]);
-    // 链上 25 个 stage / 22 个唯一工件里只有这两个存在
+    // 链上 24 个 stage / 21 个唯一工件里只有这两个存在
     expect(asked).not.toContain("gate.json");
     expect(asked).not.toContain("experiment_design.json");
   });
@@ -213,9 +213,9 @@ describe("probeWorkspace", () => {
     expect(Object.keys(snap.probes).sort()).toEqual(
       [...new Set(STAGE_CHAIN.map((c) => c.artifactType))].sort(),
     );
-    // 25 个 stage、22 个唯一工件类型；共用的三步都仍能取到探针。
-    expect(STAGE_CHAIN).toHaveLength(25);
-    expect(Object.keys(snap.probes)).toHaveLength(22);
+    // 24 个 stage、21 个唯一工件类型；共用的三步都仍能取到探针。
+    expect(STAGE_CHAIN).toHaveLength(24);
+    expect(Object.keys(snap.probes)).toHaveLength(21);
   });
 });
 
@@ -467,7 +467,7 @@ describe("G-2 产出技能与准入判据（application）", () => {
     resolvedPath: `${artifactType}.json`,
   });
 
-  it("第 19 步提示词指向产出技能 application-definition，并说明准入技能", () => {
+  it("第 18 步提示词指向产出技能 application-definition，并说明准入技能", () => {
     const applied = STAGE_CHAIN.find((c) => c.stage === "APPLIED");
     expect(applied).toBeDefined();
     const prompt = buildStepPrompt(applied as (typeof STAGE_CHAIN)[number]);
@@ -510,7 +510,7 @@ describe("G-2 产出技能与准入判据（application）", () => {
   });
 });
 
-describe("G-3 process 探针按 data.stage 区分（第 6 步基线 vs 第 17 步窗口）", () => {
+describe("G-3 process 探针按 data.stage 区分（第 6 步基线 vs 第 16 步窗口）", () => {
   const mockRoot = (contents: Record<string, unknown>) => {
     const names = Object.keys(contents);
     listDir.mockImplementation(async (dir: string) => {
@@ -522,7 +522,7 @@ describe("G-3 process 探针按 data.stage 区分（第 6 步基线 vs 第 17 �
     );
   };
 
-  it("只有 process-baseline.json 时第 17 步不得 completed；process.json 就位后才 completed", async () => {
+  it("只有 process-baseline.json 时第 16 步不得 completed；process.json 就位后才 completed", async () => {
     mockRoot({
       "project.json": validProject({ project_type: "PRECISION_GREASE_DEV" }),
       "process-baseline.json": liteValid("process", { stage: "DESIGN_SPACE_DEFINED" }),
@@ -534,7 +534,7 @@ describe("G-3 process 探针按 data.stage 区分（第 6 步基线 vs 第 17 �
     const scaleUp = deriveSteps("PRECISION_GREASE_DEV", before).find(
       (s) => s.stage === "PROCESS_SCALE_VALIDATED",
     );
-    expect(scaleUp?.status, "工艺窗口还没做，第 17 步不得被基线文件提前点亮").not.toBe(
+    expect(scaleUp?.status, "工艺窗口还没做，第 16 步不得被基线文件提前点亮").not.toBe(
       "completed",
     );
 

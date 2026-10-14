@@ -24,7 +24,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 
-# The six values shared by campaign.schema.json's iteration stop_state and
+# The six values shared by the merged bench artifact's iteration stop_state
+# (bench.schema.json, whose iteration_entry carries the inner-loop round ledger) and
 # next_batch.schema.json's stop_state. Only CONTINUE authorizes another round, so only
 # CONTINUE makes this record a GO; every other value stops the loop and must carry its
 # reason in stop_rationale.

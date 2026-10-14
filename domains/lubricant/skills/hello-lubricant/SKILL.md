@@ -1,12 +1,12 @@
 ---
 name: hello-lubricant
-description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 28-stage contract and its 7 project-type routes, and guides project setup. Use when user mentions "hello-lubricant", "润滑材料开发帮助", "研发体系导引", "环境检查", "润滑材料流程说明", or wants an overview of the lubricant R&D pipeline.
+description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 27-stage contract and its 7 project-type routes, and guides project setup. Use when user mentions "hello-lubricant", "润滑材料开发帮助", "研发体系导引", "环境检查", "润滑材料流程说明", or wants an overview of the lubricant R&D pipeline.
 ---
 
 # Hello Lubricant (Orientation & Diagnostic Smoke Skill)
 
 Orientation, environment diagnostic, and interactive onboarding guide for the Lubricant R&D Domain Pack.
-Provides a roadmap of the shared stage contract `contracts/state-machine.json` (currently v0.9.0): 28 stages,
+Provides a roadmap of the shared stage contract `contracts/state-machine.json` (currently v1.0.0): 27 stages,
 7 project-type routes, 1 on-demand stage and 1 inner-loop ring. Validates local schema/toolchain readiness.
 
 ---
@@ -14,7 +14,7 @@ Provides a roadmap of the shared stage contract `contracts/state-machine.json` (
 ## 1. Domain Pack Architecture Overview
 
 The Lubricant R&D Domain Pack implements evidence-bound, scientific lubricant engineering on the shared
-stage contract `contracts/state-machine.json`. Its 28 stages break down as: 24 sit on the 7 `type_routes`,
+stage contract `contracts/state-machine.json`. Its 27 stages break down as: 23 sit on the 7 `type_routes`,
 1 is on-demand by design (`PROCESS_WINDOW_DEFINED`, on no route), and `DRAFT` / `FROZEN` / `CLOSED` are
 lifecycle stages.
 
@@ -63,7 +63,7 @@ python skills/lubricant-rd-agent/scripts/route_step.py --list-loop-edges PRECISI
 4. **CUSTOMIZATION** (客户定制): 客户专属工况驱动，对齐技术协议与指定台架（8 步）。
 5. **EXPLORATION** (机理/平台型探索): 科学假设驱动，允许失败，探究组分响应规律（7 步）。
 6. **PROCESS_ROBUSTNESS** (工艺稳健性): 配方已定，只考工艺——跳过工况定义与挑战推导，不做多目标优化，以工艺窗口为主输出，末尾经 `APPLIED` 证明批次一致性（8 步）。
-7. **PRECISION_GREASE_DEV** (精密传动脂开发): 第 7 条路线，**20 个 stage / 17 个工艺步骤**，分三环 —— 外环配方与工艺设计（8 步）、内环台架战役（5 步，循环 N 轮）、收口（4 步）。内环只有两条契约声明的回边（`SCREENING_PASSED → BATCH_PRODUCED` REWORK；`VARIANCE_ASSESSED → BATCH_PRODUCED` LOOP_BACK），轮次上限 `max_iterations = 12`。**环间回退（如台架发现方法不可靠、判据不可达）系统仍 `DENY`**：没有 `BACKTRACK` 通道，只能人工判断 + 系统外决策 + 手工构造新工件（不留系统痕迹）。
+7. **PRECISION_GREASE_DEV** (精密传动脂开发): 第 7 条路线，**19 个 stage / 17 个工艺步骤**，分三环 —— 外环配方与工艺设计（8 步）、内环台架迭代（5 步，循环 N 轮）、收口（4 步）。内环只有两条契约声明的回边（`SCREENING_PASSED → BATCH_PRODUCED` REWORK；`VARIANCE_ASSESSED → BATCH_PRODUCED` LOOP_BACK），轮次上限 `max_iterations = 12`。**环间回退（如台架发现方法不可靠、判据不可达）系统仍 `DENY`**：没有 `BACKTRACK` 通道，只能人工判断 + 系统外决策 + 手工构造新工件（不留系统痕迹）。
 
 Two capabilities sit outside every route: `PROCESS_WINDOW_DEFINED` is an on-demand stage on no route
 (produced by `process-scale-up`, handing off to `VERIFIED`), while the grease route's step 15 uses its own

@@ -236,33 +236,33 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     expect(screen.getByText(/类型由 project\.json 的 project_type 锁定/)).toBeInTheDocument();
   });
 
-  it("project.json 锁定为 PRECISION_GREASE_DEV 时渲染 20 步新链", async () => {
+  it("project.json 锁定为 PRECISION_GREASE_DEV 时渲染 19 步新链", async () => {
     workspaceWith({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" });
     renderPane();
-    // 20 步 = 契约新第 7 类路由；新 stage 必须真的出现在步骤表里
+    // 19 步 = 契约新第 7 类路由；新 stage 必须真的出现在步骤表里
     await waitFor(() =>
-      expect(screen.getByText(/工件链阶段步骤（20 步独立推进）/)).toBeInTheDocument(),
+      expect(screen.getByText(/工件链阶段步骤（19 步独立推进）/)).toBeInTheDocument(),
     );
-    expect(screen.getByText("20 阶段")).toBeInTheDocument();
+    expect(screen.getByText("19 阶段")).toBeInTheDocument();
     expect(screen.getByText("知识入库（资产封存）")).toBeInTheDocument();
-    expect(screen.getByText("台架战役开启（内环迭代）")).toBeInTheDocument();
-    // 步骤徽章必须按本条路线内的位置编号（1..20），不得直接用与油品链
+    expect(screen.getByText("台架资源与轮次计划")).toBeInTheDocument();
+    // 步骤徽章必须按本条路线内的位置编号（1..19），不得直接用与油品链
     // 交叉的全局 chainIndex（那会渲染出 1,2,14,15,5,… 的乱序）。
-    for (let n = 1; n <= 20; n += 1) {
+    for (let n = 1; n <= 19; n += 1) {
       expect(screen.getByText(String(n)), `缺少步骤徽章 ${n}`).toBeInTheDocument();
     }
-    expect(screen.queryByText("25")).not.toBeInTheDocument();
+    expect(screen.queryByText("24")).not.toBeInTheDocument();
   });
 
   it("精密脂路线标记内环：回边两端与迭代体共 4 步，且不显示轮次时说明未开启", async () => {
     // v0.9.0：内环 5 步是带退出判据的循环体。面板只做最小呈现 —— 内环步骤
-    // 打「内环」标记 + 一行迭代读数（campaign.json 未落盘则显示未开启，不猜）。
+    // 打「内环」标记 + 一行迭代读数（合并工件未落盘则显示未开启，不猜）。
     workspaceWith({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" });
     renderPane();
     await waitFor(() => expect(screen.getByText("内环迭代")).toBeInTheDocument());
     expect(screen.getByText(/BATCH_PRODUCED → VARIANCE_ASSESSED/)).toBeInTheDocument();
     expect(
-      screen.getByText(/未开启（campaign\.json 未落盘）· 上限 12 轮/),
+      screen.getByText(/未开启（合并工件未落盘）· 上限 12 轮/),
     ).toBeInTheDocument();
     // BATCH_PRODUCED / SCREENING_PASSED / BENCH_TESTED / VARIANCE_ASSESSED 各一枚标记。
     const chips = screen.getAllByText("内环");
@@ -272,23 +272,23 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     );
   });
 
-  it("campaign.json 落盘时读盘显示当前轮次，不用猜", async () => {
-    const CAMPAIGN = {
+  it("合并工件落盘时读盘显示当前轮次，不用猜", async () => {
+    const BENCH = {
       schema_version: "0.1.0",
-      artifact_type: "campaign",
+      artifact_type: "bench",
       project_id: "PGD-001",
-      stage: "CAMPAIGN_OPENED",
+      stage: "BENCH_RESOURCE_REGISTERED",
       decision_question: "q", hypothesis: "h", uncertainty: "u",
       evidence: [{ evidence_id: "E-1", statement: "s", source: "x", status: "OBSERVED" }],
       decision_rule: "r", result: "res", decision: "GO", next_action: "n",
       current_iteration: 2,
     };
     listDir.mockImplementation(async (dir: string) => {
-      if (dir === "") return [entry("project.json"), entry("campaign.json")];
+      if (dir === "") return [entry("project.json"), entry("bench.json")];
       throw new Error("not a directory");
     });
     readArtifact.mockImplementation(async (path: string) => {
-      const data = path === "project.json" ? PROJECT : path === "campaign.json" ? CAMPAIGN : null;
+      const data = path === "project.json" ? PROJECT : path === "bench.json" ? BENCH : null;
       if (!data) return null;
       return {
         path, mime: "application/json", encoding: "utf8",
@@ -371,8 +371,8 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
 });
 
 describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / 收口）", () => {
-  // 领域包 domains/lubricant/README.md §5.1 的环表：17 个工艺步骤 → 20 个 stage
-  // （第 7 / 13 / 16 步各占两个 stage），所以面板里三段渲染为 9 / 6 / 5 步。
+  // 领域包 domains/lubricant/README.md §5.1 的环表：17 个工艺步骤 → 19 个 stage
+  // （第 13 / 16 步各占两个 stage），所以面板里三段渲染为 8 / 6 / 5 步。
   // 内环是「环体 + 退出判据」：环体 4 步由契约 loop_edges 推导（打「内环」徽章），
   // MODEL_BUILT / NEXT_BATCH_DECIDED 是退出判据 —— 在同一段内，但不是环体。
 
@@ -380,7 +380,7 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
 
   const waitForGreaseRoute = () =>
     waitFor(() =>
-      expect(screen.getByText(/工件链阶段步骤（20 步独立推进）/)).toBeInTheDocument(),
+      expect(screen.getByText(/工件链阶段步骤（19 步独立推进）/)).toBeInTheDocument(),
     );
 
   /** 步骤区按渲染顺序读出「分组标识 / 步骤 stage」标记。 */
@@ -409,21 +409,21 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
   const SCROLLER_SELECTOR =
     '[class~="overflow-y-auto"], [class~="overflow-x-auto"], [class~="overflow-auto"]';
 
-  it("三段分组标识齐备，步数合计 = 面板声明的 20 步", async () => {
+  it("三段分组标识齐备，步数合计 = 面板声明的 19 步", async () => {
     grease();
     const { container } = renderPane();
     await waitForGreaseRoute();
 
-    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架战役", "收口"]) {
+    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架迭代", "收口"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    // 每段的 stage 数（9 + 6 + 5）与面板的 20 步自洽
-    expect(screen.getByText("9 步")).toBeInTheDocument();
+    // 每段的 stage 数（8 + 6 + 5）与面板的 19 步自洽
+    expect(screen.getByText("8 步")).toBeInTheDocument();
     expect(screen.getByText("6 步")).toBeInTheDocument();
     expect(screen.getByText("5 步")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-ring-segment]")).toHaveLength(3);
-    // 分组不改变步骤编号：整条路线仍是 1..20
-    for (let n = 1; n <= 20; n += 1) {
+    // 分组不改变步骤编号：整条路线仍是 1..19
+    for (let n = 1; n <= 19; n += 1) {
       expect(screen.getByText(String(n)), `缺少步骤徽章 ${n}`).toBeInTheDocument();
     }
   });
@@ -449,7 +449,6 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
           "TEST_METHODS_QUALIFIED",
           "DESIGN_SPACE_DEFINED",
           "BENCH_RESOURCE_REGISTERED",
-          "CAMPAIGN_OPENED",
           "EXPERIMENT_DESIGNED",
         ],
       },
@@ -504,7 +503,7 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
     }
   });
 
-  it("内环段头显示当前轮次：未落盘时明说未开启，落盘后读 campaign.json 的 current_iteration", async () => {
+  it("内环段头显示当前轮次：未落盘时明说未开启，落盘后读合并工件 bench.json 的 current_iteration", async () => {
     grease();
     const first = renderPane();
     await waitForGreaseRoute();
@@ -516,18 +515,18 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
     expect(innerHeader().textContent).not.toMatch(/第 \d+ 轮/);
     first.unmount();
 
-    const CAMPAIGN = {
+    const BENCH = {
       schema_version: "0.1.0",
-      artifact_type: "campaign",
+      artifact_type: "bench",
       project_id: "PGD-001",
-      stage: "CAMPAIGN_OPENED",
+      stage: "BENCH_RESOURCE_REGISTERED",
       decision_question: "q", hypothesis: "h", uncertainty: "u",
       evidence: [{ evidence_id: "E-1", statement: "s", source: "x", status: "OBSERVED" }],
       decision_rule: "r", result: "res", decision: "GO", next_action: "n",
       current_iteration: 2,
     };
     listDir.mockImplementation(async (dir: string) => {
-      if (dir === "") return [entry("project.json"), entry("campaign.json")];
+      if (dir === "") return [entry("project.json"), entry("bench.json")];
       throw new Error("not a directory");
     });
     readArtifact.mockImplementation(async (path: string) => {
@@ -537,8 +536,8 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
           data: JSON.stringify({ ...PROJECT, project_type: "PRECISION_GREASE_DEV" }),
         };
       }
-      if (path === "campaign.json") {
-        return { path, mime: "application/json", encoding: "utf8", data: JSON.stringify(CAMPAIGN), size: 10 };
+      if (path === "bench.json") {
+        return { path, mime: "application/json", encoding: "utf8", data: JSON.stringify(BENCH), size: 10 };
       }
       return null;
     });
@@ -557,7 +556,7 @@ describe("LubricantStagePane — 精密脂三段环分组（外环 / 内环 / �
     await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
 
     expect(container.querySelectorAll("[data-ring-segment]")).toHaveLength(0);
-    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架战役", "收口"]) {
+    for (const label of ["外环 · 配方与工艺设计", "内环 · 台架迭代", "收口"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
     expect(screen.queryByText("轮次未开启")).not.toBeInTheDocument();

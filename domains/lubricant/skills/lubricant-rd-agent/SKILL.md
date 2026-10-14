@@ -12,7 +12,7 @@ This skill strictly evaluates stage advancement feasibility. It does not perform
 
 ## 1. Routing Contracts by Project Type
 
-Advancement follows a deterministic, ordered stage chain configured by `project_type`. Seven routes are published by `contracts/state-machine.json` (`type_routes`); each ends at `APPLIED`, and the chain lengths are 12 / 10 / 8 / 8 / 7 / 8 / 20.
+Advancement follows a deterministic, ordered stage chain configured by `project_type`. Seven routes are published by `contracts/state-machine.json` (`type_routes`); each ends at `APPLIED`, and the chain lengths are 12 / 10 / 8 / 8 / 7 / 8 / 19.
 
 - **NEW_PRODUCT** (新产品正向开发):
   `project-definition` (PROJECT_DEFINED) -> `duty-definition` (DUTY_DEFINED) -> `duty-challenge-analysis` (CHALLENGES_DEFINED) -> `failure-ctq-analysis` (FAILURE_CTQ_DEFINED) -> `test-method-qualification` (TEST_METHODS_QUALIFIED) -> `formulation-design` (DESIGN_SPACE_DEFINED) -> `doe-design` (EXPERIMENT_DESIGNED) -> `experiment-import` (EXPERIMENT_RUNNING) -> `statistical-analysis` (MODEL_BUILT) -> `optimization` (OPTIMIZED) -> `gate-review` (VERIFIED) -> `application-validation` (APPLIED)
@@ -34,8 +34,8 @@ Advancement follows a deterministic, ordered stage chain configured by `project_
   (No `OPTIMIZED`: the formula is not re-optimised after a kettle/batch swap.)
 
 - **PRECISION_GREASE_DEV** (精密传动脂开发):
-  `PROJECT_DEFINED` -> `DUTY_DEFINED` -> `FAILURE_MECHANISM_DEFINED` -> `REFERENCE_MATERIAL_RESOLVED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `BENCH_RESOURCE_REGISTERED` -> `CAMPAIGN_OPENED` -> `EXPERIMENT_DESIGNED` -> `BATCH_PRODUCED` -> `SCREENING_PASSED` -> `BENCH_TESTED` -> `VARIANCE_ASSESSED` -> `MODEL_BUILT` -> `NEXT_BATCH_DECIDED` -> `NON_INFERIORITY_PASSED` -> `PROCESS_SCALE_VALIDATED` -> `VERIFIED` -> `APPLIED` -> `KNOWLEDGE_ARCHIVED`
-  (20 stages over 17 process steps; steps 9-13 form the inner-loop ring — see §6.)
+  `PROJECT_DEFINED` -> `DUTY_DEFINED` -> `FAILURE_MECHANISM_DEFINED` -> `REFERENCE_MATERIAL_RESOLVED` -> `TEST_METHODS_QUALIFIED` -> `DESIGN_SPACE_DEFINED` -> `BENCH_RESOURCE_REGISTERED` -> `EXPERIMENT_DESIGNED` -> `BATCH_PRODUCED` -> `SCREENING_PASSED` -> `BENCH_TESTED` -> `VARIANCE_ASSESSED` -> `MODEL_BUILT` -> `NEXT_BATCH_DECIDED` -> `NON_INFERIORITY_PASSED` -> `PROCESS_SCALE_VALIDATED` -> `VERIFIED` -> `APPLIED` -> `KNOWLEDGE_ARCHIVED`
+  (19 stages over 17 process steps; steps 9-13 form the inner-loop ring — see §6.)
 
 ---
 
@@ -178,7 +178,7 @@ python skills/lubricant-rd-agent/scripts/route_step.py --list-loop-edges PRECISI
 | Criterion met / no new information / bench slots exhausted | none — normal advance | `VARIANCE_ASSESSED → MODEL_BUILT` leaves the inner loop | — |
 | `iteration` has reached `max_iterations` (12 ≈ one year of bench rounds) | none | STOP the loop: record `PIVOT` or `KILL`. A further round is rejected: `iteration 13 exceeds max_iterations 12; stop the inner loop and record PIVOT or KILL` | — |
 
-Every round's ending must land in `campaign.json` as `stop_state`
+Every round's ending must land in the merged bench artifact `bench.json` as `stop_state`
 (`CONTINUE` / `GOAL_MET` / `NO_NEW_INFORMATION` / `RESOURCE_EXHAUSTED` / `PIVOT` / `KILL`).
 
 ### 6.2 Semantics of a ring-edge advance (and what it deliberately does NOT change)

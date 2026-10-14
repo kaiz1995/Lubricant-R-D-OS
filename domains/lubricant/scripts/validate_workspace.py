@@ -66,8 +66,6 @@ VALIDATORS = [
     ("^reference-", "reference-material/scripts/validate_reference_artifact.py"),
     ("^bench\\.json$", "bench-registration/scripts/validate_bench_artifact.py"),
     ("^bench-", "bench-registration/scripts/validate_bench_artifact.py"),
-    ("^campaign\\.json$", "bench-registration/scripts/validate_campaign_artifact.py"),
-    ("^campaign-", "bench-registration/scripts/validate_campaign_artifact.py"),
     ("^batch\\.json$", "grease-batch/scripts/validate_batch_artifact.py"),
     ("^batch-", "grease-batch/scripts/validate_batch_artifact.py"),
     ("^sample\\.json$", "grease-batch/scripts/validate_batch_artifact.py"),

@@ -15,9 +15,11 @@ the loop continues at all. This gate exists because both halves are easy to fake
   that omits them and a stop that carries them are each refused, so the request layer asks
   for exactly the shape ``next_batch.schema.json``'s second if/then rule requires. A stop
   opens no round, proposes no sample and spends no bench slot.
-* the decision is taken at ONE campaign round boundary: the campaign carrier, the round's
+* the decision is taken at ONE round boundary of the campaign carrier - now the merged
+  bench artifact (``bench.json``, stage ``BENCH_RESOURCE_REGISTERED``), one JSON object
+  registering the bench and carrying the inner-loop ledger. The carrier, the round's
   design and the round's variance assessment must agree on the project, the evidence scope
-  and the iteration, and the campaign's own iteration entry must tell the same story as
+  and the iteration, and the carrier's own iteration entry must tell the same story as
   this record (same stop_state, same ``variance_reference``). The carrier's own
   ``next_batch_reference`` is NOT compared against this record's ``next_batch_id``: by
   E2=B that field is written only on the round that exits the inner loop, so it is null on
@@ -61,9 +63,17 @@ from next_batch_policy import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 NEXT_BATCH_STAGE = "NEXT_BATCH_DECIDED"
+# The carrier the request key ``campaign_artifact`` names (the key is kept, E2=B D-2):
+# since the bench registration and the round plan were merged into ONE artifact, that key
+# points at ``bench.json`` - the registered bench whose own JSON object carries the
+# inner-loop ledger (campaign_id / current_iteration / max_iterations / iterations).
+# Its stage is therefore the merged BENCH_RESOURCE_REGISTERED, not the retired campaign
+# stage.
+CARRIER_STAGE = "BENCH_RESOURCE_REGISTERED"
+CARRIER_ARTIFACT_TYPE = "bench"
 # This stage owns one authority schema (the record it writes) plus the common block that
 # schema references. The sibling doe-design contract is not re-loaded here (its owner is
-# preflight_doe_design.py), and neither are the campaign / variance contracts.
+# preflight_doe_design.py), and neither are the merged bench / variance contracts.
 SCHEMA_NAMES = ("common.schema.json", "next_batch.schema.json")
 INPUT_FIELDS = {"campaign_artifact", "experiment_design_artifact", "variance_artifact", "next_batch"}
 # The request block's required fields, split by stop_state (E2=B). The three proposal fields
@@ -129,14 +139,19 @@ def read_artifact(value: object, input_path: Path, label: str) -> tuple[list[str
 
 
 def campaign_errors(campaign: object) -> list[str]:
-    """Structure of the inner-loop carrier, for the fields this stage reads."""
+    """Structure of the inner-loop carrier (the merged bench artifact), for these fields.
+
+    The carrier is ``bench.json``: one object registering the bench AND carrying the round
+    ledger, so the stage checked here is the merged BENCH_RESOURCE_REGISTERED rather than
+    the retired campaign stage.
+    """
     if not isinstance(campaign, dict):
         return ["campaign_artifact must be a JSON object"]
     errors: list[str] = []
-    if campaign.get("artifact_type") != "campaign":
-        errors.append("campaign_artifact.artifact_type must be campaign")
-    if campaign.get("stage") != "CAMPAIGN_OPENED":
-        errors.append("campaign_artifact must be stage CAMPAIGN_OPENED")
+    if campaign.get("artifact_type") != CARRIER_ARTIFACT_TYPE:
+        errors.append(f"campaign_artifact.artifact_type must be {CARRIER_ARTIFACT_TYPE}")
+    if campaign.get("stage") != CARRIER_STAGE:
+        errors.append(f"campaign_artifact must be stage {CARRIER_STAGE}")
     if not has_text(campaign.get("campaign_id")):
         errors.append("campaign_artifact.campaign_id must be a non-empty string")
     if not has_text(campaign.get("project_id")):
@@ -167,9 +182,11 @@ def campaign_errors(campaign: object) -> list[str]:
 
 
 def campaign_entry(campaign: object) -> dict | None:
-    """The campaign's newest recorded round entry, or None when the ledger is empty.
+    """The carrier's newest recorded round entry, or None when the ledger is empty.
 
-    The next-batch decision is taken at a round BOUNDARY: W1 has just appended the round
+    The carrier is the merged bench artifact (``bench.json``): the same JSON object that
+    registers the bench carries the round ledger this function reads. The next-batch
+    decision is taken at a round BOUNDARY: W1 has just appended the round
     that ended CONTINUE and moved ``current_iteration`` to k+1 (D-1), and W2 has not yet
     rewritten that entry (it must not run before this stage). So the entry this stage
     speaks about is the newest one recorded, and the decision's ``from_iteration`` is that
@@ -401,7 +418,13 @@ def evidence_errors(evidence: object) -> list[str]:
 
 
 def cross_errors(campaign: dict, design: dict, variance: dict, record: dict) -> list[str]:
-    """The three upstream artifacts and the campaign carrier must tell one story."""
+    """The three upstream artifacts and the campaign carrier must tell one story.
+
+    The carrier is the merged bench artifact (``bench.json``); every ledger field this
+    check reads (campaign_id, iterations, max_iterations, and the entry's own stop_state /
+    variance_reference) kept its name through the merge, so the check reads the same story
+    it always read.
+    """
     errors: list[str] = []
     upstreams = (
         ("campaign_artifact", campaign),

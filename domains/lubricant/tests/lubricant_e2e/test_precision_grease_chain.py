@@ -1,6 +1,6 @@
 """End-to-end acceptance for the PRECISION_GREASE_DEV route (plan section 8.2 E2E-1).
 
-Walks the contract's 20-stage route in order. For every stage the test first
+Walks the contract's 19-stage route in order. For every stage the test first
 asserts that ``route_step.decide()`` ALLOWs the single-step advance from the
 previous stage and routes to the producing skill, then DRIVES the stage with that
 skill: preflight -> build -> validate with exit code 0, followed by a schema
@@ -8,9 +8,10 @@ validation of the produced artifact against ``schemas/<type>.schema.json``
 (jsonschema + referencing, the pack's existing usage) and a cross-check of the
 fields the next stage consumes.
 
-All 20 stages are drivable: the six break points this file used to record as open
+All 19 stages are drivable: the six break points this file used to record as open
 product-code gaps were fixed (project-definition ships ``build_project_artifact.py``
-and accepts PRECISION_GREASE_DEV; bench-registration produces campaigns;
+and accepts PRECISION_GREASE_DEV; bench-registration produces the merged bench
+record (bench resource + inner-loop ledger, one artifact);
 doe-design produces next_batch records; statistical-analysis exempts the route's
 contract-UNDECIDED bench_test record from its GO requirement; gate-review and
 audit_chain accept the route's NON_INFERIORITY_PASSED optimization artifact).
@@ -20,7 +21,7 @@ instead of shrinking a printout.
 
   PROJECT_DEFINED -> DUTY_DEFINED -> FAILURE_MECHANISM_DEFINED ->
   REFERENCE_MATERIAL_RESOLVED -> TEST_METHODS_QUALIFIED -> DESIGN_SPACE_DEFINED ->
-  BENCH_RESOURCE_REGISTERED -> CAMPAIGN_OPENED -> EXPERIMENT_DESIGNED ->
+  BENCH_RESOURCE_REGISTERED -> EXPERIMENT_DESIGNED ->
   BATCH_PRODUCED -> SCREENING_PASSED -> BENCH_TESTED -> VARIANCE_ASSESSED ->
   MODEL_BUILT -> NEXT_BATCH_DECIDED -> NON_INFERIORITY_PASSED ->
   PROCESS_SCALE_VALIDATED -> VERIFIED -> APPLIED -> KNOWLEDGE_ARCHIVED
@@ -38,8 +39,7 @@ Beyond the per-stage drives the chain closes what the records themselves claim:
     search returns the asset's own file.
 
 Negative checks lock the gates that make those drives meaningful: the router
-denies a cross-stage jump; the campaign gate refuses a PHYSICAL campaign drawing
-slots from a SYNTHETIC bench (NO Synthetic Closure); the next-batch gate refuses
+denies a cross-stage jump; the next-batch gate refuses
 a request that declares fewer than two competing explanations (it never composes
 one); the bench-test gate refuses an event-free run with no declared stop reason;
 and statistical-analysis refuses a PRECISION_GREASE_DEV request that omits the
@@ -87,7 +87,6 @@ EXPECTED_ROUTE = (
     "TEST_METHODS_QUALIFIED",
     "DESIGN_SPACE_DEFINED",
     "BENCH_RESOURCE_REGISTERED",
-    "CAMPAIGN_OPENED",
     "EXPERIMENT_DESIGNED",
     "BATCH_PRODUCED",
     "SCREENING_PASSED",
@@ -111,7 +110,6 @@ STAGE_SKILL = {
     "TEST_METHODS_QUALIFIED": "test-method-qualification",
     "DESIGN_SPACE_DEFINED": "formulation-design",
     "BENCH_RESOURCE_REGISTERED": "bench-registration",
-    "CAMPAIGN_OPENED": "bench-registration",
     "EXPERIMENT_DESIGNED": "doe-design",
     "BATCH_PRODUCED": "grease-batch",
     "SCREENING_PASSED": "grease-screening",
@@ -128,7 +126,6 @@ STAGE_SKILL = {
 
 # The exact refusals the negative checks below pin. Each is the product's own
 # wording, asserted against the observed output (never softened).
-CAMPAIGN_SYNTHETIC_BENCH_GAP = "is SYNTHETIC and may not back a PHYSICAL campaign"
 NEXT_BATCH_EXPLANATIONS_GAP = (
     "next_batch.competing_explanations must declare at least two competing explanations"
 )
@@ -825,7 +822,22 @@ def process_input(design_space_path: Path) -> dict:
     }
 
 
-def bench_input() -> dict:
+def bench_input(*, round_1_entry: dict | None = None, current_iteration: int = 1) -> dict:
+    """The BENCH_RESOURCE_REGISTERED request for bench-registration's merged producer.
+
+    Since the bench/campaign merge (contract 1.0.0) one stage and one artifact carry the
+    bench resource AND the inner-loop ledger, so the request has exactly the two blocks
+    ``bench`` (the resource) and ``campaign`` (the round plan and its ledger). The request
+    shape is the skill's own (preflight_bench_registration -> build_bench_artifact ->
+    validate_bench_artifact). ``max_iterations`` is deliberately OMITTED so this run
+    exercises the skill's contract-default path (the cap is read from
+    contracts/state-machine.json and the builder records that provenance).
+
+    W0 (D-1): the bench is registered before round 1 runs, so its ledger is
+    legitimately EMPTY here. Round 1's entry is appended at the round boundary
+    (stage VARIANCE_ASSESSED) by passing ``round_1_entry``; the same producer
+    writes that boundary record, which is why this one helper serves both calls.
+    """
     return {
         "bench": {
             "bench_id": BENCH_ID,
@@ -841,10 +853,9 @@ def bench_input() -> dict:
             "source": SIM,
             "evidence_id": "EV-BENCH-PGD-E2E-01",
             # This fixture chain declares PHYSICAL throughout (the SIM text above is
-            # the provenance label on the content). The bench carries the same scope
-            # as the rest of the chain because the campaign gate enforces the bench
-            # skill's NO Synthetic Closure red line: a PHYSICAL campaign may not draw
-            # its scarce slots from a SYNTHETIC bench record.
+            # the provenance label on the content). The bench block carries the same
+            # scope as the rest of the chain, and the merged preflight requires the
+            # campaign block to agree with it (cross-block scope consistency).
             "evidence_scope": "PHYSICAL",
             "evidence": [
                 {
@@ -854,33 +865,10 @@ def bench_input() -> dict:
                     "status": "ASSUMED",
                 }
             ],
-        }
-    }
-
-
-def campaign_input(project_path: Path, bench_path: Path, *, round_1_entry: dict | None = None,
-                   current_iteration: int = 1) -> dict:
-    """The CAMPAIGN_OPENED request for bench-registration's campaign producer.
-
-    The request shape is the skill's own (preflight_campaign_registration ->
-    build_campaign_artifact -> validate_campaign_artifact): the campaign record
-    plus the two upstream artifacts it draws on, supplied by path so the gate can
-    re-read them. ``max_iterations`` is deliberately OMITTED so this run exercises
-    the skill's contract-default path (the cap is read from
-    contracts/state-machine.json and the builder records that provenance).
-
-    W0 (D-1): the campaign is OPENED before round 1 runs, so its ledger is
-    legitimately EMPTY here. Round 1's entry is appended at the round boundary
-    (stage VARIANCE_ASSESSED) by passing ``round_1_entry``; the same producer
-    writes that boundary record, which is why this one helper serves both calls.
-    """
-    return {
-        "project_artifact": project_path.name,
-        "bench_artifacts": [bench_path.name],
+        },
         "campaign": {
             "campaign_id": "CMP-PGD-E2E-001",
             "project_reference": PROJECT_ID,
-            "bench_references": [BENCH_ID],
             "current_iteration": current_iteration,
             "iterations": [] if round_1_entry is None else [round_1_entry],
             "pairing_design": {
@@ -1311,7 +1299,7 @@ def model_input(project_path: Path, method_path: Path, design_space_path: Path,
         "variance_artifact": variance_path.name,
         # E-2: the modeling entry consumes the round's own ledger; the gate binds it to the
         # variance record entry-level (the counter has already advanced past the recorded
-        # round by the time step 14 runs).
+        # round by the time step 13 runs).
         "campaign_artifact": campaign_path.name,
         "analysis": {
             "model_id": "MODEL-PGD-E2E-001",
@@ -1867,6 +1855,19 @@ def main() -> int:
 
         # --- 7. BENCH_RESOURCE_REGISTERED (bench-registration) -----------------
         route_allow("DESIGN_SPACE_DEFINED", "BENCH_RESOURCE_REGISTERED")
+        # The router maps this stage to bench-registration, and the skill ships the
+        # merged producer (bench resource + inner-loop ledger in ONE artifact). Both
+        # facts are asserted BEFORE the drive: the producer must exist (a silent
+        # removal would make this stage undrivable) and must live in the skill the
+        # contract routes the stage to.
+        bench_producers = has_producer("bench")
+        assert bench_producers, (
+            "no script in the pack assembles a bench artifact: BENCH_RESOURCE_REGISTERED cannot be driven "
+            "(the drive below needs a real merged producer under the routed skill)"
+        )
+        assert any(Path(hit).parts[:2] == ("skills", STAGE_SKILL["BENCH_RESOURCE_REGISTERED"]) for hit in bench_producers), (
+            "the bench producer exists but does not live under the routed skill: " + repr(bench_producers)
+        )
         bench_request = write_input("input-bench.json", bench_input())
         bench_path = drive(
             stage_script["BENCH_RESOURCE_REGISTERED"] / "preflight_bench_registration.py",
@@ -1876,67 +1877,29 @@ def main() -> int:
             "bench.json",
         )
         bench_artifact = check_schema("bench", bench_path)
+        assert bench_artifact["stage"] == "BENCH_RESOURCE_REGISTERED", bench_artifact["stage"]
+        assert bench_artifact["decision"] == "GO", bench_artifact["decision"]
         assert bench_artifact["available_bench_slots"] == 4, bench_artifact["available_bench_slots"]
         assert bench_artifact["evidence_scope"] == "PHYSICAL", bench_artifact["evidence_scope"]
-        driven_stages.append("BENCH_RESOURCE_REGISTERED")
-
-        # --- 8. CAMPAIGN_OPENED (bench-registration) ---------------------------
-        route_allow("BENCH_RESOURCE_REGISTERED", "CAMPAIGN_OPENED")
-        # The router maps this stage to bench-registration, and the skill now ships
-        # the campaign producer. Both facts are asserted BEFORE the drive: the
-        # producer must exist (a silent removal would make this stage undrivable)
-        # and must live in the skill the contract routes the stage to.
-        campaign_producers = has_producer("campaign")
-        assert campaign_producers, (
-            "no script in the pack assembles a campaign artifact: CAMPAIGN_OPENED cannot be driven "
-            "(the drive below needs a real campaign producer under the routed skill)"
-        )
-        assert any(Path(hit).parts[:2] == ("skills", STAGE_SKILL["CAMPAIGN_OPENED"]) for hit in campaign_producers), (
-            "the campaign producer exists but does not live under the routed skill: " + repr(campaign_producers)
-        )
-        campaign_request = write_input("input-campaign.json", campaign_input(project_path, bench_path))
-        campaign_path = drive(
-            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py",
-            stage_script["CAMPAIGN_OPENED"] / "build_campaign_artifact.py",
-            stage_script["CAMPAIGN_OPENED"] / "validate_campaign_artifact.py",
-            campaign_request,
-            "campaign.json",
-        )
-        campaign_record = check_schema("campaign", campaign_path)
-        assert campaign_record["stage"] == "CAMPAIGN_OPENED", campaign_record["stage"]
-        assert campaign_record["decision"] == "GO", campaign_record["decision"]
-        assert campaign_record["current_iteration"] == 1, campaign_record["current_iteration"]
+        # W0 (D-1): the ledger is EMPTY at registration time. Round 1's entry is
+        # appended at the round boundary (below) by this SAME producer, never
+        # pre-written at registration time.
+        assert bench_artifact["current_iteration"] == 1, bench_artifact["current_iteration"]
+        assert bench_artifact["iterations"] == [], bench_artifact["iterations"]
         # The request omits the cap on purpose, so the artifact must carry the
         # contract's published figure and say where it came from -- a cap this
         # chain could see invented would be worse than no cap at all.
-        assert "max_iterations" not in read_json(campaign_request)["campaign"], "the contract-default path is the one under test"
-        assert campaign_record["max_iterations"] == contract["max_iterations"], (
-            campaign_record["max_iterations"], contract["max_iterations"]
+        assert "max_iterations" not in read_json(bench_request)["campaign"], "the contract-default path is the one under test"
+        assert bench_artifact["max_iterations"] == contract["max_iterations"], (
+            bench_artifact["max_iterations"], contract["max_iterations"]
         )
-        assert any(item.get("source") == "contracts/state-machine.json" for item in campaign_record["evidence"]), (
-            "the contract-derived cap must record its provenance on the artifact: " + repr(campaign_record["evidence"])
+        assert any(item.get("source") == "contracts/state-machine.json" for item in bench_artifact["evidence"]), (
+            "the contract-derived cap must record its provenance on the artifact: " + repr(bench_artifact["evidence"])
         )
-        driven_stages.append("CAMPAIGN_OPENED")
+        driven_stages.append("BENCH_RESOURCE_REGISTERED")
 
-        # The stage's NO Synthetic Closure gate is real: the same campaign on the
-        # same bench, but with the bench record downgraded to SYNTHETIC, is refused.
-        synthetic_bench = read_json(bench_path)
-        synthetic_bench["evidence_scope"] = "SYNTHETIC"
-        synthetic_bench_path = write_input("input-bench-synthetic.json", synthetic_bench)
-        synthetic_campaign_request = write_input(
-            "input-campaign-synthetic-bench.json",
-            campaign_input(project_path, synthetic_bench_path),
-        )
-        synthetic_refusal = run(
-            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py", synthetic_campaign_request
-        )
-        assert synthetic_refusal.returncode != 0 and CAMPAIGN_SYNTHETIC_BENCH_GAP in synthetic_refusal.stdout, (
-            synthetic_refusal.stdout
-        )
-        print("gate ok: the campaign preflight refuses a PHYSICAL campaign drawing slots from a SYNTHETIC bench")
-
-        # --- 9. EXPERIMENT_DESIGNED (doe-design) -------------------------------
-        route_allow("CAMPAIGN_OPENED", "EXPERIMENT_DESIGNED")
+        # --- 8. EXPERIMENT_DESIGNED (doe-design) -------------------------------
+        route_allow("BENCH_RESOURCE_REGISTERED", "EXPERIMENT_DESIGNED")
         doe_request = write_input(
             "input-experiment-design.json",
             experiment_design_input(project_path, challenge_path, failure_path, method_path, design_space_path, bench_path),
@@ -1983,7 +1946,7 @@ def main() -> int:
         write_json(doe_output_path, envelope)
         driven_stages.append("EXPERIMENT_DESIGNED")
 
-        # --- 10. BATCH_PRODUCED (grease-batch) ---------------------------------
+        # --- 9. BATCH_PRODUCED (grease-batch) ---------------------------------
         route_allow("EXPERIMENT_DESIGNED", "BATCH_PRODUCED")
         batch_request = write_input("input-batch.json", batch_input(project_path, design_space_path, experiment_design_path))
         batch_path = drive(
@@ -2022,7 +1985,7 @@ def main() -> int:
         assert read_json(reference_sample_path)["sample_id"] == "SMP-PGD-E2E-002", read_json(reference_sample_path)
         driven_stages.append("BATCH_PRODUCED")
 
-        # --- 11. SCREENING_PASSED (grease-screening) ---------------------------
+        # --- 10. SCREENING_PASSED (grease-screening) ---------------------------
         route_allow("BATCH_PRODUCED", "SCREENING_PASSED")
         screening_request = write_input("input-screening.json", screening_input(project_path, batch_path))
         screening_path = drive(
@@ -2055,7 +2018,7 @@ def main() -> int:
         assert reference_screening_artifact["gate_to_bench"] == "RELEASED", reference_screening_artifact
         driven_stages.append("SCREENING_PASSED")
 
-        # --- 12. BENCH_TESTED (experiment-import, bench path) ------------------
+        # --- 11. BENCH_TESTED (experiment-import, bench path) ------------------
         route_allow("SCREENING_PASSED", "BENCH_TESTED")
         bench_runs = [
             ("RUN-PGD-E2E-001", "BAT-PGD-E2E-001", "SMP-PGD-E2E-001", 2.55, True, "event observed inside the protocol window", "NONE"),
@@ -2130,7 +2093,7 @@ def main() -> int:
         assert experiment_artifact["stage"] == "EXPERIMENT_RUNNING", experiment_artifact["stage"]
         driven_stages.append("BENCH_TESTED")
 
-        # --- 13. VARIANCE_ASSESSED (variance-assessment) -----------------------
+        # --- 12. VARIANCE_ASSESSED (variance-assessment) -----------------------
         route_allow("BENCH_TESTED", "VARIANCE_ASSESSED")
         variance_request = write_input("input-variance.json", variance_input(project_path, bench_test_paths))
         variance_path = drive(
@@ -2166,13 +2129,13 @@ def main() -> int:
         assert "disagree about why the run ended" in disagree_refused.stdout, disagree_refused.stdout
 
         # --- the round-1 boundary (W1, D-1): the ledger gains round 1 ----------
-        # The campaign was OPENED with an empty ledger; the round boundary is where the
-        # round's entry is appended. Round 1 ends CONTINUE (the loop advances), so the
-        # counter stands at the round that round opened, and the two exit-round
+        # The merged bench was registered with an empty ledger; the round boundary is
+        # where the round's entry is appended. Round 1 ends CONTINUE (the loop advances),
+        # so the counter stands at the round that round opened, and the two exit-round
         # references stay null (E2=B).
-        round_1_campaign_request = write_input(
-            "input-campaign-round-1.json",
-            campaign_input(project_path, bench_path, round_1_entry={
+        round_1_bench_request = write_input(
+            "input-bench-round-1.json",
+            bench_input(round_1_entry={
                 "iteration": 1,
                 "samples": ["SMP-PGD-E2E-001", "SMP-PGD-E2E-002"],
                 "stop_state": "CONTINUE",
@@ -2184,24 +2147,24 @@ def main() -> int:
             }, current_iteration=2),
         )
         drive(
-            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py",
-            stage_script["CAMPAIGN_OPENED"] / "build_campaign_artifact.py",
-            stage_script["CAMPAIGN_OPENED"] / "validate_campaign_artifact.py",
-            round_1_campaign_request,
-            "campaign.json",
+            stage_script["BENCH_RESOURCE_REGISTERED"] / "preflight_bench_registration.py",
+            stage_script["BENCH_RESOURCE_REGISTERED"] / "build_bench_artifact.py",
+            stage_script["BENCH_RESOURCE_REGISTERED"] / "validate_bench_artifact.py",
+            round_1_bench_request,
+            "bench.json",
         )
-        campaign_record = check_schema("campaign", campaign_path)
-        assert campaign_record["current_iteration"] == 2, campaign_record["current_iteration"]
-        assert [entry["iteration"] for entry in campaign_record["iterations"]] == [1], campaign_record["iterations"]
+        bench_record = check_schema("bench", bench_path)
+        assert bench_record["current_iteration"] == 2, bench_record["current_iteration"]
+        assert [entry["iteration"] for entry in bench_record["iterations"]] == [1], bench_record["iterations"]
         print("E2E ok: the round-1 boundary appended round 1's entry; the ledger stands at iteration 2 (W1)")
 
-        # --- 14. MODEL_BUILT (statistical-analysis) ----------------------------
+        # --- 13. MODEL_BUILT (statistical-analysis) ----------------------------
         route_allow("VARIANCE_ASSESSED", "MODEL_BUILT")
         model_request = write_input(
             "input-model.json",
             model_input(project_path, method_path, design_space_path, experiment_design_path,
                         experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path,
-                        campaign_path),
+                        bench_path),
         )
         model_path = drive(
             stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py",
@@ -2224,17 +2187,17 @@ def main() -> int:
         assert METHOD_ID in model_artifact["test_method_references"], model_artifact
         driven_stages.append("MODEL_BUILT")
 
-        # E-2: the campaign ledger is bound to the variance record ENTRY-LEVEL (the
-        # counter has already advanced past the recorded round at W1, so
+        # E-2: the ledger of the merged bench record is bound to the variance record
+        # ENTRY-LEVEL (the counter has already advanced past the recorded round at W1, so
         # current_iteration could never match). The ledger's own reference to the
         # variance is what is checked; a tampered ledger is refused by name.
-        tampered_campaign = read_json(campaign_path)
-        tampered_round = {**tampered_campaign["iterations"][0], "variance_reference": "VAR-NOT-THIS-ROUND"}
-        tampered_campaign = {**tampered_campaign, "iterations": [tampered_round]}
-        write_json(campaign_path, tampered_campaign)
+        tampered_bench = read_json(bench_path)
+        tampered_round = {**tampered_bench["iterations"][0], "variance_reference": "VAR-NOT-THIS-ROUND"}
+        tampered_bench = {**tampered_bench, "iterations": [tampered_round]}
+        write_json(bench_path, tampered_bench)
         binding_probe = run(stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py", model_request)
         assert binding_probe.returncode != 0 and "variance link is invalid" in binding_probe.stdout, binding_probe.stdout
-        write_json(campaign_path, campaign_record)
+        write_json(bench_path, bench_record)
 
         # The grease precondition is keyed on the supplied charter's project_type,
         # not on the request shape: the same PRECISION_GREASE_DEV analysis with the
@@ -2242,7 +2205,7 @@ def main() -> int:
         # chain used to record is closed; the refusal wording is the gate's own.)
         oil_shaped_payload = model_input(project_path, method_path, design_space_path, experiment_design_path,
                                          experiment_path, batch_path, screening_path, bench_test_paths[0],
-                                         variance_path, campaign_path)
+                                         variance_path, bench_path)
         for key in ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact"):
             del oil_shaped_payload[key]
         oil_shaped_request = write_input("input-model-oil-shaped.json", oil_shaped_payload)
@@ -2254,7 +2217,7 @@ def main() -> int:
         )
         print("gate ok: statistical-analysis refuses a PRECISION_GREASE_DEV request that omits the four inner-loop artifacts")
 
-        # --- 15. NEXT_BATCH_DECIDED (doe-design) --------------------------------
+        # --- 14. NEXT_BATCH_DECIDED (doe-design) --------------------------------
         route_allow("MODEL_BUILT", "NEXT_BATCH_DECIDED")
         next_batch_producers = has_producer("next_batch")
         assert next_batch_producers, (
@@ -2266,7 +2229,7 @@ def main() -> int:
         )
         next_batch_request = write_input(
             "input-next-batch.json",
-            next_batch_input(campaign_path, experiment_design_path, variance_path),
+            next_batch_input(bench_path, experiment_design_path, variance_path),
         )
         next_batch_path = drive(
             stage_script["NEXT_BATCH_DECIDED"] / "preflight_next_batch.py",
@@ -2284,15 +2247,15 @@ def main() -> int:
         # a record kept for the reader (E2=B: written only on the exit round, and null
         # on a CONTINUE round), so the self-comparison that used to sit here is gone.
         assert (next_batch_record["from_iteration"], next_batch_record["to_iteration"]) == (1, 2), next_batch_record
-        assert next_batch_record["campaign_reference"] == campaign_record["campaign_id"], next_batch_record
-        assert campaign_record["iterations"][0]["next_batch_reference"] is None, campaign_record["iterations"][0]
-        assert next_batch_record["stop_state"] == campaign_record["iterations"][0]["stop_state"] == "CONTINUE", next_batch_record
+        assert next_batch_record["campaign_reference"] == bench_record["campaign_id"], next_batch_record
+        assert bench_record["iterations"][0]["next_batch_reference"] is None, bench_record["iterations"][0]
+        assert next_batch_record["stop_state"] == bench_record["iterations"][0]["stop_state"] == "CONTINUE", next_batch_record
         assert next_batch_record["bench_slots_required"] == len(next_batch_record["proposed_samples"]) == 2, next_batch_record
         driven_stages.append("NEXT_BATCH_DECIDED")
 
         # The gate refuses to compose a hypothesis: a request that declares fewer
         # than two competing explanations is held, never filled in with a plausible one.
-        singular_payload = next_batch_input(campaign_path, experiment_design_path, variance_path)
+        singular_payload = next_batch_input(bench_path, experiment_design_path, variance_path)
         singular_payload["next_batch"]["competing_explanations"] = singular_payload["next_batch"]["competing_explanations"][:1]
         singular_request = write_input("input-next-batch-single-explanation.json", singular_payload)
         singular_probe = run(stage_script["NEXT_BATCH_DECIDED"] / "preflight_next_batch.py", singular_request)
@@ -2301,7 +2264,7 @@ def main() -> int:
         )
         print("gate ok: the next-batch preflight refuses a request with fewer than two competing explanations")
 
-        # --- 16. NON_INFERIORITY_PASSED (optimization) -------------------------
+        # --- 15. NON_INFERIORITY_PASSED (optimization) -------------------------
         route_allow("NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED")
         optimization_request = write_input(
             "input-optimization.json",
@@ -2328,8 +2291,8 @@ def main() -> int:
         assert optimization_artifact["engine_handoff"] == "PHASE4_DETERMINISTIC_ENGINE", optimization_artifact
         driven_stages.append("NON_INFERIORITY_PASSED")
 
-        # E-1 on the SECOND consumer (step 16): the optimization gate reads the variance
-        # verdict the same way step 14 does -- NO_DETECTABLE_DIFFERENCE ("a capable design
+        # E-1 on the SECOND consumer (step 15): the optimization gate reads the variance
+        # verdict the same way step 13 does -- NO_DETECTABLE_DIFFERENCE ("a capable design
         # found nothing") is admissible even though its producer wrote HOLD, the blocking
         # verdicts stay refused, and the original releasing record is put back afterwards.
         no_difference_variance = {**variance_artifact, "verdict": "NO_DETECTABLE_DIFFERENCE",
@@ -2346,9 +2309,9 @@ def main() -> int:
             "the restored releasing variance record must keep the optimization entry READY"
         )
         print("gate ok: the optimization gate admits NO_DETECTABLE_DIFFERENCE (decision HOLD) and still refuses "
-              "UNDERPOWERED -- the same verdict-based dispatch as step 14")
+              "UNDERPOWERED -- the same verdict-based dispatch as step 13")
 
-        # --- 17. PROCESS_SCALE_VALIDATED (process-scale-up) --------------------
+        # --- 16. PROCESS_SCALE_VALIDATED (process-scale-up) --------------------
         route_allow("NON_INFERIORITY_PASSED", "PROCESS_SCALE_VALIDATED")
         scale_up_request = write_input("input-scale-up.json", scale_up_input(process_baseline_path, optimization_path))
         window_path = drive(
@@ -2377,7 +2340,7 @@ def main() -> int:
         ), window_artifact["batch_scale"]
         driven_stages.append("PROCESS_SCALE_VALIDATED")
 
-        # --- 18. VERIFIED (gate-review) ----------------------------------------
+        # --- 17. VERIFIED (gate-review) ----------------------------------------
         route_allow("PROCESS_SCALE_VALIDATED", "VERIFIED")
         # The gate consumes the route's own optimization artifact at its own stage:
         # the preflight dispatches the expected stage on the charter's project_type
@@ -2431,7 +2394,7 @@ def main() -> int:
         print("gate ok: the same optimization artifact is refused under an oil charter (the stage expectation "
               "stays OPTIMIZED for the six oil routes)")
 
-        # --- 19. APPLIED (application-definition + application-validation) ------
+        # --- 18. APPLIED (application-definition + application-validation) ------
         route_allow("VERIFIED", "APPLIED")
         # M4 (batch F): "who produces application.json" must answer with the producing
         # skill, not the admission gate. The artifact-type literal is the fingerprint
@@ -2452,7 +2415,7 @@ def main() -> int:
         assert application_artifact["decision"] == "GO", application_artifact["decision"]
         gate_entry_request = write_input(
             "input-application-validation.json",
-            application_validation_input(application_path, campaign_path, bench_test_paths[0]),
+            application_validation_input(application_path, bench_path, bench_test_paths[0]),
         )
         ready = run_ok(
             stage_script["APPLIED"] / "preflight_application_validation.py", gate_entry_request
@@ -2460,7 +2423,7 @@ def main() -> int:
         assert ready.stdout.startswith("READY:") and "APPLIED" in ready.stdout, ready.stdout
         driven_stages.append("APPLIED")
 
-        # --- 20. KNOWLEDGE_ARCHIVED (knowledge-archive) -------------------------
+        # --- 19. KNOWLEDGE_ARCHIVED (knowledge-archive) -------------------------
         route_allow("APPLIED", "KNOWLEDGE_ARCHIVED")
         knowledge_request = write_input("input-knowledge.json", knowledge_input(project_path))
         knowledge_path = drive(
@@ -2642,7 +2605,7 @@ def main() -> int:
             ("MODEL_BUILT", "preflight_statistical_analysis.py", "build_model_artifact.py",
              "validate_model_artifact.py", "probe-input-model.json", "model.json", "model",
              model_input(project_path, method_path, design_space_path, experiment_design_path, experiment_path,
-                         batch_path, screening_path, bench_test_paths[0], variance_path, campaign_path)),
+                         batch_path, screening_path, bench_test_paths[0], variance_path, bench_path)),
             ("NON_INFERIORITY_PASSED", "preflight_optimization.py", "build_optimization_artifact.py",
              "validate_optimization_artifact.py", "probe-input-optimization.json", "optimization.json", "optimization",
              optimization_input(project_path, method_path, design_space_path, experiment_design_path, experiment_path,
@@ -2678,12 +2641,12 @@ def main() -> int:
         print("E2E-11 ok: audit_chain reports the no-challenge workspace clean, with the UNROUTED gap recorded as a NOTE")
 
         # The scratch copies this test needed along the way (the oil-charter copy,
-        # the SYNTHETIC-bench copy, the refused requests) all carry the ``input-``
+        # the refused requests) all carry the ``input-``
         # prefix, so the audit above reads them as scratch input rather than as
         # chain records -- and the audit runs over the workspace AS BUILT, with
-        # every one of the 20 stage artifacts in it.
+        # every one of the 19 stage artifacts in it.
 
-    # Coverage is an assertion, never just a print: all 20 stages must have been
+    # Coverage is an assertion, never just a print: all 19 stages must have been
     # driven by the skill the router names, in route order, and ``stage_gaps`` (the
     # escape hatch for a stage that had to be skipped) must be empty. A stage that
     # silently drops out of the chain -- for any reason -- fails here.
@@ -2692,7 +2655,7 @@ def main() -> int:
         "the driven stages do not match the route exactly: "
         f"driven={driven_stages} missing={sorted(set(EXPECTED_ROUTE) - set(driven_stages))}"
     )
-    assert len(driven_stages) == len(EXPECTED_ROUTE) == 20, driven_stages
+    assert len(driven_stages) == len(EXPECTED_ROUTE) == 19, driven_stages
     for stage in driven_stages:
         print(f"DRIVEN: {stage} <- {STAGE_SKILL[stage]}")
     print(

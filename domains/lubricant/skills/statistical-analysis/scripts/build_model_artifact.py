@@ -37,8 +37,11 @@ def main() -> int:
     # P-2 (2026-10-14): the model is fitted from the round it was fitted on, and that round
     # is named by whichever carrier the route has -- an experiment record on the oil routes
     # (and on a grease round that imported one), or the campaign ledger on the grease route,
-    # which carries no experiment stage. schemas/model.schema.json's anyOf accepts either
-    # citation; this builder writes the one the request supplies.
+    # which carries no experiment stage. Since the bench/campaign merge (contract 1.0.0) that
+    # ledger travels inside the merged bench artifact (bench.json) under the same request key
+    # and the same field names (campaign_id / current_iteration / iterations), so only the
+    # file the key resolves to changed, not the reading. schemas/model.schema.json's anyOf
+    # accepts either citation; this builder writes the one the request supplies.
     experiment = load("experiment_artifact") if "experiment_artifact" in data else None
     campaign = load("campaign_artifact") if "campaign_artifact" in data else None
     if experiment is None and campaign is None:

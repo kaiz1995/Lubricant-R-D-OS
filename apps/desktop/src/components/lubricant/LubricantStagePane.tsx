@@ -76,14 +76,14 @@ const GATE_TONE: Record<GateStatus, string> = {
  * 精密传动脂路线（PRECISION_GREASE_DEV）的三环分组 —— 逐条镜像领域包
  * `domains/lubricant/README.md` §5.1 的「环」表：
  *
- *   外环 · 配方与工艺设计  工艺步骤 1–8   → 9 个 stage（第 7 步占
- *                                          BENCH_RESOURCE_REGISTERED + CAMPAIGN_OPENED）
- *   内环 · 台架战役        工艺步骤 9–13  → 6 个 stage（第 13 步占
+ *   外环 · 配方与工艺设计  工艺步骤 1–8   → 8 个 stage（第 7 步的台架资源
+ *                                          与轮次计划合并为一个 stage）
+ *   内环 · 台架迭代        工艺步骤 9–13  → 6 个 stage（第 13 步占
  *                                          MODEL_BUILT + NEXT_BATCH_DECIDED）
  *   收口                  工艺步骤 14–17 → 5 个 stage（第 16 步占
  *                                          VERIFIED + APPLIED）
  *
- * 17 个工艺步骤 → 20 个 stage，所以面板里三段分别是 9 / 6 / 5 步，合计仍是
+ * 17 个工艺步骤 → 19 个 stage，所以面板里三段分别是 8 / 6 / 5 步，合计仍是
  * 整条路由。内环是「环体 + 退出判据」：环体（BATCH_PRODUCED …
  * VARIANCE_ASSESSED）由契约 loop_edges 经 innerLoopStages() 推导、打「内环」
  * 徽章；MODEL_BUILT / NEXT_BATCH_DECIDED 是退出判据，属于内环段但不属于环体。
@@ -115,13 +115,12 @@ const RING_SEGMENTS: readonly RingSegment[] = [
       "TEST_METHODS_QUALIFIED",
       "DESIGN_SPACE_DEFINED",
       "BENCH_RESOURCE_REGISTERED",
-      "CAMPAIGN_OPENED",
       "EXPERIMENT_DESIGNED",
     ],
   },
   {
     id: "inner",
-    label: "内环 · 台架战役",
+    label: "内环 · 台架迭代",
     mode: "循环 N 轮，有退出判据",
     stages: [
       "BATCH_PRODUCED",
@@ -251,9 +250,9 @@ export function LubricantStagePane({
       new Map(LOOP_EDGES.filter((edge) => innerLoopSet.has(edge.from)).map((edge) => [edge.from as string, edge])),
     [innerLoopSet],
   );
-  /** campaign.json 的 current_iteration；读不到就说「未开启」，不猜轮次。 */
+  /** 合并工件 bench.json 的 current_iteration；读不到就说「未开启」，不猜轮次。 */
   const currentIteration = (() => {
-    const value = snapshot?.probes.campaign?.data?.current_iteration;
+    const value = snapshot?.probes.bench?.data?.current_iteration;
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   })();
 
@@ -564,7 +563,7 @@ export function LubricantStagePane({
               </span>
               <span className="ml-auto whitespace-nowrap tabular-nums">
                 {currentIteration === null
-                  ? `未开启（campaign.json 未落盘）· 上限 ${MAX_ITERATIONS} 轮`
+                  ? `未开启（合并工件未落盘）· 上限 ${MAX_ITERATIONS} 轮`
                   : `第 ${currentIteration} / ${MAX_ITERATIONS} 轮`}
               </span>
             </div>
@@ -785,8 +784,8 @@ export function LubricantStagePane({
                         <span
                           title={
                             currentIteration === null
-                              ? `campaign.json 未落盘，轮次未知（不猜轮次）；每战役上限 ${MAX_ITERATIONS} 轮`
-                              : `campaign.json 的 current_iteration = ${currentIteration}（每战役上限 ${MAX_ITERATIONS} 轮）`
+                              ? `合并工件未落盘，轮次未知（不猜轮次）；内环上限 ${MAX_ITERATIONS} 轮`
+                              : `合并工件的 current_iteration = ${currentIteration}（内环上限 ${MAX_ITERATIONS} 轮）`
                           }
                           className="shrink-0 rounded border border-accent/40 bg-accent/10 px-1 py-0.2 font-mono text-[10px] font-medium tabular-nums text-accent"
                         >

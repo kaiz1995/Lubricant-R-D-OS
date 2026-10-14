@@ -1,6 +1,7 @@
 """Build the only permitted NEXT_BATCH_DECIDED artifact from preflight-valid input.
 
-Deterministic assembly only. The iteration pair is derived from the campaign carrier, the
+Deterministic assembly only. The iteration pair is derived from the campaign carrier (the
+merged bench artifact, ``bench.json``, whose ledger holds the inner-loop rounds), the
 proposed samples are composed from the declared competing explanations, and the canonical
 decision block comes from ``next_batch_policy`` so this builder, the preflight and the
 validator cannot disagree.
@@ -36,7 +37,7 @@ def main() -> int:
     _, campaign = read_artifact(data["campaign_artifact"], input_path, "campaign_artifact")
     _, design = read_artifact(data["experiment_design_artifact"], input_path, "experiment_design_artifact")
     if campaign is None or design is None:
-        print("HOLD: the campaign or the round's design cannot be read; no artifact generated")
+        print("HOLD: the campaign carrier (bench.json) or the round's design cannot be read; no artifact generated")
         return 1
     artifact = composed_artifact(data, campaign, design)
     output_path.parent.mkdir(parents=True, exist_ok=True)

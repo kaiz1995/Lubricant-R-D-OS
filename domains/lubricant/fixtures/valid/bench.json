@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench",
+  "project_id": "PGD-001",
+  "stage": "BENCH_RESOURCE_REGISTERED",
+  "evidence_scope": "SYNTHETIC",
+  "source": "Synthetic bench-registration fixture",
+  "evidence_id": "EV-BENCH-001",
+  "decision_question": "Is the supplied input sufficient to register bench BENCH-SZ-01 and open its round plan?",
+  "hypothesis": "BENCH-SZ-01 records its availability windows, cycle time and per-run cost sufficient for later slot planning, and CMP-001 records its rounds, their stop states and its paired design, so the inner loop can run up to 6 bench rounds.",
+  "uncertainty": "Supplied availability, cycle time and cost are not independently verified; recorded ASSUMED evidence remains assumed and this record does not reserve capacity, book a run, or establish a capability conclusion. The plan's rounds are recorded as they happened, and a later round's outcome is not known before it runs.",
+  "decision_rule": "Register the bench and open its round plan only when availability windows, a positive cycle time, per-run cost with source, a recorded pairing design, and evidence without GAP are supplied; the cross-field ledger rules (current_iteration within max_iterations, only CONTINUE authorizes another round, exit-round-only model/next-batch references) are enforced by the validator.",
+  "result": "BENCH-SZ-01 is sufficient to register a bench record; available_bench_slots=7; 1 round(s) recorded, standing at round 2 of 6 (max_iterations=6, supplied in the request).",
+  "decision": "GO",
+  "next_action": "Open bench round 2 of 6 with the pairing design recorded above.",
+  "evidence": [
+    {
+      "evidence_id": "EV-BENCH-001",
+      "statement": "Synthetic bench registration recorded for schema validation only; not a booked or qualified capacity.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "EV-CMP-001",
+      "statement": "Synthetic round plan recorded for schema validation only; round 1 is a synthetic record and this is not product evidence.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "available_bench_slots": 7,
+  "bench_id": "BENCH-SZ-01",
+  "project_reference": "PGD-001",
+  "bench_name": "Suzhou grease bench (synthetic fixture)",
+  "location": "Suzhou",
+  "availability_window": [
+    {
+      "window_id": "W-1",
+      "start": "2026-01-01",
+      "end": "2026-01-10"
+    },
+    {
+      "window_id": "W-2",
+      "start": "2026-02-01",
+      "end": "2026-02-14",
+      "reserved_days": 2
+    }
+  ],
+  "cycle_days": 3,
+  "cost_per_run": {
+    "value": 1200,
+    "unit": "CNY/run",
+    "source": "Synthetic bench quote (fixture only)"
+  },
+  "campaign_id": "CMP-001",
+  "max_iterations": 6,
+  "current_iteration": 2,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": [
+        "SAM-SYN-001",
+        "SAM-SYN-002"
+      ],
+      "stop_state": "CONTINUE",
+      "screening_reference": "SCR-001",
+      "variance_reference": "VAR-001",
+      "model_reference": null,
+      "next_batch_reference": null,
+      "bench_test_references": [
+        "RUN-SYN-001",
+        "RUN-SYN-002"
+      ]
+    }
+  ],
+  "pairing_design": {
+    "paired": true,
+    "description": "Synthetic fixture: A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels; at a fixed sigma, pairing buys more resolution than measuring sigma precisely."
+  }
+}

@@ -46,7 +46,7 @@ EXPECTED_ERRORS = {
     "screening--failed-but-released.json": "'BLOCKED' was expected",
     "bench_test--censored-as-endpoint.json": "False was expected",
     "variance--manual-computation.json": "'ENGINE' was expected",
-    "campaign--missing-pairing-design.json": "'pairing_design' is a required property",
+    "bench--missing-pairing-design.json": "'pairing_design' is a required property",
     # Outer-loop steps 5-6 extensions (batch 1). The constraint-kind fixture
     # fails through an anyOf, so its message embeds the whole offending object;
     # the registered substring is kept short and stable on purpose.

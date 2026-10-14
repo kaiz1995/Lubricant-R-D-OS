@@ -41,7 +41,7 @@ from application_validation_policy import (
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-SCHEMAS = ("common.schema.json", "application.schema.json", "campaign.schema.json", "bench_test.schema.json")
+SCHEMAS = ("common.schema.json", "application.schema.json", "bench.schema.json", "bench_test.schema.json")
 # F-4 (2026-10-14, L10): one set, one verdict. The key-set check now says REQUIRED
 # for exactly the fields the path-level check below enforces -- the old split
 # (a GREASE_OPTIONAL_RECORD_FIELDS constant beside a direct "is required on the
@@ -49,7 +49,7 @@ SCHEMAS = ("common.schema.json", "application.schema.json", "campaign.schema.jso
 # optional. F-2 (M6) adds the application path to the same set: on this route the
 # record must also cite the built artifact it gates.
 GREASE_REQUIRED_RECORD_FIELDS = {"project_type", "machine_indicators", "campaign_artifact", "bench_test_artifact", APPLICATION_REFERENCE_FIELD}
-UPSTREAM = (("campaign_artifact", "campaign.schema.json", "CAMPAIGN_OPENED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"))
+UPSTREAM = (("campaign_artifact", "bench.schema.json", "BENCH_RESOURCE_REGISTERED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"))
 
 
 def schema_dir() -> Path:

@@ -44,8 +44,8 @@ const SCOPE_BEARING = [
  * project_type 分派（F-1 定稿后镜像，G-1）
  *
  * 常量逐条照抄 preflight_gate_review.py（宁重复也不 import 领域包，避免反向依赖）：
- * `expected_stage()` 只对两个 key 按章程的 project_type 分派 —— 第 16 步的
- * 优化工件在脂路线合法落在 NON_INFERIORITY_PASSED（schema 枚举两值），第 17 步
+ * `expected_stage()` 只对两个 key 按章程的 project_type 分派 —— 第 15 步的
+ * 优化工件在脂路线合法落在 NON_INFERIORITY_PASSED（schema 枚举两值），第 16 步
  * 的固定窗口落在 PROCESS_SCALE_VALIDATED（产出技能 GREASE_STAGE）。其余 key、
  * 其余 project_type、以及读不到章程的场景一律返回原常量 —— 六条油品路线行为
  * 逐字不变。
