@@ -35,7 +35,20 @@ def main() -> int:
     if errors:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
     def load(key: str) -> dict: return json.loads((input_path.parent / data[key]).read_text(encoding="utf-8"))
-    project, method, design_space, experiment = (load(key) for key in ("project_artifact", "test_method_artifact", "design_space_artifact", "experiment_artifact"))
+    project, method, design_space = (load(key) for key in ("project_artifact", "test_method_artifact", "design_space_artifact"))
+    # The grease route may reach this gate without an experiment artifact (that stage is not
+    # on its route, and the preflight admits that shape). schemas/model.schema.json still
+    # REQUIRES ``experiment_reference`` -- a constraint two scripts record as not ours to
+    # change -- so no legal record can be built from such a request. Refuse readably instead
+    # of raising KeyError: the gap belongs to the model contract, and it stays visible until
+    # that call is made.
+    if "experiment_artifact" not in data:
+        print(
+            "HOLD: experiment_artifact is not on the PRECISION_GREASE_DEV route and "
+            "schemas/model.schema.json still requires experiment_reference, so no legal model "
+            "record can be built from this request; no artifact generated")
+        return 1
+    experiment = load("experiment_artifact")
     request = data["analysis"]
     # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
     # travels with the request the recorded Challenge Map link is written as the ASSUMED

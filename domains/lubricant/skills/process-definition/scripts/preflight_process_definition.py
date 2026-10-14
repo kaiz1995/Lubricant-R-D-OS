@@ -194,6 +194,14 @@ def process_errors(value: object, design_space: dict | None) -> list[str]:
         errors.append("process.project_reference")
     elif design_space is not None and project_reference != design_space.get("project_id"):
         errors.append("process.project_reference must equal the upstream design_space project_id")
+    # I-3 producer-side closure: the design space declares WHICH process record is its fixed
+    # baseline (``baseline_process_reference``), so the record written here must BE that id.
+    # Without this check the reference is a free string and the two records never meet.
+    design_space_baseline = design_space.get("baseline_process_reference") if isinstance(design_space, dict) else None
+    if has_text(design_space_baseline) and value.get("process_id") != design_space_baseline:
+        errors.append(
+            f"process.process_id must equal design_space.baseline_process_reference "
+            f"({design_space_baseline!r}), got {value.get('process_id')!r}")
     step_errors, parameter_ids = process_step_errors(value.get("process_step"))
     errors.extend(step_errors)
     batch_scale = value.get("batch_scale")

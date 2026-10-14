@@ -30,7 +30,7 @@
     "BENCH-PGD-IL-01"
   ],
   "max_iterations": 12,
-  "current_iteration": 2,
+  "current_iteration": 3,
   "iterations": [
     {
       "iteration": 1,

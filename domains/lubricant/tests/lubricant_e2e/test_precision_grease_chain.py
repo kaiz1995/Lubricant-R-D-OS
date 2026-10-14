@@ -2129,6 +2129,25 @@ def main() -> int:
         assert variance_artifact["computed_by"] == "ENGINE", variance_artifact["computed_by"]
         driven_stages.append("VARIANCE_ASSESSED")
 
+        # I-4 negative case: the bench record and the variance observation must not
+        # disagree about WHY a run ended. The bench side says the event was observed
+        # inside the protocol window; an observation that claims the run was stopped
+        # administratively contradicts it, and the gate must refuse rather than let the
+        # analysis record tell a different story than the raw record.
+        disagreeing = variance_input(project_path, bench_test_paths)
+        disagreeing["engine_input"]["censoring"] = [
+            {**entry, "stop_reason": "administrator stopped the run at the 10 h window"}
+            if isinstance(entry, dict) and entry.get("observation_reference") == "OBS-PGD-E2E-001"
+            else entry
+            for entry in disagreeing["engine_input"]["censoring"]
+        ]
+        disagree_refused = run(
+            stage_script["VARIANCE_ASSESSED"] / "preflight_variance_assessment.py",
+            write_input("input-variance-stop-reason-disagrees.json", disagreeing),
+        )
+        assert disagree_refused.returncode != 0, disagree_refused.stdout
+        assert "disagree about why the run ended" in disagree_refused.stdout, disagree_refused.stdout
+
         # --- the round-1 boundary (W1, D-1): the ledger gains round 1 ----------
         # The campaign was OPENED with an empty ledger; the round boundary is where the
         # round's entry is appended. Round 1 ends CONTINUE (the loop advances), so the
