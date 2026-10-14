@@ -71,7 +71,6 @@ ROUTE_TABLE = (
     ("failure-ctq-analysis", "FAILURE_MECHANISM_DEFINED"),
     ("reference-material", "REFERENCE_MATERIAL_RESOLVED"),
     ("bench-registration", "BENCH_RESOURCE_REGISTERED"),
-    ("bench-registration", "CAMPAIGN_OPENED"),
     ("grease-batch", "BATCH_PRODUCED"),
     ("grease-screening", "SCREENING_PASSED"),
     ("experiment-import", "BENCH_TESTED"),
@@ -151,8 +150,8 @@ FALLBACK_STAGES = tuple(TYPE_ROUTES.get("NEW_PRODUCT", ()))
 START_STAGE = "DRAFT"
 TERMINAL_STATUSES = {"FROZEN", "CLOSED", "KILLED", "PIVOTED"}
 
-# Stage universe = the contract's stages (28 since PRECISION_GREASE_DEV added
-# its 12). A contract that cannot be read leaves the universe empty so decide()
+# Stage universe = the contract's stages (27 since PRECISION_GREASE_DEV added
+# its 11). A contract that cannot be read leaves the universe empty so decide()
 # denies every request instead of guessing.
 KNOWN_STAGES = tuple(CONTRACT["stages"]) if CONTRACT else ()
 NEXT_STAGE = dict(zip(KNOWN_STAGES, KNOWN_STAGES[1:]))
