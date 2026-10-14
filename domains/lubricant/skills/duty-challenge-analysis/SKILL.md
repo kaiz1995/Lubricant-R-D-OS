@@ -1,9 +1,9 @@
 ---
 name: duty-challenge-analysis
-description: Convert one validated lubricant duty profile into one traceable Challenge Map member at CHALLENGES_DEFINED; preflight verifies DUTY_DEFINED stage artifact and challenge evaluation dimensions before building the artifact. Use when user mentions "duty-challenge-analysis", "工况挑战分析", "精密脂工况挑战", "挑战图谱", "Challenge Map", "工况挑战", or advancing to Stage 2 in lubricant R&D.
+description: Convert one validated lubricant duty profile into one traceable Challenge Map member at CHALLENGES_DEFINED; preflight verifies DUTY_DEFINED stage artifact and challenge evaluation dimensions before building the artifact. Use when user mentions "duty-challenge-analysis", "工况挑战分析", "精密脂工况挑战", "挑战图谱", "Challenge Map", "工况挑战", or advancing to CHALLENGES_DEFINED in lubricant R&D.
 ---
 
-# Duty Challenge Analysis (Stage 2)
+# Duty Challenge Analysis (CHALLENGES_DEFINED)
 
 Convert a validated lubricant duty profile into exactly one traceable Challenge Map member at `CHALLENGES_DEFINED` for the Lubricant R&D Domain Pack.
 This is a tribological challenge analysis record, NOT a failure mechanism, CTQ, test plan, or formulation recipe.
@@ -121,7 +121,7 @@ python skills/duty-challenge-analysis/scripts/validate_duty_challenge_artifact.p
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes. **Naming rule**: if `challenge.json` does not yet exist in the workspace root, commit this record as `challenge.json`; otherwise commit it as `challenge-<project_id>-<challenge_id>.json`. That is, the first record of this stage occupies the canonical name `challenge.json` (the stage-gate panel uses this exact name to mark the stage complete), and subsequent records of the same stage are appended as suffixed names carrying the record ID. After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant `PROJECT_DEFINED` — it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 2 stops here at CHALLENGES_DEFINED. Route to Stage 3 (failure-ctq-analysis).
+# 🔴 CHECKPOINT · STOP: the challenge map member stops here at CHALLENGES_DEFINED. Next station: FAILURE_CTQ_DEFINED (failure-ctq-analysis); on PRECISION_GREASE_DEV the challenge artifact carries no route stage, so no stage advance happens here.
 ```
 
 ---

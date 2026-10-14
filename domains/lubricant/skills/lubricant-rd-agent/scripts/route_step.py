@@ -8,7 +8,10 @@ A second form, `--list-stages <PROJECT_TYPE>`, prints the full stage sequence of
 one declared project type (one stage per line) so callers can read the route
 without duplicating it. A third form, `--list-loop-edges <PROJECT_TYPE>`, prints
 that route's declared inner-loop back edges (`from -> to (kind)`) for the same
-reason. All forms fail closed when the contract is unreadable.
+reason. A fourth form, `--list-producers`, prints the stages whose artifact is
+materialised by a skill other than the router's admission target
+(`stage<TAB>producer<TAB>admission`). All forms fail closed when the contract is
+unreadable.
 
 The differentiated per-project_type stage chains are NOT hardcoded here: they
 are read from the shared contract `contracts/state-machine.json` (`type_routes`),
@@ -82,6 +85,16 @@ ROUTE_TABLE = (
 STAGES = tuple(stage for _, stage in ROUTE_TABLE)
 SKILL_FOR_STAGE = dict((stage, skill) for skill, stage in ROUTE_TABLE)
 
+# M4 (2026-10-14, Python end): APPLIED has two roles. ROUTE_TABLE names the
+# ADMISSION skill (who gates entry), because a stage has exactly one router
+# target and that is the routing fact. The PRODUCER (who writes application.json)
+# is registered BESIDE it here, never inside ROUTE_TABLE: inserting
+# ("application-definition", "APPLIED") there would let the later entry overwrite
+# SKILL_FOR_STAGE["APPLIED"] and silently re-route the VERIFIED -> APPLIED step
+# to the wrong skill. This constant and `--list-producers` are the Python half of
+# the panel fix; the panel mirrors them separately (batch G).
+PRODUCER_SKILL_FOR_STAGE = {"APPLIED": "application-definition"}
+
 # On-demand stages: materialisable by a skill, but on no type_route. The list
 # is published by the same contract (one list, two consumers) so the router and
 # the state machine cannot drift apart.
@@ -110,6 +123,19 @@ MAX_ITERATIONS = CONTRACT.get("max_iterations") if CONTRACT else None
 LOOP_TARGETS: dict[str, list[str]] = {}
 for _edge in LOOP_EDGES:
     LOOP_TARGETS.setdefault(_edge["from"], []).append(_edge["to"])
+
+# The iteration cap bounds the whole-ring back edge ONLY (`kind == LOOP_BACK`),
+# because the contract states the unit of `max_iterations` is bench rounds
+# (`max_iterations_note`), and a `REWORK` edge remakes the batch *without
+# consuming a bench slot* (its own edge note). A separate map is published here
+# instead of narrowing LOOP_TARGETS: LOOP_TARGETS is the "legal extra targets"
+# set (both kinds — a rework is still a legal move), while this map is the
+# "spends a bench round" set the cap governs. Keeping them apart also keeps
+# `--list-loop-edges` and the ALLOW reason unchanged for both kinds.
+LOOP_BACK_TARGETS: dict[str, set[str]] = {}
+for _edge in LOOP_EDGES:
+    if _edge["kind"] == "LOOP_BACK":
+        LOOP_BACK_TARGETS.setdefault(_edge["from"], set()).add(_edge["to"])
 
 # The undifferentiated fallback chain, used only when state declares no routed
 # project_type. It is the contract's NEW_PRODUCT route, not "every stage the
@@ -209,13 +235,16 @@ def decide(project_state: object, requested_stage: str) -> dict:
         return {"decision": "DENY", "reason": reason, "skill": None}
 
     # Ring-edge iteration cap (contract `max_iterations`): the inner loop is a
-    # bounded body, not an open-ended retry. When the request is a declared ring
+    # bounded body, not an open-ended retry. The cap is measured in bench rounds
+    # (`max_iterations_note`), so it governs the declared `LOOP_BACK` edge only —
+    # a `REWORK` edge remakes the batch *without consuming a bench slot* and must
+    # stay available past the cap. When the request is a declared `LOOP_BACK`
     # target and project_state publishes a `current_iteration` that has reached
-    # the cap, the back edge is refused — past the cap the loop must stop, so the
+    # the cap, that back edge is refused — past the cap the loop must stop, so the
     # message names the exit actions (same wording as the state machine's
     # `iteration_error`) instead of a bare denial or a HOLD that would suggest
     # "resolve the gaps and retry the ring".
-    if requested_stage in ring_targets:
+    if requested_stage in LOOP_BACK_TARGETS.get(current, ()):
         declared_iteration = project_state.get("current_iteration")
         if (
             isinstance(MAX_ITERATIONS, int)
@@ -300,6 +329,21 @@ def list_loop_edges(project_type: str) -> int:
     return 0
 
 
+def list_producers() -> int:
+    """Print `stage<TAB>producer<TAB>admission` for every stage with a split role.
+
+    ROUTE_TABLE answers "which skill does the router send to" -- the ADMISSION
+    side, one skill per stage. A stage whose artifact is written by a DIFFERENT
+    skill therefore cannot be read off ROUTE_TABLE, and callers asking "who makes
+    step 19" would be pointed at the gate instead of the producer. This form
+    publishes the pair (same pattern as `--list-stages`) so the producer is
+    discoverable without a second copy of the table in the caller.
+    """
+    for stage in sorted(PRODUCER_SKILL_FOR_STAGE):
+        print(f"{stage}\t{PRODUCER_SKILL_FOR_STAGE[stage]}\t{SKILL_FOR_STAGE.get(stage, '')}")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == "--list-stages":
         if len(sys.argv) != 3:
@@ -311,10 +355,16 @@ def main() -> int:
             print("Usage: python route_step.py --list-loop-edges <PROJECT_TYPE>")
             return 1
         return list_loop_edges(sys.argv[2])
+    if len(sys.argv) >= 2 and sys.argv[1] == "--list-producers":
+        if len(sys.argv) != 2:
+            print("Usage: python route_step.py --list-producers")
+            return 1
+        return list_producers()
     if len(sys.argv) != 2:
         print("Usage: python route_step.py <input.json>")
         print("       python route_step.py --list-stages <PROJECT_TYPE>")
         print("       python route_step.py --list-loop-edges <PROJECT_TYPE>")
+        print("       python route_step.py --list-producers")
         return 1
     path = Path(sys.argv[1]).resolve()
     try:

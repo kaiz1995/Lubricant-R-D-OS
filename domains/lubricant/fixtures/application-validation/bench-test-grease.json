@@ -23,6 +23,7 @@
   "bench_reference": "BENCH-SZ-01",
   "batch_reference": "BATCH-APP-001",
   "sample_reference": "S-1",
+  "ctq_reference": "C-STARTUP",
   "protocol_version": "proto-v1",
   "setpoints": [
     "80 degC soak",

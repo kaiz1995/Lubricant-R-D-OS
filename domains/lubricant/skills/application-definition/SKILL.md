@@ -100,7 +100,7 @@ python skills/application-definition/scripts/validate_application_artifact.py <t
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the application record stops here.
+# 🔴 CHECKPOINT · STOP: the application record stops here at APPLIED (its entry gate is application-validation).
 # Do NOT gate the APPLIED entry (application-validation), freeze, or claim a field / life / release conclusion.
 ```
 

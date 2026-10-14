@@ -1,9 +1,9 @@
 ---
 name: statistical-analysis
-description: Record one evidence-bound statistical-analysis request at MODEL_BUILT; preflight verifies 7 upstream artifacts through EXPERIMENT_RUNNING and response CTQ method chains before building the artifact. Use when user mentions "statistical-analysis", "统计分析", "显著性分析", "响应面拟合", "ANOVA", "回归建模", or advancing to Stage 7 in lubricant R&D.
+description: Record one evidence-bound statistical-analysis request at MODEL_BUILT; preflight verifies 7 upstream artifacts through EXPERIMENT_RUNNING and response CTQ method chains before building the artifact. Use when user mentions "statistical-analysis", "统计分析", "显著性分析", "响应面拟合", "ANOVA", "回归建模", or advancing to MODEL_BUILT in lubricant R&D.
 ---
 
-# Statistical Analysis (Stage 7)
+# Statistical Analysis (MODEL_BUILT)
 
 Record an evidence-bound statistical analysis request at `MODEL_BUILT` for the Lubricant R&D Domain Pack.
 This is an analysis request and handoff contract, NOT a simulated regression result or optimization claim.
@@ -18,6 +18,13 @@ A single JSON input object providing the 7 upstream artifacts and the `analysis`
 A `PRECISION_GREASE_DEV` charter additionally supplies the four inner-loop artifacts
 (`batch_artifact`, `screening_artifact`, `bench_test_artifact`, `variance_artifact`), for
 eleven upstream keys in total.
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: the preflight prints a `NOTE:` line instead
+of demanding the artifact, and the built record carries the recorded-gap sentence
+(`UNROUTED:<project_id>`) as `ASSUMED` evidence. Supplying a challenge artifact on either
+route behaves exactly as before.
 
 ```json
 {
@@ -81,7 +88,7 @@ python skills/statistical-analysis/scripts/validate_model_artifact.py <temporary
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 7 stops here at MODEL_BUILT. Pass to Phase 4 compute engine or Stage 8 (optimization).
+# 🔴 CHECKPOINT · STOP: the model stops here at MODEL_BUILT. Next station: OPTIMIZED (optimization) or NEXT_BATCH_DECIDED (PRECISION_GREASE_DEV inner loop, doe-design).
 ```
 
 ---

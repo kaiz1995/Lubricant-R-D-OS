@@ -91,6 +91,7 @@
         "evidence_reference": "EV-APP-001"
       }
     },
+    "application_artifact": "application-grease.json",
     "project_type": "PRECISION_GREASE_DEV",
     "machine_indicators": [
       {

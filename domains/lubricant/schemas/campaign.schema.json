@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/campaign.schema.json",
   "title": "Bench campaign (inner-loop carrier, N bench rounds)",
-  "description": "Stage contract carrying the inner loop of PRECISION_GREASE_DEV: a campaign of up to max_iterations bench rounds, each round producing samples, running the screen and bench tests, assessing variance, and ending in one stop_state. Cross-field rule: current_iteration must not exceed max_iterations. Pure JSON Schema cannot compare two numbers, so that check is NOT expressed structurally here -- the validator enforces it and reports it; this description and the $comment on max_iterations record the rule for the reader (no fake constraint is invented). pairing_design exists because paired comparison (an A/B pair run in the same round and swapped in the next round) is the design this project should prefer: at a fixed sigma, pairing buys more resolution than trying to measure sigma precisely.",
-  "$comment": "Cross-field rule current_iteration <= max_iterations: pure JSON Schema has no keyword that compares two instance numbers, so this rule is deliberately NOT expressed structurally and no fake if/then is invented. The validator enforces it and reports it; it is recorded here, in the top-level description, and in the $comment on max_iterations.",
+  "description": "Stage contract carrying the inner loop of PRECISION_GREASE_DEV: a campaign of up to max_iterations bench rounds, each round producing samples, running the screen and bench tests, assessing variance, and ending in one stop_state. The ledger is opened empty at CAMPAIGN_OPENED (no round has run yet) and is appended per round boundary, oldest first. Cross-field rules: current_iteration must not exceed max_iterations, and it must equal the round the ledger stands at (1 while no round is recorded; len(iterations) + 1 while the newest recorded round ended CONTINUE; len(iterations) otherwise). Pure JSON Schema cannot compare instance values, so those checks are NOT expressed structurally here -- the validator enforces them and reports them; this description and the $comment on max_iterations record the rules for the reader (no fake constraint is invented). pairing_design exists because paired comparison (an A/B pair run in the same round and swapped in the next round) is the design this project should prefer: at a fixed sigma, pairing buys more resolution than trying to measure sigma precisely.",
+  "$comment": "Cross-field rules current_iteration <= max_iterations and current_iteration == the round the ledger stands at: pure JSON Schema has no keyword that compares instance values, so these rules are deliberately NOT expressed structurally and no fake if/then is invented. The validator enforces them and reports them; they are recorded here, in the top-level description, and in the $comment on max_iterations.",
   "allOf": [
     { "$ref": "common.schema.json#/$defs/artifact" }
   ],
@@ -25,14 +25,14 @@
       "minimum": 1
     },
     "current_iteration": {
-      "description": "Bench round this campaign is currently at, 1-based. Validator-enforced: must not exceed max_iterations.",
+      "description": "Bench round this campaign stands at, 1-based. Validator-enforced (not structurally expressible): with an empty ledger it is 1, and otherwise it is len(iterations) + 1 when the newest recorded round ended CONTINUE (that round opened the next one) and len(iterations) when the newest recorded round ended otherwise (the ledger closed at that round). It must never exceed max_iterations.",
       "type": "integer",
       "minimum": 1
     },
     "iterations": {
-      "description": "One entry per inner-loop round actually run, oldest first. Every round records how it ended through stop_state; capped by max_iterations (validator-enforced).",
+      "description": "One entry per inner-loop round whose boundary has been recorded, oldest first. The ledger is opened BEFORE round 1 is run (stage CAMPAIGN_OPENED), so it is legitimately empty until round 1's boundary is reached; every recorded round states how it ended through stop_state; capped by max_iterations (validator-enforced).",
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": { "$ref": "#/$defs/iteration_entry" }
     },
     "pairing_design": { "$ref": "#/$defs/pairing_design" },
@@ -75,12 +75,12 @@
           "minLength": 1
         },
         "model_reference": {
-          "description": "Optional model artifact updated from this round's results.",
+          "description": "Exit round only: written only on the round that exits the inner loop (stop_state other than CONTINUE). A round that looped back (stop_state=CONTINUE) must carry null here - the model is updated after the round that closes the loop, never on every round. Validator-enforced.",
           "type": ["string", "null"],
           "minLength": 1
         },
         "next_batch_reference": {
-          "description": "Optional next-batch reference when this round decided a follow-up batch.",
+          "description": "Exit round only: written only on the round that exits the inner loop (stop_state other than CONTINUE), and it is a reference kept for the record - the next-batch record itself carries its own id. A round that looped back (stop_state=CONTINUE) must carry null here. Validator-enforced.",
           "type": ["string", "null"],
           "minLength": 1
         },

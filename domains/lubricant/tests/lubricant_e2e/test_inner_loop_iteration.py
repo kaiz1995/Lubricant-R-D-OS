@@ -45,10 +45,12 @@ counter), and the records the pair names are checked back on disk.
 
 Records with no producing script usable here are assembled inline against their schemas
 from ``fixtures/inner-loop/`` -- today that is the MODEL_BUILT record alone:
-statistical-analysis requires the oil-route upstream artifacts (challenge / failure_ctq /
-test_method / experiment) that this inner-loop-only workspace deliberately does not
-carry, and its REAL refusal is asserted below rather than printed. E2E-1
-(``test_precision_grease_chain.py``) drives MODEL_BUILT for real on the full route.
+statistical-analysis's remaining oil-route upstream requirements (failure_ctq /
+test_method) are not carried by this inner-loop-only workspace, and its REAL refusal is
+asserted below rather than printed. The challenge path (C-1) and the experiment path (E-2)
+are legal omissions on the grease route, so the probe asserts their ABSENCE from the
+refusal. E2E-1 (``test_precision_grease_chain.py``) drives MODEL_BUILT for real on the
+full route.
 The campaign and next_batch records used to be inline fixtures as well; both are now
 produced by their skills, so ``fixtures/inner-loop/campaign_iteration_*.json`` and
 ``next_batch_round_1.json`` are no longer read by this test (they stay on disk as
@@ -501,9 +503,12 @@ def screening_input(project_path: Path, batch_path: Path, sample_path: Path,
 
 
 def bench_test_input(project_path: Path, run_id: str, batch_reference: str, sample_reference: str,
-                     iteration: int, event_time: float) -> dict:
+                     iteration: int, event_time: float, screening_artifacts: list[str]) -> dict:
     return {
         "project_artifact": project_path.name,
+        # E-3: the screening artifacts that released this run's sample; the bench gate
+        # resolves them and refuses a sample no PASS/RELEASED screen released.
+        "screening_artifacts": list(screening_artifacts),
         "evidence_scope": "PHYSICAL",
         "evidence": [
             {
@@ -518,6 +523,9 @@ def bench_test_input(project_path: Path, run_id: str, batch_reference: str, samp
             "bench_reference": BENCH_ID,
             "batch_reference": batch_reference,
             "sample_reference": sample_reference,
+            # E-2: the step-14 modeling entry links its response references against the
+            # CTQs the round's bench runs recorded.
+            "ctq_reference": CTQ_ID,
             "protocol_version": "BENCH_PROTOCOL_V2",
             "setpoints": ["load 1.5 kN", "speed 1200 rpm", "temperature 80 degC"],
             "environment": {"temperature_c": 23.5, "humidity_percent": 45.0},
@@ -748,19 +756,24 @@ def next_batch_request(campaign_name: str, design_name: str, variance_name: str)
 
 
 def model_probe_input(project_path: Path, artifact_names: dict[str, str]) -> dict:
-    """The grease-route statistical-analysis request, used only to locate the MODEL_BUILT gap."""
+    """The grease-route statistical-analysis request, used only to locate the MODEL_BUILT gap.
+
+    C-1/E-2 shape: the challenge path and the experiment path are both legal omissions on
+    the grease route, so the probe does not name them; everything the route DOES carry --
+    the four inner-loop artifacts plus the campaign ledger (W1 shape: the counter has
+    advanced past the recorded round) -- is supplied by path.
+    """
     return {
         "project_artifact": project_path.name,
-        "challenge_artifact": "challenge.json",
         "failure_ctq_artifact": "failure_ctq.json",
         "test_method_artifact": "test_method.json",
         "design_space_artifact": artifact_names["design_space"],
         "experiment_design_artifact": artifact_names["experiment_design"],
-        "experiment_artifact": "experiment.json",
         "batch_artifact": artifact_names["batch"],
         "screening_artifact": artifact_names["screening"],
         "bench_test_artifact": artifact_names["bench_test"],
         "variance_artifact": artifact_names["variance"],
+        "campaign_artifact": artifact_names["campaign"],
         "analysis": {
             "model_id": "MODEL-PGD-IL-001",
             "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL"],
@@ -899,15 +912,39 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         screening = check_schema("screening", screening_path)
         assert screening["overall_verdict"] == "PASS", screening
         assert screening["gate_to_bench"] == "RELEASED" and screening["decision"] == "GO", screening
-        print("E2E-2 ok: SCREENING_PASSED built and validated; gate_to_bench RELEASED")
+        # The reference arm is screened the same way: both samples of the paired round
+        # must clear the screen, because the bench gate (E-3) releases a slot only for a
+        # sample its own PASS/RELEASED screening record covers.
+        reference_screening_request = ws / "input-screening-reference.json"
+        write_json(reference_screening_request, screening_input(
+            project_path, batch_paths[BATCH_REFERENCE[1]], sample_paths[BATCH_REFERENCE[1]],
+            "SCR-PGD-IL-002", BATCH_REFERENCE[1], failing_index=None, bench_request=BATCH_REFERENCE[1],
+        ))
+        reference_screening_path = ws / "screening-002.json"
+        run_ok(scripts["screening"] / "preflight_grease_screening.py", reference_screening_request)
+        run_ok(scripts["screening"] / "build_screening_artifact.py", reference_screening_request, reference_screening_path)
+        run_ok(scripts["screening"] / "validate_screening_artifact.py", reference_screening_path)
+        reference_screening = check_schema("screening", reference_screening_path)
+        assert reference_screening["overall_verdict"] == "PASS", reference_screening
+        assert reference_screening["gate_to_bench"] == "RELEASED", reference_screening
+        print("E2E-2 ok: SCREENING_PASSED built and validated for both arms; gate_to_bench RELEASED")
 
         # --- BENCH_TESTED: four bench runs of the round -----------------------
+        screening_by_sample = {
+            BATCH_CANDIDATE[1]: screening_path,
+            BATCH_REFERENCE[1]: reference_screening_path,
+        }
         bench_test_paths: list[Path] = []
         for index, (run_id, batch_id, sample_id, event_time) in enumerate(ROUND_1_RUNS):
             request = ws / f"input-bench-test-{index}.json"
-            write_json(request, bench_test_input(project_path, run_id, batch_id, sample_id, 1, event_time))
+            write_json(request, bench_test_input(project_path, run_id, batch_id, sample_id, 1, event_time,
+                                                 [screening_by_sample[sample_id].name]))
             artifact = ws / ("bench_test.json" if index == 0 else f"bench_test-{PROJECT_ID}-{run_id}.json")
-            run_ok(scripts["bench_test"] / "preflight_experiment_import.py", request)
+            preflight = run_ok(scripts["bench_test"] / "preflight_experiment_import.py", request)
+            if index == 0:
+                # E-3: the run that may spend a slot prints the release conclusion, naming
+                # the screening record that released its sample.
+                assert f"released by screening {screening['screening_id']}" in preflight.stdout, preflight.stdout
             run_ok(scripts["bench_test"] / "build_bench_test_artifact.py", request, artifact)
             run_ok(scripts["bench_test"] / "validate_bench_test_artifact.py", artifact)
             record = check_schema("bench_test", artifact)
@@ -917,6 +954,16 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert len(found) == 4, found
         result["bench_test_records_in_round_1"] = found
         print(f"E2E-2 ok: BENCH_TESTED x{len(bench_test_paths)} built and validated by experiment-import (bench path)")
+        # E-3: the field set is closed -- a bench request that omits screening_artifacts is
+        # refused by name; the gate never assumes a screen it was not given.
+        missing_screening = bench_test_input(project_path, "RUN-PGD-IL-NOSCR", BATCH_CANDIDATE[0],
+                                             BATCH_CANDIDATE[1], 1, 2.5, [screening_path.name])
+        del missing_screening["screening_artifacts"]
+        missing_screening_path = ws / "input-bench-test-no-screening.json"
+        write_json(missing_screening_path, missing_screening)
+        missing_refused = run(scripts["bench_test"] / "preflight_experiment_import.py", missing_screening_path)
+        assert missing_refused.returncode != 0 and "screening_artifacts" in missing_refused.stdout, missing_refused.stdout
+        print("E2E-2 ok: a bench request without screening_artifacts is refused by name (E-3)")
 
         # --- VARIANCE_ASSESSED: the round's difference is real ----------------
         variance_request = ws / "input-variance.json"
@@ -946,60 +993,49 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         print(f"E2E-2 ok: BENCH_RESOURCE_REGISTERED built and validated by bench-registration "
               f"({bench['available_bench_slots']} derived slots)")
 
-        # --- MODEL_BUILT: the one record this workspace cannot produce ---------
-        # statistical-analysis requires the oil-route upstream artifacts (challenge /
-        # failure_ctq / test_method / experiment) that an inner-loop-only workspace does
-        # not carry, while the route's own contract-UNDECIDED bench_test record must NOT
-        # be refused (WP-14 exempted it; E2E-1 drives the stage for real on the full
-        # route). The record below is therefore a labelled fixture, and the probe asserts
-        # the skill's REAL refusal: exactly the four missing upstreams, and no
-        # bench_test-demand wording.
-        write_json(ws / "model.json", read_json(FIXTURES / "model_round_1.json"))
-        model = check_schema("model", ws / "model.json")
-        assert model["stage"] == "MODEL_BUILT", model
-        probe = run(scripts["model"] / "preflight_statistical_analysis.py",
-                    _probe_path(ws, project_path, design_space_path, experiment_design_path,
-                                batch_paths[BATCH_CANDIDATE[1]], screening_path, bench_test_paths[0],
-                                variance_path))
-        assert probe.returncode != 0, probe.stdout
-        assert probe.stdout.startswith("HOLD: missing or invalid:"), probe.stdout
-        for key in ("challenge_artifact", "failure_ctq_artifact", "test_method_artifact", "experiment_artifact"):
-            assert f"{key} cannot be read" in probe.stdout, probe.stdout
-        assert MODEL_BUILT_GAP not in probe.stdout, (
-            "the contract-UNDECIDED bench_test record must not be refused (WP-14): " + probe.stdout
-        )
-        print("E2E-2 ok: statistical-analysis's real refusal on this workspace names only the four oil "
-              "upstreams it does not carry; the contract-UNDECIDED bench_test record is accepted "
-              "(MODEL_BUILT itself is a fixture here, driven for real by E2E-1)")
-
         # --- CAMPAIGN_OPENED: the loop's carrier, produced by its skill --------
-        # The round-1 entry is composed from the records THIS workspace produced (the
-        # sample ids the batches carry, the four bench-test run ids on disk, the
-        # screening and variance ids of this round), so the campaign record can be
-        # checked against the workspace instead of against another fixture.
-        round_1_entry = round_entry(
-            1,
-            [BATCH_CANDIDATE[1], BATCH_REFERENCE[1]],
-            screening=read_json(screening_path)["screening_id"],
-            variance=read_json(variance_path)["variance_id"],
-            model=model["model_id"],
-            next_batch="NEXT-PGD-IL-001",
-            bench_tests=[read_json(path)["run_id"] for path in bench_test_paths],
-        )
+        # W0 (D-1): the campaign is OPENED before round 1 runs, so its ledger is
+        # legitimately EMPTY here and current_iteration is 1. The round entries are
+        # appended at each round boundary (below), never pre-written at open time.
         campaign_path = ws / "campaign.json"
-        campaign_request_path = ws / "input-campaign-iteration-1.json"
-        write_json(campaign_request_path, campaign_request(1, [round_1_entry]))
+        campaign_request_path = ws / "input-campaign-opened.json"
+        write_json(campaign_request_path, campaign_request(1, []))
         run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_request_path)
         run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_request_path, campaign_path)
         run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
         campaign_1 = check_schema("campaign", campaign_path)
         assert campaign_1["campaign_id"] == CAMPAIGN_ID and campaign_1["current_iteration"] == 1, campaign_1
         assert campaign_1["decision"] == "GO", campaign_1
+        assert campaign_1["iterations"] == [], campaign_1["iterations"]
         # The request omitted the cap: the artifact must carry the contract's own figure
         # and record where it came from (a cap this loop could see invented would be the
         # one thing the bound cannot be).
         assert campaign_1["max_iterations"] == read_json(CONTRACT)["max_iterations"], campaign_1
         assert any(item.get("source") == "contracts/state-machine.json" for item in campaign_1["evidence"]), campaign_1
+        print("E2E-2 ok: CAMPAIGN_OPENED built and validated by bench-registration with an EMPTY ledger "
+              "(W0: the campaign is opened before round 1 runs)")
+
+        # --- the round-1 boundary: the ledger gains round 1 (W1) ---------------
+        # The entry is composed from the records THIS workspace produced (the sample ids
+        # the batches carry, the four bench-test run ids on disk, the screening and
+        # variance ids of this round), so the campaign record can be checked against the
+        # workspace instead of against another fixture. A round that looped back carries
+        # null for the two exit-round references (E2=B).
+        round_1_entry = round_entry(
+            1,
+            [BATCH_CANDIDATE[1], BATCH_REFERENCE[1]],
+            screening=read_json(screening_path)["screening_id"],
+            variance=read_json(variance_path)["variance_id"],
+            bench_tests=[read_json(path)["run_id"] for path in bench_test_paths],
+        )
+        round_1_request_path = ws / "input-campaign-iteration-1.json"
+        write_json(round_1_request_path, campaign_request(2, [round_1_entry]))
+        run_ok(scripts["campaign"] / "preflight_campaign_registration.py", round_1_request_path)
+        run_ok(scripts["campaign"] / "build_campaign_artifact.py", round_1_request_path, campaign_path)
+        run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
+        campaign_1 = check_schema("campaign", campaign_path)
+        assert campaign_1["current_iteration"] == 2, campaign_1
+        assert campaign_1["decision"] == "GO", campaign_1
         # Round 1's entry, as the product stored it, names records that exist on disk.
         stored = campaign_1["iterations"][0]
         assert stored == round_1_entry, stored
@@ -1007,8 +1043,43 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         assert read_json(variance_path)["variance_id"] == stored["variance_reference"], stored
         assert [read_json(path)["run_id"] for path in bench_test_paths] == stored["bench_test_references"], stored
         assert all((ws / name).is_file() for name in (screening_path.name, variance_path.name)), stored
-        print("E2E-2 ok: CAMPAIGN_OPENED built and validated by bench-registration; round 1's entry names the "
-              "screening/variance/bench-test records that exist on disk")
+        print("E2E-2 ok: the round-1 boundary appended round 1's entry; the ledger stands at iteration 2 "
+              "(W1: a CONTINUE round opened the next one)")
+
+        # --- MODEL_BUILT: the probe, on the W1-shape campaign -------------------
+        # E-2: the modeling entry consumes the round's own ledger, and it runs after the
+        # round boundary has recorded the round (W1 above: the counter stands at 2, the
+        # newest entry is round 1 ending CONTINUE with both exit-round references null) --
+        # exactly the shape step 14 sees in the real loop. The record below is a labelled
+        # fixture (the workspace produces no model), and the probe asserts the skill's REAL
+        # refusal: only the two oil-path upstreams this inner-loop-only workspace does not
+        # carry. The challenge path (C-1) and the experiment path (E-2) are legal omissions
+        # on the grease route, and the contract-UNDECIDED bench_test record must not be
+        # refused (WP-14; E2E-1 drives the stage for real on the full route).
+        write_json(ws / "model.json", read_json(FIXTURES / "model_round_1.json"))
+        model = check_schema("model", ws / "model.json")
+        assert model["stage"] == "MODEL_BUILT", model
+        probe = run(scripts["model"] / "preflight_statistical_analysis.py",
+                    _probe_path(ws, project_path, design_space_path, experiment_design_path,
+                                batch_paths[BATCH_CANDIDATE[1]], screening_path, bench_test_paths[0],
+                                variance_path, campaign_path))
+        assert probe.returncode != 0, probe.stdout
+        assert probe.stdout.startswith("HOLD: missing or invalid:"), probe.stdout
+        for key in ("failure_ctq_artifact", "test_method_artifact"):
+            assert f"{key} cannot be read" in probe.stdout, probe.stdout
+        assert "challenge_artifact cannot be read" not in probe.stdout, probe.stdout
+        assert "experiment_artifact cannot be read" not in probe.stdout, probe.stdout
+        assert MODEL_BUILT_GAP not in probe.stdout, (
+            "the contract-UNDECIDED bench_test record must not be refused (WP-14): " + probe.stdout
+        )
+        # The campaign ledger is supplied and read: no error names it, and none demands it.
+        assert "campaign_artifact cannot be read" not in probe.stdout, probe.stdout
+        assert "campaign_artifact is required" not in probe.stdout, probe.stdout
+        print("E2E-2 ok: statistical-analysis's real refusal on this workspace names only the two oil "
+              "upstreams it does not carry (failure_ctq / test_method); the challenge and experiment "
+              "paths are legal omissions on the grease route, the contract-UNDECIDED bench_test record "
+              "is accepted, and the campaign ledger is consumed (MODEL_BUILT itself is a fixture here, "
+              "driven for real by E2E-1)")
 
         # --- NEXT_BATCH_DECIDED: round 2 proposed by its skill -----------------
         next_batch_request_path = ws / "input-next-batch.json"
@@ -1021,11 +1092,13 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         next_batch = check_schema("next_batch", next_batch_path)
         assert next_batch["stage"] == "NEXT_BATCH_DECIDED", next_batch
         # The iteration pair is DERIVED from the campaign carrier (the request never
-        # supplies it); the ids and the stop state must agree with the campaign's own
-        # round-1 entry, which is what authorises this decision.
+        # supplies it); the stop state must agree with the campaign's own round-1 entry,
+        # which is what authorises this decision. The carrier's next_batch_reference is a
+        # record kept for the reader (E2=B: written only on the exit round, null on a
+        # CONTINUE round), so the self-comparison that used to sit here is gone.
         assert (next_batch["from_iteration"], next_batch["to_iteration"]) == (1, 2), next_batch
         assert next_batch["campaign_reference"] == campaign_1["campaign_id"], next_batch
-        assert next_batch["next_batch_id"] == campaign_1["iterations"][0]["next_batch_reference"], next_batch
+        assert campaign_1["iterations"][0]["next_batch_reference"] is None, campaign_1["iterations"][0]
         assert next_batch["stop_state"] == campaign_1["iterations"][0]["stop_state"] == "CONTINUE", next_batch
         assert next_batch["bench_slots_required"] == len(next_batch["proposed_samples"]) == 2, next_batch
         assert next_batch["information_gain_basis"].strip(), next_batch
@@ -1091,8 +1164,10 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         # on disk, and (c) below, that the SAME rules refuse a version bump and a dropped
         # round -- the refusals are real product output.
         appended = f"ITER-2:{round2_batch.name}"
-        assert campaign_1["current_iteration"] == 1
-        assert next_batch["to_iteration"] == campaign_1["current_iteration"] + 1, next_batch
+        # W1 has already advanced the counter (the round that ended CONTINUE opened the
+        # next one), and the decision's pair is derived from the newest recorded entry.
+        assert campaign_1["current_iteration"] == 2, campaign_1
+        assert next_batch["to_iteration"] == campaign_1["current_iteration"], next_batch
         missing_round_1_records = [name for name in frozen_round_1 if not (ws / name).is_file()]
         assert missing_round_1_records == [], missing_round_1_records
         assert (ws / round2_batch.name).is_file(), round2_batch
@@ -1128,15 +1203,16 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         # campaign iteration 2 is produced by the SAME skill, and its round-1 entry is the
         # one the iteration-1 artifact recorded (read back from disk, never re-authored):
         # the iteration advance runs through the producer, and the producer must refuse a
-        # record that drops round 1 or exceeds its own cap.
+        # record that drops round 1 or exceeds its own cap. Round 2 ends CONTINUE, so the
+        # counter stands at the round that round opened (W1: 3).
         campaign_2_request_path = ws / "input-campaign-iteration-2.json"
         round_2_entry = round_entry(2, [BATCH_ROUND_2[1]], next_batch=None)
-        write_json(campaign_2_request_path, campaign_request(2, [stored, round_2_entry]))
+        write_json(campaign_2_request_path, campaign_request(3, [stored, round_2_entry]))
         run_ok(scripts["campaign"] / "preflight_campaign_registration.py", campaign_2_request_path)
         run_ok(scripts["campaign"] / "build_campaign_artifact.py", campaign_2_request_path, campaign_path)
         run_ok(scripts["campaign"] / "validate_campaign_artifact.py", campaign_path)
         campaign_2 = check_schema("campaign", campaign_path)
-        assert campaign_2["current_iteration"] == 2, campaign_2
+        assert campaign_2["current_iteration"] == 3, campaign_2
         assert campaign_2["decision"] == "GO", campaign_2
         assert campaign_2["iterations"][0] == stored, campaign_2["iterations"]
         assert [entry["iteration"] for entry in campaign_2["iterations"]] == [1, 2], campaign_2["iterations"]
@@ -1146,7 +1222,7 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
         # (i) A campaign that records ONLY round 2 is refused: rounds are oldest first,
         # so the loop cannot drop the round it advanced past.
         dropped_request = ws / "input-campaign-dropped-round-1.json"
-        write_json(dropped_request, campaign_request(2, [round_entry(2, [BATCH_ROUND_2[1]])]))
+        write_json(dropped_request, campaign_request(3, [round_entry(2, [BATCH_ROUND_2[1]])]))
         dropped_probe = run(scripts["campaign"] / "preflight_campaign_registration.py", dropped_request)
         assert dropped_probe.returncode != 0 and CAMPAIGN_ROUND_ORDER_GAP in dropped_probe.stdout, dropped_probe.stdout
         # (ii) A campaign whose current_iteration exceeds its own cap is refused.
@@ -1185,7 +1261,7 @@ def scenario_inner_loop_iteration(router, validator) -> dict:
 
 
 def _probe_path(ws: Path, project_path, design_space_path, experiment_design_path,
-                batch_path, screening_path, bench_test_path, variance_path) -> Path:
+                batch_path, screening_path, bench_test_path, variance_path, campaign_path) -> Path:
     request = ws / "input-model-probe.json"
     write_json(request, model_probe_input(project_path, {
         "design_space": design_space_path.name,
@@ -1194,6 +1270,7 @@ def _probe_path(ws: Path, project_path, design_space_path, experiment_design_pat
         "screening": screening_path.name,
         "bench_test": bench_test_path.name,
         "variance": variance_path.name,
+        "campaign": campaign_path.name,
     }))
     return request
 
@@ -1256,10 +1333,33 @@ def scenario_screening_rework(router, validator) -> dict:
         assert n14.returncode != 0 and "must not consume a bench slot" in n14.stdout, n14.stdout
         print("E2E-3 ok: SCREENING_PASSED recorded FAIL -> gate_to_bench BLOCKED -> decision HOLD, "
               "and the bench request for the failed sample is refused (N14)")
+        # E-3: the bench side now refuses the same sample on its OWN evidence. The bench
+        # request names this round's FAIL/BLOCKED screening record and the bench gate
+        # resolves it (instead of trusting the reference), so a sample the screen failed
+        # cannot even be documented as having spent a slot. The refusal names the sample
+        # AND the screening id.
+        bench_refused_request = ws / "input-bench-refused.json"
+        write_json(bench_refused_request, bench_test_input(
+            project_path, "RUN-PGD-IL-RW-1", BATCH_CANDIDATE[0], BATCH_CANDIDATE[1], 1, 2.5,
+            [screening_path.name],
+        ))
+        bench_refused = run(scripts["bench_test"] / "preflight_experiment_import.py", bench_refused_request)
+        assert bench_refused.returncode != 0, bench_refused.stdout
+        assert BATCH_CANDIDATE[1] in bench_refused.stdout, bench_refused.stdout
+        assert "SCR-PGD-IL-001" in bench_refused.stdout, bench_refused.stdout
+        print("E2E-3 ok: the bench gate refuses the failed screen's sample on its own evidence "
+              "(the refusal names " + BATCH_CANDIDATE[1] + " and SCR-PGD-IL-001)")
 
         # --- the rework edge: the router ALLOWs SCREENING_PASSED -> BATCH_PRODUCED ---
+        # The cap (`max_iterations`) is measured in bench rounds and governs the
+        # LOOP_BACK edge only; a REWORK remakes the batch without consuming a bench
+        # slot (contract `loop_edges[1].note`), so the rework edge stays ALLOWed even
+        # at the cap. Asserted at the cap itself: that is the case the old
+        # behaviour got wrong.
+        assert router.MAX_ITERATIONS == 12, router.MAX_ITERATIONS
         router_rework = router.decide(
-            {"stage": "SCREENING_PASSED", "status": "ACTIVE", "evidence_scope": "PHYSICAL", "project_type": PROJECT_TYPE},
+            {"stage": "SCREENING_PASSED", "status": "ACTIVE", "evidence_scope": "PHYSICAL",
+             "project_type": PROJECT_TYPE, "current_iteration": router.MAX_ITERATIONS},
             "BATCH_PRODUCED",
         )
         assert router_rework["decision"] == "ALLOW", router_rework
@@ -1451,11 +1551,11 @@ def main() -> int:
     )
     print(
         "NOT COVERED HERE: MODEL_BUILT is the one inline record (fixtures/inner-loop/model_round_1.json) because "
-        "statistical-analysis requires the oil-route upstream artifacts (challenge / failure_ctq / test_method / "
-        "experiment) that this inner-loop-only workspace does not carry; its real refusal names exactly those four "
-        "and no longer demands a verdict from the contract-UNDECIDED bench_test record, and E2E-1 "
-        "(test_precision_grease_chain.py) drives MODEL_BUILT for real on the full route. The oil-route upstream "
-        "stages themselves are not re-driven here."
+        "statistical-analysis's remaining oil-route upstreams (failure_ctq / test_method) are not carried by this "
+        "inner-loop-only workspace; its real refusal names exactly those two -- the challenge path (C-1) and the "
+        "experiment path (E-2) are legal grease-route omissions -- and it no longer demands a verdict from the "
+        "contract-UNDECIDED bench_test record. E2E-1 (test_precision_grease_chain.py) drives MODEL_BUILT for real "
+        "on the full route. The oil-route upstream stages themselves are not re-driven here."
     )
     return 0
 

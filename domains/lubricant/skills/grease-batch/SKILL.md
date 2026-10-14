@@ -1,9 +1,9 @@
 ---
 name: grease-batch
-description: Record one executed grease batch at BATCH_PRODUCED - the full saponification / dehydration / phase-inversion / dilution-cooling / milling / deaeration / filling / ripening trajectory with setpoint, actual, duration and an explicit per-step deviation verdict, plus the charged raw-material lots, operator, equipment, anomalies, and the labelled sample taken from it. Use when user mentions "grease-batch", "制脂与制样", "工艺执行记录", "工艺偏差", "皂化温度曲线", "转相", "研磨参数", "投料批次", "样品标签", or advancing to Stage 9 in lubricant R&D.
+description: Record one executed grease batch at BATCH_PRODUCED - the full saponification / dehydration / phase-inversion / dilution-cooling / milling / deaeration / filling / ripening trajectory with setpoint, actual, duration and an explicit per-step deviation verdict, plus the charged raw-material lots, operator, equipment, anomalies, and the labelled sample taken from it. Use when user mentions "grease-batch", "制脂与制样", "工艺执行记录", "工艺偏差", "皂化温度曲线", "转相", "研磨参数", "投料批次", "样品标签", or advancing to BATCH_PRODUCED in lubricant R&D.
 ---
 
-# Grease Batch (Stage 9 · 制脂与制样)
+# Grease Batch (BATCH_PRODUCED · 制脂与制样)
 
 Record one executed grease batch at `BATCH_PRODUCED`: what was charged, what the equipment
 actually did, and what deviation that produced against the declared baseline process. This
@@ -160,8 +160,8 @@ would hide the decision.
 
 ### Release Rule (放行判据)
 ```
-batch_verdict VALID     -> decision GO    : the sample may go to Stage 10 (grease-screening)
-batch_verdict DEVIATED  -> decision HOLD  : disposition the deviation first; Stage 10 must not proceed
+batch_verdict VALID     -> decision GO    : the sample may go to SCREENING_PASSED (grease-screening)
+batch_verdict DEVIATED  -> decision HOLD  : disposition the deviation first; SCREENING_PASSED must not proceed
 batch_verdict VOID      -> decision HOLD  : the batch is voided; the sample must not reach the bench
 ```
 
@@ -232,7 +232,7 @@ appended as suffixed names carrying the record id. After the commit, run
 proceeding. The checker also enforces that `project.json`'s `stage` stays the constant
 `PROJECT_DEFINED` - it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 9 stops here at BATCH_PRODUCED.
+# 🔴 CHECKPOINT · STOP: the batch record stops here at BATCH_PRODUCED. Next station: SCREENING_PASSED (grease-screening).
 ```
 
 ---
@@ -255,7 +255,7 @@ proceeding. The checker also enforces that `project.json`'s `stage` stays the co
 | `HOLD: ... sample ... batch_reference ... must not be supplied` | 手填了由批次记录绑定的字段 | **STOP**。删除该字段，`batch_reference` / `formula_reference` 由 builder 从批次记录绑定。 |
 | `HOLD: ... sample.chain_of_custody must be a non-empty array` | 样品无交接链 | **STOP**。补真实交接记录；没有交接记录的样品不能作为下游测量证据。 |
 | `HOLD: ... workspace naming: ...` | 工作区存在面板认不出的工件名 | **STOP**。按 `check_artifact_naming.py` 的报错改名，再重跑 preflight。 |
-| `GATE: batch ... batch_verdict=DEVIATED -> decision HOLD; ... sample ... must not leave Stage 9 and Stage 10 must not proceed` | 批次超差 | **保留工件并停在第 9 步**。这是真实结局，不是可修复的错误：先把偏差处置完（判可用则重记判语，判不可用则作废重做），再谈筛测。 |
+| `GATE: batch ... batch_verdict=DEVIATED -> decision HOLD; ... sample ... must not leave BATCH_PRODUCED and SCREENING_PASSED must not proceed` | 批次超差 | **保留工件并停在第 9 步**。这是真实结局，不是可修复的错误：先把偏差处置完（判可用则重记判语，判不可用则作废重做），再谈筛测。 |
 | `FAIL: ...: the recorded trajectory does not match its derived trace E-TRAJ-...` | 落盘工件被手工改过 | **STOP**。恢复原始轨迹，用 builder 重新生成；不得手改工件。 |
 | `FAIL: cannot read artifact or schemas` | Schema 路径缺失或 JSON 语法损坏 | 检查 `../../schemas/` 与输入文件 JSON 格式。 |
 
@@ -286,7 +286,7 @@ proceeding. The checker also enforces that `project.json`'s `stage` stays the co
    "酌情设置", "可以考虑". Every step carries a concrete setpoint, actual, unit, duration and
    tolerance.
 8. **NO Cross-Stage Mutation**: DO NOT screen the sample, allocate a bench slot, run a
-   variance judgement, update a model, or advance the state machine here. Stage 9 records
+   variance judgement, update a model, or advance the state machine here. BATCH_PRODUCED records
    the batch and stops.
 9. **NO Synthetic Closure**: DO NOT let a SYNTHETIC batch record authorize stage
    advancement, and never present a synthetic trajectory as a real kettle log.

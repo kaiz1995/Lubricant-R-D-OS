@@ -1,9 +1,9 @@
 ---
 name: experiment-import
-description: Import one PHYSICAL experiment record with DOE-point and execution provenance at EXPERIMENT_RUNNING, and one bench run at BENCH_TESTED on the PRECISION_GREASE_DEV route; preflight verifies 6 upstream artifacts, raw DOE SHA-256 digest, calibration provenance, and the censoring discipline. Use when user mentions "experiment-import", "实验导入", "实验数据接入", "台架数据摄取", "台架实测", "删失", "物理实验记录", or advancing to Stage 6 in lubricant R&D.
+description: Import one PHYSICAL experiment record with DOE-point and execution provenance at EXPERIMENT_RUNNING, and one bench run at BENCH_TESTED on the PRECISION_GREASE_DEV route; preflight verifies 6 upstream artifacts, raw DOE SHA-256 digest, calibration provenance, and the censoring discipline. Use when user mentions "experiment-import", "实验导入", "实验数据接入", "台架数据摄取", "台架实测", "删失", "物理实验记录", or advancing to EXPERIMENT_RUNNING in lubricant R&D.
 ---
 
-# Experiment Import (Stage 6 · and Stage 11 on the grease route)
+# Experiment Import (EXPERIMENT_RUNNING · BENCH_TESTED on PRECISION_GREASE_DEV)
 
 Import one PHYSICAL experiment record with strict execution and DOE-point provenance at `EXPERIMENT_RUNNING` for the Lubricant R&D Domain Pack.
 This is a raw experimental record ingestion and provenance lock, NOT a statistical regression or performance conclusion.
@@ -97,7 +97,7 @@ python skills/experiment-import/scripts/validate_experiment_artifact.py <tempora
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 6 stops here at EXPERIMENT_RUNNING. Pass to Stage 7 (statistical-analysis).
+# 🔴 CHECKPOINT · STOP: the experiment record stops here at EXPERIMENT_RUNNING. Next station per project_type: MODEL_BUILT (statistical-analysis), OPTIMIZED (COST_DOWN, optimization), or VERIFIED (CUSTOMIZATION, gate-review).
 ```
 
 ---
@@ -198,7 +198,7 @@ Then commit the temporary file as `bench_test.json` (first record) or
 `bench_test-<project_id>-<run_id>.json` (subsequent records), and run
 `python scripts/check_artifact_naming.py <workspace_root>`.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 11 stops here at BENCH_TESTED. Pass to Stage 12 (variance-assessment).
+# 🔴 CHECKPOINT · STOP: the bench run stops here at BENCH_TESTED. Next station: VARIANCE_ASSESSED (variance-assessment).
 ```
 
 ### Bench-path failure modes

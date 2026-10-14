@@ -1,0 +1,6 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "failure_ctq",
+  "stage": "FAILURE_CTQ_DEFINED",
+  "project_id": "PGD-REF-001"
+}

@@ -19,6 +19,7 @@ const {
   GATE_UPSTREAM,
   buildGateArtifact,
   evaluateGate,
+  expectedStageOf,
   finalStatus,
   hasGap,
   nextGateId,
@@ -276,6 +277,133 @@ describe("evaluateGate", () => {
   it("结构不合规的工件等同于缺失", () => {
     const result = evaluateGate(snapshotWith({}, ["optimization"]));
     expect(result.blockers.some((b) => b.includes("未就绪：配方优化"))).toBe(true);
+  });
+});
+
+describe("expectedStageOf（镜像 preflight_gate_review.expected_stage，G-1）", () => {
+  it("脂路线分派 optimization 与 process 两条分支，其余返回原常量", () => {
+    expect(
+      expectedStageOf({ artifactType: "optimization", stage: "OPTIMIZED" }, "PRECISION_GREASE_DEV"),
+    ).toBe("NON_INFERIORITY_PASSED");
+    expect(
+      expectedStageOf(
+        { artifactType: "process", stage: "PROCESS_WINDOW_DEFINED" },
+        "PRECISION_GREASE_DEV",
+      ),
+    ).toBe("PROCESS_SCALE_VALIDATED");
+    // 其余 key / 其余 project_type / 读不到章程 → 原常量逐字返回
+    expect(
+      expectedStageOf({ artifactType: "model", stage: "MODEL_BUILT" }, "PRECISION_GREASE_DEV"),
+    ).toBe("MODEL_BUILT");
+    expect(
+      expectedStageOf({ artifactType: "process", stage: "PROCESS_WINDOW_DEFINED" }, "NEW_PRODUCT"),
+    ).toBe("PROCESS_WINDOW_DEFINED");
+    expect(expectedStageOf({ artifactType: "optimization", stage: "OPTIMIZED" }, null)).toBe(
+      "OPTIMIZED",
+    );
+  });
+});
+
+describe("evaluateGate — project_type 分派（G-1）", () => {
+  it("脂路线 optimization 报 NON_INFERIORITY_PASSED 时不再误报阶段归属", () => {
+    const snap = {
+      ...snapshotWith({ optimization: { stage: "NON_INFERIORITY_PASSED" } }),
+      projectType: "PRECISION_GREASE_DEV",
+    };
+    const result = evaluateGate(snap);
+    expect(result.blockers.some((b) => b.includes("阶段归属不符"))).toBe(false);
+    expect(result.canGo).toBe(true);
+  });
+
+  it("油路线（NEW_PRODUCT）期望值仍是 OPTIMIZED，分派不泄漏", () => {
+    const result = evaluateGate(
+      snapshotWith({ optimization: { stage: "NON_INFERIORITY_PASSED" } }),
+    );
+    expect(
+      result.blockers.some((b) => b.includes("阶段归属不符") && b.includes("应为 OPTIMIZED")),
+    ).toBe(true);
+  });
+});
+
+/** 在 9 份上游之外追加一个 process 探针（GATE_UPSTREAM 不含它，单独构造）。 */
+function withProcessProbe(
+  base: WorkspaceSnapshot,
+  projectType: string,
+  data: Record<string, unknown>,
+): WorkspaceSnapshot {
+  return {
+    ...base,
+    projectType,
+    probes: {
+      ...base.probes,
+      process: {
+        artifactType: "process",
+        file: "process.json",
+        exists: true,
+        valid: true,
+        errors: [],
+        data,
+        resolvedPath: "process.json",
+      },
+    },
+  };
+}
+
+describe("evaluateGate — process 记录纳入证据同源（G-1 可达子集）", () => {
+  const greaseProcess = (scope: string) =>
+    withProcessProbe(snapshotWith(), "PRECISION_GREASE_DEV", {
+      artifact_type: "process",
+      stage: "PROCESS_SCALE_VALIDATED",
+      evidence_scope: scope,
+    });
+
+  it("脂路线：process 的 SYNTHETIC 与 5 份 PHYSICAL 不一致时拦下（需 6 份同源）", () => {
+    const result = evaluateGate(greaseProcess("SYNTHETIC"));
+    const scopeCheck = result.checks.find((c) => c.id === "evidence-scope");
+    expect(scopeCheck?.ok).toBe(false);
+    expect(scopeCheck?.detail).toContain("需 6 份");
+    expect(result.canGo).toBe(false);
+  });
+
+  it("脂路线：process 与其它 5 份同为 PHYSICAL 时通过", () => {
+    const result = evaluateGate(greaseProcess("PHYSICAL"));
+    expect(result.checks.find((c) => c.id === "evidence-scope")?.ok).toBe(true);
+  });
+
+  it("油路线：工作区里的 process 记录不进聚合（不新增任何 blocker）", () => {
+    const oil = withProcessProbe(snapshotWith(), "NEW_PRODUCT", {
+      artifact_type: "process",
+      stage: "DESIGN_SPACE_DEFINED",
+      evidence_scope: "SYNTHETIC",
+    });
+    expect(evaluateGate(oil).blockers).toEqual(evaluateGate(snapshotWith()).blockers);
+  });
+});
+
+describe("suggestGateSubmission — 证据包 stage 走分派（G-1）", () => {
+  const draft = {
+    gateId: "GATE-WGO-001-001",
+    scope: "Stage Gate verification.",
+    gateStatus: "GO" as const,
+    reason: "ok",
+    risksText: "",
+  };
+
+  it("脂路线证据行报 NON_INFERIORITY_PASSED，油路线仍报 OPTIMIZED", () => {
+    const grease = {
+      ...snapshotWith({ optimization: { stage: "NON_INFERIORITY_PASSED" } }),
+      projectType: "PRECISION_GREASE_DEV",
+    };
+    const greaseEvidence = suggestGateSubmission(grease, evaluateGate(grease), draft).evidence.find(
+      (e) => e.evidence_id === "E-OPTIMIZATION",
+    );
+    expect(greaseEvidence?.statement).toContain("stage=NON_INFERIORITY_PASSED");
+
+    const oil = snapshotWith();
+    const oilEvidence = suggestGateSubmission(oil, evaluateGate(oil), draft).evidence.find(
+      (e) => e.evidence_id === "E-OPTIMIZATION",
+    );
+    expect(oilEvidence?.statement).toContain("stage=OPTIMIZED");
   });
 });
 

@@ -115,6 +115,12 @@ def expected_stage(stage, kind, project_type):
 # looks like a method id but does not resolve is worth flagging.
 METHOD_ID_RE = re.compile(r"[A-Z0-9]+(?:-[A-Z0-9]+)*-TM-\d+")
 CHALLENGE_ID_PREFIX_RE = re.compile(r"^[A-Z0-9]+-CHAL")
+# The recorded CHALLENGES_DEFINED gap of a route that carries no challenge step. The
+# stage sits on no type_route, so the grease route records the Challenge Map link as
+# ``UNROUTED:<project_id>`` instead of fabricating an out-of-route artifact: that is a
+# NOTE, not a dangling reference. Recognised by prefix and required to name the
+# workspace's own project_id, so the marker can never point at another project's chain.
+UNROUTED_PREFIX = "UNROUTED:"
 
 
 def load_all(workspace_dir):
@@ -222,12 +228,13 @@ def main(argv):
 
     # ---- 3. project_id identical across the whole chain -------------------
     pids = {a.get("project_id") for a in recognized.values()}
-    if len(pids) != 1 or None in pids:
+    chain_project_id = pids.pop() if len(pids) == 1 and None not in pids else None
+    if chain_project_id is None:
         problems.append(
             f"project_id not uniform across artifacts: {sorted(str(p) for p in pids)}"
         )
     else:
-        notes.append(f"  ok   project_id uniform: {pids.pop()}  (n={len(recognized)})")
+        notes.append(f"  ok   project_id uniform: {chain_project_id}  (n={len(recognized)})")
 
     proj = next((a for a in recognized.values() if a.get("artifact_type") == "project"), None)
     if proj is None:
@@ -242,7 +249,21 @@ def main(argv):
 
     for name, a in recognized.items():
         ref = a.get("challenge_reference")
-        if ref and ref not in challenge_ids:
+        if isinstance(ref, str) and ref.startswith(UNROUTED_PREFIX):
+            # The route's recorded CHALLENGES_DEFINED gap. It is a NOTE rather than a
+            # problem only when it names the workspace's own project_id: an UNROUTED
+            # marker pointing anywhere else is still a dangling reference.
+            if ref == f"{UNROUTED_PREFIX}{chain_project_id}":
+                notes.append(
+                    f"  note {name}: challenge_reference {ref} records the CHALLENGES_DEFINED gap "
+                    "of a route that carries no challenge step"
+                )
+            else:
+                problems.append(
+                    f"{name}: challenge_reference {ref!r} records an UNROUTED gap for a project "
+                    f"other than this workspace's own ({chain_project_id!r})"
+                )
+        elif ref and ref not in challenge_ids:
             problems.append(f"{name}: challenge_reference {ref!r} does not exist")
         ref = a.get("challenge")
         if (

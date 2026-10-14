@@ -24,11 +24,29 @@ from optimization_policy import (
     stage_for,
     trust_region_from_boundary,
 )
-from preflight_optimization import errors_for
+from preflight_optimization import errors_for, grease_without_challenge, unrouted_evidence
 
 
-def build_artifact(project: dict, model: dict, request: dict, variance: dict | None, boundary: object) -> dict:
-    """Assemble the optimization artifact. Pure function of validated input + upstreams."""
+def _evidence(project: dict, request: dict, data: dict) -> list:
+    """The request's evidence, plus the grease route's recorded Challenge Map gap.
+
+    The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    travels with the request the recorded link is written as the ASSUMED route-property
+    evidence item. Every other shape - every oil route, and a grease request that supplied
+    a challenge - writes exactly the evidence it wrote before.
+    """
+    evidence = list(request["evidence"])
+    if grease_without_challenge(data, project):
+        evidence.append(unrouted_evidence(project["project_id"]))
+    return evidence
+
+
+def build_artifact(project: dict, model: dict, request: dict, variance: dict | None, boundary: object, data: dict) -> dict:
+    """Assemble the optimization artifact. Pure function of validated input + upstreams.
+
+    ``data`` is the validated request object itself: ``grease_without_challenge`` reads
+    the presence of the challenge key off it, which is the route's own input shape.
+    """
     grease = grease_route(project)
     trust_region = trust_region_from_boundary(boundary) if grease else None
     variance_id = variance["variance_id"] if isinstance(variance, dict) else None
@@ -42,7 +60,7 @@ def build_artifact(project: dict, model: dict, request: dict, variance: dict | N
         "stage": stage_for(grease),
         "evidence_scope": model["evidence_scope"],
         **expected_decision_fields(resolved, grease, trust_region, variance_id if grease else None),
-        "evidence": request["evidence"],
+        "evidence": _evidence(project, request, data),
         "model_reference": model["model_id"],
         "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE",
         "optimization_id": request["optimization_id"],
@@ -66,7 +84,7 @@ def main() -> int:
     def load(key: str) -> dict: return json.loads((input_path.parent / data[key]).read_text(encoding="utf-8"))
     project = load("project_artifact"); model = load("model_artifact"); request = data["optimization"]
     variance = load("variance_artifact") if "variance_artifact" in data else None
-    artifact = build_artifact(project, model, request, variance, data.get(MODEL_TRUST_REGION_INPUT_FIELD))
+    artifact = build_artifact(project, model, request, variance, data.get(MODEL_TRUST_REGION_INPUT_FIELD), data)
     output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path} stage={artifact['stage']} objective_type={artifact['objective_type']}"); return 0
 

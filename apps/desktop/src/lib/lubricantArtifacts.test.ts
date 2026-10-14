@@ -21,7 +21,9 @@ const {
   emptySnapshot,
   probeWorkspace,
 } = await import("./lubricantArtifacts");
-const { STAGE_CHAIN } = await import("./lubricantContracts");
+const { STAGE_CHAIN, routeFor } = await import("./lubricantContracts");
+type ArtifactProbe = import("./lubricantArtifacts").ArtifactProbe;
+type WorkspaceSnapshot = import("./lubricantArtifacts").WorkspaceSnapshot;
 
 const entry = (name: string, path = name, isDir = false) => ({
   path,
@@ -83,6 +85,18 @@ const OWN_EXTRAS: Record<string, Record<string, unknown>> = {
     design_space_reference: "DS-1", test_method_references: [],
     factor_references: [], design: {}, run_plan: [], responses: [],
     guardrails: [], expected_information_value: "v",
+  },
+  // 第 6 步基线与第 17 步窗口共用这个键集（stage 由记录自身携带）。
+  process: {
+    process_id: "PROC-1", project_reference: "P-1", process_step: "s",
+    batch_scale: {}, amplification_factor: {}, process_window: {},
+    control_points: [], cpk: {}, material_batch_reference: "B-1", factor_role: "r",
+  },
+  // result 由 common 提供（同一字段）：准入只放行 PASS。
+  application: {
+    application_id: "APP-1", project_reference: "P-1", formula_reference: "F-1",
+    acceptance_criteria: [], counterexamples: [], life_claim_boundary: "b",
+    source: "s", evidence_id: "E-1", evidence_scope: "PHYSICAL",
   },
 };
 
@@ -439,5 +453,123 @@ describe("derivedCurrentStage 与 charterStage 的语义区分", () => {
     const prompt = buildGatePrompt(derivedCurrentStage(snap.projectType, snap), []);
     expect(prompt).toContain("DUTY_DEFINED");
     expect(prompt).not.toContain("PROJECT_DEFINED");
+  });
+});
+
+describe("G-2 产出技能与准入判据（application）", () => {
+  const validProbe = (artifactType: string, data: Record<string, unknown>): ArtifactProbe => ({
+    artifactType,
+    file: `${artifactType}.json`,
+    exists: true,
+    valid: true,
+    errors: [],
+    data,
+    resolvedPath: `${artifactType}.json`,
+  });
+
+  it("第 19 步提示词指向产出技能 application-definition，并说明准入技能", () => {
+    const applied = STAGE_CHAIN.find((c) => c.stage === "APPLIED");
+    expect(applied).toBeDefined();
+    const prompt = buildStepPrompt(applied as (typeof STAGE_CHAIN)[number]);
+    expect(prompt).toContain("skills/application-definition");
+    expect(prompt).toContain("生成后由 skills/application-validation");
+    // 产出者与准入者是两个目录：生成段不得再指向没有 builder 的准入目录
+    expect(prompt).not.toContain("严格按领域包技能 skills/application-validation");
+  });
+
+  it("application 记录 result=GAP 不算完成；result=PASS 才算（准入只放行 PASS）", () => {
+    const prior: Record<string, ArtifactProbe> = {};
+    for (const c of routeFor("NEW_PRODUCT").slice(0, 11)) {
+      prior[c.artifactType] = validProbe(c.artifactType, { artifact_type: c.artifactType, result: "GO" });
+    }
+
+    const withResult = (result: string): WorkspaceSnapshot => ({
+      live: true,
+      probedAt: Date.now(),
+      probes: {
+        ...prior,
+        application: validProbe("application", {
+          artifact_type: "application",
+          stage: "APPLIED",
+          result,
+        }),
+      },
+      projectType: "NEW_PRODUCT",
+      charterStage: "PROJECT_DEFINED",
+      gateStatus: null,
+    });
+
+    const gap = deriveSteps("NEW_PRODUCT", withResult("GAP"));
+    expect(gap).toHaveLength(12);
+    expect(gap[11].artifactType).toBe("application");
+    // 前 11 步都完成，result=GAP 让末步停在 active —— 不得显示「已完成」
+    expect(gap[11].status).toBe("active");
+
+    const pass = deriveSteps("NEW_PRODUCT", withResult("PASS"));
+    expect(pass[11].status).toBe("completed");
+  });
+});
+
+describe("G-3 process 探针按 data.stage 区分（第 6 步基线 vs 第 17 步窗口）", () => {
+  const mockRoot = (contents: Record<string, unknown>) => {
+    const names = Object.keys(contents);
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir !== "") throw new Error("not a directory");
+      return names.map((n) => entry(n));
+    });
+    readArtifact.mockImplementation(async (path: string) =>
+      path in contents ? utf8(contents[path]) : null,
+    );
+  };
+
+  it("只有 process-baseline.json 时第 17 步不得 completed；process.json 就位后才 completed", async () => {
+    mockRoot({
+      "project.json": validProject({ project_type: "PRECISION_GREASE_DEV" }),
+      "process-baseline.json": liteValid("process", { stage: "DESIGN_SPACE_DEFINED" }),
+    });
+    const before = await probeWorkspace();
+    // 精确名不存在 → 探针代表记录是前缀名 process-baseline.json（stage 为第 6 步的）
+    expect(before.probes.process.resolvedPath).toBe("process-baseline.json");
+    expect(before.probes.process.valid).toBe(true);
+    const scaleUp = deriveSteps("PRECISION_GREASE_DEV", before).find(
+      (s) => s.stage === "PROCESS_SCALE_VALIDATED",
+    );
+    expect(scaleUp?.status, "工艺窗口还没做，第 17 步不得被基线文件提前点亮").not.toBe(
+      "completed",
+    );
+
+    mockRoot({
+      "project.json": validProject({ project_type: "PRECISION_GREASE_DEV" }),
+      "process-baseline.json": liteValid("process", { stage: "DESIGN_SPACE_DEFINED" }),
+      "process.json": liteValid("process", { stage: "PROCESS_SCALE_VALIDATED" }),
+    });
+    const after = await probeWorkspace();
+    expect(after.probes.process.resolvedPath).toBe("process.json");
+    const windowStep = deriveSteps("PRECISION_GREASE_DEV", after).find(
+      (s) => s.stage === "PROCESS_SCALE_VALIDATED",
+    );
+    expect(windowStep?.status).toBe("completed");
+  });
+
+  it("回归：COST_DOWN 的步数与状态序列不因 process 特判改变", async () => {
+    const base = {
+      "project.json": validProject(),
+      "failure_ctq-A-1.json": liteValid("failure_ctq"),
+      "design_space-A-1.json": liteValid("design_space"),
+    };
+    mockRoot(base);
+    const plain = deriveSteps("COST_DOWN", await probeWorkspace());
+
+    mockRoot({
+      ...base,
+      "process-baseline.json": liteValid("process", { stage: "DESIGN_SPACE_DEFINED" }),
+    });
+    const withBaseline = deriveSteps("COST_DOWN", await probeWorkspace());
+
+    expect(plain).toHaveLength(8);
+    expect(plain.map((s) => s.status)).toEqual([
+      "completed", "completed", "completed", "active", "pending", "pending", "pending", "pending",
+    ]);
+    expect(withBaseline.map((s) => s.status)).toEqual(plain.map((s) => s.status));
   });
 });

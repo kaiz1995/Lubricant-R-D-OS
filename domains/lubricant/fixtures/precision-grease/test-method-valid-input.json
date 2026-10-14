@@ -35,7 +35,10 @@
     "standard": "Synthetic torque-bench protocol P-001",
     "challenge_reference": "CHG-PG-B1-001",
     "target_failure_reference": "FM-PG-B1-001",
-    "role": ["D", "P"],
+    "role": [
+      "D",
+      "P"
+    ],
     "qualification_metrics": [
       {
         "metric": "REPEATABILITY",
@@ -85,9 +88,20 @@
       }
     ],
     "qualification_pipeline": {
-      "repeatability": { "status": "PASS", "evidence_reference": "E-TM-PG-B1-REP", "computed_by": "ENGINE" },
-      "discrimination": { "status": "PASS", "evidence_reference": "E-TM-PG-B1-DIS", "computed_by": "ENGINE" },
-      "independent_batch": { "status": "PASS", "evidence_reference": "E-TM-PG-B1-BATCH" }
+      "repeatability": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-REP",
+        "computed_by": "ENGINE"
+      },
+      "discrimination": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-DIS",
+        "computed_by": "ENGINE"
+      },
+      "independent_batch": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-BATCH"
+      }
     },
     "reference_material_reference": "REF-PGD-001",
     "qualification_basis": [
@@ -97,6 +111,11 @@
     ],
     "qualification_status": "QUALIFIED",
     "method_source_evidence_id": "E-TM-PG-B1-STD",
-    "qualification_evidence_ids": ["E-TM-PG-B1-REP", "E-TM-PG-B1-DIS", "E-TM-PG-B1-BATCH"]
-  }
+    "qualification_evidence_ids": [
+      "E-TM-PG-B1-REP",
+      "E-TM-PG-B1-DIS",
+      "E-TM-PG-B1-BATCH"
+    ]
+  },
+  "reference_material_artifact": "reference-material.json"
 }

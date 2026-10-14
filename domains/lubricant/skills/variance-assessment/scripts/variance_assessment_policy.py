@@ -522,6 +522,24 @@ def provenance_errors(engine_input: object, bench_records: list[dict]) -> list[s
                     f"bench_test run {run_id} belongs to batch_reference {record.get('batch_reference')} but "
                     f"observation {observation.get('observation_reference')} claims batch_id "
                     f"{observation.get('batch_id')}: a run is not a replicate of a batch it did not come from")
+        upstream_stop_reason = record.get("stop_reason")
+        if has_text(upstream_stop_reason):
+            # One-sided cross-check (I-4): the step-11 record and the observation must
+            # not disagree about WHY the run ended. Only the declared direction is
+            # compared - the bench side may legitimately carry no stop_reason where
+            # this side states the end of the protocol window, so a strict equality
+            # would misreport a legal shape. When both records DO name a reason and the
+            # reasons differ, one of the two records is wrong and the analysis must not
+            # proceed on records that contradict each other.
+            for observation in run_observations:
+                entry = censoring_index.get(observation.get("observation_reference"))
+                downstream_stop_reason = entry.get("stop_reason") if isinstance(entry, dict) else None
+                if has_text(downstream_stop_reason) and downstream_stop_reason != upstream_stop_reason:
+                    errors.append(
+                        f"bench_test run {run_id} records stop_reason {upstream_stop_reason!r} but observation "
+                        f"{observation.get('observation_reference')} carries stop_reason "
+                        f"{downstream_stop_reason!r}: the two records disagree about why the run ended"
+                    )
         censoring_type = record.get("censoring_type")
         if censoring_type != "NONE":
             matching = [

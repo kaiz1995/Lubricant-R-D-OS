@@ -59,9 +59,9 @@ Input is a single JSON object containing only `application_validation`:
 ### Precision-grease route (additive)
 When `project_type` is `PRECISION_GREASE_DEV`, the record additionally carries:
 - `machine_indicators`: a non-empty array of `{ "indicator": ..., "criterion_reference": ... }`. Every one of `START_UP_TORQUE`, `BACKLASH`, `TEMPERATURE_RISE`, `LIFE` must be declared exactly once, and every `criterion_reference` must resolve to an `acceptance_criteria[].criterion_id` on the application record. When the verdict is PASS, each cited criterion must be `OBSERVED` with a numeric `threshold`, and the LIFE indicator requires a non-empty OBSERVED `life_claim_boundary`.
-- `campaign_artifact` / `bench_test_artifact`: paths to the built `campaign` (stage `CAMPAIGN_OPENED`) and `bench_test` (stage `BENCH_TESTED`) artifacts. Both are required on this route, must belong to the same project, and the `bench_test` bench must be cited in `application.bench_references`. The machine verdict must trace to the campaign round and bench run that produced it.
+- `campaign_artifact` / `bench_test_artifact` / `application_artifact`: paths to the built `campaign` (stage `CAMPAIGN_OPENED`), `bench_test` (stage `BENCH_TESTED`), and `application` (stage `APPLIED`) artifacts. All three are required on this route: the two upstreams must belong to the same project, the `bench_test` bench must be cited in `application.bench_references`, and the machine verdict must trace to the campaign round and bench run that produced it. `application_artifact` is read back and compared field by field with the inline `application` copy — an inline copy that differs from the built record is a HOLD, never a pass.
 
-An oil record (no `project_type`) must contain exactly the three original fields; a grease record must contain those three plus `project_type` and `machine_indicators`, and may contain the two upstream paths.
+An oil record (no `project_type`) must contain exactly the three original fields; a grease record must contain those three plus `project_type`, `machine_indicators`, and the three required paths (`campaign_artifact`, `bench_test_artifact`, `application_artifact`).
 
 ### The APPLIED Entry Rule (contract guarantee)
 Entry is admissible **only** when all of the following hold; otherwise the preflight holds and no APPLIED entry happens:
@@ -87,7 +87,7 @@ python skills/application-validation/scripts/preflight_application_validation.py
 A READY verdict authorizes — it does not perform — the transition. The project advances `VERIFIED → APPLIED` only via a state-machine `GO` (the router routes that step to this skill), and later `APPLIED → FROZEN` is the **only** FREEZE entry.
 
 ```bash
-# 🔴 CHECKPOINT · STOP: the gate stops here.
+# 🔴 CHECKPOINT · STOP: the admission gate stops here at APPLIED (it admits the record, it does not advance beyond it).
 # Do NOT freeze, close, or claim a field / life / release conclusion from this gate.
 ```
 
@@ -101,6 +101,7 @@ A READY verdict authorizes — it does not perform — the transition. The proje
 | `HOLD: ... application result must be PASS to enter APPLIED (got FAIL/GAP)` | 结论为 FAIL/GAP | **STOP**。先解决失败项/判据缺口，再重新门禁。 |
 | `HOLD: ... current_stage must be VERIFIED to enter APPLIED` | 项目不在 VERIFIED | **STOP**。先走完审查门禁到 VERIFIED。 |
 | `HOLD: ... acceptance_criteria must be a non-empty array to claim PASS` | 判据缺失却宣称 PASS | **STOP**。补判据或把 verdict 降为 GAP；缺判据一律拒绝。 |
+| `HOLD: ... application (inline) does not match the built artifact at ...: field ... differs` | 内联副本与落盘 application 工件不一致 | **STOP**。以落盘工件为准修正内联副本（或反之）；两处必须逐字段一致，不得只改一边。 |
 | `HOLD: ... life_claim_boundary must be OBSERVED with at least one validated condition to claim PASS` | 寿命边界为空却宣称 PASS | **STOP**。补齐边界条件或保持非 PASS。 |
 | `HOLD: ... application.bench_references must list at least one registered bench` | 未挂台架 | **STOP**。引用至少一个已登记台架（bench-registration 产出）。 |
 | `FAIL: cannot read input` | 输入缺失或 JSON 损坏 | 检查输入文件路径与 JSON 格式。 |

@@ -38,5 +38,10 @@
     "id": 8,
     "prompt": "给精密传动脂项目做方法评定，但第 4 步的参照物卷宗还没做，直接评定",
     "expected": "preflight 报 HOLD，明确输出 'reference_material_reference is required on the PRECISION_GREASE_DEV route'；没有实物 Known Good / Known Bad，区分度无法被证明"
+  },
+  {
+    "id": 9,
+    "prompt": "参照物卷宗写好了（reference_id 也填了），但输入目录里没有 reference-material.json 这个文件，直接做方法评定",
+    "expected": "preflight 报 HOLD，明确输出 'reference_material_artifact is required on the PRECISION_GREASE_DEV route'；只有编号没有卷宗读不出区分度标尺，而没有卷宗正是本步必须拒绝的「没有已知坏样」情形"
   }
 ]

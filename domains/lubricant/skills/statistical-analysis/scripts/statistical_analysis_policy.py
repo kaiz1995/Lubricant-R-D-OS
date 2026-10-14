@@ -205,6 +205,16 @@ def expected_decision_fields(value: dict, grease: bool = False) -> dict[str, str
     }
     if not grease:
         return fields
+    # NOTE (E-2): this grease branch is currently dispatched by NOBODY, and that is
+    # deliberate. Wiring it into build_model_artifact / validate_model_artifact was
+    # reviewed and rejected: the builder computes the block from the REQUEST while the
+    # validator recomputes it from the ARTIFACT, and this branch reads material
+    # (variance_reference, the verdict, the applicability boundary) that the closed
+    # schemas/model.schema.json (unevaluatedProperties: false) gives the artifact no slot
+    # for -- the validator would then disagree with the builder and FAIL every build. It
+    # stays here as the recorded contract of what the grease handoff would have to say,
+    # ready for the day the model contract carries those fields; do not wire it before
+    # that.
     variance_id = value.get("variance_reference", "")
     verdict = value.get("variance_verdict", "")
     boundary = value.get(TRUST_REGION_FIELD)

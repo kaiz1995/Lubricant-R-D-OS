@@ -1,4 +1,18 @@
-"""Build the only permitted Phase 3 statistical-model request artifact."""
+"""Build the only permitted Phase 3 statistical-model request artifact.
+
+E-2 boundary (deliberately NOT wired): the grease route's canonical decision block
+(``statistical_analysis_policy.expected_decision_fields(request, grease=True)``) is NOT
+dispatched from this builder. The builder would compute it from the REQUEST while
+``validate_model_artifact.py`` re-derives it from the ARTIFACT, and the two materials do
+not agree: the grease branch's wording reads ``variance_reference`` / ``variance_verdict``
+and the applicability boundary off the request, and the closed ``schemas/model.schema.json``
+(``unevaluatedProperties: false``) gives the artifact no slot for any of them -- the
+validator would recompute a different ``result``/``next_action`` and FAIL every build.
+Both call sites therefore keep the default ``grease=False`` and the policy's grease branch
+stays un-dispatched until the model contract itself carries the boundary and the variance
+reference. Recorded here (and in ``validate_model_artifact.py``) so the next reader does
+not wire it by mistake.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from preflight_statistical_analysis import errors_for
+from preflight_statistical_analysis import errors_for, grease_without_challenge, unrouted_evidence
 from statistical_analysis_policy import expected_decision_fields
 
 
@@ -23,7 +37,14 @@ def main() -> int:
     def load(key: str) -> dict: return json.loads((input_path.parent / data[key]).read_text(encoding="utf-8"))
     project, method, design_space, experiment = (load(key) for key in ("project_artifact", "test_method_artifact", "design_space_artifact", "experiment_artifact"))
     request = data["analysis"]
-    artifact = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project["project_id"], "stage": "MODEL_BUILT", "evidence_scope": experiment["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("model_id", "requested_analyses", "response_references")}}
+    # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    # travels with the request the recorded Challenge Map link is written as the ASSUMED
+    # route-property evidence item. Every other shape - every oil route, and a grease
+    # request that supplied a challenge - writes exactly the evidence it wrote before.
+    evidence = list(request["evidence"])
+    if grease_without_challenge(data, project):
+        evidence.append(unrouted_evidence(project["project_id"]))
+    artifact = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project["project_id"], "stage": "MODEL_BUILT", "evidence_scope": experiment["evidence_scope"], **expected_decision_fields(request), "evidence": evidence, "experiment_reference": experiment["experiment_id"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **{key: request[key] for key in ("model_id", "requested_analyses", "response_references")}}
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}"); return 0

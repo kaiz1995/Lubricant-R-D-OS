@@ -83,6 +83,53 @@ def is_precision_grease(project_type: object) -> bool:
     return project_type == PRECISION_GREASE_PROJECT_TYPE
 
 
+# The Challenge Map link recorded when a route carries no challenge step at all.
+# ``CHALLENGES_DEFINED`` sits on no ``type_route``, so on the grease route the link is
+# a RECORDED GAP rather than a fabricated upstream artifact, and this marker is what
+# audit_chain recognises and what the downstream records must agree on. The marker is
+# route-gated: an oil route without a challenge artifact still HOLDs as before.
+UNROUTED_PREFIX = "UNROUTED:"
+
+
+def unrouted_reference(project_id: object) -> str | None:
+    """``UNROUTED:<project_id>`` for a route whose challenge step does not exist."""
+    return f"{UNROUTED_PREFIX}{project_id}" if has_text(project_id) else None
+
+
+def unrouted_statement(project_id: object) -> str:
+    """The recorded-gap sentence. The preflight prints it, the artifact's evidence carries it."""
+    return (
+        f"challenge_artifact not supplied on the {PRECISION_GREASE_PROJECT_TYPE} route "
+        f"(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+        f"{UNROUTED_PREFIX}{project_id}"
+    )
+
+
+def unrouted_note(project_id: object) -> str:
+    """The one audible line a grease run without a challenge artifact prints."""
+    return "NOTE: " + unrouted_statement(project_id)
+
+
+def unrouted_errors(failure_ctq: object, project_id: object) -> list[str]:
+    """The grease route's recorded CHALLENGES_DEFINED gap must be the exact marker.
+
+    Route-gated by the caller: this is only called once the project type has resolved
+    to the grease route AND no challenge artifact was supplied. An oil record is never
+    reached here, so its ``challenge_reference`` is not examined by this function.
+    """
+    expected = unrouted_reference(project_id)
+    if expected is None or not isinstance(failure_ctq, dict):
+        return []
+    if failure_ctq.get("challenge_reference") == expected:
+        return []
+    return [
+        f"failure_ctq.challenge_reference must be {expected} on the "
+        f"{PRECISION_GREASE_PROJECT_TYPE} route when no challenge_artifact is supplied: "
+        "CHALLENGES_DEFINED is on no type_route, so the Challenge Map link is a recorded "
+        "gap (UNROUTED), never a fabricated upstream artifact"
+    ]
+
+
 def resolved_project_type(project_artifact: object, failure_ctq: object) -> object:
     """The project type to enforce for this input, or None when it is not determinable.
 
@@ -224,6 +271,29 @@ def diagnosis_chain_errors(failure_ctq: object, project_type: object) -> list[st
             "confirmed lubricant cause"
         )
     return errors
+
+
+def unrouted_reference_errors(record: object, project_id: object) -> list[str]:
+    """A record carrying a ``UNROUTED:`` marker must carry its OWN project's marker.
+
+    The marker is a recorded property of the route, not free text, so an artifact that
+    carries it must carry it for the project the artifact belongs to. Records without
+    the marker - every oil record, and every grease record built with a challenge
+    artifact - are untouched, which is what keeps this check purely additive.
+    """
+    if not isinstance(record, dict):
+        return []
+    reference = record.get("challenge_reference")
+    if not has_text(reference) or not reference.startswith(UNROUTED_PREFIX):
+        return []
+    expected = unrouted_reference(project_id)
+    if expected is None or reference == expected:
+        return []
+    return [
+        f"challenge_reference {reference!r} is not this project's recorded gap: the "
+        f"UNROUTED marker must be "
+        f"{expected if expected is not None else UNROUTED_PREFIX + '<project_id>'}"
+    ]
 
 
 def policy_errors(failure_ctq: object, project_type: object) -> list[str]:

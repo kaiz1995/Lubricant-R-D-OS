@@ -48,6 +48,14 @@ STAGE_TYPES = [
     "failure_ctq",
     "test_method",
     "design_space",
+    # 2026-10-14 (I-3): the material registrations the design space resolves its
+    # material_reference against are produced by formulation-design itself (the
+    # step-6 companion records). ``material`` is not a panel stage -- the panel
+    # never probes ``material.json`` -- but it is kept here for the same reason
+    # ``sample`` is: the producer emits the canonical name ``material.json``
+    # first and ``material-<material_id>.json`` afterwards, and those names must
+    # read as canonical/suffixed rather than as unrelated json.
+    "material",
     "experiment_design",
     "experiment",
     "model",

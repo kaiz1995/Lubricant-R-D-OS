@@ -1,9 +1,9 @@
 ---
 name: variance-assessment
-description: Assess whether an observed bench difference is real or noise at VARIANCE_ASSESSED - nested variance decomposition, repeatability sigma, effect size, power and the four-verdict decision. Use when user mentions "variance-assessment", "方差与重复性判定", "方差分解", "重复性判定", "这个差异是真的吗", "检验功效", "UNDERPOWERED", "SIGMA_MAX", or advancing to step 12 in precision-grease R&D.
+description: Assess whether an observed bench difference is real or noise at VARIANCE_ASSESSED - nested variance decomposition, repeatability sigma, effect size, power and the four-verdict decision. Use when user mentions "variance-assessment", "方差与重复性判定", "方差分解", "重复性判定", "这个差异是真的吗", "检验功效", "UNDERPOWERED", "SIGMA_MAX", or advancing to VARIANCE_ASSESSED in precision-grease R&D.
 ---
 
-# Variance Assessment (Step 12 · 方差与重复性判定)
+# Variance Assessment (VARIANCE_ASSESSED · 方差与重复性判定)
 
 Record the engine-computed answer to the question that decides whether the whole inner loop is meaningful:
 **is this difference real, or is it noise?** The record is built at `VARIANCE_ASSESSED` and carries a nested
@@ -276,7 +276,7 @@ the stage complete), and later records of the same stage are appended as suffixe
 After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before
 proceeding.
 ```bash
-# 🔴 CHECKPOINT · STOP: step 12 stops here at VARIANCE_ASSESSED. Route by verdict; do not compute a model.
+# 🔴 CHECKPOINT · STOP: the variance judgement stops here at VARIANCE_ASSESSED. Next station: MODEL_BUILT (statistical-analysis), or BATCH_PRODUCED via the LOOP_BACK edge; do not compute a model here.
 ```
 
 ### Routing after the checkpoint

@@ -1,9 +1,9 @@
 ---
 name: doe-design
-description: Record one evidence-bound experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, the mixture↔factor bridge (constraint_role routes variables to components or factors), and bound constraints before building the artifact. On the PRECISION_GREASE_DEV route it defaults to a small sequential round (3–6 samples per round) and enforces the registered bench schedule. It also produces the inner-loop step-13b sequential decision (`next_batch.json`, stage `NEXT_BATCH_DECIDED`): which samples the next round runs — each one separating a pair of competing explanations the input must declare — and whether the loop continues at all (see §3). Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "因子设计", "裂区", "小批序贯", "序贯实验", "资源受限贪心序贯", "台架档期约束", "序贯决策", "下一批跑哪些样", "next_batch", "NEXT_BATCH_DECIDED", "CONSTRAINED_MIXTURE", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL", or advancing to Stage 5 in lubricant R&D.
+description: Record one evidence-bound experiment-design request at EXPERIMENT_DESIGNED; preflight verifies 5 upstream stage artifacts, D/P qualified methods, the mixture↔factor bridge (constraint_role routes variables to components or factors), and bound constraints before building the artifact. On the PRECISION_GREASE_DEV route it defaults to a small sequential round (3–6 samples per round) and enforces the registered bench schedule. It also produces the inner-loop step-13b sequential decision (`next_batch.json`, stage `NEXT_BATCH_DECIDED`): which samples the next round runs — each one separating a pair of competing explanations the input must declare — and whether the loop continues at all (see §3). Use when user mentions "doe-design", "实验设计", "混料设计", "mixture DOE", "正交实验", "因子设计", "裂区", "小批序贯", "序贯实验", "资源受限贪心序贯", "台架档期约束", "序贯决策", "下一批跑哪些样", "next_batch", "NEXT_BATCH_DECIDED", "CONSTRAINED_MIXTURE", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL", or advancing to EXPERIMENT_DESIGNED in lubricant R&D.
 ---
 
-# DOE Design (Stage 5)
+# DOE Design (EXPERIMENT_DESIGNED · NEXT_BATCH_DECIDED)
 
 Record an evidence-bound experiment design request at `EXPERIMENT_DESIGNED` for the Lubricant R&D Domain Pack.
 This is an experiment design specification and handoff record, NOT an executed test run, measurement result, or statistical regression.
@@ -15,6 +15,13 @@ Authority schema: `../../schemas/experiment_design.schema.json` (or local `refer
 ## 1. Input Specification, Supported Families & the Mixing/Factor Bridge
 
 A single JSON input object providing the 5 upstream artifacts and the `experiment_design` request:
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: the preflight prints a `NOTE:` line instead
+of demanding the artifact, and the built record carries the recorded-gap sentence
+(`UNROUTED:<project_id>`) as `ASSUMED` evidence. Supplying a challenge artifact on either
+route behaves exactly as before.
 
 ```json
 {
@@ -185,7 +192,7 @@ python skills/doe-design/scripts/validate_experiment_design_artifact.py <tempora
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes. **Naming rule**: if `experiment_design.json` does not yet exist in the workspace root, commit this record as `experiment_design.json`; otherwise commit it as `experiment_design-<project_id>-<experiment_design_id>.json`. That is, the first record of this stage occupies the canonical name `experiment_design.json` (the stage-gate panel uses this exact name to mark the stage complete), and subsequent records of the same stage are appended as suffixed names carrying the record ID. After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant `PROJECT_DEFINED` — it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 5 stops here at EXPERIMENT_DESIGNED. Pass to Phase 4 compute engine or Stage 6 (experiment-import).
+# 🔴 CHECKPOINT · STOP: the experiment design stops here at EXPERIMENT_DESIGNED. Next station: EXPERIMENT_RUNNING (oil routes, experiment-import) or BATCH_PRODUCED (PRECISION_GREASE_DEV, grease-batch).
 ```
 
 ### Grease route (PRECISION_GREASE_DEV): the same four steps, one extra path
@@ -290,7 +297,7 @@ python -B skills/doe-design/scripts/validate_next_batch_artifact.py <temporary-f
   `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD`.
 
 ```bash
-# 🔴 CHECKPOINT · STOP: step 13b stops here at NEXT_BATCH_DECIDED. CONTINUE hands the proposed
+# 🔴 CHECKPOINT · STOP: the 13b sequential decision stops here at NEXT_BATCH_DECIDED; the route continues at NON_INFERIORITY_PASSED (optimization). CONTINUE hands the proposed
 # samples to the next round's doe-design step; any other stop_state hands off to the campaign's stop path.
 ```
 

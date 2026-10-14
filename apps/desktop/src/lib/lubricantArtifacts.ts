@@ -246,6 +246,34 @@ export interface StepView extends StageContract {
 }
 
 /**
+ * 单步的完成判据（deriveSteps 的唯一判定入口）。
+ *
+ * 多数类型只看「存在且 lite 校验通过」；两种 artifactType 需要更严的判定：
+ *
+ * - `process` 特判（G-3/L6）：两条路线共用一个 process.json 探针 —— 同一
+ *   artifactType 服务两个语义（脂路线第 6 步的固定基准 `process-baseline.json`
+ *   报 DESIGN_SPACE_DEFINED，第 17 步的固定窗口 `process.json` 报
+ *   PROCESS_SCALE_VALIDATED）。精确名 `process.json` 永远压过前缀名
+ *   `process-baseline.json`，所以 `probe.data` 只会装当前代表记录一份。只按
+ *   `probe.valid` 判定的话，第 6 步一落盘基线文件就会把第 17 步提前点亮；用
+ *   `data.stage` 区分它代表的是哪一份，stage 等于本契约 stage 才算完成。
+ *   （跨记录链路检查与「脂路线必交工艺窗口」是命令行侧能力，面板只有单探针
+ *   拿不到两份记录的数据 —— 已知的不对称，不做。）
+ * - `application` 特判（G-2/M4）：准入只放行 `result === "PASS"`；一份
+ *   result=GAP（或 FAIL / INCONCLUSIVE）的记录虽然 schema 合法，但进不了
+ *   APPLIED，不得显示「已完成」。
+ *
+ * process 契约不在任何油品路线上，该分支在油品线上永不执行；非 process /
+ * application 类型仍只按 probe.valid。
+ */
+function stepIsCompleted(contract: StageContract, probe: ArtifactProbe | null): boolean {
+  if (!probe?.valid) return false;
+  if (contract.artifactType === "process") return probe.data?.stage === contract.stage;
+  if (contract.artifactType === "application") return probe.data?.result === "PASS";
+  return true;
+}
+
+/**
  * 按 routeFor 的顺序推导每步状态。
  *
  * - 工件存在且 lite 校验通过 → completed
@@ -276,7 +304,7 @@ export function deriveSteps(
   for (const c of contracts) {
     const probe = snapshot.probes[c.artifactType] ?? null;
     let status: StepStatus;
-    if (probe?.valid) {
+    if (stepIsCompleted(c, probe)) {
       status = "completed";
     } else if (!activeAssigned) {
       status = "active";
@@ -316,11 +344,24 @@ export function derivedCurrentStage(
  *
  * 带上领域包技能名与真实文件名，避免 Agent 自创字段；显式要求 PHYSICAL
  * 证据，因为 route_step.py 对 SYNTHETIC 直接 DENY。
+ *
+ * 产出技能与准入技能可能不是同一个目录（M4 / F-3：application.json 由
+ * application-definition 生成、由 application-validation 准入）。提示词指向
+ * 产出者 —— 否则研发员会被指去一个没有 builder 的目录；准入者在下一行点名。
  */
-export function buildStepPrompt(step: Pick<StepView, "titleZh" | "stage" | "file" | "skill" | "criteria">): string {
+export function buildStepPrompt(
+  step: Pick<
+    StepView,
+    "titleZh" | "stage" | "file" | "skill" | "criteria" | "producerSkill" | "admissionSkill"
+  >,
+): string {
+  const producerSkill = step.producerSkill ?? step.skill;
   return [
     `请推进「${step.titleZh}」（stage=${step.stage}，工件 ${step.file}）。`,
-    `严格按领域包技能 skills/${step.skill} 的规范生成工件，不要自创字段。`,
+    `严格按领域包技能 skills/${producerSkill} 的规范生成工件，不要自创字段。`,
+    ...(step.admissionSkill
+      ? [`生成后由 skills/${step.admissionSkill} 做准入考核，通过后该步才算完成。`]
+      : []),
     `准入考核标准：${step.criteria.join("；")}。`,
     `证据范围必须为 PHYSICAL；不得捏造实验数据。`,
     `工件落盘到项目根目录，并在完成后更新 docs/ 下的活报告。`,

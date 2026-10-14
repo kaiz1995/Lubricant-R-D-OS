@@ -216,6 +216,9 @@ def main() -> int:
         "VARIANCE_ASSESSED": ["BATCH_PRODUCED"],
         "SCREENING_PASSED": ["BATCH_PRODUCED"],
     }, router.LOOP_TARGETS
+    # The cap's map is the LOOP_BACK subset of the same edges: a REWORK is a legal
+    # ring move but spends no bench round, so it is deliberately absent here.
+    assert router.LOOP_BACK_TARGETS == {"VARIANCE_ASSESSED": {"BATCH_PRODUCED"}}, router.LOOP_BACK_TARGETS
     assert router.MAX_ITERATIONS == contract["max_iterations"] == 12, router.MAX_ITERATIONS
     grease_route = router.TYPE_ROUTES["PRECISION_GREASE_DEV"]
     for edge in router.LOOP_EDGES:
@@ -302,13 +305,17 @@ def main() -> int:
     returncode, stdout = run_cli_args("--list-loop-edges", "NOT_A_TYPE")
     assert returncode == 1 and "no routed stage chain" in stdout, (returncode, stdout)
 
-    # 23. The contract's max_iterations bounds the ring in the router too: a
-    #     ring-edge request whose project_state declares a `current_iteration`
-    #     at or past the cap is DENIED with the same stop-the-loop guidance the
-    #     state machine gives. Below the cap — and when the counter is not
-    #     declared at all — the ring keeps its ALLOW and its verbatim reason.
-    #     The cap governs the back edge only (the forward step stays legal), and
-    #     the six oil routes are unaffected: no oil route exposes a ring target.
+    # 23. The contract's max_iterations bounds the whole-ring back edge in the
+    #     router too: a `LOOP_BACK` request whose project_state declares a
+    #     `current_iteration` at or past the cap is DENIED with the same
+    #     stop-the-loop guidance the state machine gives. The cap's unit is the
+    #     bench round (`max_iterations_note`), so it governs the LOOP_BACK edge
+    #     ONLY: a REWORK edge remakes the batch *without consuming a bench slot*
+    #     (its own edge note), so it must stay ALLOWed at and past the cap.
+    #     Below the cap — and when the counter is not declared at all — both
+    #     edges keep their ALLOW and their verbatim reason. The forward step
+    #     stays legal at any counter, and the six oil routes are unaffected: no
+    #     oil route exposes a ring target.
     capped_ring = physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS)
     result = router.decide(capped_ring, "BATCH_PRODUCED")
     assert result["decision"] == "DENY", result
@@ -316,12 +323,21 @@ def main() -> int:
         f"current_iteration {router.MAX_ITERATIONS} has reached max_iterations {router.MAX_ITERATIONS}; "
         "stop the inner loop and record PIVOT or KILL"
     ), result
-    for stage in ("VARIANCE_ASSESSED", "SCREENING_PASSED"):
+    for iteration in (router.MAX_ITERATIONS, router.MAX_ITERATIONS + 1):
         result = router.decide(
-            physical_state(stage, project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS + 1),
+            physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=iteration),
             "BATCH_PRODUCED",
         )
-        assert result["decision"] == "DENY" and "PIVOT or KILL" in result["reason"], (stage, result)
+        assert result["decision"] == "DENY" and "PIVOT or KILL" in result["reason"], (iteration, result)
+    # The REWORK edge spends no bench slot, so the cap never reaches it: at the
+    # cap and past it alike, with the same ALLOW text the uncapped case carries.
+    for iteration in (router.MAX_ITERATIONS, router.MAX_ITERATIONS + 1):
+        result = router.decide(
+            physical_state("SCREENING_PASSED", project_type="PRECISION_GREASE_DEV", current_iteration=iteration),
+            "BATCH_PRODUCED",
+        )
+        assert result["decision"] == "ALLOW" and result["skill"] == "grease-batch", (iteration, result)
+        assert result["reason"] == "declared inner-loop edge permitted", (iteration, result)
     # The ordinary next step is not a back edge: the cap never blocks it.
     result = router.decide(
         physical_state("VARIANCE_ASSESSED", project_type="PRECISION_GREASE_DEV", current_iteration=router.MAX_ITERATIONS + 1),
@@ -364,6 +380,22 @@ def main() -> int:
         "BATCH_PRODUCED",
     )
     assert result["decision"] == "DENY" and "max_iterations" not in result["reason"], result
+
+    # 24. M4 (batch F): APPLIED has two roles. ROUTE_TABLE names the ADMISSION
+    #     skill the router sends to (a stage has exactly one router target); the
+    #     PRODUCER that writes application.json is published beside it, never
+    #     inside ROUTE_TABLE -- a second APPLIED entry there would let the later
+    #     row overwrite SKILL_FOR_STAGE["APPLIED"] and silently re-route the step.
+    assert router.PRODUCER_SKILL_FOR_STAGE == {"APPLIED": "application-definition"}, router.PRODUCER_SKILL_FOR_STAGE
+    assert router.SKILL_FOR_STAGE["APPLIED"] == "application-validation", router.SKILL_FOR_STAGE
+    returncode, stdout = run_cli_args("--list-producers")
+    assert returncode == 0, (returncode, stdout)
+    assert stdout.splitlines() == ["APPLIED\tapplication-definition\tapplication-validation"], stdout
+    returncode, stdout = run_cli_args("--list-producers", "EXTRA")
+    assert returncode == 1 and "Usage" in stdout, (returncode, stdout)
+    # The producer table is additive: `--list-stages` still prints exactly the route.
+    returncode, stdout = run_cli_args("--list-stages", "PRECISION_GREASE_DEV")
+    assert returncode == 0 and "application-definition" not in stdout, (returncode, stdout)
 
     print(f"PASS: lubricant-rd-agent router ALLOW/DENY/HOLD contract ({len(ROUTE_TABLE_REF)} routable stages, {len(router.TYPE_ROUTES)} project types)")
     return 0

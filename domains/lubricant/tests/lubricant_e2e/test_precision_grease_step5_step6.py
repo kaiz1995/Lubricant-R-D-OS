@@ -125,6 +125,25 @@ def step5_checks() -> None:
     assert n6.returncode == 1, n6.stdout
     assert "qualification_pipeline is required on the PRECISION_GREASE_DEV route" in n6.stdout, n6.stdout
 
+    # I-1 (E3=B): the dossier path is a HARD requirement, not an optional extra.
+    # A bare reference id with no readable dossier beside the input is exactly the
+    # no-Known-Bad case this step must refuse, so a workspace holding every other
+    # upstream artifact but NOT reference-material.json is held at the dossier rule
+    # (not at an earlier missing-input rule).
+    with tempfile.TemporaryDirectory() as temporary:
+        bare = Path(temporary)
+        for name in (
+            "project-active.json", "challenge-defined.json", "failure-ctq-defined.json",
+            "test-method-valid-input.json",
+        ):
+            shutil.copyfile(FIXTURES / name, bare / name)
+        missing_dossier = run(test_method_preflight(), bare / "test-method-valid-input.json")
+        assert missing_dossier.returncode == 1, missing_dossier.stdout
+        assert (
+            "reference_material_artifact is required on the PRECISION_GREASE_DEV route"
+            in missing_dossier.stdout
+        ), missing_dossier.stdout
+
     # The valid grease input builds and validates, and carries the pipeline through.
     with tempfile.TemporaryDirectory() as temporary:
         workspace = Path(temporary)
@@ -213,7 +232,7 @@ def step6_checks() -> None:
         run_ok(formulation_validator(), output)
         artifact = read_json(output)
         assert artifact["stage"] == "DESIGN_SPACE_DEFINED"
-        assert artifact["baseline_process_reference"] == "PROCESS-BASE-PG-B1-001"
+        assert artifact["baseline_process_reference"] == "PROC-PG-B1-001"
         assert len(artifact["feasibility_regions"]) == 2
         assert isinstance(artifact["constraints"][0], dict) and artifact["constraints"][-1] == "Use only the supplied variable bounds."
         roles = {v["variable_id"]: v.get("role") for v in artifact["variables"]}

@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from preflight_test_method import errors_for, resolved_path
+from preflight_test_method import errors_for, grease_without_challenge, resolved_path, unrouted_evidence
 from qualification_policy import expected_decision_fields
 
 
@@ -33,9 +33,16 @@ def main() -> int:
     project_path = resolved_path(data["project_artifact"], input_path)
     project = json.loads(project_path.read_text(encoding="utf-8"))
     method = {**data["test_method"], "evidence": data["evidence"], "evidence_scope": data["evidence_scope"]}
+    # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    # travels with the request the recorded Challenge Map link is written as the ASSUMED
+    # route-property evidence item. Every other shape - every oil route, and a grease
+    # request that supplied a challenge - writes exactly the evidence it wrote before.
+    evidence = list(data["evidence"])
+    if grease_without_challenge(data, project):
+        evidence.append(unrouted_evidence(project["project_id"]))
     artifact = {
         "schema_version": "0.1.0", "artifact_type": "test_method", "project_id": project["project_id"], "stage": "TEST_METHODS_QUALIFIED", "evidence_scope": data["evidence_scope"],
-        **expected_decision_fields(method, project.get("project_type")), "evidence": data["evidence"],
+        **expected_decision_fields(method, project.get("project_type")), "evidence": evidence,
         **{field: method[field] for field in METHOD_FIELDS},
     }
     for field in OPTIONAL_METHOD_FIELDS:

@@ -37,7 +37,9 @@ Four rules, all fail-closed:
    ``schemas/reference.schema.json`` - the schema ties a RESOLVED Known Bad to COMPLETE
    and ``tier: UNRESOLVED`` to INCOMPLETE - and closes the remaining direction: this
    policy forces INCOMPLETE whenever no Known Bad is resolved, so the state cannot be
-   papered over, and the flag is what Stage 5 must carry to the final gate.
+   papered over. Stage 5 reads the flag off this dossier and refuses to proceed when it
+   is INCOMPLETE: a reference set with no RESOLVED Known Bad is exactly the
+   no-Known-Bad case the discrimination ruler cannot be built from.
 
 The release rule (放行判据): at least ONE side must be RESOLVED before Stage 5 may
 proceed. ``decision`` is GO only when that rule is met and no artifact-level evidence
@@ -411,12 +413,15 @@ def expected_decision_fields(
         "uncertainty": (
             f"{scope_prefix}Supplied dossiers record material history; they are not independently verified "
             "evidence, so recording a dossier does not qualify a test method and does not by itself prove "
-            f"that any stand can discriminate. downstream_flag={downstream_flag} must survive to the final gate."
+            f"that any stand can discriminate. downstream_flag={downstream_flag} is read by Stage 5, which "
+            "refuses to proceed when it is DISCRIMINATION_EVIDENCE_INCOMPLETE: a Stage 4 GO is necessary but "
+            "not sufficient for Stage 5."
         ),
         "decision_rule": (
             "A reference set may advance to Stage 5 only when at least one of its Known Good and Known Bad "
             "sides is RESOLVED; a Known Bad is RESOLVED only when at least one recorded failure is bound to "
-            "the mechanism it demonstrates, and the resulting downstream_flag must be carried to the final gate."
+            "the mechanism it demonstrates, and Stage 5 hard-rejects a dossier whose downstream_flag is "
+            "DISCRIMINATION_EVIDENCE_INCOMPLETE (a Stage 4 GO is necessary but not sufficient)."
         ),
         "result": (
             f"reference set {reference_id}: known_good {resolved_good}/{total_good} RESOLVED, "

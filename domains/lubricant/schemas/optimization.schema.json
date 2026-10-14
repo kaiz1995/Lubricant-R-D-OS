@@ -8,7 +8,7 @@
     "artifact_type": { "const": "optimization" },
     "stage": {
       "enum": ["OPTIMIZED", "NON_INFERIORITY_PASSED"],
-      "description": "Widened from the original const OPTIMIZED to an enum so the precision-grease route's step 14 (stage NON_INFERIORITY_PASSED, added in batch 0 and deliberately chosen over reusing OPTIMIZED) can carry the same contract. Purely additive: OPTIMIZED stays legal and the six oil routes keep validating against it byte for byte."
+      "description": "Widened from the original const OPTIMIZED to an enum so the precision-grease route's step 14 (stage NON_INFERIORITY_PASSED, added in batch 0 and deliberately chosen over reusing OPTIMIZED) can carry the same contract. The name marks WHERE the optimization REQUEST is registered on that route; it is NOT a claim that a non-inferiority conclusion has been reached (E4=B: this step registers the request and its non-inferiority method contract, and no candidate, optimum, or non-inferiority verdict is produced by this Phase 3 artifact). Purely additive: OPTIMIZED stays legal and the six oil routes keep validating against it byte for byte."
     },
     "optimization_id": { "type": "string", "minLength": 1 },
     "model_reference": { "type": "string", "minLength": 1 },
@@ -24,7 +24,7 @@
           "criterion": { "type": "string", "minLength": 1 },
           "ni_limits": {
             "type": "object",
-            "description": "Optional non-inferiority contract for a critical CTQ. All fields optional; once present each must be numeric and the margin must exceed zero.",
+            "description": "Reserved / no consumer in this pack: no skill, builder, validator or engine reads ni_limits, so a value written here is never a non-inferiority verdict. The authoritative field for a non-inferiority judgement is the engine input contract domains/lubricant/schemas/optimization_input.schema.json, non_inferiority[].minimum_margin; the artifact-level field must never be used as the basis of a decision. Kept (rather than deleted) so artifacts already carrying it stay valid; all fields optional, and once present each must be numeric with a margin above zero.",
             "properties": {
               "baseline": { "type": "number" },
               "minimum_acceptable": { "type": "number" },

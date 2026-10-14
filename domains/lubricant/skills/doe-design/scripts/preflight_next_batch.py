@@ -135,27 +135,38 @@ def campaign_errors(campaign: object) -> list[str]:
     iterations = campaign.get("iterations")
     if not isinstance(iterations, list) or not iterations:
         errors.append("campaign_artifact.iterations must be a non-empty array of round entries")
-    elif is_count(campaign.get("current_iteration"), 1):
+    else:
         entry = campaign_entry(campaign)
         if entry is None:
-            errors.append(
-                f"campaign_artifact.iterations carries no entry for iteration {campaign['current_iteration']}: "
-                "the next-batch decision is taken at the campaign's current round boundary")
+            errors.append("campaign_artifact.iterations carries no round entry to decide from")
         elif not has_text(entry.get("stop_state")):
             errors.append(
-                f"campaign_artifact.iterations (iteration {campaign['current_iteration']}).stop_state must record "
+                f"campaign_artifact.iterations (iteration {entry.get('iteration')}).stop_state must record "
                 "how that round ended")
+        elif entry.get("stop_state") != CONTINUE:
+            errors.append(
+                f"campaign_artifact.iterations (iteration {entry.get('iteration')}).stop_state="
+                f"{entry.get('stop_state')}: only {CONTINUE} authorizes another round, so there is no next-batch "
+                "decision to take at this boundary")
     return errors
 
 
 def campaign_entry(campaign: object) -> dict | None:
-    """The campaign's entry for its own current iteration, or None when it has none."""
+    """The campaign's newest recorded round entry, or None when the ledger is empty.
+
+    The next-batch decision is taken at a round BOUNDARY: W1 has just appended the round
+    that ended CONTINUE and moved ``current_iteration`` to k+1 (D-1), and W2 has not yet
+    rewritten that entry (it must not run before this stage). So the entry this stage
+    speaks about is the newest one recorded, and the decision's ``from_iteration`` is that
+    entry's own round - never the campaign's advanced counter.
+    """
     if not isinstance(campaign, dict):
         return None
-    for entry in campaign.get("iterations", []) if isinstance(campaign.get("iterations"), list) else []:
-        if isinstance(entry, dict) and entry.get("iteration") == campaign.get("current_iteration"):
-            return entry
-    return None
+    iterations = campaign.get("iterations")
+    if not isinstance(iterations, list) or not iterations:
+        return None
+    newest = iterations[-1]
+    return newest if isinstance(newest, dict) else None
 
 
 def design_errors(design: object) -> list[str]:
@@ -371,29 +382,31 @@ def cross_errors(campaign: dict, design: dict, variance: dict, record: dict) -> 
         errors.append(
             "all upstream artifacts must declare one evidence_scope: this record is taken at one round boundary "
             "of one campaign and cannot inherit two")
-    from_iteration = campaign.get("current_iteration")
+    entry = campaign_entry(campaign)
+    from_iteration = entry.get("iteration") if isinstance(entry, dict) else campaign.get("current_iteration")
     if is_count(from_iteration, 1):
-        to_iteration = from_iteration + 1
+        # E2=B: a CONTINUE opens the next round (to_iteration = from + 1); a stop does not open
+        # anything, so the pair collapses onto the round the ledger stands at. The campaign's
+        # own round history and this decision must agree on stop_state and on the variance
+        # reference; the carrier's next_batch_reference is a record kept for the reader, not a
+        # value this record must predict (the self-comparison was removed - D-2).
+        stop_state = record.get("stop_state")
+        to_iteration = from_iteration + 1 if stop_state == CONTINUE else from_iteration
         entry = campaign_entry(campaign)
         if isinstance(entry, dict):
-            if entry.get("stop_state") != record.get("stop_state"):
+            if entry.get("stop_state") != stop_state:
                 errors.append(
                     f"campaign_artifact.iterations (iteration {from_iteration}).stop_state="
                     f"{entry.get('stop_state')} contradicts the supplied next_batch.stop_state="
-                    f"{record.get('stop_state')}: the carrier's round history and this decision must tell the "
+                    f"{stop_state}: the carrier's round history and this decision must tell the "
                     "same story")
-            reference = entry.get("next_batch_reference")
-            if reference is not None and reference != record.get("next_batch_id"):
-                errors.append(
-                    f"campaign_artifact.iterations (iteration {from_iteration}).next_batch_reference={reference} "
-                    f"is not the supplied next_batch.next_batch_id={record.get('next_batch_id')}")
             variance_reference = entry.get("variance_reference")
             if variance_reference is not None and variance_reference != variance.get("variance_id"):
                 errors.append(
                     f"campaign_artifact.iterations (iteration {from_iteration}).variance_reference="
                     f"{variance_reference} is not the supplied variance_artifact.variance_id="
                     f"{variance.get('variance_id')}")
-        if record.get("stop_state") == CONTINUE:
+        if stop_state == CONTINUE:
             cap = campaign.get("max_iterations")
             if is_count(cap, 1) and to_iteration > cap:
                 errors.append(
@@ -420,8 +433,15 @@ def composed_artifact(data: dict, campaign: dict, design: dict) -> dict:
     """
     record = data["next_batch"]
     statements = statement_map(record.get("competing_explanations"))
-    from_iteration = campaign.get("current_iteration") if is_count(campaign.get("current_iteration"), 1) else 0
+    # The decision is taken at the round BOUNDARY: the round that ended CONTINUE is the
+    # newest entry, and that round is what this decision advances past (never the
+    # campaign's already-advanced counter).
+    entry = campaign_entry(campaign)
+    from_iteration = entry.get("iteration") if isinstance(entry, dict) else campaign.get("current_iteration")
+    if not is_count(from_iteration, 1):
+        from_iteration = 0
     samples = record.get("proposed_samples")
+    stop_state = record.get("stop_state")
     artifact = {
         "schema_version": "0.1.0",
         "artifact_type": "next_batch",
@@ -431,15 +451,19 @@ def composed_artifact(data: dict, campaign: dict, design: dict) -> dict:
         "next_batch_id": record.get("next_batch_id"),
         "campaign_reference": campaign.get("campaign_id"),
         "from_iteration": from_iteration,
-        "to_iteration": from_iteration + 1,
-        "proposed_samples": [
-            composed_sample(sample, statements) for sample in samples if isinstance(sample, dict)
-        ] if isinstance(samples, list) else [],
-        "information_gain_basis": record.get("information_gain_basis"),
-        "bench_slots_required": record.get("bench_slots_required"),
-        "stop_state": record.get("stop_state"),
+        # E2=B: only a CONTINUE opens another round, so only it advances the pair. A stop
+        # collapses onto the round the ledger stands at and carries none of the three
+        # proposal fields (the schema forbids them off CONTINUE).
+        "to_iteration": from_iteration + 1 if stop_state == CONTINUE else from_iteration,
+        "stop_state": stop_state,
         "evidence": record.get("evidence"),
     }
+    if stop_state == CONTINUE:
+        artifact["proposed_samples"] = [
+            composed_sample(sample, statements) for sample in samples if isinstance(sample, dict)
+        ] if isinstance(samples, list) else []
+        artifact["information_gain_basis"] = record.get("information_gain_basis")
+        artifact["bench_slots_required"] = record.get("bench_slots_required")
     if record.get("stop_rationale") is not None:
         artifact["stop_rationale"] = record.get("stop_rationale")
     if isinstance(record.get("next_round_budget"), dict):

@@ -1,9 +1,9 @@
 ---
 name: formulation-design
-description: Define one evidence-bound, testable design space at DESIGN_SPACE_DEFINED for lubricant formulation; preflight verifies upstream stage artifacts (project, challenge, failure CTQ, qualified test method), input bounds, material references, and the baseline process before building the artifact. Use when user mentions "formulation-design", "配方设计", "设计空间", "design space", "定义设计空间", "材料属性表", "基准工艺", "可行性区域", "ISO VG", or advancing lubricant R&D to Stage 4.
+description: Define one evidence-bound, testable design space at DESIGN_SPACE_DEFINED for lubricant formulation; preflight verifies upstream stage artifacts (project, challenge, failure CTQ, qualified test method), input bounds, material references, and the baseline process before building the artifact. Use when user mentions "formulation-design", "配方设计", "设计空间", "design space", "定义设计空间", "材料属性表", "基准工艺", "可行性区域", "ISO VG", or advancing lubricant R&D to DESIGN_SPACE_DEFINED.
 ---
 
-# Formulation Design (Stage 4)
+# Formulation Design (DESIGN_SPACE_DEFINED)
 
 Define an evidence-bound, testable design space record at `DESIGN_SPACE_DEFINED` for the Lubricant R&D Domain Pack.
 Authority schema: `../../schemas/design_space.schema.json` (or local `references/design_space.schema.json` in deployed bundle).
@@ -13,6 +13,13 @@ Authority schema: `../../schemas/design_space.schema.json` (or local `references
 ## 1. Input Specification
 
 Input must be a single JSON object containing exact upstream artifact paths and the target `design_space` specification:
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: the preflight prints a `NOTE:` line instead
+of demanding the artifact, and the built record carries the recorded-gap sentence
+(`UNROUTED:<project_id>`) as `ASSUMED` evidence. Supplying a challenge artifact on either
+route behaves exactly as before.
 
 ```json
 {
@@ -136,7 +143,7 @@ python skills/formulation-design/scripts/validate_design_space_artifact.py <temp
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`. **Naming rule**: if `design_space.json` does not yet exist in the workspace root, commit this record as `design_space.json`; otherwise commit it as `design_space-<project_id>-<design_space_id>.json`. That is, the first record of this stage occupies the canonical name `design_space.json` (the stage-gate panel uses this exact name to mark the stage complete), and subsequent records of the same stage are appended as suffixed names carrying the record ID. After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant `PROJECT_DEFINED` — it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 4 stops here at DESIGN_SPACE_DEFINED.
+# 🔴 CHECKPOINT · STOP: the design space stops here at DESIGN_SPACE_DEFINED. Next station: BENCH_RESOURCE_REGISTERED (PRECISION_GREASE_DEV, bench-registration) or EXPERIMENT_DESIGNED (oil routes, doe-design).
 ```
 
 ---

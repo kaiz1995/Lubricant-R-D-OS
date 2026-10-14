@@ -389,19 +389,19 @@ Local-First 给的是**选择权**：
 
 ### 5.1 精密传动脂路线（`PRECISION_GREASE_DEV`）：17 个工艺步骤 = 20 个 stage，三环结构
 
-该路线服务"**配方 + 工艺 = 产品**"的精密传动脂（首个课题为谐波减速器润滑脂；RV 减速器脂、丝杠导轨脂可复用同一条路线，据《交接文档》§6.2 决策 1）。17 个工艺步骤全部落为独立 stage：第 7、13、16 步各产出两份工件而各占两个 stage（`BENCH_RESOURCE_REGISTERED`+`CAMPAIGN_OPENED`、`MODEL_BUILT`+`NEXT_BATCH_DECIDED`、`VERIFIED`+`APPLIED`），故 **17 步 → 20 个 stage**。序列以 `type_routes` 为准，读它、别手抄：
+该路线服务"**配方 + 工艺 = 产品**"的精密传动脂（首个课题为谐波减速器润滑脂；RV 减速器脂、丝杠导轨脂可复用同一条路线，据《交接文档》§6.2 决策 1）。17 个工艺步骤全部落为独立 stage：第 7、13、16 步各产出两份工件而各占两个 stage（`BENCH_RESOURCE_REGISTERED`+`CAMPAIGN_OPENED`、`MODEL_BUILT`+`NEXT_BATCH_DECIDED`、`VERIFIED`+`APPLIED`），故 **17 步 → 20 个 stage**。口径提醒：本节（及全仓库）的「第 N 步」一律是 **17 个工艺步骤**口径，与契约的「stage 序号」（`route_step.py --list-stages` 输出的 20 项顺序）数字不同，不得混用——例如 `SCREENING_PASSED` 是工艺步骤 10/17、却是第 11 个 stage。序列以 `type_routes` 为准，读它、别手抄：
 
 ```bash
-python skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISION_GREASE_DEV
+python -B skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISION_GREASE_DEV
 ```
 
-| 环 | 步 | stage 序列 | 迭代形态 |
+| 环 | 步 / stage 序号 | stage 序列 | 迭代形态 |
 |---|---|---|---|
-| **外环 · 配方与工艺设计** | 1–8 | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → CAMPAIGN_OPENED → EXPERIMENT_DESIGNED` | 做一次 |
-| **内环 · 台架战役** | 9–13 | `BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED` | 循环 N 轮，有退出判据 |
-| **收口** | 14–17 | `NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED` | 判据满足 / 止损后各一次 |
+| **外环 · 配方与工艺设计** | 1–8 / 1–9 | `PROJECT_DEFINED → DUTY_DEFINED → FAILURE_MECHANISM_DEFINED → REFERENCE_MATERIAL_RESOLVED → TEST_METHODS_QUALIFIED → DESIGN_SPACE_DEFINED → BENCH_RESOURCE_REGISTERED → CAMPAIGN_OPENED → EXPERIMENT_DESIGNED` | 做一次 |
+| **内环 · 台架战役** | 9–13 / 10–15 | `BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED → MODEL_BUILT → NEXT_BATCH_DECIDED` | 循环 N 轮，有退出判据 |
+| **收口** | 14–17 / 16–20 | `NON_INFERIORITY_PASSED → PROCESS_SCALE_VALIDATED → VERIFIED → APPLIED → KNOWLEDGE_ARCHIVED` | 判据满足 / 止损后各一次 |
 
-该路线的 5 个 ★ 新增环节（据《交接文档》§6.3）：第 4 步参照物卷宗、第 7 步台架资源与档期、第 10 步理化筛测、第 12 步方差与重复性判定、第 17 步知识入库。第 15 步落在该路线独有的 `PROCESS_SCALE_VALIDATED` 上，**不复用**按需阶段 `PROCESS_WINDOW_DEFINED`。
+该路线的 5 个 ★ 新增环节（据《交接文档》§6.3；以下「第 N 步」均为 **17 个工艺步骤**口径）：第 4 步参照物卷宗、第 7 步台架资源与档期、第 10 步理化筛测、第 12 步方差与重复性判定、第 17 步知识入库。第 15 步落在该路线独有的 `PROCESS_SCALE_VALIDATED` 上，**不复用**按需阶段 `PROCESS_WINDOW_DEFINED`。
 
 #### 5.1.1 内环：两条契约声明的回边（`loop_edges`）
 
@@ -498,11 +498,11 @@ python skills/lubricant-rd-agent/scripts/route_step.py --list-stages PRECISION_G
 | `bench-registration` | 台架登记 | `bench.json`（`bench.schema.json`） | 登记台架/试验装置档案，供应用验证与工况关联引用。 |
 | `interface-definition` | 接口契约 | interface 工件 + 兼容性判定 | 定义跨工件/跨技能接口契约（`interface.schema.json`），fail-closed 输出兼容性判定（仅 `COMPATIBILITY_PASSED` 放行）。 |
 | `external-record-import` | 外部协作记录 | `external_record.json`（`external_record.schema.json`） | 导入外委测试 / 代工 / 厂商数据表等外部协作记录，强制数据使用权限（usage-rights）锚点，fail-closed。 |
-| `reference-material` **（脂路线）** | 脂路线第 4 步 `REFERENCE_MATERIAL_RESOLVED` | `REFERENCE_MATERIAL_RESOLVED` / `reference.json` | 建立物理参照物卷宗：Known Good（必须通过）与 Known Bad（必须失败）各自带材料身份、配方身份、机理绑定的历史证据、存储 SOP 与安全参照。 |
-| `grease-batch` **（脂路线）** | 脂路线第 9 步 `BATCH_PRODUCED` | `BATCH_PRODUCED` / `batch.json`（+ `sample.json`） | 记录一次真实制脂批次：皂化 / 脱水 / 转相 / 稀释冷却 / 研磨 / 脱气 / 灌装 / 熟化的设定值、实际值、时长与逐步偏差判定，附投料批号、操作员、设备、异常与留样标签。 |
-| `grease-screening` **（脂路线）** | 脂路线第 10 步 `SCREENING_PASSED` | `SCREENING_PASSED` / `screening.json` | 理化筛测并给出**台架准入闸门**：锥入度（含工作锥入度变化）、滴点、析油、蒸发损失、剪切安定性与外观均匀性逐项判值；不合格 → 回 `BATCH_PRODUCED` 返工，不占台架位。 |
-| `variance-assessment` **（脂路线）** | 脂路线第 12 步 `VARIANCE_ASSESSED` | `VARIANCE_ASSESSED` / `variance.json` | 判定"台架差异是真的还是噪声"：嵌套方差分解、重复性 σ、效应量、功效与 `SIGMA_MAX` 判据，输出四个冻结结论之一；`UNDERPOWERED` 与 `NO_DETECTABLE_DIFFERENCE` 严格区分。 |
-| `knowledge-archive` **（脂路线）** | 脂路线第 17 步 `KNOWLEDGE_ARCHIVED` | `KNOWLEDGE_ARCHIVED` / `knowledge_asset.json` | 六类知识资产（推荐配方 / 可行设计空间 / 关键失效边界 / 证据包 / 材料知识 / 模型）齐备才落 `CLOSED_KNOWLEDGE`，否则 `DRAFT_KNOWLEDGE`；`SYNTHETIC` 项目强制打标且永不 CLOSED。 |
+| `reference-material` **（脂路线）** | 脂路线第 4 步（工艺步骤 4/17）`REFERENCE_MATERIAL_RESOLVED` | `REFERENCE_MATERIAL_RESOLVED` / `reference.json` | 建立物理参照物卷宗：Known Good（必须通过）与 Known Bad（必须失败）各自带材料身份、配方身份、机理绑定的历史证据、存储 SOP 与安全参照。 |
+| `grease-batch` **（脂路线）** | 脂路线第 9 步（工艺步骤 9/17）`BATCH_PRODUCED` | `BATCH_PRODUCED` / `batch.json`（+ `sample.json`） | 记录一次真实制脂批次：皂化 / 脱水 / 转相 / 稀释冷却 / 研磨 / 脱气 / 灌装 / 熟化的设定值、实际值、时长与逐步偏差判定，附投料批号、操作员、设备、异常与留样标签。 |
+| `grease-screening` **（脂路线）** | 脂路线第 10 步（工艺步骤 10/17）`SCREENING_PASSED` | `SCREENING_PASSED` / `screening.json` | 理化筛测并给出**台架准入闸门**：锥入度（含工作锥入度变化）、滴点、析油、蒸发损失、剪切安定性与外观均匀性逐项判值；不合格 → 回 `BATCH_PRODUCED` 返工，不占台架位。 |
+| `variance-assessment` **（脂路线）** | 脂路线第 12 步（工艺步骤 12/17）`VARIANCE_ASSESSED` | `VARIANCE_ASSESSED` / `variance.json` | 判定"台架差异是真的还是噪声"：嵌套方差分解、重复性 σ、效应量、功效与 `SIGMA_MAX` 判据，输出四个冻结结论之一；`UNDERPOWERED` 与 `NO_DETECTABLE_DIFFERENCE` 严格区分。 |
+| `knowledge-archive` **（脂路线）** | 脂路线第 17 步（工艺步骤 17/17）`KNOWLEDGE_ARCHIVED` | `KNOWLEDGE_ARCHIVED` / `knowledge_asset.json` | 六类知识资产（推荐口径（optimization 请求登记的判定口径） / 可行设计空间 / 关键失效边界 / 证据包 / 材料知识 / 模型）齐备才落 `CLOSED_KNOWLEDGE`，否则 `DRAFT_KNOWLEDGE`；`SYNTHETIC` 项目强制打标且永不 CLOSED。 |
 | `lubricant-rd-agent` | 元路由（不产出 stage） | ALLOW / DENY / HOLD + 指路技能 | 元技能（Meta-Skill）路由器：按 `type_routes` 执行跨阶段拦截、性质分流与证据门控；同 stage 的换釜复现走 `REVISE`；脂路线内环回边（`loop_edges`）只在本路线上放行，环间回退仍 `DENY`（详见 §5.1）。 |
 | `hello-lubricant` | 环境自检（不在 `SKILLS` 安装表内） | — | 冒烟自检技能，验证运行时技能扫描与部署链路。 |
 

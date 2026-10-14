@@ -32,9 +32,11 @@ from knowledge_archive_policy import (
     QUALIFIED_ASSET_FIELDS,
     QUALIFIED_ASSET_KEY,
     STAGE,
+    asset_requirement,
     cost_criterion_errors,
     has_gap,
     has_text,
+    is_absence_marker,
     present_keys,
     status_notes,
 )
@@ -123,17 +125,19 @@ def upstream_errors(path: Path) -> tuple[list[str], dict | None]:
     return errors, artifact if not errors else None
 
 
-def asset_entry_errors(value: object, key: str) -> list[str]:
+def asset_entry_errors(value: object, key: str, workspace: Path | None = None,
+                       project_id: str | None = None) -> list[str]:
     label = f"knowledge_assets.{key}"
     if not isinstance(value, dict):
         return [label]
     fields = QUALIFIED_ASSET_FIELDS if key == QUALIFIED_ASSET_KEY else ASSET_ENTRY_FIELDS
     unknown = sorted(set(value) - fields)
-    missing = sorted(ASSET_ENTRY_FIELDS - set(value))
+    missing = sorted(set(ASSET_ENTRY_FIELDS) - set(value))
     if unknown or missing:
         return [f"{label}: unexpected={unknown or 'none'} missing={missing or 'none'}"]
     errors: list[str] = []
-    if not has_text(value.get("artifact_reference")):
+    reference = value.get("artifact_reference")
+    if not has_text(reference):
         errors.append(f"{label}.artifact_reference must be a non-empty string; {ABSENCE_HINT}")
     if not isinstance(value.get("present"), bool):
         errors.append(f"{label}.present must be a boolean")
@@ -143,10 +147,61 @@ def asset_entry_errors(value: object, key: str) -> list[str]:
             errors.append(f"{label}.qualification must be QUALIFIED, PROVISIONAL, or UNQUALIFIED")
         if qualification is not None and not has_text(value.get("qualification_reference")):
             errors.append(f"{label}.qualification_reference is required whenever a qualification is recorded")
+    # E7=A resolution runs AFTER the cost-criterion check (which is a whole-request rule
+    # in archive_errors), so a reference that reads as a cost CTQ is reported as that,
+    # not merely as an unresolvable path.
+    if has_text(reference) and workspace is not None and not errors:
+        if value.get("present") is True:
+            errors.extend(asset_reference_errors(reference, label, workspace, project_id, key))
+        elif value.get("present") is False and not is_absence_marker(reference):
+            errors.append(
+                f"{label}.artifact_reference {reference!r} records an absence, so it must be one of the "
+                f"explicit absence markers ({ABSENCE_HINT})"
+            )
     return errors
 
 
-def knowledge_assets_errors(value: object) -> list[str]:
+def asset_reference_errors(reference: str, label: str, workspace: Path,
+                           project_id: str | None, key: str) -> list[str]:
+    """Resolve one present:true reference and check what it points at (E7=A)."""
+    path = Path(reference)
+    if not path.is_absolute():
+        path = workspace / path
+    if not path.is_file():
+        return [
+            f"{label}.artifact_reference {reference!r} does not resolve to a file in the workspace: a present "
+            "asset must cite the record itself, not a document number"
+        ]
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return [f"{label}.artifact_reference {reference!r} cannot be read as a record: {error}"]
+    if not isinstance(record, dict) or not has_text(record.get("artifact_type")):
+        return [
+            f"{label}.artifact_reference {reference!r} is not an artifact record: a cited asset must carry an "
+            "artifact_type and a stage"
+        ]
+    expected_type, allowed_stages = asset_requirement(key)
+    if record.get("artifact_type") != expected_type:
+        return [
+            f"{label}.artifact_reference {reference!r} carries artifact_type {record.get('artifact_type')!r}, "
+            f"but this asset must cite a {expected_type!r} record"
+        ]
+    if record.get("stage") not in allowed_stages:
+        return [
+            f"{label}.artifact_reference {reference!r} carries stage {record.get('stage')!r}, which is not one "
+            f"of the stages this asset may cite ({', '.join(allowed_stages)})"
+        ]
+    if project_id is not None and record.get("project_id") not in (None, project_id):
+        return [
+            f"{label}.artifact_reference {reference!r} belongs to project {record.get('project_id')!r}, not to "
+            f"this project {project_id!r}: an asset may only be cited from its own project"
+        ]
+    return []
+
+
+def knowledge_assets_errors(value: object, workspace: Path | None = None,
+                            project_id: str | None = None) -> list[str]:
     if not isinstance(value, dict):
         return ["knowledge_assets must be the six-asset object"]
     unknown = sorted(set(value) - set(ASSET_KEYS))
@@ -155,7 +210,7 @@ def knowledge_assets_errors(value: object) -> list[str]:
         return [f"knowledge_assets must contain exactly the six assets; unexpected={unknown or 'none'} missing={missing or 'none'}"]
     errors: list[str] = []
     for key in ASSET_KEYS:
-        errors.extend(asset_entry_errors(value.get(key), key))
+        errors.extend(asset_entry_errors(value.get(key), key, workspace, project_id))
     return errors
 
 
@@ -176,7 +231,8 @@ def evidence_errors(value: object) -> list[str]:
     return errors
 
 
-def archive_errors(data: dict) -> list[str]:
+def archive_errors(data: dict, workspace: Path | None = None,
+                   project_id: str | None = None) -> list[str]:
     errors: list[str] = []
     if not has_text(data.get("project_artifact")):
         errors.append("project_artifact")
@@ -184,15 +240,19 @@ def archive_errors(data: dict) -> list[str]:
         errors.append("evidence_scope must be SYNTHETIC or PHYSICAL")
     if data.get("asset_status") not in ASSET_STATUSES:
         errors.append("asset_status must be DRAFT_KNOWLEDGE or CLOSED_KNOWLEDGE")
-    errors.extend(knowledge_assets_errors(data.get("knowledge_assets")))
-    errors.extend(evidence_errors(data.get("evidence")))
-    if not errors:
+    # Cost is a whole-request rule and runs FIRST: a reference that reads as a cost CTQ
+    # must be reported as that error, not merely as a path that fails to resolve (E7=A
+    # resolution runs below, on the entries the cost check cleared).
+    assets = data.get("knowledge_assets")
+    if isinstance(assets, dict):
         references = [
             entry.get("artifact_reference")
-            for entry in data["knowledge_assets"].values()
+            for entry in assets.values()
             if isinstance(entry, dict)
         ]
         errors.extend(cost_criterion_errors(references))
+    errors.extend(knowledge_assets_errors(assets, workspace, project_id))
+    errors.extend(evidence_errors(data.get("evidence")))
     if not errors and has_gap(data):
         errors.append(
             "evidence contains GAP; a missing knowledge asset belongs on its asset entry as present=false, "
@@ -213,12 +273,15 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         ]
     errors: list[str] = []
     project_path = resolved_path(data.get("project_artifact"), input_path)
+    project_id: str | None = None
     if project_path is None:
         errors.append("project_artifact")
     else:
-        upstream_problems, _ = upstream_errors(project_path)
+        upstream_problems, project = upstream_errors(project_path)
         errors.extend(upstream_problems)
-    errors.extend(archive_errors(data))
+        if isinstance(project, dict):
+            project_id = project.get("project_id")
+    errors.extend(archive_errors(data, input_path.parent, project_id))
     errors.extend(workspace_naming_errors(input_path))
     return errors
 

@@ -16,9 +16,8 @@ length is a censoring time, not an end-point. Once such a value is written as an
 end-point, the variance estimate is wrong and every downstream conclusion built on it is
 void. This is red line 3 of the development guide (删失不得当终点).
 
-Four rules, all fail-closed. The first two mirror the if/then rules of
+Four rules for the run record, all fail-closed. The first two mirror the if/then rules of
 ``schemas/bench_test.schema.json``; the last two are stricter on purpose and say so:
-
 1. A CENSORING TIME IS NEVER AN END-POINT (schema rule (i)). ``event_occurred: false``
    forces ``event_time: null``, whatever the ``censoring_type`` says. A right-censored
    10 h observation is refused, never reinterpreted as a completed run.
@@ -40,6 +39,21 @@ Four rules, all fail-closed. The first two mirror the if/then rules of
    hours when event_occurred is true"). An event without a time is not an end-point
    either, and it would be silently unusable by the variance assessment downstream.
 
+5. A BENCH SLOT IS SPENT ONLY ON A SCREENED SAMPLE (E-3 / L5). The request names the
+   screening artifacts of the round, and the run's ``sample_reference`` must fall on a
+   supplied screening whose ``overall_verdict`` is ``PASS`` with
+   ``gate_to_bench: RELEASED``. Until now the rule "a failed screen must not occupy a
+   bench slot" was enforced only by the screening side refusing a ``bench_request`` for
+   its own sample (N14 of grease-screening): the bench record itself never resolved its
+   screening reference, so a sample recorded as FAIL/BLOCKED could still be documented
+   as having consumed a slot. The bench is the scarcest resource of the loop, so this
+   gate resolves the reference and refuses the run instead of trusting a path.
+
+The modeling entry's observed-CTQ link is also carried here: since step 14
+(statistical-analysis) consumes the round's bench records on the grease route, the run
+records WHICH CTQ it observed in ``ctq_reference`` -- the artifact's ``response_references``
+are checked against exactly that field. It is a plain structural field of the record.
+
 Nothing is invented anywhere: the record is projected field by field into the artifact,
 the canonical decision block is derived from the artifact's own fields, and the run's
 ``decision`` is UNDECIDED because one run is a record, not a verdict. Whether the round's
@@ -50,23 +64,27 @@ from __future__ import annotations
 
 import math
 
-# Input: the upstream charter, the bench-run record, and the artifact-level evidence.
-# ``bench_test`` is the record; the artifact-level fields (schema_version, artifact_type,
-# project_id, stage, decision_question, hypothesis, uncertainty, decision_rule, result,
-# decision, next_action) are DERIVED by this module and supplying any of them is a hard
-# reject, exactly like the aggregate verdict in grease-screening.
-BENCH_INPUT_FIELDS = frozenset({"project_artifact", "bench_test", "evidence_scope", "evidence"})
+# Input: the upstream charter, the bench-run record, the screening records that released
+# the run's sample, and the artifact-level evidence. ``bench_test`` is the record; the
+# artifact-level fields (schema_version, artifact_type, project_id, stage,
+# decision_question, hypothesis, uncertainty, decision_rule, result, decision,
+# next_action) are DERIVED by this module and supplying any of them is a hard reject,
+# exactly like the aggregate verdict in grease-screening.
+BENCH_INPUT_FIELDS = frozenset({"project_artifact", "bench_test", "screening_artifacts", "evidence_scope", "evidence"})
 
 # The bench-run record, mirroring the field set of schemas/bench_test.schema.json.
 # ``stop_reason`` may be absent from the INPUT (an uncensored run may carry no stop
 # reason), but it is always written into the artifact (null when absent), so it is in the
-# allowed set and not in the required set.
+# allowed set and not in the required set. ``ctq_reference`` is required: the modeling
+# entry (step 14) links the round's response references to the CTQ its bench runs
+# recorded, so a run that does not say which CTQ it observed cannot be modeled.
 BENCH_RECORD_INPUT_FIELDS = frozenset(
     {
         "run_id",
         "bench_reference",
         "batch_reference",
         "sample_reference",
+        "ctq_reference",
         "protocol_version",
         "setpoints",
         "environment",
@@ -298,6 +316,12 @@ def record_field_errors(record: object) -> list[str]:
                 f"bench_test.{field} is required: every bench run must hang its run id, its bench, its "
                 "batch, its sample, the frozen protocol version and the raw record it was distilled from"
             )
+    if not has_text(record.get("ctq_reference")):
+        errors.append(
+            "bench_test.ctq_reference is required: the run must record which CTQ it observed, because the "
+            "modeling entry (step 14) links its response references to the CTQs the round's bench runs "
+            "actually recorded"
+        )
     errors.extend(setpoints_errors(record.get("setpoints")))
     errors.extend(environment_errors(record.get("environment")))
     errors.extend(anomalies_errors(record.get("anomalies")))
@@ -364,6 +388,7 @@ def record_projection(record: object) -> dict:
             "bench_reference",
             "batch_reference",
             "sample_reference",
+            "ctq_reference",
             "protocol_version",
             "setpoints",
             "environment",
@@ -525,3 +550,66 @@ def gate_lines(data: dict) -> list[str]:
         f"GATE: bench run {run_id} recorded as a {censoring_type} observation with no end-point "
         f"({observed}) -> decision UNDECIDED; {handoff}, never as the observation window length"
     ]
+
+
+# --- The screened-sample release gate (E-3 / L5) -------------------------------
+
+
+def released_screening(record: object, screenings: object) -> dict | None:
+    """The one supplied screening artifact that released this run's sample, or None.
+
+    The single verifiable rule of the bench-side screen gate: the run's
+    ``sample_reference`` must fall on a supplied screening artifact whose
+    ``overall_verdict`` is PASS with ``gate_to_bench`` RELEASED. A screen that FAILed
+    (which the schema forces to BLOCKED) or one that never released the sample cannot
+    authorize a bench slot. Pure lookup over records judged on their own fields; the
+    records' schema validity is checked by the caller that loaded them.
+    """
+    if not isinstance(record, dict) or not isinstance(screenings, list):
+        return None
+    sample = record.get("sample_reference")
+    if not has_text(sample):
+        return None
+    for screening in screenings:
+        if not isinstance(screening, dict):
+            continue
+        if screening.get("sample_reference") != sample:
+            continue
+        if screening.get("overall_verdict") == "PASS" and screening.get("gate_to_bench") == "RELEASED":
+            return screening
+    return None
+
+
+def screening_release_errors(record: object, screenings: object) -> list[str]:
+    """Reasons this run's sample is not released by any supplied screening artifact.
+
+    The message names the sample AND every supplied screening (id, sample, verdict,
+    gate), so a refusal is never silent about which screen failed to release which
+    sample. Empty list = the sample was released and the bench slot may be spent.
+    """
+    if released_screening(record, screenings) is not None:
+        return []
+    sample = record.get("sample_reference") if isinstance(record, dict) else None
+    listed = []
+    for screening in screenings if isinstance(screenings, list) else []:
+        if not isinstance(screening, dict):
+            continue
+        listed.append(
+            f"{screening.get('screening_id')} (sample {screening.get('sample_reference')}, "
+            f"overall_verdict {screening.get('overall_verdict')}, gate_to_bench {screening.get('gate_to_bench')})"
+        )
+    return [
+        f"bench_test.sample_reference {sample} is not released by any supplied screening artifact: "
+        + ("; ".join(listed) if listed else "none supplied")
+        + ". A bench slot is spent only on a sample whose screening shows overall_verdict PASS with "
+        "gate_to_bench RELEASED; a failed or unreleased screen must not occupy one"
+    ]
+
+
+def release_line(record: object, screening: dict) -> str:
+    """The one-line release conclusion printed when the run may spend a bench slot."""
+    return (
+        f"GATE: run {record.get('run_id')} sample {record.get('sample_reference')} released by screening "
+        f"{screening.get('screening_id')} (overall_verdict PASS, gate_to_bench RELEASED); "
+        "the bench slot may be spent"
+    )

@@ -158,6 +158,11 @@ function formatAge(probedAt: number, now: number): string {
   return `${Math.round(seconds / 60)} 分钟前`;
 }
 
+/** 从探针数据里安全取一个非空文本字段；非字符串 / 空串 → null。 */
+function probeText(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
 export function LubricantStagePane({
   sessionId,
   sessionDir,
@@ -805,6 +810,13 @@ export function LubricantStagePane({
               const isCompleted = step.status === "completed";
               const isActive = step.status === "active";
               const invalid = !!step.probe?.exists && !step.probe.valid;
+              // 命中记录的实际 stage（G-3）：process 一个探针服务两个语义，研发员
+              // 要能直接看到当前命中的是 process-baseline.json / DESIGN_SPACE_DEFINED
+              // 还是 process.json / PROCESS_SCALE_VALIDATED。
+              const probeData = step.probe?.data ?? null;
+              const hitStage = probeText(probeData?.stage);
+              const applicationResult =
+                step.artifactType === "application" ? probeText(probeData?.result) : null;
 
               return (
                 <div
@@ -957,6 +969,18 @@ export function LubricantStagePane({
                           )}
                         </div>
                       </div>
+
+                      {step.probe?.resolvedPath && (
+                        <div>
+                          <div className="text-[11px] font-medium text-muted">命中记录：</div>
+                          <div className="mt-0.5 break-all font-mono text-[10px] leading-relaxed text-text/90">
+                            {step.probe.resolvedPath}（stage={hitStage ?? "未读取"}
+                            {step.artifactType === "application" &&
+                              `，result=${applicationResult ?? "未声明"}`}
+                            ）
+                          </div>
+                        </div>
+                      )}
 
                       {invalid && step.probe && (
                         <ul className="space-y-0.5 rounded-md border border-red-500/30 bg-red-500/5 p-2">

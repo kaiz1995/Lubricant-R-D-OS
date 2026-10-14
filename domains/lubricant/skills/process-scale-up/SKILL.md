@@ -57,6 +57,7 @@ Input must be a single JSON object containing both upstream artifact paths and t
 - Evidence integrity: the retained evidence list is the process record's evidence plus the scale-up evidence; `scale_up.evidence` MUST be non-empty, well-formed, and contain no `GAP` status. On the precision-grease route it MUST also contain at least one `OBSERVED` item.
 - Provenance of the optimization link: the linkage is enforced by the preflight (artifact existence, stage, `decision: "GO"`, project match) and recorded in each scale-up evidence `source`; no new process field was added for it.
 - Precision-grease route (additive): when the optimization artifact's stage is `NON_INFERIORITY_PASSED`, the output stage is `PROCESS_SCALE_VALIDATED`, the process record must cover `SAPONIFICATION`, and every `step_type` must belong to the grease route items.
+- Batch identity (precision-grease route): a fixed-window record carries **one** batch identity. `material_batch_reference` names the amplified batch the window was fixed at — the builder writes it from `scale_up.batch_scale.batch_size.material_batch`, and the validator asserts the two agree (`material_batch_reference must equal batch_scale.batch_size.material_batch`). The oil routes keep the pre-change copy-through of the baseline record's value, where the two fields legitimately differ.
 
 ---
 
@@ -86,9 +87,8 @@ python skills/process-scale-up/scripts/validate_process_window_artifact.py <temp
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the window stops here. It links DESIGN_SPACE_DEFINED (process) +
-# OPTIMIZED (optimization) → PROCESS_WINDOW_DEFINED, and its ONLY published hand-off is
-# VERIFIED (contract on_demand_stages). It is not a step of any project-type route.
+# 🔴 CHECKPOINT · STOP: the window stops here at PROCESS_WINDOW_DEFINED (on-demand) / PROCESS_SCALE_VALIDATED (PRECISION_GREASE_DEV). It links the process record and the
+# optimization request, and its ONLY published hand-off is VERIFIED (contract on_demand_stages). It is not a step of any oil project-type route.
 # Do NOT run gate-review, mark the project VERIFIED, or claim release approval from this skill.
 ```
 

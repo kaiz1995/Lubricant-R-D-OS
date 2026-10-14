@@ -20,18 +20,23 @@
   "decision": "GO",
   "next_action": "Run iteration 1 and decide the next round from its variance assessment.",
   "campaign_id": "CMP-PGD-IL-001",
-  "bench_references": ["BENCH-PGD-IL-01"],
+  "bench_references": [
+    "BENCH-PGD-IL-01"
+  ],
   "max_iterations": 12,
   "current_iteration": 1,
   "iterations": [
     {
       "iteration": 1,
-      "samples": ["SMP-PGD-IL-R1A", "SMP-PGD-IL-R1B"],
+      "samples": [
+        "SMP-PGD-IL-R1A",
+        "SMP-PGD-IL-R1B"
+      ],
       "stop_state": "CONTINUE",
       "screening_reference": "SCR-PGD-IL-001",
       "variance_reference": "VAR-PGD-IL-001",
-      "model_reference": "MODEL-PGD-IL-001",
-      "next_batch_reference": "NEXT-PGD-IL-001",
+      "model_reference": null,
+      "next_batch_reference": null,
       "bench_test_references": [
         "RUN-PGD-IL-R1A-1",
         "RUN-PGD-IL-R1A-2",

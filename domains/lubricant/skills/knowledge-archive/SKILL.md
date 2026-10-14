@@ -1,9 +1,9 @@
 ---
 name: knowledge-archive
-description: Close a project's knowledge at KNOWLEDGE_ARCHIVED by landing the six knowledge assets (recommended formula / feasible design space / critical failure boundaries / evidence package / material knowledge / model) as one knowledge_asset record, with CLOSED_KNOWLEDGE reachable only when all six are present and the evidence package is QUALIFIED, and SYNTHETIC projects capped at DRAFT forever. Use when user mentions "knowledge-archive", "知识入库", "知识资产", "六类知识资产", "CLOSED_KNOWLEDGE", "DRAFT_KNOWLEDGE", "知识沉淀", "知识检索索引", or advancing to Stage 17 in lubricant R&D.
+description: Close a project's knowledge at KNOWLEDGE_ARCHIVED by landing the six knowledge assets (recommended formula / feasible design space / critical failure boundaries / evidence package / material knowledge / model) as one knowledge_asset record, with CLOSED_KNOWLEDGE reachable only when all six are present and the evidence package is QUALIFIED, and SYNTHETIC projects capped at DRAFT forever. Use when user mentions "knowledge-archive", "知识入库", "知识资产", "六类知识资产", "CLOSED_KNOWLEDGE", "DRAFT_KNOWLEDGE", "知识沉淀", "知识检索索引", or advancing to KNOWLEDGE_ARCHIVED in lubricant R&D.
 ---
 
-# Knowledge Archive (Stage 17 · 知识入库)
+# Knowledge Archive (KNOWLEDGE_ARCHIVED · 知识入库)
 
 Close the knowledge of a finished project at `KNOWLEDGE_ARCHIVED`: land the six knowledge
 assets the redesign names as one `knowledge_asset` record, so later projects can retrieve
@@ -36,28 +36,34 @@ six asset entries, the evidence scope, and the artifact-level evidence.
   "asset_status": "CLOSED_KNOWLEDGE",
   "evidence_scope": "PHYSICAL",
   "knowledge_assets": {
-    "recommended_formula": { "artifact_reference": "FORMULA-REC-PGD-001", "present": true },
-    "feasible_design_space": { "artifact_reference": "DS-FEASIBLE-PGD-001", "present": true },
-    "critical_failure_boundaries": { "artifact_reference": "CFB-PGD-001", "present": true },
+    "recommended_formula": { "artifact_reference": "optimization.json", "present": true },
+    "feasible_design_space": { "artifact_reference": "design_space.json", "present": true },
+    "critical_failure_boundaries": { "artifact_reference": "failure_ctq.json", "present": true },
     "evidence_package": {
-      "artifact_reference": "EP-PGD-001",
+      "artifact_reference": "application.json",
       "present": true,
-      "qualification_reference": "EQ-PGD-001",
+      "qualification_reference": "evidence_qualification.json",
       "qualification": "QUALIFIED"
     },
-    "material_knowledge": { "artifact_reference": "MAT-KNOW-PGD-001", "present": true },
-    "model": { "artifact_reference": "MODEL-PGD-001", "present": true }
+    "material_knowledge": { "artifact_reference": "material-base-oil.json", "present": true },
+    "model": { "artifact_reference": "model.json", "present": true }
   },
   "evidence": [
     {
       "evidence_id": "E-KA-PGD-001",
       "statement": "The closure evidence package is qualified.",
-      "source": "qualification record EQ-PGD-001",
+      "source": "qualification record evidence_qualification.json",
       "status": "OBSERVED"
     }
   ]
 }
 ```
+
+An `artifact_reference` names the RECORD ITSELF (a file in the workspace), never a document
+number: every entry whose `present` is true is resolved and checked for its `artifact_type`,
+its `stage` and its `project_id`, so a fabricated or borrowed citation is a HOLD. The
+`recommended_formula` asset cites the optimization request record — this pack registers the
+request and its non-inferiority criterion; it does not compute a recommended formulation.
 
 ### Field Invariants (contract in)
 - Upstream (hard): `project_artifact` is mandatory. It must validate against
@@ -152,7 +158,7 @@ workspace root, commit this record as `knowledge_asset.json`; otherwise commit i
 proceeding. The checker also enforces that `project.json`'s `stage` stays the constant
 `PROJECT_DEFINED` - it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 17 stops here at KNOWLEDGE_ARCHIVED.
+# 🔴 CHECKPOINT · STOP: the knowledge assets stop here at KNOWLEDGE_ARCHIVED (terminal stage; no further route step).
 ```
 
 ---

@@ -3,29 +3,29 @@
   "asset_status": "CLOSED_KNOWLEDGE",
   "knowledge_assets": {
     "recommended_formula": {
-      "artifact_reference": "FORMULA-REC-PGD-001",
+      "artifact_reference": "optimization.json",
       "present": true
     },
     "feasible_design_space": {
-      "artifact_reference": "DS-FEASIBLE-PGD-001",
+      "artifact_reference": "design_space.json",
       "present": true
     },
     "critical_failure_boundaries": {
-      "artifact_reference": "CFB-PGD-001",
+      "artifact_reference": "failure_ctq.json",
       "present": true
     },
     "evidence_package": {
-      "artifact_reference": "EP-PGD-001",
+      "artifact_reference": "application.json",
       "present": true,
-      "qualification_reference": "EQ-PGD-001",
+      "qualification_reference": "gate.json",
       "qualification": "QUALIFIED"
     },
     "material_knowledge": {
-      "artifact_reference": "MAT-KNOW-PGD-001",
+      "artifact_reference": "material.json",
       "present": true
     },
     "model": {
-      "artifact_reference": "MODEL-PGD-001",
+      "artifact_reference": "model.json",
       "present": true
     }
   },

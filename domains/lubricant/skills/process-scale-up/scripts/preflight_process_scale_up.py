@@ -32,6 +32,7 @@ from scale_up_policy import (
     ON_DEMAND_STAGE,
     REQUIRED_GREASE_STEP_TYPES,
     SCALE_ORDER,
+    grease_batch_identity_notes,
     grease_step_notes,
     has_gap,
     has_observed_evidence,
@@ -235,6 +236,8 @@ def main() -> int:
         )
         _, process = schema_artifact(resolved_path(data["process_artifact"], path), "process.schema.json", "process_artifact")
         for line in grease_step_notes(process):
+            print(line)
+        for line in grease_batch_identity_notes(process, data.get("scale_up")):
             print(line)
     return 0
 

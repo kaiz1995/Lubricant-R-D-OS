@@ -38,6 +38,11 @@
     "bench_reference": { "type": "string", "minLength": 1 },
     "batch_reference": { "type": "string", "minLength": 1 },
     "sample_reference": { "type": "string", "minLength": 1 },
+    "ctq_reference": {
+      "description": "The CTQ this bench run observed. Step 11 measures the round's CTQ on the bench, and the modeling entry (step 14) links its response references to the CTQs the round's bench runs actually recorded.",
+      "type": "string",
+      "minLength": 1
+    },
     "protocol_version": {
       "description": "Frozen bench protocol version this run was executed under.",
       "type": "string",
@@ -100,6 +105,7 @@
     "bench_reference",
     "batch_reference",
     "sample_reference",
+    "ctq_reference",
     "protocol_version",
     "setpoints",
     "environment",

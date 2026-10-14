@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lubricant-rd.local/schemas/next_batch.schema.json",
   "title": "Next batch decision (inner-loop step 13b: which samples run next, or stop)",
-  "description": "Stage contract for inner-loop step 13b of PRECISION_GREASE_DEV, the sequential decision taken after a bench round. It decides two things at once. (i) Which samples the NEXT round runs: every proposed sample must name the competing hypotheses it separates, because the whole point of the inner loop is that the next batch is chosen to be informative, and a sample that cannot separate two competing explanations is not worth a bench slot. (ii) Whether the loop continues at all: stop_state carries the same six values as campaign.schema.json's iteration stop_state, and any value other than CONTINUE must record its reason in stop_rationale (see the if/then rule), because stopping the loop is a decision that needs its reason recorded exactly like continuing does. information_gain_basis states why these are the informative samples rather than others; bench_slots_required is what the round costs.",
+  "description": "Stage contract for inner-loop step 13b of PRECISION_GREASE_DEV, the sequential decision taken at one campaign round boundary. It decides two things at once, and only one of them produces a proposal. (i) While the loop continues: which samples the NEXT round runs. Every proposed sample must name the competing hypotheses it separates, because the whole point of the inner loop is that the next batch is chosen to be informative, and a sample that cannot separate two competing explanations is not worth a bench slot; information_gain_basis states why these are the informative samples rather than others, and bench_slots_required is what the round costs. (ii) Whether the loop continues at all: stop_state carries the same six values as campaign.schema.json's iteration stop_state. Only CONTINUE carries a proposal (see the second if/then rule): a stop proposes nothing and spends no bench slot, so it records its cause in stop_rationale instead (first if/then rule). Stopping the loop is a decision that needs its reason recorded exactly like continuing does.",
   "allOf": [
     { "$ref": "common.schema.json#/$defs/artifact" },
     {
@@ -14,6 +14,23 @@
       "then": {
         "required": ["stop_rationale"],
         "properties": { "stop_rationale": { "type": "string", "minLength": 1 } }
+      }
+    },
+    {
+      "$comment": "The proposal is CONTINUE-only (E2=B): while the loop continues the record must say which samples the next round would run, why they are the informative ones and what they cost; on any stop it must carry none of the three, because a stop opens no round, proposes no sample and spends no bench slot. The two directions are one rule stated twice, exactly as stop_rationale's rule is.",
+      "if": {
+        "properties": { "stop_state": { "const": "CONTINUE" } },
+        "required": ["stop_state"]
+      },
+      "then": {
+        "required": ["proposed_samples", "information_gain_basis", "bench_slots_required"]
+      },
+      "else": {
+        "properties": {
+          "proposed_samples": false,
+          "information_gain_basis": false,
+          "bench_slots_required": false
+        }
       }
     }
   ],
@@ -33,23 +50,23 @@
       "minimum": 1
     },
     "to_iteration": {
-      "description": "Bench round this decision opens, 1-based. Strictly positive.",
+      "description": "Bench round this decision opens, 1-based, strictly positive. While the loop continues it is from_iteration + 1 (the next round is opened); on any stop the decision opens no round at all, so it equals from_iteration and proposed_samples is forbidden (see the second if/then rule).",
       "type": "integer",
       "minimum": 1
     },
     "proposed_samples": {
-      "description": "Samples the next round would run. minItems 1: a next-batch decision that proposes nothing can only be a stop, and that stop is expressed by stop_state. Every entry names the competing hypotheses it separates, so a bench slot is never spent on a sample that cannot discriminate.",
+      "description": "Samples the next round would run. CONTINUE only (see the second if/then rule): minItems 1, because a next-batch decision that proposes nothing can only be a stop, and that stop is expressed by stop_state instead. Every entry names the competing hypotheses it separates, so a bench slot is never spent on a sample that cannot discriminate. Forbidden on any stop_state other than CONTINUE.",
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/proposed_sample" }
     },
     "information_gain_basis": {
-      "description": "Why these are the informative samples rather than the alternatives considered: what the round buys that the previous round did not settle.",
+      "description": "Why these are the informative samples rather than the alternatives considered: what the round buys that the previous round did not settle. CONTINUE only (see the second if/then rule); forbidden on any stop_state other than CONTINUE, which records its cause in stop_rationale instead.",
       "type": "string",
       "minLength": 1
     },
     "bench_slots_required": {
-      "description": "Bench slots the next round consumes if it runs. Strictly positive.",
+      "description": "Bench slots the next round consumes if it runs. Strictly positive. CONTINUE only (see the second if/then rule); forbidden on any stop_state other than CONTINUE, because a stop spends no slot.",
       "type": "integer",
       "minimum": 1
     },
@@ -71,9 +88,6 @@
     "campaign_reference",
     "from_iteration",
     "to_iteration",
-    "proposed_samples",
-    "information_gain_basis",
-    "bench_slots_required",
     "stop_state",
     "evidence_scope"
   ],

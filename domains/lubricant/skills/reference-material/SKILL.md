@@ -1,9 +1,9 @@
 ---
 name: reference-material
-description: Build the physical reference-material dossier for a precision-gear grease campaign at REFERENCE_MATERIAL_RESOLVED - a Known Good and a Known Bad, each carrying material identity, formula identity, mechanism-bound history evidence, storage SOP and safety reference. Use when user mentions "reference-material", "参照物卷宗", "已知好样", "已知坏样", "方法标定参照物", "历史失效证据", or advancing to Stage 4 in lubricant R&D.
+description: Build the physical reference-material dossier for a precision-gear grease campaign at REFERENCE_MATERIAL_RESOLVED - a Known Good and a Known Bad, each carrying material identity, formula identity, mechanism-bound history evidence, storage SOP and safety reference. Use when user mentions "reference-material", "参照物卷宗", "已知好样", "已知坏样", "方法标定参照物", "历史失效证据", or advancing to REFERENCE_MATERIAL_RESOLVED in lubricant R&D.
 ---
 
-# Reference Material (Stage 4 · 参照物卷宗)
+# Reference Material (REFERENCE_MATERIAL_RESOLVED · 参照物卷宗)
 
 Record the physical reference set for a precision-gear grease campaign at `REFERENCE_MATERIAL_RESOLVED`: a
 Known Good that must pass and a Known Bad that must fail. This is a dossier of material history, NOT a
@@ -122,8 +122,9 @@ downstream_flag = DISCRIMINATION_EVIDENCE_COMPLETE   iff a Known Bad is RESOLVED
 decision        = GO  iff at least ONE side is RESOLVED and no artifact evidence item is GAP
                   HOLD otherwise
 ```
-`DISCRIMINATION_EVIDENCE_INCOMPLETE` must survive to the final gate: it is the recorded state that Stage 5's
-discrimination evidence is incomplete, not a temporary message.
+`DISCRIMINATION_EVIDENCE_INCOMPLETE` is a HARD STOP for Stage 5, not a carried state: Stage 5 reads this
+flag off the dossier and refuses to proceed while it is INCOMPLETE. A Stage 4 `decision: GO` is therefore
+NECESSARY BUT NOT SUFFICIENT - it says at least one side is RESOLVED, not that a Known Bad exists.
 
 ### Known validation boundary (stated, not hidden)
 `schemas/reference.schema.json` fixes the dossier shape and carries **no ladder-rung field**, so the rung a
@@ -178,7 +179,7 @@ record id. After the commit, run `python scripts/check_artifact_naming.py <works
 `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant
 `PROJECT_DEFINED` - it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 4 stops here at REFERENCE_MATERIAL_RESOLVED.
+# 🔴 CHECKPOINT · STOP: the reference dossier stops here at REFERENCE_MATERIAL_RESOLVED. Next station: TEST_METHODS_QUALIFIED (test-method-qualification).
 ```
 
 ---
@@ -194,7 +195,7 @@ record id. After the commit, run `python scripts/check_artifact_naming.py <works
 | `HOLD: ... evidence contains GAP` | 把"缺参照物"写成请求层 GAP | **STOP**。把缺口落到卷宗的 `resolution: UNRESOLVED`，请求层证据保持非 GAP。 |
 | `HOLD: ... workspace naming: ...` | 工作区存在面板认不出的工件名 | **STOP**。按 `check_artifact_naming.py` 的报错改名，再重跑 preflight。 |
 | `NOTE: ... recorded UNRESOLVED: known_bad history_evidence must bind at least one recorded failure to the mechanism it demonstrates` | Known Bad 的失效证据未绑定机理（如"高硫一般不好"） | 这是**预期结果**，不是可修复的错误。若找不到绑定机理的证据，保留 `UNRESOLVED`；禁止为凑 `RESOLVED` 编造机理。 |
-| `GATE: no side RESOLVED ... -> decision HOLD; ... Stage 5 must not proceed` | 两侧都 `UNRESOLVED` | **保留工件并停在第 4 步**。这就是 WGO_001 的真实结局：`downstream_flag=DISCRIMINATION_EVIDENCE_INCOMPLETE` 必须继承到最终门禁。 |
+| `GATE: no side RESOLVED ... -> decision HOLD; ... Stage 5 must not proceed` | 两侧都 `UNRESOLVED` | **保留工件并停在第 4 步**。这就是 WGO_001 的真实结局：`downstream_flag=DISCRIMINATION_EVIDENCE_INCOMPLETE` 会被第 5 步**硬拒绝**（不是继承状态）。Stage 4 的 `GO` 是必要不充分条件。 |
 | `FAIL: ...: storage_sop is recorded as absent, so the dossier cannot be RESOLVED` | 落盘工件被手工改成 `RESOLVED` | **STOP**。恢复策略推导值，用 builder 重新生成；不得手改工件。 |
 | `FAIL: cannot read artifact or schemas` | Schema 路径缺失或 JSON 语法损坏 | 检查 `../../schemas/` 与输入文件 JSON 格式。 |
 

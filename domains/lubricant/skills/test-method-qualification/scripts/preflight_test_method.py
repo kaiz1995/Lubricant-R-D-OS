@@ -34,6 +34,56 @@ from qualification_policy import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
+# The one upstream key the grease route may legally omit: CHALLENGES_DEFINED is on no
+# type_route, so the grease route records the Challenge Map link as UNROUTED:<project_id>
+# instead of producing an out-of-route artifact. Named once, used by the take-item loop
+# and by the recorded-gap evidence the builder writes.
+CHALLENGE_KEY = "challenge_artifact"
+UNROUTED_PREFIX = "UNROUTED:"
+# Provenance of the recorded gap: the route contract is what says the stage is on no
+# type_route, so it is what the recorded evidence cites.
+ROUTE_CONTRACT_SOURCE = "contracts/state-machine.json"
+
+
+def unrouted_statement(project_id: object) -> str:
+    """The recorded-gap sentence. The preflight prints it, the artifact's evidence carries it."""
+    return (
+        f"challenge_artifact not supplied on the {GREASE_PROJECT_TYPE} route "
+        f"(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+        f"{UNROUTED_PREFIX}{project_id}"
+    )
+
+
+def unrouted_note(project_id: object) -> str:
+    """The one audible line a grease run without a challenge artifact prints."""
+    return "NOTE: " + unrouted_statement(project_id)
+
+
+def unrouted_evidence(project_id: object) -> dict:
+    """The ASSUMED evidence item that records the missing challenge as a route property.
+
+    Never GAP: several preflights refuse a GAP-status item outright, and this is not an
+    unresolved gap in the record - it is a recorded property of the route.
+    """
+    return {
+        "evidence_id": f"EV-UNROUTED-{project_id}",
+        "statement": unrouted_statement(project_id),
+        "source": ROUTE_CONTRACT_SOURCE,
+        "status": "ASSUMED",
+    }
+
+
+def grease_without_challenge(data: object, project: object) -> bool:
+    """True for the grease route's legal no-challenge shape, and nothing else.
+
+    Strictly gated: a non-grease charter, or a grease request that did supply a challenge
+    artifact, returns False and every caller keeps the output it had.
+    """
+    return (
+        isinstance(data, dict)
+        and CHALLENGE_KEY not in data
+        and is_grease_route(charter_project_type(project))
+    )
 
 
 def has_text(value: object) -> bool:
@@ -51,6 +101,16 @@ def resolved_path(value: object, input_path: Path) -> Path | None:
         return None
     path = Path(value)
     return path if path.is_absolute() else input_path.parent / path
+
+
+def charter_project_type(project: object) -> object:
+    """The route marker off a validated charter, or None when there is not one.
+
+    An unreadable or absent charter yields None, which ``is_grease_route`` reads as "not
+    the grease route": every caller that cannot determine the route keeps the exact
+    pre-change behaviour.
+    """
+    return project.get("project_type") if isinstance(project, dict) else None
 
 
 def schema_artifact(path: Path, name: str, label: str) -> tuple[list[str], dict | None]:
@@ -147,17 +207,27 @@ def pipeline_errors(value: object, project_type: object) -> list[str]:
     return errors
 
 
+DOSSIER_REQUIRED = (
+    "test_method.reference_material_artifact is required on the PRECISION_GREASE_DEV route: "
+    "a reference id with no dossier beside the input cannot be read, and an unreadable dossier is "
+    "exactly the no-Known-Bad case this step must refuse"
+)
+
+
 def reference_dossier_errors(reference_id: object, project_type: object, dossier_path: Path | None) -> list[str]:
     """Grease-route presence and resolution of the Stage 4 reference dossier.
 
     ``reference_id`` is the id recorded on the method; ``dossier_path`` is the
-    optional top-level ``reference_material_artifact`` path. The dossier is read
-    structurally rather than schema-validated: the reference contract is not part
-    of this skill's deployment list, and naming a schema the bundle does not ship
-    would make the deployed preflight crash at runtime (the double-list guard
-    exists for exactly that). The fields checked here are the ones this policy
-    actually consumes - identity, stage, decision, and the downstream
-    discrimination flag - and they are checked, not assumed.
+    top-level ``reference_material_artifact`` path, which is REQUIRED on this
+    route: a reference id with no readable dossier beside the input cannot be
+    read, and an unreadable dossier is exactly the no-Known-Bad case this step
+    must refuse. The dossier is read structurally rather than schema-validated:
+    the reference contract is not part of this skill's deployment list, and
+    naming a schema the bundle does not ship would make the deployed preflight
+    crash at runtime (the double-list guard exists for exactly that). The fields
+    checked here are the ones this policy actually consumes - identity, stage,
+    decision, and the downstream discrimination flag - and they are checked, not
+    assumed.
     """
     if not is_grease_route(project_type):
         return []
@@ -167,11 +237,9 @@ def reference_dossier_errors(reference_id: object, project_type: object, dossier
             "discrimination cannot be proved without the physical Known Good / Known Bad dossiers"
         ]
     if dossier_path is None:
-        # A bare id with no dossier beside the input: the requirement above is
-        # met, and there is nothing further this layer can read.
-        return []
+        return [DOSSIER_REQUIRED]
     if not dossier_path.is_file():
-        return [f"reference_material_artifact cannot be read: {dossier_path} is not a file"]
+        return [f"{DOSSIER_REQUIRED} ({dossier_path} is not a file)"]
     try:
         dossier = json.loads(dossier_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -193,12 +261,14 @@ def reference_dossier_errors(reference_id: object, project_type: object, dossier
             "set cannot serve as the discrimination ruler"
         )
     if dossier.get("downstream_flag") == "DISCRIMINATION_EVIDENCE_INCOMPLETE":
-        # The flag is the discrimination evidence state Stage 5 must carry to the
-        # final gate (E2E-7): an incomplete flag is reported, never silently used.
+        # NOT a carried state (E3=B): the flag is a hard refusal here. A set with
+        # no RESOLVED Known Bad is exactly the no-Known-Bad case this step must
+        # refuse, so an incomplete flag is reported and Step 5 stops; it is never
+        # silently used as a discrimination ruler.
         errors.append(
             "reference_material_artifact.downstream_flag is DISCRIMINATION_EVIDENCE_INCOMPLETE: "
-            "the Known Bad is not RESOLVED, so discrimination evidence is incomplete and this state "
-            "must be carried to the final gate"
+            "the Known Bad is not RESOLVED, so this reference set cannot serve as the discrimination "
+            "ruler and Step 5 must not proceed"
         )
     return errors
 
@@ -266,8 +336,11 @@ def method_errors(value: object, challenge: dict | None, failure: dict | None, e
         )
     elif "qualification_pipeline" in value:
         # Oil routes keep today's behaviour, but a pipeline they do supply is
-        # still checked structurally rather than accepted unchecked.
-        errors.extend(pipeline_errors(value))
+        # still checked structurally rather than accepted unchecked. The route is
+        # passed through, and the pipeline object (not the method) is what this
+        # checker reads: dropping the argument raised a TypeError on any
+        # non-grease input that carries a pipeline.
+        errors.extend(pipeline_errors(value.get("qualification_pipeline"), project_type))
     return errors
 
 
@@ -278,10 +351,17 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     evidence_scope = data.get("evidence_scope")
     if evidence_scope not in {"SYNTHETIC", "PHYSICAL"}:
         errors.append("evidence_scope must be SYNTHETIC or PHYSICAL")
+    # The three upstream artifacts are read in order, so the charter is available by the
+    # time the challenge entry is reached: CHALLENGES_DEFINED is on no type_route, so on
+    # the grease route a missing challenge_artifact is a legal state (recorded downstream
+    # as UNROUTED:<project_id>) rather than a missing input. Every other route, and every
+    # grease request that DOES supply one, keeps the pre-existing requirement word for word.
     for key, schema, stage in (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED")):
         path = resolved_path(data.get(key), input_path)
         if path is None:
-            errors.append(key)
+            # The charter is read first, so ``grease`` is already knowable here.
+            if key != CHALLENGE_KEY or not is_grease_route(charter_project_type(artifacts.get("project_artifact"))):
+                errors.append(key)
             artifacts[key] = None
             continue
         item_errors, artifact = schema_artifact(path, schema, key)
@@ -289,12 +369,20 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         artifacts[key] = artifact
         if artifact is not None and artifact.get("stage") != stage:
             errors.append(f"{key} must be stage {stage}")
-    project, challenge, failure = artifacts["project_artifact"], artifacts["challenge_artifact"], artifacts["failure_ctq_artifact"]
+    project = artifacts.get("project_artifact")
+    challenge = artifacts.get(CHALLENGE_KEY)
+    failure = artifacts.get("failure_ctq_artifact")
+    grease = is_grease_route(charter_project_type(project))
     if project is not None and project.get("status") != "ACTIVE":
         errors.append("project_artifact must have status ACTIVE")
     if project and challenge and failure and len({project.get("project_id"), challenge.get("project_id"), failure.get("project_id")}) != 1:
         errors.append("project, challenge, and failure_ctq project_id values must match")
-    project_type = project.get("project_type") if isinstance(project, dict) else None
+    if grease and challenge is None and project and failure and project.get("project_id") != failure.get("project_id"):
+        # The grease route's no-challenge shape: the same uniformity rule, over the two
+        # artifacts that do exist. Unreachable on any route that requires a challenge, so
+        # the oil output is untouched.
+        errors.append("project and failure_ctq project_id values must match")
+    project_type = charter_project_type(project)
     evidence_problems, evidence = evidence_errors(data.get("evidence"))
     errors.extend(evidence_problems)
     errors.extend(
@@ -321,6 +409,20 @@ def main() -> int:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
     print("READY: input can form one TEST_METHODS_QUALIFIED record only")
+    # The recorded CHALLENGES_DEFINED gap is a property of the ROUTE, so it is gated on
+    # the charter's own project_type and on the challenge key being absent: an oil request,
+    # and a grease request that supplied a challenge artifact, print exactly what they
+    # printed before. The line is printed AFTER the READY verdict so the verdict stays the
+    # first line, matching the sibling preflights.
+    project_path = resolved_path(data.get("project_artifact"), path)
+    project = None
+    if project_path is not None and project_path.is_file():
+        try:
+            project = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            project = None
+    if resolved_path(data.get("challenge_artifact"), path) is None and is_grease_route(charter_project_type(project)):
+        print(unrouted_note(project.get("project_id")))
     return 0
 
 

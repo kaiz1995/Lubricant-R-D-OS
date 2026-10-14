@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from preflight_failure_ctq import evidence_errors, failure_ctq_errors, schema_dir
-from failure_ctq_policy import policy_errors, resolved_project_type
+from failure_ctq_policy import policy_errors, resolved_project_type, unrouted_reference_errors
 
 
 def sibling_project_type(artifact_path: Path) -> object:
@@ -60,6 +60,9 @@ def main() -> int:
         artifact,
     )
     errors.extend(policy_errors(artifact, route_type))
+    # The recorded CHALLENGES_DEFINED gap is recomputed rather than trusted: a marker
+    # that does not name this artifact's own project_id is a fabricated link.
+    errors.extend(unrouted_reference_errors(artifact, artifact.get("project_id")))
     errors.extend(evidence_errors(artifact.get("evidence")))
     if errors:
         for error in errors:

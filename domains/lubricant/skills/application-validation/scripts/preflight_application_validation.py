@@ -11,8 +11,12 @@ an empty criteria list can only carry result GAP, and GAP never advances.
 
 ADDITIVE (step 16b, plan section 4.4.3 item 3-7): the precision-grease route adds
 the whole-machine criteria chain (``machine_indicators``) and the upstream references
-that chain must trace to (``campaign_artifact`` / ``bench_test_artifact``). A record
-that declares no ``project_type`` is an oil record and is validated exactly as before.
+that chain must trace to (``campaign_artifact`` / ``bench_test_artifact`` /
+``application_artifact``). Every one of them is REQUIRED on this route, and the
+``application_artifact`` path is read back and compared field by field with the
+inline ``application`` copy (M6), so the admission never gates over a copy that
+drifted from the built record. A record that declares no ``project_type`` is an oil
+record and is validated exactly as before.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from application_validation_policy import (
+    APPLICATION_REFERENCE_FIELD,
     GREASE_PROJECT_TYPE,
     GREASE_RECORD_FIELDS,
     MACHINE_INDICATORS,
@@ -37,8 +42,13 @@ from application_validation_policy import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ("common.schema.json", "application.schema.json", "campaign.schema.json", "bench_test.schema.json")
-GREASE_REQUIRED_RECORD_FIELDS = {"project_type", "machine_indicators"}
-GREASE_OPTIONAL_RECORD_FIELDS = {"campaign_artifact", "bench_test_artifact"}
+# F-4 (2026-10-14, L10): one set, one verdict. The key-set check now says REQUIRED
+# for exactly the fields the path-level check below enforces -- the old split
+# (a GREASE_OPTIONAL_RECORD_FIELDS constant beside a direct "is required on the
+# route" refusal) told the same field two stories and the message called them
+# optional. F-2 (M6) adds the application path to the same set: on this route the
+# record must also cite the built artifact it gates.
+GREASE_REQUIRED_RECORD_FIELDS = {"project_type", "machine_indicators", "campaign_artifact", "bench_test_artifact", APPLICATION_REFERENCE_FIELD}
 UPSTREAM = (("campaign_artifact", "campaign.schema.json", "CAMPAIGN_OPENED"), ("bench_test_artifact", "bench_test.schema.json", "BENCH_TESTED"))
 
 
@@ -105,6 +115,39 @@ def grease_upstream_errors(record: dict, input_path: Path) -> list[str]:
     return errors
 
 
+def application_reference_errors(record: dict, input_path: Path) -> list[str]:
+    """The inline application copy must match the built artifact the record cites.
+
+    M6 (2026-10-14): the admission used to see only the inline copy, so a record
+    could gate over an on-disk application.json edited after the fact -- or over a
+    copy that never came from a builder at all. The path key is required on the
+    grease route (see GREASE_REQUIRED_RECORD_FIELDS); this check reads the artifact
+    back, holds it to the APPLIED stage and the gated project, then compares it
+    field by field with the inline copy. Only the FIRST differing field (sorted key
+    order) is reported, so the message is deterministic.
+    """
+    errors, built = read_artifact(
+        record.get(APPLICATION_REFERENCE_FIELD), input_path, "application.schema.json", APPLICATION_REFERENCE_FIELD
+    )
+    errors = list(errors)
+    if built is None:
+        return errors
+    if built.get("stage") != "APPLIED":
+        errors.append(f"{APPLICATION_REFERENCE_FIELD} must be stage APPLIED")
+    if built.get("project_id") != record.get("project_reference"):
+        errors.append(f"{APPLICATION_REFERENCE_FIELD} must belong to {record.get('project_reference')}")
+    inline = record.get("application")
+    if isinstance(inline, dict):
+        for name in sorted(set(inline) | set(built)):
+            if inline.get(name) != built.get(name):
+                errors.append(
+                    f"application (inline) does not match the built artifact at "
+                    f"{resolved_path(record.get(APPLICATION_REFERENCE_FIELD), input_path)}: field {name} differs"
+                )
+                break
+    return errors
+
+
 def errors_for(data: object, input_path: Path | None = None) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
@@ -126,8 +169,8 @@ def errors_for(data: object, input_path: Path | None = None) -> list[str]:
         missing = sorted(GREASE_REQUIRED_RECORD_FIELDS - set(record))
         if extra or missing:
             return [
-                f"a {GREASE_PROJECT_TYPE} application_validation record must contain {sorted(RECORD_FIELDS | GREASE_REQUIRED_RECORD_FIELDS)} "
-                f"plus the optional {sorted(GREASE_OPTIONAL_RECORD_FIELDS)}; unexpected={extra or 'none'} missing={missing or 'none'}"
+                f"a {GREASE_PROJECT_TYPE} application_validation record must contain {sorted(RECORD_FIELDS)} "
+                f"plus the required {sorted(GREASE_REQUIRED_RECORD_FIELDS)}; unexpected={extra or 'none'} missing={missing or 'none'}"
             ]
         record_errors = []
     errors: list[str] = list(record_errors)
@@ -136,6 +179,7 @@ def errors_for(data: object, input_path: Path | None = None) -> list[str]:
     errors.extend(applied_entry_blockers(record))
     if grease_route(record) and input_path is not None:
         errors.extend(grease_upstream_errors(record, input_path))
+        errors.extend(application_reference_errors(record, input_path))
     return errors
 
 
@@ -155,7 +199,7 @@ def main() -> int:
         return 1
     print("READY: the application record gates entry into APPLIED")
     if grease_route(data.get("application_validation") if isinstance(data, dict) else None):
-        print(f"NOTE: {GREASE_PROJECT_TYPE} route: every whole-machine indicator ({', '.join(MACHINE_INDICATORS)}) is bound to an OBSERVED criterion, and the campaign / bench_test chain is verified")
+        print(f"NOTE: {GREASE_PROJECT_TYPE} route: every whole-machine indicator ({', '.join(MACHINE_INDICATORS)}) is bound to an OBSERVED criterion, the campaign / bench_test chain is verified, and the inline application copy matches the built artifact it cites")
     return 0
 
 

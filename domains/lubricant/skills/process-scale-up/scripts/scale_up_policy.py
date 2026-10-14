@@ -96,6 +96,31 @@ def grease_step_notes(process: object) -> list[str]:
     ]
 
 
+def grease_batch_identity_notes(process: object, scale_up: object) -> list[str]:
+    """The batch identity the grease fixed window advances to, printed, never asserted here.
+
+    A NOTE only, because the input field set is a frozen strict set and no new field can
+    be added: the builder writes ``material_batch_reference`` from the scale-up batch, and
+    the validator asserts the two agree. This line makes the transition audible at
+    preflight time instead of silent.
+    """
+    if not isinstance(process, dict) or not isinstance(scale_up, dict):
+        return []
+    batch_scale = scale_up.get("batch_scale")
+    batch_size = batch_scale.get("batch_size") if isinstance(batch_scale, dict) else None
+    material_batch = batch_size.get("material_batch") if isinstance(batch_size, dict) else None
+    if not isinstance(material_batch, str) or not material_batch.strip():
+        return []
+    baseline = process.get("material_batch_reference")
+    if baseline == material_batch:
+        return []
+    return [
+        "NOTE: the fixed window advances the batch identity from the baseline "
+        f"material_batch_reference {baseline!r} to the amplified batch {material_batch!r}; "
+        "the built record carries one batch identity only"
+    ]
+
+
 def expected_decision_fields(process_id: str, window_id: str, ready: bool, grease: bool = False) -> dict[str, str]:
     fields = {
         "decision_question": f"Is process {process_id} window {window_id} fixed from the OPTIMIZED conclusion?",

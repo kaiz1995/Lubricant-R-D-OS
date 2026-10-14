@@ -38,10 +38,61 @@ from design_space_policy import (
     grease_notes,
     has_gap,
     has_text,
+    is_grease_route,
 )
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
+
+# The Challenge Map link of a route that carries no CHALLENGES_DEFINED step. The route
+# marker (the charter's project_type) is the authority: a design space that merely uses
+# grease-shaped fields is not evidence that the stage is off the route, and gating on the
+# marker is what keeps every non-grease request byte-identical to what it was.
+UNROUTED_PREFIX = "UNROUTED:"
+# Provenance of the recorded gap: the route contract is what says the stage is on no
+# type_route, so it is what the recorded evidence cites.
+ROUTE_CONTRACT_SOURCE = "contracts/state-machine.json"
+
+
+def unrouted_statement(project_id: object) -> str:
+    """The recorded-gap sentence. The preflight prints it, the artifact's evidence carries it."""
+    return (
+        "challenge_artifact not supplied on the PRECISION_GREASE_DEV route "
+        f"(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+        f"{UNROUTED_PREFIX}{project_id}"
+    )
+
+
+def challenge_note(project_id: object) -> str:
+    """The one audible line a grease run without a challenge artifact prints."""
+    return "NOTE: " + unrouted_statement(project_id)
+
+
+def unrouted_evidence(project_id: object) -> dict:
+    """The ASSUMED evidence item that records the missing challenge as a route property.
+
+    Never GAP: several preflights refuse a GAP-status item outright, and this is not an
+    unresolved gap in the record - it is a recorded property of the route.
+    """
+    return {
+        "evidence_id": f"EV-UNROUTED-{project_id}",
+        "statement": unrouted_statement(project_id),
+        "source": ROUTE_CONTRACT_SOURCE,
+        "status": "ASSUMED",
+    }
+
+
+def grease_without_challenge(data: object, project: object) -> bool:
+    """True for the grease route's legal no-challenge shape, and nothing else.
+
+    Strictly gated: a non-grease charter, or a grease request that did supply a challenge
+    artifact, returns False and every caller keeps the output it had.
+    """
+    return (
+        isinstance(data, dict)
+        and CHALLENGE_KEY not in data
+        and is_grease_route(project.get("project_type") if isinstance(project, dict) else None)
+    )
 
 
 def _ensure_constraint_role_importable() -> None:
@@ -83,6 +134,12 @@ REQUIRED_INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_
 # keep their exact input shape.
 OPTIONAL_INPUT_FIELDS = {"material_artifacts"}
 INPUT_FIELDS = REQUIRED_INPUT_FIELDS | OPTIONAL_INPUT_FIELDS
+# The grease route's own input shape: CHALLENGES_DEFINED is on no type_route, so that
+# route may legally omit the challenge artifact and records the Challenge Map link as
+# UNROUTED:<project_id> instead. This constant is the only shape difference; the six oil
+# routes keep validating against REQUIRED_INPUT_FIELDS verbatim.
+CHALLENGE_KEY = "challenge_artifact"
+GREASE_NO_CHALLENGE_FIELDS = REQUIRED_INPUT_FIELDS - {CHALLENGE_KEY}
 VARIABLE_TYPES = {"MATERIAL_FAMILY", "FORMULATION_VARIABLE", "PROCESS_VARIABLE"}
 DESIGN_SPACE_REQUIRED_FIELDS = {"design_space_id", "scope", "variables", "ctq_references", "qualified_test_method_references", "constraints", "evidence"}
 DESIGN_SPACE_OPTIONAL_FIELDS = {"process_reference", "baseline_process_reference", "feasibility_regions"}
@@ -155,6 +212,74 @@ def load_materials(data: dict, input_path: Path) -> list[dict]:
         if isinstance(record, dict) and has_text(record.get("material_id")):
             materials.append(record)
     return materials
+
+
+def baseline_process_records(input_path: Path) -> list[dict]:
+    """Every process record sitting in the input's OWN directory.
+
+    Only the input directory itself is scanned (never its parent): the reference
+    is a forward reference by construction - the design space is written before
+    its step-6 companion ``process-baseline.json`` exists - and scanning upward
+    would make an unrelated parent-level process record turn a legal pending
+    reference into an incidental failure. A file counts as a record only when it
+    parses to an object carrying a non-empty top-level ``process_id``: the
+    request files (``input-process-baseline.json``) and every other shape are
+    ignored.
+    """
+    records: list[dict] = []
+    directory = input_path.parent
+    if not directory.is_dir():
+        return records
+    for candidate in sorted(directory.glob("process*.json")):
+        if not candidate.is_file():
+            continue
+        try:
+            record = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(record, dict) and has_text(record.get("process_id")):
+            records.append(record)
+    return records
+
+
+def baseline_process_errors(value: object, project_type: object, input_path: Path) -> list[str]:
+    """Grease-route closure of ``baseline_process_reference``, consumer side.
+
+    The design space names the fixed process its formula comparison is valid
+    under, and that record is written later in the same step - so an absent
+    record is the legal PENDING state (the NOTE in :func:`main`), never a HOLD.
+    Once the directory holds at least one process record, the reference must
+    resolve to one of them: a reference that names nothing is a dangling link.
+    """
+    if not isinstance(value, dict) or not effective_route_is_grease(project_type, value):
+        return []
+    reference = value.get("baseline_process_reference")
+    if not has_text(reference):
+        return []
+    records = baseline_process_records(input_path)
+    if not records:
+        return []
+    if any(record.get("process_id") == reference for record in records):
+        return []
+    return [
+        f"design_space.baseline_process_reference: {reference} does not resolve to a readable process record "
+        f"beside the input (found process_ids {sorted(record.get('process_id') for record in records)})"
+    ]
+
+
+def baseline_process_note(value: object, project_type: object, input_path: Path) -> list[str]:
+    """The audible PENDING marker: the fixed process is declared, not yet written."""
+    if not isinstance(value, dict) or not effective_route_is_grease(project_type, value):
+        return []
+    reference = value.get("baseline_process_reference")
+    if not has_text(reference):
+        return []
+    if baseline_process_records(input_path):
+        return []
+    return [
+        f"NOTE: design_space.baseline_process_reference {reference} is PENDING: no process record beside the "
+        "input carries that process_id yet; the reference must resolve once the step-6 companion fix is written"
+    ]
 
 
 def measurement_errors(value: object, label: str) -> list[str]:
@@ -356,7 +481,20 @@ def design_space_errors(value: object, failure: dict | None, method: dict | None
             if ctq is None:
                 errors.append(f"design_space.ctq_references: {ctq_id} does not exist")
             elif method_id not in ctq.get("test_references", []) and method_id not in failure.get("test_chain", []):
-                errors.append(f"design_space.ctq_references: {ctq_id} is not linked to the supplied qualified method")
+                # The step-3 CTQ may legally carry PENDING:<method_id> while the method
+                # does not exist yet; by this step it IS qualified, so a CTQ that still
+                # carries the marker must be backfilled with the bare id.
+                references = ctq.get("test_references")
+                pending_form = f"PENDING:{method_id}"
+                hint = (
+                    f"; this CTQ still marks the method as {pending_form}, so backfill the bare id "
+                    f"{method_id} now that the method is QUALIFIED"
+                    if isinstance(references, list) and pending_form in references
+                    else ""
+                )
+                errors.append(
+                    f"design_space.ctq_references: {ctq_id} is not linked to the supplied qualified method{hint}"
+                )
     return errors
 
 
@@ -364,8 +502,6 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors = []
-    if not REQUIRED_INPUT_FIELDS <= set(data) <= INPUT_FIELDS:
-        errors.append("input must contain only required Stage 4 artifact paths and design_space")
     artifacts: dict[str, dict | None] = {}
     requirements = (
         ("project_artifact", "project.schema.json", "PROJECT_DEFINED"),
@@ -373,10 +509,34 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"),
         ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"),
     )
+    # The charter is read BEFORE the key-set verdict, because whether the challenge key
+    # may be absent at all is a property of the route: CHALLENGES_DEFINED is on no
+    # type_route, so only the grease route may drop it. An input of any other shape, or a
+    # grease shape whose charter is not the grease route, gets the pre-existing verdict
+    # word for word.
+    project_path = resolved_path(data.get("project_artifact"), input_path)
+    charter = None
+    if project_path is not None and project_path.is_file():
+        try:
+            charter = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            charter = None
+    grease = is_grease_route(charter.get("project_type") if isinstance(charter, dict) else None)
+    no_challenge_shape = isinstance(data, dict) and CHALLENGE_KEY not in data
+    key_shape_ok = (
+        GREASE_NO_CHALLENGE_FIELDS <= set(data) <= INPUT_FIELDS - {CHALLENGE_KEY}
+        if no_challenge_shape and grease
+        else REQUIRED_INPUT_FIELDS <= set(data) <= INPUT_FIELDS
+    )
+    if not key_shape_ok:
+        errors.append("input must contain only required Stage 4 artifact paths and design_space")
     for key, schema, stage in requirements:
         path = resolved_path(data.get(key), input_path)
         if path is None:
-            errors.append(key)
+            # The grease route's legal no-challenge state: the link is recorded as
+            # UNROUTED:<project_id> on the failure record instead of being consumable here.
+            if key != CHALLENGE_KEY or not grease:
+                errors.append(key)
             artifacts[key] = None
             continue
         item_errors, artifact = schema_artifact(path, schema, key)
@@ -387,22 +547,30 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         if artifact is not None and artifact.get("decision") != "GO":
             errors.append(f"{key} must have decision GO")
     project = artifacts["project_artifact"]
-    challenge = artifacts["challenge_artifact"]
+    challenge = artifacts[CHALLENGE_KEY]
     failure = artifacts["failure_ctq_artifact"]
     method = artifacts["test_method_artifact"]
     if project is not None and project.get("status") != "ACTIVE":
         errors.append("project_artifact must have status ACTIVE")
-    present = [item for item in (project, challenge, failure, method) if item is not None]
-    if len(present) == 4 and len({item.get("project_id") for item in present}) != 1:
-        errors.append("project, challenge, failure_ctq, and test_method project_id values must match")
     if challenge is not None and failure is not None and failure.get("challenge_reference") != challenge.get("challenge_id"):
         errors.append("failure_ctq_artifact.challenge_reference must equal challenge_artifact.challenge_id")
+    if grease and challenge is None and failure is not None:
+        # The no-challenge shape's own uniformity rule, over the three artifacts that
+        # exist. Unreachable on any route that requires a challenge.
+        present = [item for item in (project, failure, method) if item is not None]
+        if len(present) == 3 and len({item.get("project_id") for item in present}) != 1:
+            errors.append("project, failure_ctq, and test_method project_id values must match")
+    elif challenge is not None:
+        present = [item for item in (project, challenge, failure, method) if item is not None]
+        if len(present) == 4 and len({item.get("project_id") for item in present}) != 1:
+            errors.append("project, challenge, failure_ctq, and test_method project_id values must match")
     if failure is not None and method is not None and method.get("target_failure_reference") != failure.get("failure_id"):
         errors.append("test_method_artifact.target_failure_reference must equal failure_ctq_artifact.failure_id")
     if method is not None and method.get("qualification_status") != "QUALIFIED":
         errors.append("test_method_artifact must have qualification_status QUALIFIED")
     project_type = project.get("project_type") if isinstance(project, dict) else None
     errors.extend(design_space_errors(data.get("design_space"), failure, method, project_type, load_materials(data, input_path)))
+    errors.extend(baseline_process_errors(data.get("design_space"), project_type, input_path))
     return errors
 
 
@@ -465,6 +633,19 @@ def main() -> int:
     if effective_route_is_grease(project.get("project_type") if isinstance(project, dict) else None, design_space):
         for note in grease_notes(design_space):
             print(note)
+        # The fixed-process reference is a forward reference by construction (the
+        # companion process record is written later in this same step), so its
+        # PENDING state is said out loud rather than silently assumed.
+        for note in baseline_process_note(
+            design_space, project.get("project_type") if isinstance(project, dict) else None, path
+        ):
+            print(note)
+    # The recorded CHALLENGES_DEFINED gap is a property of the ROUTE, so it is gated on
+    # the charter's own project_type rather than on effective_route_is_grease: a design
+    # space that merely uses grease-shaped fields did not thereby drop a route stage.
+    if isinstance(data, dict) and is_grease_route(project.get("project_type") if isinstance(project, dict) else None):
+        if resolved_path(data.get("challenge_artifact"), path) is None:
+            print(challenge_note(project.get("project_id")))
     if errors:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1

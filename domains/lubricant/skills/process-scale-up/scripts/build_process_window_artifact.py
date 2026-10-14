@@ -20,9 +20,13 @@ from scale_up_policy import expected_decision_fields, has_gap, window_evidence_r
 
 
 # Carried over unchanged from the DESIGN_SPACE_DEFINED process record.
+# ``material_batch_reference`` is deliberately NOT in this tuple: on the grease
+# route the fixed-window record must not carry two batch identities, so that
+# field is written from the scale-up batch below instead of being copied from the
+# baseline record. The oil routes keep the pre-change copy-through exactly.
 PROCESS_ARTIFACT_FIELDS = (
     "process_id", "project_reference", "process_step", "batch_scale", "amplification_factor",
-    "process_window", "control_points", "cpk", "material_batch_reference", "factor_role",
+    "process_window", "control_points", "cpk", "factor_role",
 )
 
 
@@ -30,7 +34,7 @@ def build_artifact(process: dict, optimization: dict, scale_up: dict) -> dict:
     """Assemble the fixed-window artifact. Pure function of validated input + upstreams."""
     grease = optimization.get("stage") == GREASE_UPSTREAM_STAGE
     window_id = scale_up["window_id"]
-    return {
+    artifact = {
         "schema_version": "0.1.0",
         "artifact_type": "process",
         "project_id": process["project_id"],
@@ -51,6 +55,16 @@ def build_artifact(process: dict, optimization: dict, scale_up: dict) -> dict:
             "evidence_reference": window_evidence_reference(window_id),
         },
     }
+    if grease:
+        # One fixed-window record, one batch identity: on the grease route the
+        # batch the window was verified at IS the amplified batch, so the identity
+        # is written from the scale-up batch rather than inherited from the
+        # baseline record (the validator asserts the two agree). The oil routes
+        # keep the copy-through value they had before.
+        artifact["material_batch_reference"] = scale_up["batch_scale"]["batch_size"]["material_batch"]
+    else:
+        artifact["material_batch_reference"] = process["material_batch_reference"]
+    return artifact
 
 
 def main() -> int:

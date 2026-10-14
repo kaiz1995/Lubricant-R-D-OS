@@ -1,9 +1,9 @@
 ---
 name: project-definition
-description: Turn a complete lubricant R&D project brief into a traceable Project Charter at PROJECT_DEFINED; preflight verifies project classification, objectives, constraints, cost target, benchmarks, and evidence. Use when user mentions "project-definition", "项目立项", "立项章程", "Project Charter", "新项目启动", or starting Stage 0 in lubricant development.
+description: Turn a complete lubricant R&D project brief into a traceable Project Charter at PROJECT_DEFINED; preflight verifies project classification, objectives, constraints, cost target, benchmarks, and evidence. Use when user mentions "project-definition", "项目立项", "立项章程", "Project Charter", "新项目启动", or starting PROJECT_DEFINED in lubricant development.
 ---
 
-# Project Definition (Stage 0)
+# Project Definition (PROJECT_DEFINED)
 
 Create only the Stage 0 Project Charter (`PROJECT_DEFINED`) for the Lubricant R&D Domain Pack.
 This is a scoping and governance decision record, NOT a formulation, performance claim, Challenge Map, or downstream artifact.
@@ -85,7 +85,7 @@ python skills/project-definition/scripts/validate_project_artifact.py <temporary
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
 - The landed name must be the canonical stage name `project.json` (or the legal suffixed form `project-<project_id>-<id>.json`), directly under the workspace root. The panel and `scripts/check_artifact_naming.py` match it exactly; a name like `project.grease.json` is classified as a mangled stage artifact and the stage would read as missing. A temp/suffixed candidate name used for Step 2/3 must not be the name that lands.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 0 stops here at PROJECT_DEFINED. Route to next stage according to project_type.
+# 🔴 CHECKPOINT · STOP: the Project Charter stops here at PROJECT_DEFINED. Next station per project_type: DUTY_DEFINED (NEW_PRODUCT, PRECISION_GREASE_DEV), FAILURE_CTQ_DEFINED (IMPROVEMENT, COST_DOWN, CUSTOMIZATION, PROCESS_ROBUSTNESS), or DESIGN_SPACE_DEFINED (EXPLORATION).
 ```
 
 ---

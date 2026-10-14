@@ -19,14 +19,26 @@ SKILLS = {
     "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "duty.schema.json", "challenge.schema.json"),
     "failure-ctq-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json"),
     "test-method-qualification": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json"),
-    "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json"),
+    # 2026-10-14 (I-3): the skill also produces the material records the design
+    # space resolves its material_reference against (preflight_material.py /
+    # build_material_artifact.py / validate_material_artifact.py), and the
+    # validator loads material.schema.json -- so it must be deployed here or the
+    # double-list guard (check_double_list.py) turns red with
+    # "loaded but NOT deployed".
+    "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "material.schema.json"),
     "process-definition": ("common.schema.json", "design_space.schema.json", "process.schema.json"),
     # 2026-10-13: doe-design also owns the sequential next-batch decision
     # (preflight_next_batch.py / validate_next_batch_artifact.py), so the
     # deploy list carries next_batch.schema.json like every other loaded schema.
     "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "next_batch.schema.json"),
-    "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "bench_test.schema.json"),
-    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json"),
+    # 2026-10-14: the bench path now resolves the screening release it spends a slot
+    # on (BENCH_SCHEMA_NAMES loads screening.schema.json), so the deploy list carries
+    # it -- the double-list guard requires every script-loaded schema here.
+    "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "bench_test.schema.json", "screening.schema.json"),
+    # 2026-10-14: the grease modeling entry (step 14) reads the campaign ledger it
+    # must trace to (campaign_artifact), so campaign.schema.json is loaded here;
+    # the double-list guard requires it in the deploy list.
+    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json", "campaign.schema.json"),
     "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "variance.schema.json"),
     "process-scale-up": ("common.schema.json", "process.schema.json", "optimization.schema.json"),
     "application-definition": ("common.schema.json", "application.schema.json"),

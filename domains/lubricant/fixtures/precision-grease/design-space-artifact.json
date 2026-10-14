@@ -113,7 +113,7 @@
     },
     "Use only the supplied variable bounds."
   ],
-  "baseline_process_reference": "PROCESS-BASE-PG-B1-001",
+  "baseline_process_reference": "PROC-PG-B1-001",
   "feasibility_regions": [
     {
       "region_id": "REG-PG-B1-LOW-SOAP",

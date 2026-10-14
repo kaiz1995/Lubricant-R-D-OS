@@ -14,13 +14,38 @@ import json
 import sys
 from pathlib import Path
 
-from failure_ctq_policy import is_precision_grease, policy_errors, resolved_project_type
+from failure_ctq_policy import (
+    is_precision_grease,
+    policy_errors,
+    resolved_project_type,
+    unrouted_reference,
+    unrouted_statement,
+)
 from preflight_failure_ctq import (
     CTQ_ITEM_FIELDS,
     errors_for,
     resolved_path,
     schema_errors,
 )
+
+# Provenance of the recorded CHALLENGES_DEFINED gap: the route contract is what says
+# the stage is on no type_route, so it is what the recorded evidence cites.
+ROUTE_CONTRACT_SOURCE = "contracts/state-machine.json"
+UNROUTED_EVIDENCE_PREFIX = "EV-UNROUTED-"
+
+
+def unrouted_evidence(project_id: object) -> dict:
+    """The ASSUMED evidence item that records the missing challenge as a gap.
+
+    Never GAP: several preflights refuse a GAP-status item outright, and this is not
+    an unresolved gap in the record - it is a recorded property of the route.
+    """
+    return {
+        "evidence_id": f"{UNROUTED_EVIDENCE_PREFIX}{project_id}",
+        "statement": unrouted_statement(project_id),
+        "source": ROUTE_CONTRACT_SOURCE,
+        "status": "ASSUMED",
+    }
 
 
 def main() -> int:
@@ -48,6 +73,16 @@ def main() -> int:
     if policy:
         print(f"HOLD: missing or invalid: {', '.join(policy)}; no artifact generated")
         return 1
+    # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    # travels with the request the Challenge Map link is RECOMPUTED from the charter's own
+    # project_id rather than copied through: the marker is a property of the route, and
+    # recomputing it here is what makes it agree with what the preflight enforced and what
+    # test_method's existing comparison reads back. When a challenge artifact IS supplied,
+    # the supplied id is copied through exactly as before, on every route.
+    grease_without_challenge = is_precision_grease(route_type) and resolved_path(data.get("challenge_artifact"), input_path) is None
+    challenge_reference = (
+        unrouted_reference(project["project_id"]) if grease_without_challenge else failure_ctq.get("challenge_reference")
+    )
 
     # Deterministic projection of each CTQ onto the contract's own field order; unknown
     # keys are dropped rather than copied, so the artifact cannot carry an unpublished field.
@@ -73,11 +108,12 @@ def main() -> int:
                 "source": item.get("source"), "status": item.get("status"),
             }
             for item in data["evidence"]
-        ],
+        ]
+        + ([unrouted_evidence(project["project_id"])] if grease_without_challenge else []),
         "decision_rule": "Do not act on formulation until diagnosis, hypothesis and lubricant contribution are recorded.",
         "result": "A testable CTQ chain is defined; no performance conclusion is made.",
         "decision": "GO", "next_action": "Qualify the proposed test method.",
-        "challenge_reference": failure_ctq.get("challenge_reference"),
+        "challenge_reference": challenge_reference,
         "failure_id": failure_ctq.get("failure_id"),
         "failure_mode": failure_ctq.get("failure_mode"),
         "mechanism": failure_ctq.get("mechanism"),

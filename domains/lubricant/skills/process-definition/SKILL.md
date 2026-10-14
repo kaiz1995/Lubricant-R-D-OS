@@ -1,6 +1,6 @@
 ---
 name: process-definition
-description: Define one evidence-bound grease manufacturing process record alongside the Stage 4 design space; preflight verifies the upstream DESIGN_SPACE_DEFINED artifact and rejects any process parameter missing source or evidence_id. Use when user mentions "process-definition", "工艺定义", "制脂工艺", "工艺参数", "process window", "factor_role", "WHOLE_PLOT", "SUB_PLOT", "皂化保温", "稀释曲线", "熟化", "灌装温度", or defining the grease manufacturing process (皂化/转相/研磨/均质) linked to a design space.
+description: Define one evidence-bound grease manufacturing process record alongside the DESIGN_SPACE_DEFINED design space; preflight verifies the upstream DESIGN_SPACE_DEFINED artifact and rejects any process parameter missing source or evidence_id. Use when user mentions "process-definition", "工艺定义", "制脂工艺", "工艺参数", "process window", "factor_role", "WHOLE_PLOT", "SUB_PLOT", "皂化保温", "稀释曲线", "熟化", "灌装温度", or defining the grease manufacturing process (皂化/转相/研磨/均质) linked to a design space.
 ---
 
 # Process Definition (design-space companion)
@@ -120,7 +120,7 @@ python skills/process-definition/scripts/validate_process_artifact.py <temporary
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the process record stops here. It links to DESIGN_SPACE_DEFINED.
+# 🔴 CHECKPOINT · STOP: the process record stops here at DESIGN_SPACE_DEFINED (a design-space companion record).
 # Do NOT advance the state machine, generate a DOE matrix, or claim a validated process window.
 ```
 

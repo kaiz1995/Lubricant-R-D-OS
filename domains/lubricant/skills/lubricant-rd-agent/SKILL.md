@@ -173,7 +173,7 @@ python skills/lubricant-rd-agent/scripts/route_step.py --list-loop-edges PRECISI
 
 | Situation | Edge | What it means | `iteration` |
 |---|---|---|---|
-| 理化筛测 FAIL / INCONCLUSIVE（`screening.json` → `gate_to_bench = BLOCKED`） | `SCREENING_PASSED → BATCH_PRODUCED` (**REWORK**) | Remake the batch/sample; the bench slot is not spent | unchanged (same round) |
+| 理化筛测 FAIL / INCONCLUSIVE（`screening.json` → `gate_to_bench = BLOCKED`） | `SCREENING_PASSED → BATCH_PRODUCED` (**REWORK**) | Remake the batch/sample; the bench slot is not spent — so the cap does NOT apply to this edge | unchanged (same round) |
 | Round finished, criterion not met, information still expected | `VARIANCE_ASSESSED → BATCH_PRODUCED` (**LOOP_BACK**) | Start the next bench round (new formula / new batch) | +1 |
 | Criterion met / no new information / bench slots exhausted | none — normal advance | `VARIANCE_ASSESSED → MODEL_BUILT` leaves the inner loop | — |
 | `iteration` has reached `max_iterations` (12 ≈ one year of bench rounds) | none | STOP the loop: record `PIVOT` or `KILL`. A further round is rejected: `iteration 13 exceeds max_iterations 12; stop the inner loop and record PIVOT or KILL` | — |

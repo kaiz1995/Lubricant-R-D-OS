@@ -38,6 +38,12 @@ STOP_STATES = (
     "KILL",
 )
 
+# The three fields that make up the next round's proposal. They exist only while the loop
+# continues (next_batch.schema.json's second if/then rule, E2=B): a stop opens no round,
+# proposes no sample and spends no bench slot, so it carries none of them and records its
+# cause in stop_rationale instead. Enforced in both directions by proposal_field_errors.
+PROPOSAL_FIELDS = ("proposed_samples", "information_gain_basis", "bench_slots_required")
+
 # The pair separator: next_batch.schema.json's own example of the ``discriminates`` field
 # is "'A explains the result' vs 'B explains the result'", so the composed form uses the
 # same spelling. Every word but this separator is text the input declared.
@@ -149,6 +155,40 @@ def stop_rationale_errors(record: Mapping[str, object], label: str = "next_batch
         "like any other and must record why it stopped"]
 
 
+def proposal_field_errors(record: Mapping[str, object], label: str = "next_batch") -> list[str]:
+    """Both directions of the CONTINUE-only proposal rule (E2=B), as readable refusals.
+
+    The schema's second if/then rule enforces the same thing structurally; this function is
+    the wording layer for the request (which never reaches the artifact schema) and for the
+    committed record (which the validator re-derives): while the loop continues the record
+    must carry ``proposed_samples`` / ``information_gain_basis`` / ``bench_slots_required``;
+    on any stop it must carry none of the three, because a stop opens no round, proposes no
+    sample and spends no bench slot. A stop records its cause in ``stop_rationale`` instead --
+    the two rules are mirror images of one another.
+    """
+    stop_state = record.get("stop_state")
+    if stop_state not in STOP_STATES:
+        # An unknown stop_state is reported by the vocabulary check; this rule only speaks
+        # about a value the contract defines.
+        return []
+    if stop_state == CONTINUE:
+        missing = [field for field in PROPOSAL_FIELDS if field not in record]
+        if not missing:
+            return []
+        return [
+            f"{label}.{', '.join(missing)} must be recorded while stop_state is CONTINUE: the round is opened by "
+            "this decision and cannot be opened without the samples it would run, why they are informative and "
+            "what they cost"
+        ]
+    present = [field for field in PROPOSAL_FIELDS if field in record]
+    if not present:
+        return []
+    return [
+        f"{label}.{', '.join(present)} must be omitted while stop_state is {stop_state}: a stop opens no round, "
+        "proposes no sample and spends no bench slot; it records its cause in stop_rationale instead"
+    ]
+
+
 def expected_decision_fields(record: Mapping[str, object], campaign_id: str) -> dict[str, str]:
     """Canonical decision fields for one next-batch record (pure function of the record).
 
@@ -172,7 +212,11 @@ def expected_decision_fields(record: Mapping[str, object], campaign_id: str) -> 
         "hypothesis": (
             f"{batch_id} records the supplied round-{to_iteration} proposal for campaign {campaign_id}: "
             f"{sample_count} proposed sample(s) at {slots} bench slot(s), each separating a declared pair of "
-            "competing explanations."),
+            "competing explanations."
+            if continuing else
+            f"{batch_id} records the supplied stop for campaign {campaign_id} at the round-{from_iteration} "
+            f"boundary: the loop closes with stop_state {stop_state} and its recorded reason, so no round "
+            "follows and no bench slot is proposed."),
         "uncertainty": (
             "The supplied proposed samples, competing explanations, information-gain basis, bench-slot "
             "requirement and stop state are planning statements that are not independently verified; this "
@@ -181,18 +225,23 @@ def expected_decision_fields(record: Mapping[str, object], campaign_id: str) -> 
         "decision_rule": (
             "Open the next round only while stop_state is CONTINUE, the campaign's own iteration entry agrees "
             "with this decision, and every proposed sample separates two declared competing explanations; any "
-            "other stop_state records its reason in stop_rationale."),
+            "other stop_state records its reason in stop_rationale."
+            if continuing else
+            "The loop stays open only while stop_state is CONTINUE, the campaign's own iteration entry agrees "
+            "with this decision, and every proposed sample separates two declared competing explanations; this "
+            "record's stop_state is not CONTINUE, so it carries no proposal and records its reason in "
+            "stop_rationale."),
         "result": (
             f"Round {to_iteration} is opened with {sample_count} proposed sample(s) requiring {slots} bench "
             f"slot(s); the round boundary ends with stop_state {stop_state}."
             if continuing else
-            f"Round {to_iteration} is not opened: the round boundary ends with stop_state {stop_state} and its "
-            "recorded reason."),
+            f"No round follows the round-{from_iteration} boundary: the loop closes with stop_state {stop_state} "
+            "and its recorded reason."),
         "decision": "GO" if continuing else "HOLD",
         "next_action": (
             f"Hand the {sample_count} proposed sample(s) to the doe-design step as the round-{to_iteration} "
             "request without adding samples, and size the round to the registered bench capacity."
             if continuing else
             f"Stop the inner loop at round {from_iteration} with stop_state {stop_state} and retain the recorded "
-            f"reason; do not open round {to_iteration}."),
+            "reason; no further bench round is opened."),
     }

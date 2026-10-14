@@ -50,6 +50,18 @@ OIL_INPUT_FIELDS = {key for key, _, _ in UPSTREAM_OIL} | {"optimization"}
 # and the batch-3 scope does not permit changing it.
 GREASE_INPUT_FIELDS = INPUT_FIELDS | {MODEL_TRUST_REGION_INPUT_FIELD}
 OIL_INPUT_FIELDS_WITH_REGION = OIL_INPUT_FIELDS | {MODEL_TRUST_REGION_INPUT_FIELD}
+# The one upstream key the grease route may legally omit: CHALLENGES_DEFINED is on no
+# type_route, so that route records the Challenge Map link as UNROUTED:<project_id> on
+# the failure record instead of producing an out-of-route artifact. (The request field
+# the policy module names is MODEL_TRUST_REGION_INPUT_FIELD; the constant the plan called
+# GREASE_INPUT_FIELDS_WITH_REGION does not exist here and is not introduced -- the two
+# grease shapes are derived instead, so a typo cannot silently add a shape.)
+CHALLENGE_KEY = "challenge_artifact"
+GREASE_NO_CHALLENGE_FIELDS = GREASE_INPUT_FIELDS - {CHALLENGE_KEY}
+GREASE_NO_CHALLENGE_FIELDS_WITH_REGION = GREASE_NO_CHALLENGE_FIELDS | {MODEL_TRUST_REGION_INPUT_FIELD}
+# Provenance of the recorded gap: the route contract is what says the stage is on no
+# type_route, so it is what the recorded evidence cites.
+ROUTE_CONTRACT_SOURCE = "contracts/state-machine.json"
 REQUEST_FIELDS = {"optimization_id", "objective_type", "objectives", "methods", "evidence"}
 
 
@@ -64,6 +76,33 @@ def load_schemas() -> tuple[dict[str, dict], Registry]:
     return schemas, registry
 
 
+# E-1 (E6=A): the variance artifact is judged by its VERDICT, not by ``decision == GO``.
+# The releasing verdict is the only one ``variance_assessment_policy.decision_for`` gives
+# GO; a NO_DETECTABLE_DIFFERENCE round ("a capable design found nothing") is admissible to
+# the optimization and its producer correctly writes HOLD, so a blanket GO demand would
+# refuse a legitimate record. The two blocking verdicts stay refused by
+# ``grease_reference_errors`` (its first-line branch below), which is why this dispatch
+# only has to keep the decision honest for the admissible verdicts -- without it the two
+# consumers could disagree about the same record.
+RELEASING_VARIANCE_VERDICT = "CONSISTENT_DIFFERENCE"
+NO_DIFFERENCE_VERDICT = "NO_DETECTABLE_DIFFERENCE"
+
+
+def variance_gate_errors(artifact: dict) -> list[str]:
+    """Verdict-level decision honesty for a variance record (E-1 / E6=A)."""
+    verdict = artifact.get("verdict")
+    decision = artifact.get("decision")
+    if verdict == RELEASING_VARIANCE_VERDICT and decision != "GO":
+        return ["variance_artifact must have decision GO"]
+    if verdict == NO_DIFFERENCE_VERDICT and decision == "GO":
+        return [
+            "variance_artifact must not carry decision GO: NO_DETECTABLE_DIFFERENCE releases no "
+            "model update (it is admissible to the optimization but is not a difference); only "
+            "CONSISTENT_DIFFERENCE carries GO"
+        ]
+    return []
+
+
 def read_artifact(value: object, input_path: Path, schema_name: str, label: str) -> tuple[list[str], dict | None]:
     if not isinstance(value, str) or not value.strip(): return [label], None
     try:
@@ -71,6 +110,67 @@ def read_artifact(value: object, input_path: Path, schema_name: str, label: str)
     except (OSError, json.JSONDecodeError) as error: return [f"{label} cannot be read: {error}"], None
     errors = [f"{label}: {error.message}" for error in Draft202012Validator(schemas[schema_name], registry=registry).iter_errors(artifact)]
     return errors, artifact if not errors else None
+
+
+def charter_project_type(data: object, input_path: Path) -> object:
+    """The route marker off the request's own charter, or None when it cannot be read.
+
+    Read before the key-set verdict because whether the challenge key may be absent at
+    all is a property of the route. An unreadable or absent charter yields None, which
+    ``grease_route`` reads as "not the grease route": the request then gets exactly the
+    pre-change key-set verdict.
+    """
+    if not isinstance(data, dict):
+        return None
+    value = data.get("project_artifact")
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        project = json.loads((input_path.parent / value).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return project.get("project_type") if isinstance(project, dict) else None
+
+
+def unrouted_statement(project_id: object) -> str:
+    """The recorded-gap sentence. The preflight prints it, the artifact's evidence carries it."""
+    return (
+        "challenge_artifact not supplied on the PRECISION_GREASE_DEV route "
+        f"(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+        f"UNROUTED:{project_id}"
+    )
+
+
+def challenge_note(project_id: object) -> str:
+    """The one audible line a grease run without a challenge artifact prints."""
+    return "NOTE: " + unrouted_statement(project_id)
+
+
+def unrouted_evidence(project_id: object) -> dict:
+    """The ASSUMED evidence item that records the missing challenge as a route property.
+
+    Never GAP: several preflights refuse a GAP-status item outright, and this is not an
+    unresolved gap in the record - it is a recorded property of the route.
+    """
+    return {
+        "evidence_id": f"EV-UNROUTED-{project_id}",
+        "statement": unrouted_statement(project_id),
+        "source": ROUTE_CONTRACT_SOURCE,
+        "status": "ASSUMED",
+    }
+
+
+def grease_without_challenge(data: object, project: object) -> bool:
+    """True for the grease route's legal no-challenge shape, and nothing else.
+
+    Strictly gated: a non-grease charter, or a grease request that did supply a challenge
+    artifact, returns False and every caller keeps the output it had.
+    """
+    return (
+        isinstance(data, dict)
+        and CHALLENGE_KEY not in data
+        and grease_route(project)
+    )
 
 
 def request_errors(request: object, project_id: str, evidence_scope: str | None = None, stage: str = "OPTIMIZED", grease: bool = False) -> list[str]:
@@ -125,25 +225,41 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     # The input key set is decided by the route, not by the widest list: an oil request
     # supplies exactly the eight original keys it always did; the grease route supplies
     # the variance assessment and the model's applicability boundary. Requiring the
-    # union on both routes would reject every oil request.
+    # union on both routes would reject every oil request. The grease route may also omit
+    # the challenge path, because CHALLENGES_DEFINED is on no type_route.
     supplied = set(data)
-    if supplied not in (OIL_INPUT_FIELDS, OIL_INPUT_FIELDS_WITH_REGION, INPUT_FIELDS, GREASE_INPUT_FIELDS):
+    charter_type = charter_project_type(data, input_path)
+    if charter_grease := grease_route({"project_type": charter_type}):
+        allowed_shapes = (
+            OIL_INPUT_FIELDS, OIL_INPUT_FIELDS_WITH_REGION, INPUT_FIELDS, GREASE_INPUT_FIELDS,
+            GREASE_NO_CHALLENGE_FIELDS, GREASE_NO_CHALLENGE_FIELDS_WITH_REGION,
+        )
+    else:
+        allowed_shapes = (OIL_INPUT_FIELDS, OIL_INPUT_FIELDS_WITH_REGION, INPUT_FIELDS, GREASE_INPUT_FIELDS)
+    if supplied not in allowed_shapes:
         errors.append("input must contain only required upstream artifact paths and optimization")
     for key, schema, stage in UPSTREAM:
         if key not in supplied:
             continue
         item_errors, artifact = read_artifact(data.get(key), input_path, schema, key); errors.extend(item_errors); artifacts[key] = artifact
         if artifact and artifact.get("stage") != stage: errors.append(f"{key} must be stage {stage}")
-        if artifact and artifact.get("decision") != "GO": errors.append(f"{key} must have decision GO")
+        if artifact and key == "variance_artifact":
+            # E-1: dispatched by verdict (see variance_gate_errors); the blocking verdicts
+            # are already refused by grease_reference_errors above, so the old blanket
+            # ``!= GO`` branch is skipped for this key to avoid reporting the same record
+            # twice.
+            errors.extend(variance_gate_errors(artifact))
+        elif artifact and artifact.get("decision") != "GO": errors.append(f"{key} must have decision GO")
     # Read BY NAME, never unpacked positionally: UPSTREAM grew to nine entries for the
     # precision-grease inner loop, and a positional unpack silently becomes a crash the
     # moment a list grows.
-    project = artifacts["project_artifact"]; challenge = artifacts["challenge_artifact"]
-    failure = artifacts["failure_ctq_artifact"]; method = artifacts["test_method_artifact"]
-    design_space = artifacts["design_space_artifact"]; experiment_design = artifacts["experiment_design_artifact"]
-    experiment = artifacts["experiment_artifact"]; model = artifacts["model_artifact"]
+    project = artifacts.get("project_artifact"); challenge = artifacts.get(CHALLENGE_KEY)
+    failure = artifacts.get("failure_ctq_artifact"); method = artifacts.get("test_method_artifact")
+    design_space = artifacts.get("design_space_artifact"); experiment_design = artifacts.get("experiment_design_artifact")
+    experiment = artifacts.get("experiment_artifact"); model = artifacts.get("model_artifact")
     variance = artifacts.get("variance_artifact")
     grease = grease_route(project)
+    grease_without_challenge = grease and CHALLENGE_KEY not in supplied
     if grease and variance is None:
         errors.append("variance_artifact is required on the PRECISION_GREASE_DEV route")
     if grease:
@@ -154,6 +270,11 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         errors.append("test_method, experiment_design, experiment, and model evidence_scope values must exist and match")
     if project and project.get("status") != "ACTIVE": errors.append("project_artifact must have status ACTIVE")
     if len(available) == 8 and len({value.get("project_id") for value in available}) != 1: errors.append("all upstream artifact project_id values must match")
+    elif grease_without_challenge and len(available) == 7 and len({value.get("project_id") for value in available}) != 1:
+        # The grease route's no-challenge shape: the same uniformity rule, over the seven
+        # upstreams that do exist. Unreachable on any route that requires a challenge, so
+        # the eight-key threshold above stays exactly what it was.
+        errors.append("all upstream artifact project_id values must match")
     if failure and challenge and failure.get("challenge_reference") != challenge.get("challenge_id"): errors.append("failure_ctq_artifact challenge link is invalid")
     if method and failure and (method.get("target_failure_reference") != failure.get("failure_id") or method.get("qualification_status") != "QUALIFIED" or not ({"D", "P"} & set(method.get("role", [])))): errors.append("test_method_artifact must be linked qualified D or P")
     if design_space and method and method.get("method_id") not in (design_space.get("qualified_test_method_references") or []): errors.append("design_space_artifact method link is invalid")
@@ -189,6 +310,8 @@ def route_notes(data: object, input_path: Path) -> list[str]:
     notes: list[str] = []
     if grease:
         notes.append(f"NOTE: PRECISION_GREASE_DEV route: this request will land at {stage_for(True)}")
+        if CHALLENGE_KEY not in data:
+            notes.append(challenge_note(project.get("project_id")) if isinstance(project, dict) else challenge_note(None))
         summary = trust_region_summary(trust_region_from_boundary(data.get(MODEL_TRUST_REGION_INPUT_FIELD)))
         if summary:
             notes.append(f"NOTE: trust region carried to the engine: {summary}")

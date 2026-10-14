@@ -1,9 +1,9 @@
 ---
 name: duty-definition
-description: Record one evidence-declared lubricant duty profile at DUTY_DEFINED; preflight verifies active upstream Project Charter and all 7 equipment operating conditions before building the artifact. Use when user mentions "duty-definition", "工况定义", "工况剖面", "duty profile", "设备工况", or advancing to Stage 1 in lubricant R&D.
+description: Record one evidence-declared lubricant duty profile at DUTY_DEFINED; preflight verifies active upstream Project Charter and all 7 equipment operating conditions before building the artifact. Use when user mentions "duty-definition", "工况定义", "工况剖面", "duty profile", "设备工况", or advancing to DUTY_DEFINED in lubricant R&D.
 ---
 
-# Duty Definition (Stage 1)
+# Duty Definition (DUTY_DEFINED)
 
 Record an evidence-declared lubricant duty profile at `DUTY_DEFINED` for the Lubricant R&D Domain Pack.
 Authority schema: `../../schemas/duty.schema.json` (or local `references/duty.schema.json` in deployed bundle).
@@ -152,7 +152,7 @@ python skills/duty-definition/scripts/validate_duty_artifact.py <temporary-file.
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` (defaults to `duty.json`) only after Step 3 passes.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 1 stops here at DUTY_DEFINED. Pass to Stage 2 (duty-challenge-analysis).
+# 🔴 CHECKPOINT · STOP: the duty record stops here at DUTY_DEFINED. Next station: FAILURE_MECHANISM_DEFINED (PRECISION_GREASE_DEV, failure-ctq-analysis) or CHALLENGES_DEFINED (NEW_PRODUCT, duty-challenge-analysis).
 ```
 
 ---

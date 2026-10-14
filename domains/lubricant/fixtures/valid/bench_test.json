@@ -23,6 +23,7 @@
   "bench_reference": "BENCH-SZ-01",
   "batch_reference": "BATCH-SYN-001",
   "sample_reference": "SAM-SYN-001",
+  "ctq_reference": "CTQ-SYN-001",
   "protocol_version": "BENCH_PROTOCOL_V2",
   "setpoints": ["load 1.5 kN", "speed 1200 rpm", "temperature 80 degC"],
   "environment": { "temperature_c": 23.5, "humidity_percent": 45.0 },

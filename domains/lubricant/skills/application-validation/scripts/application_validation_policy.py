@@ -20,6 +20,13 @@ cannot drift apart. This module only adds the stage-entry rules on top.
 Missing criteria are rejected the same way: an application record with an
 empty criteria list can only carry `result = GAP`, and a GAP record never
 enters `APPLIED`.
+
+This stage produces no artifact and no decision block: the gate only answers
+"READY / HOLD" for the `VERIFIED -> APPLIED` transition. A decision-block builder
+(deleted 2026-10-14, batch H / M4) had no caller anywhere in the pack and was removed
+rather than wired up -- the `application.json` decision block is produced by the
+producing skill (`application-definition/scripts/application_policy.py`). If a gate
+summary is ever needed here, emit a NOTE line, never a decision block.
 """
 
 from __future__ import annotations
@@ -53,7 +60,13 @@ RESULTS = ("PASS", "FAIL", "INCONCLUSIVE", "GAP")
 GREASE_PROJECT_TYPE = "PRECISION_GREASE_DEV"
 MACHINE_INDICATORS = ("START_UP_TORQUE", "BACKLASH", "TEMPERATURE_RISE", "LIFE")
 MACHINE_INDICATOR_ENTRY_FIELDS = {"indicator", "criterion_reference"}
-GREASE_RECORD_FIELDS = {"project_type", "campaign_artifact", "bench_test_artifact", "machine_indicators"}
+# M6 (2026-10-14): the grease record also names the BUILT application artifact it
+# gates. The inline `application` object is kept (the field-level semantics in
+# `applied_entry_blockers` depend on it), but it alone let a record gate over a
+# copy edited after the fact: the path is what the preflight reads back and
+# compares field by field, so the two cannot drift apart silently.
+APPLICATION_REFERENCE_FIELD = "application_artifact"
+GREASE_RECORD_FIELDS = {"project_type", "campaign_artifact", "bench_test_artifact", "machine_indicators", APPLICATION_REFERENCE_FIELD}
 
 
 def has_text(value: object) -> bool:
@@ -186,25 +199,3 @@ def applied_entry_blockers(record: dict) -> list[str]:
     if grease_route(record):
         reasons.extend(machine_indicator_blockers(record, application))
     return reasons
-
-
-def expected_decision_fields(record: dict, blockers: list[str]) -> dict[str, str]:
-    application = record.get("application") if isinstance(record, dict) else None
-    application_id = application.get("application_id", "") if isinstance(application, dict) else ""
-    grease = grease_route(record)
-    allowed = not blockers
-    machine_rule = (
-        " On the precision-grease route the record must ALSO declare machine_indicators, and every "
-        "whole-machine indicator must cite an OBSERVED acceptance criterion with a determined numeric "
-        "threshold (plus a non-empty life-claim boundary for LIFE)."
-        if grease else ""
-    )
-    return {
-        "decision_question": f"May application {application_id} gate project entry into APPLIED?",
-        "hypothesis": f"{application_id} records a PASS application verdict with determined criteria, a non-empty life-claim boundary, and bench linkage." + (" Every whole-machine indicator is bound to a criterion." if grease else ""),
-        "uncertainty": "This gate records the supplied application verdict only; it does not create new experiment, model, or release evidence and does not by itself freeze the design.",
-        "decision_rule": "Enter APPLIED only when the record is at stage VERIFIED, the application verdict is PASS (INCONCLUSIVE, FAIL, and GAP are all blocked), the PASS is fail-closed admissible, and at least one registered bench is cited." + machine_rule,
-        "result": "The supplied application record satisfies the APPLIED entry gate." if allowed else f"The supplied application record is blocked from APPLIED: {'; '.join(blockers)}.",
-        "decision": "GO" if allowed else "HOLD",
-        "next_action": "Advance to APPLIED under a state-machine GO with this record as evidence." if allowed else "Retain the project at VERIFIED and resolve the recorded blockers; never fabricate a PASS.",
-    }

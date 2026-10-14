@@ -30,7 +30,16 @@ counter-controls that prove nothing was loosened:
   6. the pack's own oil-route gate-review request fixtures keep their recorded
      exit codes, and the canonical one keeps its stdout byte for byte;
   7. an undecidable charter (absent / unreadable / oil type) still yields
-     ``OPTIMIZED`` from both dispatch helpers.
+     ``OPTIMIZED`` from both dispatch helpers;
+  8. batch F / E5=A: the same dispatch covers the route's step-17 fixed window
+     (``PROCESS_SCALE_VALIDATED`` vs the oil routes' ``PROCESS_WINDOW_DEFINED``),
+     the grease route's submitted window must be validated and carry its
+     ``PROCESS-WINDOW:<window_id>`` citation, and an oil charter keeps the oil
+     expectation (the P-1 "must submit" half stays suspended: the pair is still
+     optional);
+  9. batch F / L11 carry-over: a submitted method whose recorded
+     ``reference_material_reference`` names an incomplete discrimination ruler is
+     held, while an absent ruler record adds no new dependency.
 
 Fixtures are the pack's recorded grease chain (``fixtures/optimization/`` and
 ``fixtures/process-scale-up/``) plus the pack's oil gate-review fixtures; the
@@ -162,6 +171,45 @@ def audit_problem_lines(stdout: str) -> list[str]:
     return problems
 
 
+# E5=A / H7 (batch F, 2026-10-14): the grease route's step-17 fixed window lands at
+# PROCESS_SCALE_VALIDATED, the oil routes' window keeps PROCESS_WINDOW_DEFINED. The
+# pack ships no PROCESS_SCALE_VALIDATED process fixture (the e2e builds one through
+# the producing skill), so this acceptance derives the pair from the pack's own
+# process-grease baseline with the labelled stage/validated/reference dials and
+# touches nothing else in the fixture bytes.
+GREASE_WINDOW_STAGE = "PROCESS_SCALE_VALIDATED"
+WINDOW_FIXTURE = FIXTURES / "process-scale-up" / "process-grease.json"
+
+
+def process_pair(root: Path, window_stage: str = GREASE_WINDOW_STAGE, evidence_reference: str | None = None) -> None:
+    """Write the optional process pair beside the chain, using the pack fixture.
+
+    ``process.json`` keeps the baseline's DESIGN_SPACE_DEFINED stage (that half is
+    route-independent); ``process-window.json`` is the labelled derivative whose
+    stage, ``validated`` flag and evidence reference are the dials under test.
+    """
+    baseline = read_json(WINDOW_FIXTURE)
+    baseline["process_window"] = {**baseline["process_window"], "validated": True}
+    write_json(root / "process.json", baseline)
+    window = {**baseline, "stage": window_stage}
+    if evidence_reference is None:
+        window["process_window"] = {
+            key: value for key, value in window["process_window"].items() if key != "evidence_reference"
+        }
+    else:
+        window["process_window"] = {**window["process_window"], "evidence_reference": evidence_reference}
+    write_json(root / "process-window.json", window)
+
+
+def with_process_pair(request: Path) -> Path:
+    """Add the optional pair to a generated gate request."""
+    payload = read_json(request)
+    payload["process_artifact"] = "process.json"
+    payload["process_window_artifact"] = "process-window.json"
+    write_json(request, payload)
+    return request
+
+
 def load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -270,6 +318,93 @@ def oil_gate_fixtures_unchanged() -> None:
     print("PASS: the six oil gate-review requests keep their recorded outcomes byte for byte")
 
 
+def grease_process_window_dispatch() -> None:
+    """8. E5=A/H7: the submitted step-17 window dispatches on the charter's type."""
+    with tempfile.TemporaryDirectory() as temporary:
+        base = Path(temporary)
+        # 8a. Same chain, grease charter, PROCESS_SCALE_VALIDATED window: the false
+        # refusal is gone. The chain stays SYNTHETIC, so the gate still HOLDs -- that
+        # is the pre-existing design (P-1), not a stage complaint.
+        grease_root = chain_workspace(base / "grease_window", GREASE_PROJECT_TYPE)
+        process_pair(grease_root)
+        grease_request = with_process_pair(gate_request(grease_root))
+        grease_probe = run(PREFLIGHT, grease_request)
+        assert "process_window_artifact must be stage PROCESS_WINDOW_DEFINED" not in grease_probe.stdout, grease_probe.stdout
+        assert "process_window_artifact must be stage" not in grease_probe.stdout, grease_probe.stdout
+        assert (
+            "SYNTHETIC process evidence_scope permits Gate HOLD workflow validation only; "
+            "a validated window declared SYNTHETIC cannot authorize a state transition"
+        ) in grease_probe.stdout, grease_probe.stdout
+
+        # 8b. A window at the oil constant is refused, and the message names the
+        # grease constant it must carry.
+        wrong_root = chain_workspace(base / "grease_wrong_stage", GREASE_PROJECT_TYPE)
+        process_pair(wrong_root, window_stage="PROCESS_WINDOW_DEFINED")
+        wrong_probe = run(PREFLIGHT, with_process_pair(gate_request(wrong_root)))
+        assert wrong_probe.returncode == 1, wrong_probe.stdout
+        assert "process_window_artifact must be stage PROCESS_SCALE_VALIDATED" in wrong_probe.stdout, wrong_probe.stdout
+
+        # 8c. A fixed window without the PROCESS-WINDOW:<window_id> citation is held
+        # even though the shared schema keeps evidence_reference optional.
+        unreferenced_root = chain_workspace(base / "grease_no_reference", GREASE_PROJECT_TYPE)
+        process_pair(unreferenced_root, evidence_reference=None)
+        unreferenced_probe = run(PREFLIGHT, with_process_pair(gate_request(unreferenced_root)))
+        assert unreferenced_probe.returncode == 1, unreferenced_probe.stdout
+        assert "must carry evidence_reference PROCESS-WINDOW:" in unreferenced_probe.stdout, unreferenced_probe.stdout
+
+        # 8d. The SAME pair under an oil charter keeps the oil expectation: the
+        # grease allowance cannot leak into the six oil routes.
+        oil_root = chain_workspace(base / "oil_window", OIL_PROJECT_TYPE)
+        process_pair(oil_root, window_stage=GREASE_WINDOW_STAGE)
+        oil_probe = run(PREFLIGHT, with_process_pair(gate_request(oil_root)))
+        assert "process_window_artifact must be stage PROCESS_WINDOW_DEFINED" in oil_probe.stdout, oil_probe.stdout
+        assert "process_window_artifact must be stage PROCESS_SCALE_VALIDATED" not in oil_probe.stdout, oil_probe.stdout
+    print("PASS: the step-17 window dispatches PROCESS_SCALE_VALIDATED on the grease route and stays PROCESS_WINDOW_DEFINED on oil")
+
+
+def grease_method_reference_ruler() -> None:
+    """9. L11 carry-over: a submitted method's recorded reference ruler must be complete."""
+    with tempfile.TemporaryDirectory() as temporary:
+        root = chain_workspace(Path(temporary) / "grease_reference", GREASE_PROJECT_TYPE)
+        reference_id = "REF-GATE-T-1"
+        method = read_json(root / "test_method.json")
+        method["reference_material_reference"] = reference_id
+        write_json(root / "test_method.json", method)
+        request = gate_request(root)
+
+        # Malformed method->ruler link: the reference record beside the input says the
+        # discrimination evidence is incomplete, so the review gate must not pass.
+        write_json(root / f"reference-{reference_id}.json", {
+            "artifact_type": "reference",
+            "stage": "REFERENCE_MATERIAL_RESOLVED",
+            "reference_id": reference_id,
+            "downstream_flag": "DISCRIMINATION_EVIDENCE_INCOMPLETE",
+        })
+        incomplete_probe = run(PREFLIGHT, request)
+        assert incomplete_probe.returncode == 1, incomplete_probe.stdout
+        assert "DISCRIMINATION_EVIDENCE_INCOMPLETE" in incomplete_probe.stdout, incomplete_probe.stdout
+        assert "discrimination ruler" in incomplete_probe.stdout, incomplete_probe.stdout
+
+        # The same link with a complete record is not a blocker (the chain is SYNTHETIC,
+        # so the ordinary HOLD applies -- asserted only to prove the new message is gone).
+        write_json(root / f"reference-{reference_id}.json", {
+            "artifact_type": "reference",
+            "stage": "REFERENCE_MATERIAL_RESOLVED",
+            "reference_id": reference_id,
+            "downstream_flag": "DISCRIMINATION_EVIDENCE_COMPLETE",
+        })
+        complete_probe = run(PREFLIGHT, request)
+        assert "DISCRIMINATION_EVIDENCE_INCOMPLETE" not in complete_probe.stdout, complete_probe.stdout
+
+        # Zero new dependency: a method naming a ruler with NO record beside the input
+        # keeps today's verdict (the step-5 gate owns that hard refusal).
+        (root / f"reference-{reference_id}.json").unlink()
+        absent_probe = run(PREFLIGHT, request)
+        assert "DISCRIMINATION_EVIDENCE_INCOMPLETE" not in absent_probe.stdout, absent_probe.stdout
+        assert "discrimination ruler" not in absent_probe.stdout, absent_probe.stdout
+    print("PASS: a submitted method's recorded discrimination ruler is checked, and an absent record adds no new dependency")
+
+
 def undecidable_charter_keeps_optimized() -> None:
     """7. No readable project_type -> both dispatch helpers keep the original constant."""
     skill_scripts = str(PREFLIGHT.parent)
@@ -280,9 +415,16 @@ def undecidable_charter_keeps_optimized() -> None:
         assert preflight.expected_stage("optimization_artifact", "OPTIMIZED", {}) == "OPTIMIZED"
         assert preflight.expected_stage("optimization_artifact", "OPTIMIZED", {"project_type": OIL_PROJECT_TYPE}) == "OPTIMIZED"
         assert preflight.expected_stage("optimization_artifact", "OPTIMIZED", {"project_type": GREASE_PROJECT_TYPE}) == GREASE_STAGE
-        # The dispatch is scoped to the one step-14 key: every other key keeps
+        # The dispatch is scoped to the named keys: every other key keeps
         # its constant even on the grease route.
         assert preflight.expected_stage("model_artifact", "MODEL_BUILT", {"project_type": GREASE_PROJECT_TYPE}) == "MODEL_BUILT"
+        # E5=A/H7 (batch F): the step-17 window dispatches the same way, and the two
+        # dispatched keys do not bleed into each other or into the baseline half.
+        assert preflight.expected_stage("process_window_artifact", "PROCESS_WINDOW_DEFINED", None) == "PROCESS_WINDOW_DEFINED"
+        assert preflight.expected_stage("process_window_artifact", "PROCESS_WINDOW_DEFINED", {}) == "PROCESS_WINDOW_DEFINED"
+        assert preflight.expected_stage("process_window_artifact", "PROCESS_WINDOW_DEFINED", {"project_type": OIL_PROJECT_TYPE}) == "PROCESS_WINDOW_DEFINED"
+        assert preflight.expected_stage("process_window_artifact", "PROCESS_WINDOW_DEFINED", {"project_type": GREASE_PROJECT_TYPE}) == GREASE_WINDOW_STAGE
+        assert preflight.expected_stage("process_artifact", "DESIGN_SPACE_DEFINED", {"project_type": GREASE_PROJECT_TYPE}) == "DESIGN_SPACE_DEFINED"
     finally:
         sys.path.remove(skill_scripts)
         sys.modules.pop("pg_gate_preflight_acceptance", None)
@@ -302,6 +444,8 @@ def main() -> int:
     grease_audit_is_clean()
     oil_audit_still_flags_noninferiority()
     oil_gate_fixtures_unchanged()
+    grease_process_window_dispatch()
+    grease_method_reference_ruler()
     undecidable_charter_keeps_optimized()
     print("PASS: precision-grease step 14 accepted by gate-review and audit_chain; oil routes unchanged")
     return 0

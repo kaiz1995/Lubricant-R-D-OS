@@ -31,7 +31,7 @@ export const GATE_UPSTREAM = [
   { artifactType: "optimization", stage: "OPTIMIZED", label: "配方优化" },
 ] as const;
 
-/** 镜像 preflight 的 scopes 集合：这 5 个工件的 evidence_scope 必须存在且一致。 */
+/** 镜像 preflight_gate_review.py 的 scopes 集合：这 5 个工件的 evidence_scope 必须存在且一致。 */
 const SCOPE_BEARING = [
   "test_method",
   "experiment_design",
@@ -39,6 +39,40 @@ const SCOPE_BEARING = [
   "model",
   "optimization",
 ] as const;
+
+/* ------------------------------------------------------------------ *
+ * project_type 分派（F-1 定稿后镜像，G-1）
+ *
+ * 常量逐条照抄 preflight_gate_review.py（宁重复也不 import 领域包，避免反向依赖）：
+ * `expected_stage()` 只对两个 key 按章程的 project_type 分派 —— 第 16 步的
+ * 优化工件在脂路线合法落在 NON_INFERIORITY_PASSED（schema 枚举两值），第 17 步
+ * 的固定窗口落在 PROCESS_SCALE_VALIDATED（产出技能 GREASE_STAGE）。其余 key、
+ * 其余 project_type、以及读不到章程的场景一律返回原常量 —— 六条油品路线行为
+ * 逐字不变。
+ *
+ * 已知不对称（复核确认，见方案 §8.2 H8）：命令行侧还能做「基线↔窗口」的跨记录
+ * 链路检查与「脂路线必交工艺窗口」，面板做不到 —— 前端 probes 以 artifactType
+ * 为键只留一个 process 探针，`probe.data` 只装代表记录一份，两份 process 记录的
+ * 数据不可能同时到手。面板只做可达子集：单条记录 + `data.stage` 判定。
+ * ------------------------------------------------------------------ */
+const GREASE_PROJECT_TYPE = "PRECISION_GREASE_DEV";
+const GREASE_OPTIMIZATION_STAGE = "NON_INFERIORITY_PASSED";
+const GREASE_PROCESS_WINDOW_STAGE = "PROCESS_SCALE_VALIDATED";
+
+/**
+ * 某个上游工件在给定路线下应处的 stage（镜像 preflight_gate_review.expected_stage）。
+ * 两条分派分支与 Python 侧逐一对应；其余返回 item.stage 原值。
+ */
+export function expectedStageOf(
+  item: { readonly artifactType: string; readonly stage: string },
+  projectType: string | null | undefined,
+): string {
+  if (projectType === GREASE_PROJECT_TYPE) {
+    if (item.artifactType === "optimization") return GREASE_OPTIMIZATION_STAGE;
+    if (item.artifactType === "process") return GREASE_PROCESS_WINDOW_STAGE;
+  }
+  return item.stage;
+}
 
 /** 镜像 preflight 的链路完整性检查。 */
 const LINKS: readonly { from: string; fromField: string; to: string; toField: string }[] = [
@@ -217,8 +251,14 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
   //    staged = 真正读到数据的工件，check3 复用同一集合（工件存在即同时带 stage 与 decision）。
   const staged = GATE_UPSTREAM.filter((item) => data.get(item.artifactType));
   const wrongStage = staged
-    .filter((item) => data.get(item.artifactType)?.stage !== item.stage)
-    .map((item) => `${panelNameOf(item.artifactType)}（应为 ${item.stage}）`);
+    .filter(
+      (item) =>
+        data.get(item.artifactType)?.stage !== expectedStageOf(item, snapshot.projectType),
+    )
+    .map(
+      (item) =>
+        `${panelNameOf(item.artifactType)}（应为 ${expectedStageOf(item, snapshot.projectType)}）`,
+    );
   add(
     "upstream-stage",
     "各交付物归属正确的研发阶段",
@@ -275,13 +315,24 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
         : `检测到多个项目编号：${uniqueIds.join("、")}`,
   );
 
-  // 6) 5 个承范围工件的 evidence_scope 存在且一致
-  const scopes = SCOPE_BEARING.map((t) => str(data.get(t)?.evidence_scope)).filter(
-    (v): v is string => v !== null,
-  );
+  // 6) 5 个承范围工件的 evidence_scope 存在且一致。
+  //    脂路线上再把 process 记录纳入聚合（有则校验、无则不计）：命令行侧对所有
+  //    路线都聚合「已提交」process 的 scope，而面板是自动扫描 —— 油品路线第 6
+  //    步也会在工作区留下 process-baseline.json，把它一并纳入会给油品路线造出
+  //    新的 blocker 面（油品零变化的边界），故只在脂路线纳入。process 不进
+  //    SCOPE_BEARING：schema 不要求它带 evidence_scope，进必填集合会让油品路线直接红。
+  const processProbe = snapshot.probes.process;
+  const processScope = processProbe?.valid ? str(processProbe.data?.evidence_scope) : null;
+  const scopeBearing: string[] = [...SCOPE_BEARING];
+  if (snapshot.projectType === GREASE_PROJECT_TYPE && processScope !== null) {
+    scopeBearing.push("process");
+  }
+  const scopes = scopeBearing
+    .map((t) => (t === "process" ? processScope : str(data.get(t)?.evidence_scope)))
+    .filter((v): v is string => v !== null);
   const uniqueScopes = [...new Set(scopes)];
   const scopesValid =
-    scopes.length === SCOPE_BEARING.length &&
+    scopes.length === scopeBearing.length &&
     uniqueScopes.length === 1 &&
     (uniqueScopes[0] === "SYNTHETIC" || uniqueScopes[0] === "PHYSICAL");
   add(
@@ -290,7 +341,7 @@ export function evaluateGate(snapshot: WorkspaceSnapshot | null): GateEvaluation
     scopesValid,
     scopesValid
       ? evidenceScopeZh(uniqueScopes[0])
-      : `需 5 份关键交付物证据同源，当前仅读到：${uniqueScopes.join("、") || "无"}`,
+      : `需 ${scopeBearing.length} 份关键交付物证据同源，当前仅读到：${uniqueScopes.join("、") || "无"}`,
   );
 
   const evidenceScope = uniqueScopes.length === 1 ? uniqueScopes[0] : null;
@@ -491,7 +542,7 @@ export function suggestGateSubmission(
     if (!probe?.valid) continue;
     evidence.push({
       evidence_id: `E-${item.artifactType.toUpperCase().replace(/_/g, "-")}`,
-      statement: `${item.label}工件已就绪（stage=${item.stage}，decision=GO）`,
+      statement: `${item.label}工件已就绪（stage=${expectedStageOf(item, snapshot.projectType)}，decision=GO）`,
       source: probe.resolvedPath ?? `${item.artifactType}.json`,
       status: "OBSERVED",
     });

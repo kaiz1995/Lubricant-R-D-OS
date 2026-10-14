@@ -98,7 +98,7 @@ python skills/bench-registration/scripts/validate_bench_artifact.py <temporary-f
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the bench record stops here. It is registered infrastructure.
+# 🔴 CHECKPOINT · STOP: the bench record stops here at DRAFT (it is registered infrastructure, not a chain stage).
 # Do NOT book capacity, reserve runs, emit a DOE resource envelope, advance the state machine,
 # or claim the bench is qualified / available for release.
 ```
@@ -208,7 +208,7 @@ python skills/bench-registration/scripts/validate_campaign_artifact.py <temporar
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the campaign record stops here. It opens the inner loop; it does not run a round.
+# 🔴 CHECKPOINT · STOP: the campaign record stops here at CAMPAIGN_OPENED. It opens the inner loop; next station: EXPERIMENT_DESIGNED (doe-design). It does not run a round.
 # Do NOT book bench slots, reserve capacity, emit a DOE envelope, advance the state machine,
 # or claim any round's outcome that was not supplied.
 ```

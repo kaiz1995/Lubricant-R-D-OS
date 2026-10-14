@@ -1,9 +1,9 @@
 ---
 name: grease-screening
-description: Record one cheap physical/chemical screen at SCREENING_PASSED - cone penetration (including worked-penetration change), dropping point, oil separation, evaporation loss, shear stability and appearance uniformity, each with value, unit, limit and verdict - and decide the bench gate. Use when user mentions "grease-screening", "理化筛测", "筛测判据", "锥入度", "滴点", "析油率", "蒸发损失", "剪切安定性", "不送台架", or advancing to Stage 10 in lubricant R&D.
+description: Record one cheap physical/chemical screen at SCREENING_PASSED - cone penetration (including worked-penetration change), dropping point, oil separation, evaporation loss, shear stability and appearance uniformity, each with value, unit, limit and verdict - and decide the bench gate. Use when user mentions "grease-screening", "理化筛测", "筛测判据", "锥入度", "滴点", "析油率", "蒸发损失", "剪切安定性", "不送台架", or advancing to SCREENING_PASSED in lubricant R&D.
 ---
 
-# Grease Screening (Stage 10 · 理化筛测)
+# Grease Screening (SCREENING_PASSED · 理化筛测)
 
 Record one cheap physical/chemical screen at `SCREENING_PASSED` and decide whether the
 sample may occupy a bench slot. This is a GATE, NOT a selection criterion, NOT a
@@ -178,7 +178,7 @@ names carrying the record id. After the commit, run
 proceeding. The checker also enforces that `project.json`'s `stage` stays the constant
 `PROJECT_DEFINED` - it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 10 stops here at SCREENING_PASSED.
+# 🔴 CHECKPOINT · STOP: the screen stops here at SCREENING_PASSED. Next station: BENCH_TESTED (experiment-import), or BATCH_PRODUCED via the REWORK edge.
 ```
 
 ---

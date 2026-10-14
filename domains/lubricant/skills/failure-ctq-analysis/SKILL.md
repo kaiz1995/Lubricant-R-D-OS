@@ -1,9 +1,9 @@
 ---
 name: failure-ctq-analysis
-description: Convert one validated lubricant Challenge Map member into one evidence-bound Failure/CTQ record at FAILURE_CTQ_DEFINED; preflight verifies upstream artifacts, hypothesis formatting, lubricant contribution uncertainty, and dual CTQ limits. Use when user mentions "failure-ctq-analysis", "失效CTQ分析", "失效机理与判据", "三层判据链", "失效模式", "关键质量特性", "CTQ定义", or advancing to Stage 3 in lubricant R&D.
+description: Convert one validated lubricant Challenge Map member into one evidence-bound Failure/CTQ record at FAILURE_CTQ_DEFINED; preflight verifies upstream artifacts, hypothesis formatting, lubricant contribution uncertainty, and dual CTQ limits. Use when user mentions "failure-ctq-analysis", "失效CTQ分析", "失效机理与判据", "三层判据链", "失效模式", "关键质量特性", "CTQ定义", or advancing to FAILURE_CTQ_DEFINED in lubricant R&D.
 ---
 
-# Failure CTQ Analysis (Stage 3)
+# Failure CTQ Analysis (FAILURE_CTQ_DEFINED · FAILURE_MECHANISM_DEFINED on PRECISION_GREASE_DEV)
 
 Convert a validated lubricant Challenge Map member into an evidence-bound Failure/CTQ record at `FAILURE_CTQ_DEFINED` for the Lubricant R&D Domain Pack.
 This is a diagnostic hypothesis and CTQ metric specification, NOT a confirmed forensic conclusion or test method qualification.
@@ -15,6 +15,13 @@ Authority schema: `../../schemas/failure_ctq.schema.json` (or local `references/
 ## 1. Input Specification & Scientific Invariants
 
 A single JSON input object providing `project_artifact`, `challenge_artifact`, and the `failure_ctq` data:
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: `failure_ctq.challenge_reference` must then
+be the recorded gap `UNROUTED:<project_id>`, the preflight prints a `NOTE:` line instead of
+demanding the artifact, and the built record carries the same sentence as `ASSUMED` evidence.
+Supplying a challenge artifact on either route behaves exactly as before.
 
 ```json
 {
@@ -143,7 +150,7 @@ python skills/failure-ctq-analysis/scripts/validate_failure_ctq_artifact.py <tem
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes. **Naming rule**: if `failure_ctq.json` does not yet exist in the workspace root, commit this record as `failure_ctq.json`; otherwise commit it as `failure_ctq-<project_id>-<failure_id>.json`. That is, the first record of this stage occupies the canonical name `failure_ctq.json` (the stage-gate panel uses this exact name to mark the stage complete), and subsequent records of the same stage are appended as suffixed names carrying the record ID. After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant `PROJECT_DEFINED` — it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 3 stops here at FAILURE_CTQ_DEFINED. Route to Stage 3.5 (test-method-qualification).
+# 🔴 CHECKPOINT · STOP: the failure/CTQ record stops here at FAILURE_CTQ_DEFINED (oil routes) / FAILURE_MECHANISM_DEFINED (PRECISION_GREASE_DEV); next station: REFERENCE_MATERIAL_RESOLVED (grease route, reference-material) / TEST_METHODS_QUALIFIED or DESIGN_SPACE_DEFINED (oil, per project_type).
 ```
 
 ---

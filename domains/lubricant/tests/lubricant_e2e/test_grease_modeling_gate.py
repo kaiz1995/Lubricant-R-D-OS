@@ -32,18 +32,31 @@ UNDECIDED decision is the contract's value, not this test's choice.
 
 Cases (numbered as in the fix request):
 
-  (a) grease project + all eleven keys + bench_test UNDECIDED -> READY, and the record is
+  (a) grease project + all twelve keys + bench_test UNDECIDED -> READY, and the record is
       then built and validated end to end (pre-fix this HOLDed with
       "bench_test_artifact must have decision GO");
-  (b) the same grease project with the four inner-loop keys omitted -> HOLD naming all
-      four; a partial (mixed) request -> HOLD as well;
-  (c) a verdict-carrying grease upstream (variance) at HOLD -> still HOLD; a
-      verdict-carrying oil upstream (test_method) at HOLD -> still HOLD, so the fix did
-      not loosen the requirement anywhere it applies;
+  (b) the same grease project with the five inner-loop keys omitted -> HOLD naming all
+      five; a partial (mixed) request -> HOLD as well;
+  (c) a verdict-carrying grease upstream (variance) at HOLD -> still HOLD when its verdict
+      is the releasing one; a verdict-carrying oil upstream (test_method) at HOLD -> still
+      HOLD, so the fix did not loosen the requirement anywhere it applies;
   (d) the oil route's seven-key request -> READY, byte-for-byte the pre-fix output for the
       same input, and its HOLD output with a HOLD method is byte-for-byte the pre-fix
       output too (frozen below; captured from the pre-fix preflight in the fixing session
-      and re-verified against a faithful reconstruction of it).
+      and re-verified against a faithful reconstruction of it);
+  (e) E-1/E6=A: the variance VERDICT decides admissibility. NO_DETECTABLE_DIFFERENCE with
+      its producer's own decision HOLD -> READY; UNDERPOWERED / REPLICATE_INCONSISTENT ->
+      HOLD (UNDERPOWERED is never a synonym for NO_DETECTABLE_DIFFERENCE); the releasing
+      verdict must carry GO and no other verdict may;
+  (f) E-2: the grease request reaches READY without the experiment path (EXPERIMENT_RUNNING
+      is on no grease route), and the analysis responses are linked against the CTQ each
+      bench run recorded -- a bench_test.ctq_reference outside the round is refused.
+
+   The campaign ledger and the bench records are part of the grease precondition (D-1/E-2):
+   the request names ``campaign_artifact`` (exempt from the GO demand like bench_test,
+   because a ledger records the loop's state; its binding to the variance record is checked
+   entry-level), and ``fixtures/statistical-analysis/grease-modeling-gate/campaign.json``
+   is its fixture.
 """
 
 from __future__ import annotations
@@ -69,7 +82,7 @@ CTQ_ID = "CTQ-PG-B1-001"
 METHOD_ID = "TM-PG-B1-001"
 MARKER = "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE"
 
-GREASE_INNER_KEYS = ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact")
+GREASE_INNER_KEYS = ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact", "campaign_artifact")
 GREASE_UPSTREAM = (
     ("project_artifact", "project.json", "project"),
     ("challenge_artifact", "challenge.json", "challenge"),
@@ -82,6 +95,7 @@ GREASE_UPSTREAM = (
     ("screening_artifact", "screening.json", "screening"),
     ("bench_test_artifact", "bench_test.json", "bench_test"),
     ("variance_artifact", "variance.json", "variance"),
+    ("campaign_artifact", "campaign.json", "campaign"),
 )
 OIL_FIXTURE_NAMES = {
     "project_artifact": "project-active.json",
@@ -163,6 +177,7 @@ def grease_request() -> dict:
         "screening_artifact": "screening.json",
         "bench_test_artifact": "bench_test.json",
         "variance_artifact": "variance.json",
+        "campaign_artifact": "campaign.json",
         "analysis": {
             "model_id": "MODEL-PG-B1-001",
             "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL"],
@@ -230,10 +245,10 @@ def fixture_set_is_contract_conform() -> None:
         assert instance.get("project_id") == PROJECT_ID, (name, instance.get("project_id"))
     decisions = {name: read_json(GREASE_FIXTURES / name).get("decision") for _key, name, _kind in GREASE_UPSTREAM}
     assert decisions["bench_test.json"] == "UNDECIDED", decisions
-    for name in ("batch.json", "screening.json", "variance.json"):
+    for name in ("batch.json", "screening.json", "variance.json", "campaign.json"):
         assert decisions[name] == "GO", decisions
-    print("ok fixtures: 11 producer-built upstreams are schema-valid for " + PROJECT_ID
-          + "; bench_test decision=UNDECIDED, batch/screening/variance decision=GO")
+    print("ok fixtures: 12 producer-built upstreams are schema-valid for " + PROJECT_ID
+          + "; bench_test decision=UNDECIDED, batch/screening/variance/campaign decision=GO")
 
 
 def case_a_and_d(workspace: Path) -> None:
@@ -247,7 +262,7 @@ def case_a_and_d(workspace: Path) -> None:
     ready = run(PREFLIGHT, request_path)
     assert ready.returncode == 0, output(ready)
     assert output(ready) == "READY: input can form one MODEL_BUILT request only", output(ready)
-    print("(a) grease 11-key request with bench_test UNDECIDED -> " + output(ready))
+    print("(a) grease 12-key request with bench_test UNDECIDED -> " + output(ready))
 
     model_path = grease_dir / "model.json"
     built = run(BUILDER, request_path, model_path)
@@ -297,7 +312,7 @@ def case_b(workspace: Path) -> None:
     for key in GREASE_INNER_KEYS:
         assert f"{key} is required on the PRECISION_GREASE_DEV route" in text, text
     assert text.startswith("HOLD:") and "no artifact generated" in text, text
-    print("(b) grease 7-key request -> " + text)
+    print("(b) grease request without the five inner-loop keys -> " + text)
 
     mixed = {key: value for key, value in full.items()
              if key not in ("screening_artifact", "bench_test_artifact")}
@@ -330,7 +345,88 @@ def case_c(workspace: Path) -> None:
     text = output(result)
     assert "variance_artifact must have decision GO" in text, text
     assert "bench_test_artifact must have decision GO" not in text, text
-    print("(c) grease 11-key with variance decision=HOLD -> " + text)
+    print("(c) grease 12-key with variance decision=HOLD -> " + text)
+
+
+def case_e(workspace: Path) -> None:
+    """(e) E-1/E6=A: the variance VERDICT decides admissibility, not decision==GO."""
+    grease_dir = workspace / "grease"
+    grease_dir.mkdir(parents=True)
+    stage_grease_workspace(grease_dir)
+    request_path = grease_dir / "input-model.json"
+    write_json(request_path, grease_request())
+    variance_path = grease_dir / "variance.json"
+    original = read_json(variance_path)
+
+    # A REAL NO_DETECTABLE_DIFFERENCE record ("a capable design found nothing") is a
+    # conclusion: it is admissible to the model even though its produced decision is HOLD,
+    # because HOLD is exactly what a non-releasing verdict carries.
+    no_difference = {**original, "verdict": "NO_DETECTABLE_DIFFERENCE", "decision": "HOLD"}
+    no_difference["next_action"] = "Hold: the round's difference is not released."
+    write_json(variance_path, no_difference)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode == 0, output(result)
+    assert output(result) == "READY: input can form one MODEL_BUILT request only", output(result)
+    print("(e) variance NO_DETECTABLE_DIFFERENCE (decision HOLD) -> " + output(result))
+
+    # UNDERPOWERED stays blocked, and the wording says it is never a synonym.
+    underpowered = {**original, "verdict": "UNDERPOWERED", "decision": "HOLD"}
+    write_json(variance_path, underpowered)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode != 0, output(result)
+    assert "never a synonym" in output(result), output(result)
+    print("(e) variance UNDERPOWERED -> " + output(result))
+
+    # REPLICATE_INCONSISTENT stays blocked too.
+    inconsistent = {**original, "verdict": "REPLICATE_INCONSISTENT", "decision": "HOLD"}
+    write_json(variance_path, inconsistent)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode != 0 and "REPLICATE_INCONSISTENT" in output(result), output(result)
+    print("(e) variance REPLICATE_INCONSISTENT -> " + output(result))
+
+    # The releasing verdict must carry GO: a hand-edited HOLD is refused with the frozen
+    # case_c wording.
+    releasing_without_go = {**original, "verdict": "CONSISTENT_DIFFERENCE", "decision": "HOLD"}
+    write_json(variance_path, releasing_without_go)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode != 0, output(result)
+    assert "variance_artifact must have decision GO" in output(result), output(result)
+    print("(e) variance CONSISTENT_DIFFERENCE with decision HOLD -> " + output(result))
+
+    # ... and no other verdict may carry GO either.
+    no_difference_with_go = {**original, "verdict": "NO_DETECTABLE_DIFFERENCE", "decision": "GO"}
+    write_json(variance_path, no_difference_with_go)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode != 0, output(result)
+    assert "must not carry decision GO" in output(result), output(result)
+    print("(e) variance NO_DETECTABLE_DIFFERENCE with decision GO -> " + output(result))
+
+
+def case_f(workspace: Path) -> None:
+    """(f) E-2: the grease modeling entry without the experiment path; observed CTQs off bench_test."""
+    grease_dir = workspace / "grease"
+    grease_dir.mkdir(parents=True)
+    stage_grease_workspace(grease_dir)
+    request = grease_request()
+    # E-2: EXPERIMENT_RUNNING is on no grease route, so the route's request may omit the
+    # experiment path entirely and still reach MODEL_BUILT.
+    del request["experiment_artifact"]
+    request_path = grease_dir / "input-model-no-experiment.json"
+    write_json(request_path, request)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode == 0, output(result)
+    print("(f) grease request without the experiment path -> " + output(result))
+
+    # The round's observed CTQs come off the bench records on this route: a bench run whose
+    # ctq_reference is not the analysis response's CTQ leaves the response unlinked.
+    bench_path = grease_dir / "bench_test.json"
+    bench = read_json(bench_path)
+    bench["ctq_reference"] = "CTQ-NOT-IN-ROUND"
+    write_json(bench_path, bench)
+    result = run(PREFLIGHT, request_path)
+    assert result.returncode != 0, output(result)
+    assert f"analysis response {CTQ_ID} is not a linked observed CTQ" in output(result), output(result)
+    print("(f) bench_test.ctq_reference outside the round -> " + output(result))
 
 
 def main() -> int:
@@ -340,9 +436,14 @@ def main() -> int:
         case_a_and_d(workspace / "a-d")
         case_b(workspace / "b")
         case_c(workspace / "c")
+        case_e(workspace / "e")
+        case_f(workspace / "f")
     print("PASS: statistical-analysis MODEL_BUILT gate — bench_test UNDECIDED admits the grease "
-          "chain, the four inner-loop keys are required by project_type (fail-closed), verdict "
-          "upstreams still require GO, and the oil route's outputs are byte-for-byte unchanged")
+          "chain, the inner-loop keys (campaign included) are required by project_type (fail-closed), "
+          "the variance verdict decides admissibility (NO_DETECTABLE_DIFFERENCE READY, UNDERPOWERED "
+          "never a synonym, decision checked against the verdict), the grease request reaches MODEL_BUILT "
+          "without the experiment path with its observed CTQs linked off the bench records, and the oil "
+          "route's outputs are byte-for-byte unchanged")
     return 0
 
 

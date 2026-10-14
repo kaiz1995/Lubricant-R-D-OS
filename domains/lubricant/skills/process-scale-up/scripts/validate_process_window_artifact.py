@@ -37,6 +37,18 @@ def semantic_errors(artifact: dict) -> list[str]:
         errors.append("process_window.validated must be true for a fixed process window")
     if window.get("evidence_reference") != window_evidence_reference(window_id):
         errors.append(f"process_window.evidence_reference must be {window_evidence_reference(window_id)}")
+    if grease:
+        # One fixed-window record must not carry two batch identities. The check is
+        # GATED ON THE GREASE STAGE: the oil routes legitimately record the baseline
+        # batch in `material_batch_reference` and the amplified batch in
+        # `batch_scale.batch_size.material_batch` (two different values by design),
+        # so an unconditional comparison would fail every oil artifact.
+        scale_batch = ((artifact.get("batch_scale") or {}).get("batch_size") or {}).get("material_batch")
+        if artifact.get("material_batch_reference") != scale_batch:
+            errors.append(
+                "material_batch_reference must equal batch_scale.batch_size.material_batch on the "
+                f"{GREASE_STAGE} record: one fixed-window record must not carry two batch identities"
+            )
     for field, value in expected_decision_fields(artifact.get("process_id"), window_id, not has_gap(artifact), grease).items():
         if artifact.get(field) != value:
             errors.append(f"{field} must equal the deterministic scale-up policy")

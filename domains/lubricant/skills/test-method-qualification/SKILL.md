@@ -1,9 +1,9 @@
 ---
 name: test-method-qualification
-description: Qualify one evidence-bound lubricant test method at TEST_METHODS_QUALIFIED; preflight verifies upstream artifacts, method provenance, role metrics (C/D/P), the serial repeatability-discrimination-independent-batch pipeline, and physical evidence scope before building the artifact. Use when user mentions "test-method-qualification", "测试方法评定", "台架评定", "方法标定", "区分度验证", "重复性", "FZG评定", or advancing to Stage 3.5 in lubricant R&D.
+description: Qualify one evidence-bound lubricant test method at TEST_METHODS_QUALIFIED; preflight verifies upstream artifacts, method provenance, role metrics (C/D/P), the serial repeatability-discrimination-independent-batch pipeline, and physical evidence scope before building the artifact. Use when user mentions "test-method-qualification", "测试方法评定", "台架评定", "方法标定", "区分度验证", "重复性", "FZG评定", or advancing to TEST_METHODS_QUALIFIED in lubricant R&D.
 ---
 
-# Test Method Qualification (Stage 3.5)
+# Test Method Qualification (TEST_METHODS_QUALIFIED)
 
 Qualify one evidence-bound lubricant test method at `TEST_METHODS_QUALIFIED` for the Lubricant R&D Domain Pack.
 This is a method sensitivity and mechanism relevance qualification record, NOT a formulation design or downstream result.
@@ -15,6 +15,13 @@ Authority schema: `../../schemas/test_method.schema.json` (or local `references/
 ## 1. Input Specification & Role Governance
 
 A single JSON input object providing upstream artifacts, `evidence_scope`, and `test_method`:
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: `test_method.challenge_reference` must then
+equal the failure record's own `UNROUTED:<project_id>` marker (that comparison is the
+pre-existing one), and the built record carries the recorded-gap sentence as `ASSUMED`
+evidence. Supplying a challenge artifact on either route behaves exactly as before.
 
 ```json
 {
@@ -77,7 +84,7 @@ They are declared in the optional `qualification_pipeline` object, one entry per
 - You may NOT record `discrimination` without `repeatability` PASS: a discrimination result recorded on top of an unpassed repeatability step has no established measurement noise behind it.
 - You may NOT record `independent_batch` without `discrimination` recorded, and it must be `PASS`. Re-verification on a fresh batch is the only check that a result is not an artefact of the batch that produced it. Building and verifying on the same data is not verification.
 - `repeatability` and `discrimination` must be **computed by the ENGINE**. A hand-entered figure is a declaration, not a measurement: before a method can predict the bench, any optimisation algorithm only optimises the wrong target faster. Each entry in `qualification_metrics[]` also carries the optional `computed_by`, and a `MANUAL` value on either of those two metrics is refused.
-- `reference_material_reference` names the Stage 4 reference dossier this qualification used as its discrimination ruler. Discrimination cannot be proved without physical Known Good / Known Bad objects, so a grease-route qualification names the dossier it consumed. If the supplied dossier's `downstream_flag` is `DISCRIMINATION_EVIDENCE_INCOMPLETE`, that state is reported and must be carried to the final gate.
+- `reference_material_reference` names the Stage 4 reference dossier this qualification used as its discrimination ruler. Discrimination cannot be proved without physical Known Good / Known Bad objects, so a grease-route qualification names the dossier it consumed, and `reference_material_artifact` (the dossier path) is REQUIRED: a bare id with no readable dossier beside the input is refused. If the supplied dossier's `downstream_flag` is `DISCRIMINATION_EVIDENCE_INCOMPLETE`, Step 5 is hard-rejected - that state is exactly the no-Known-Bad case this step must refuse, so the Stage 4 `GO` is necessary but not sufficient.
 
 ### Route gating
 
@@ -110,7 +117,7 @@ python skills/test-method-qualification/scripts/validate_test_method_artifact.py
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes. **Naming rule**: if `test_method.json` does not yet exist in the workspace root, commit this record as `test_method.json`; otherwise commit it as `test_method-<project_id>-<method_id>.json`. That is, the first record of this stage occupies the canonical name `test_method.json` (the stage-gate panel uses this exact name to mark the stage complete), and subsequent records of the same stage are appended as suffixed names carrying the record ID. After the commit, run `python scripts/check_artifact_naming.py <workspace_root>` and correct any `HOLD` before proceeding. The checker also enforces that `project.json`'s `stage` stays the constant `PROJECT_DEFINED` — it is NOT the project's current stage, and must not be advanced.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 3.5 stops here at TEST_METHODS_QUALIFIED. Route to Stage 4 (formulation-design).
+# 🔴 CHECKPOINT · STOP: the qualification record stops here at TEST_METHODS_QUALIFIED. Next station: DESIGN_SPACE_DEFINED (formulation-design).
 ```
 
 ---

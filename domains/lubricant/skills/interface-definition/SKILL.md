@@ -97,7 +97,7 @@ python skills/interface-definition/scripts/validate_interface_artifact.py <tempo
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the interface record stops here. It is recorded evidence.
+# 🔴 CHECKPOINT · STOP: the interface record stops here at DRAFT. It is recorded evidence, not a chain stage.
 # Do NOT advance the state machine, run a design freeze, treat COMPATIBILITY_PASSED as satisfied
 # without a PASS-verdict artifact cited as INTERFACE:<interface_id>, or claim release qualification.
 ```

@@ -102,8 +102,12 @@ describe("LubricantStagePane — 草稿注入", () => {
     renderPane();
     await userEvent.click(await screen.findByRole("button", { name: /在会话中推进此步骤/ }));
 
-    // duty-definition 的第一条 criteria
-    expect(useUiStore.getState().composerDraft).toContain("七类 duty_item 齐备");
+    // duty-definition 的第一条 criteria（G-4：十四维；两个命门维度必须点名，
+    // 否则研发员按卡片备料必漏 motion_regime / torque_requirement）
+    const draft = useUiStore.getState().composerDraft as string;
+    expect(draft).toContain("十四类 duty_item 齐备");
+    expect(draft).toContain("motion_regime");
+    expect(draft).toContain("torque_requirement");
   });
 
   it("门禁按钮注入的是 gate-review 提示词，含决议值域与 schema 约束", async () => {
@@ -321,6 +325,48 @@ describe("LubricantStagePane — 契约驱动渲染", () => {
     for (const ghost of ["doe_design.json", "sample_profile.json", "baseline_bom.json"]) {
       expect(screen.queryByText(ghost)).not.toBeInTheDocument();
     }
+  });
+
+  it("展开步骤显示命中记录与实际 stage（G-3：同一探针服务两个语义时可分辨）", async () => {
+    const { container } = renderPane();
+    await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
+    const card = container.querySelector('[data-stage="PROJECT_DEFINED"]') as HTMLElement;
+    await userEvent.click(within(card).getByText("立项与项目定义"));
+    expect(within(card).getByText("命中记录：")).toBeInTheDocument();
+    expect(within(card).getByText(/project\.json（stage=PROJECT_DEFINED）/)).toBeInTheDocument();
+  });
+
+  it("application 步骤展开显示准入 result（G-2：result=GAP 一眼可见）", async () => {
+    const APPLICATION = {
+      schema_version: "0.1.0",
+      artifact_type: "application",
+      project_id: "WGO-001",
+      stage: "APPLIED",
+      decision_question: "q", hypothesis: "h", uncertainty: "u",
+      evidence: [], decision_rule: "r", result: "GAP", decision: "HOLD", next_action: "n",
+      application_id: "APP-1", project_reference: "P-1", formula_reference: "F-1",
+      acceptance_criteria: [], counterexamples: [], life_claim_boundary: "b",
+      source: "s", evidence_id: "E-1", evidence_scope: "PHYSICAL",
+    };
+    listDir.mockImplementation(async (dir: string) => {
+      if (dir === "") return [entry("project.json"), entry("application.json")];
+      throw new Error("not a directory");
+    });
+    readArtifact.mockImplementation(async (path: string) => {
+      const data =
+        path === "project.json" ? PROJECT : path === "application.json" ? APPLICATION : null;
+      if (!data) return null;
+      return {
+        path, mime: "application/json", encoding: "utf8",
+        data: JSON.stringify(data), size: 10,
+      };
+    });
+
+    const { container } = renderPane();
+    await screen.findByText(/工件链阶段步骤（12 步独立推进）/);
+    const card = container.querySelector('[data-stage="APPLIED"]') as HTMLElement;
+    await userEvent.click(within(card).getByText("应用与整机验证（APPLIED）"));
+    expect(within(card).getByText(/result=GAP/)).toBeInTheDocument();
   });
 });
 

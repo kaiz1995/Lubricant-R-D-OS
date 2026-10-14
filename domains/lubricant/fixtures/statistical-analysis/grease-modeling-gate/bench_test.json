@@ -39,5 +39,6 @@
   "censoring_type": "NONE",
   "stop_reason": null,
   "anomalies": [],
-  "campaign_iteration": 1
+  "campaign_iteration": 1,
+  "ctq_reference": "CTQ-PG-B1-001"
 }

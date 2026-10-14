@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from doe_design_policy import GREASE_PROJECT_TYPE, expected_decision_fields
-from preflight_doe_design import errors_for, resolved_path
+from preflight_doe_design import errors_for, grease_without_challenge, resolved_path, unrouted_evidence
 
 
 REQUEST_FIELDS = ("experiment_design_id", "factor_references", "design", "run_plan", "responses", "guardrails", "expected_information_value", "mixture_total", "resource_envelope")
@@ -31,9 +31,16 @@ def main() -> int:
     method = json.loads(resolved_path(data["test_method_artifact"], input_path).read_text(encoding="utf-8"))
     design_space = json.loads(resolved_path(data["design_space_artifact"], input_path).read_text(encoding="utf-8"))
     request = data["experiment_design"]
+    # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    # travels with the request the recorded Challenge Map link is written as the ASSUMED
+    # route-property evidence item. Every other shape - every oil route, and a grease
+    # request that supplied a challenge - writes exactly the evidence it wrote before.
+    evidence = list(request["evidence"])
+    if grease_without_challenge(data, project):
+        evidence.append(unrouted_evidence(project["project_id"]))
     artifact = {
         "schema_version": "0.1.0", "artifact_type": "experiment_design", "project_id": project["project_id"], "stage": "EXPERIMENT_DESIGNED", "evidence_scope": method["evidence_scope"],
-        **expected_decision_fields(request, project.get("project_type")), "evidence": request["evidence"], "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]],
+        **expected_decision_fields(request, project.get("project_type")), "evidence": evidence, "design_space_reference": design_space["design_space_id"], "test_method_references": [method["method_id"]],
         **{field: request[field] for field in REQUEST_FIELDS if field in request},
     }
     # Grease step 8: record which bench schedule bounded this round, when one was

@@ -56,6 +56,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -556,6 +557,25 @@ def material_artifacts() -> list[dict]:
     return [base_oil, thickener]
 
 
+def material_request(project_path: Path, artifact: dict) -> dict:
+    """The material producer's request shape: charter, scope, evidence, material block.
+
+    The trio (preflight_material / build_material_artifact / validate_material_artifact)
+    is what now writes the material records the design space resolves against - before
+    it existed the only way a design space could be built was to place these files by
+    hand.
+    """
+    return {
+        "project_artifact": project_path.name,
+        "evidence_scope": artifact.get("evidence_scope", "SYNTHETIC"),
+        "evidence": artifact["evidence"],
+        "material": {
+            field: artifact[field]
+            for field in ("material_id", "category", "identity", "chemistry", "properties", "cost")
+        },
+    }
+
+
 def test_method_input(project_path: Path, challenge_path: Path, failure_path: Path, reference_path: Path) -> dict:
     return {
         "project_artifact": project_path.name,
@@ -643,7 +663,7 @@ def design_space_input(project_path: Path, challenge_path: Path, failure_path: P
         "challenge_artifact": challenge_path.name,
         "failure_ctq_artifact": failure_path.name,
         "test_method_artifact": method_path.name,
-        "material_artifacts": ["material-base-oil.json", "material-thickener-raw.json"],
+        "material_artifacts": ["material.json", "material-MAT-PG-E2E-FA-001.json"],
         "design_space": {
             "design_space_id": "DS-PGD-E2E-001",
             "scope": f"{SIM}: precision-gear grease formulation and process window.",
@@ -687,7 +707,7 @@ def design_space_input(project_path: Path, challenge_path: Path, failure_path: P
                 },
                 "Use only the supplied variable bounds.",
             ],
-            "baseline_process_reference": "PROCESS-BASE-PGD-E2E-001",
+            "baseline_process_reference": "PROC-PGD-E2E-BASE-001",
             "feasibility_regions": [
                 {
                     "region_id": "REG-PG-E2E-LOW-SOAP",
@@ -833,7 +853,8 @@ def bench_input() -> dict:
     }
 
 
-def campaign_input(project_path: Path, bench_path: Path) -> dict:
+def campaign_input(project_path: Path, bench_path: Path, *, round_1_entry: dict | None = None,
+                   current_iteration: int = 1) -> dict:
     """The CAMPAIGN_OPENED request for bench-registration's campaign producer.
 
     The request shape is the skill's own (preflight_campaign_registration ->
@@ -841,9 +862,12 @@ def campaign_input(project_path: Path, bench_path: Path) -> dict:
     plus the two upstream artifacts it draws on, supplied by path so the gate can
     re-read them. ``max_iterations`` is deliberately OMITTED so this run exercises
     the skill's contract-default path (the cap is read from
-    contracts/state-machine.json and the builder records that provenance), and the
-    round-1 entry cites the ids the later stages of this chain actually produce,
-    so the entry and the next_batch record it authorises agree by construction.
+    contracts/state-machine.json and the builder records that provenance).
+
+    W0 (D-1): the campaign is OPENED before round 1 runs, so its ledger is
+    legitimately EMPTY here. Round 1's entry is appended at the round boundary
+    (stage VARIANCE_ASSESSED) by passing ``round_1_entry``; the same producer
+    writes that boundary record, which is why this one helper serves both calls.
     """
     return {
         "project_artifact": project_path.name,
@@ -852,24 +876,8 @@ def campaign_input(project_path: Path, bench_path: Path) -> dict:
             "campaign_id": "CMP-PGD-E2E-001",
             "project_reference": PROJECT_ID,
             "bench_references": [BENCH_ID],
-            "current_iteration": 1,
-            "iterations": [
-                {
-                    "iteration": 1,
-                    "samples": ["SMP-PGD-E2E-001", "SMP-PGD-E2E-002"],
-                    "stop_state": "CONTINUE",
-                    "screening_reference": "SCR-PGD-E2E-001",
-                    "variance_reference": "VAR-PGD-E2E-001",
-                    "model_reference": "MODEL-PGD-E2E-001",
-                    "next_batch_reference": "NEXT-PGD-E2E-001",
-                    "bench_test_references": [
-                        "RUN-PGD-E2E-001",
-                        "RUN-PGD-E2E-002",
-                        "RUN-PGD-E2E-003",
-                        "RUN-PGD-E2E-004",
-                    ],
-                }
-            ],
+            "current_iteration": current_iteration,
+            "iterations": [] if round_1_entry is None else [round_1_entry],
             "pairing_design": {
                 "paired": True,
                 "description": f"{SIM}: A/B pair runs in the same round; at a fixed sigma, pairing buys more resolution than measuring sigma precisely.",
@@ -998,7 +1006,9 @@ def doe_engine_input() -> dict:
     }
 
 
-def batch_input(project_path: Path, design_space_path: Path, experiment_design_path: Path) -> dict:
+def batch_input(project_path: Path, design_space_path: Path, experiment_design_path: Path,
+                batch_id: str = "BAT-PGD-E2E-001", sample_id: str = "SMP-PGD-E2E-001",
+                evidence_id: str = "E-BAT-PG-E2E-001") -> dict:
     trajectory = [
         ("SAPONIFICATION", 195, 196, "degC", 5400, 3),
         ("SOAP_HOLD", 40, 41, "min", 2400, 3),
@@ -1025,7 +1035,7 @@ def batch_input(project_path: Path, design_space_path: Path, experiment_design_p
             "deviation_verdict": "WITHIN",
             "tolerance": tolerance,
             "source": f"{SIM}: kettle log KL-E2E-001 line {index}",
-            "evidence_id": "E-BAT-PG-E2E-001",
+            "evidence_id": evidence_id,
         }
         steps.append(step)
     if isinstance(steps[1]["deviation"], float):
@@ -1037,14 +1047,14 @@ def batch_input(project_path: Path, design_space_path: Path, experiment_design_p
         "evidence_scope": "PHYSICAL",
         "evidence": [
             {
-                "evidence_id": "E-BAT-PG-E2E-001",
+                "evidence_id": evidence_id,
                 "statement": f"{SIM}: kettle log KL-E2E-001 records setpoint, actual, duration and a tolerance band for every executed step.",
                 "source": f"{SIM}: kettle log KL-E2E-001",
                 "status": "OBSERVED",
             }
         ],
         "batch": {
-            "batch_id": "BAT-PGD-E2E-001",
+            "batch_id": batch_id,
             "formula_reference": "FORM-PG-E2E@v1",
             "scale_class": "LAB",
             "trajectory": steps,
@@ -1055,9 +1065,9 @@ def batch_input(project_path: Path, design_space_path: Path, experiment_design_p
             "batch_verdict": "VALID",
         },
         "sample": {
-            "sample_id": "SMP-PGD-E2E-001",
+            "sample_id": sample_id,
             "label": {
-                "printed_text": "SMP-PGD-E2E-001 | BAT-PGD-E2E-001 | FORM-PG-E2E@v1 | 2026-12-05",
+                "printed_text": f"{sample_id} | {batch_id} | FORM-PG-E2E@v1 | 2026-12-05",
                 "printed_at": "2026-12-05T09:40:00",
             },
             "prepared_at": "2026-12-05",
@@ -1075,7 +1085,9 @@ def batch_input(project_path: Path, design_space_path: Path, experiment_design_p
     }
 
 
-def screening_input(project_path: Path, batch_path: Path) -> dict:
+def screening_input(project_path: Path, batch_path: Path,
+                    screening_id: str = "SCR-PGD-E2E-001", sample_reference: str = "SMP-PGD-E2E-001",
+                    sample_artifact: str = "sample.json", evidence_id: str = "E-SC-PG-E2E-001") -> dict:
     tests = [
         ("ST-PG-E2E-001", "PENETRATION", 265, "0.1 mm", 340, "PASS"),
         ("ST-PG-E2E-002", "WORKED_PENETRATION_CHANGE", 12, "0.1 mm", 30, "PASS"),
@@ -1088,37 +1100,40 @@ def screening_input(project_path: Path, batch_path: Path) -> dict:
     return {
         "project_artifact": project_path.name,
         "batch_artifact": batch_path.name,
-        "sample_artifact": "sample.json",
+        "sample_artifact": sample_artifact,
         "evidence_scope": "PHYSICAL",
         "evidence": [
             {
-                "evidence_id": "E-SC-PG-E2E-001",
+                "evidence_id": evidence_id,
                 "statement": f"{SIM}: the screening lab worksheet supplied for this sample records value, unit, limit and verdict for each screened index.",
                 "source": SIM,
                 "status": "ASSUMED",
             }
         ],
         "screening": {
-            "screening_id": "SCR-PGD-E2E-001",
-            "sample_reference": "SMP-PGD-E2E-001",
+            "screening_id": screening_id,
+            "sample_reference": sample_reference,
             "tests": [
                 {"test_id": test_id, "test_name": name, "value": value, "unit": unit, "limit": limit, "verdict": verdict}
                 for test_id, name, value, unit, limit, verdict in tests
             ],
             "measurement_replicates": 3,
         },
-        "bench_request": "SMP-PGD-E2E-001",
+        "bench_request": sample_reference,
     }
 
 
 def bench_test_input(project_path: Path, run_id: str, batch_reference: str, sample_reference: str,
                      iteration: int, event_time: float | None, event_occurred: bool,
-                     stop_reason: str, censoring_type: str) -> dict:
+                     stop_reason: str, censoring_type: str, screening_artifacts: list[str]) -> dict:
     record = {
         "run_id": run_id,
         "bench_reference": BENCH_ID,
         "batch_reference": batch_reference,
         "sample_reference": sample_reference,
+        # E-2: the step-14 modeling entry links its response references against the CTQs
+        # the round's bench runs recorded, so every run must say which CTQ it observed.
+        "ctq_reference": CTQ_ID,
         "protocol_version": "BENCH_PROTOCOL_V2",
         "setpoints": ["load 1.5 kN", "speed 1200 rpm", "temperature 80 degC"],
         "environment": {"temperature_c": 23.5, "humidity_percent": 45.0},
@@ -1132,6 +1147,9 @@ def bench_test_input(project_path: Path, run_id: str, batch_reference: str, samp
     }
     return {
         "project_artifact": project_path.name,
+        # E-3: the screening artifacts that released this run's sample; the bench gate
+        # resolves them and refuses a sample no PASS/RELEASED screen released.
+        "screening_artifacts": list(screening_artifacts),
         "evidence_scope": "PHYSICAL",
         "evidence": [
             {
@@ -1272,7 +1290,8 @@ def variance_input(project_path: Path, bench_test_paths: list[Path]) -> dict:
 
 def model_input(project_path: Path, method_path: Path, design_space_path: Path,
                 experiment_design_path: Path, experiment_path: Path,
-                batch_path: Path, screening_path: Path, bench_test_path: Path, variance_path: Path) -> dict:
+                batch_path: Path, screening_path: Path, bench_test_path: Path, variance_path: Path,
+                campaign_path: Path) -> dict:
     return {
         "project_artifact": project_path.name,
         "challenge_artifact": "challenge.json",
@@ -1285,6 +1304,10 @@ def model_input(project_path: Path, method_path: Path, design_space_path: Path,
         "screening_artifact": screening_path.name,
         "bench_test_artifact": bench_test_path.name,
         "variance_artifact": variance_path.name,
+        # E-2: the modeling entry consumes the round's own ledger; the gate binds it to the
+        # variance record entry-level (the counter has already advanced past the recorded
+        # round by the time step 14 runs).
+        "campaign_artifact": campaign_path.name,
         "analysis": {
             "model_id": "MODEL-PGD-E2E-001",
             "requested_analyses": ["ANOVA", "REGRESSION", "RESIDUAL"],
@@ -1358,11 +1381,15 @@ def application_input(process_window_reference: str | None) -> dict:
 
 
 def application_validation_input(application_path: Path, campaign_path: Path, bench_test_path: Path) -> dict:
+    # M6 (batch F): the grease record cites the built application artifact beside the
+    # inline copy; the preflight reads it back and compares field by field, so the
+    # inline copy and the file on disk cannot drift apart unnoticed.
     return {
         "application_validation": {
             "project_reference": PROJECT_ID,
             "current_stage": "VERIFIED",
             "application": read_json(application_path),
+            "application_artifact": application_path.name,
             "project_type": PROJECT_TYPE,
             "campaign_artifact": campaign_path.name,
             "bench_test_artifact": bench_test_path.name,
@@ -1391,8 +1418,10 @@ def knowledge_input(project_path: Path) -> dict:
         "project_artifact": project_path.name,
         "asset_status": "CLOSED_KNOWLEDGE",
         "knowledge_assets": {
-            # The stage-16 optimization artifact records the recommended formula
-            # (its objectives and methods are what the closed loop recommends).
+            # optimization.json registers the optimization REQUEST and the non-inferiority
+            # method contract: this pack produces no computed recommended formula and no
+            # non-inferiority verdict, so the asset is the registered decision basis
+            # (口径), not a finished recommendation.
             "recommended_formula": {"artifact_reference": "optimization.json", "present": True},
             "feasible_design_space": {"artifact_reference": "design_space.json", "present": True},
             "critical_failure_boundaries": {"artifact_reference": "failure_ctq.json", "present": True},
@@ -1404,7 +1433,7 @@ def knowledge_input(project_path: Path) -> dict:
                 "qualification_reference": "gate.json",
                 "qualification": "QUALIFIED",
             },
-            "material_knowledge": {"artifact_reference": "material-base-oil.json", "present": True},
+            "material_knowledge": {"artifact_reference": "material.json", "present": True},
             "model": {"artifact_reference": "model.json", "present": True},
         },
         "evidence_scope": "PHYSICAL",
@@ -1769,10 +1798,23 @@ def main() -> int:
 
         # --- 6. DESIGN_SPACE_DEFINED (formulation-design) ----------------------
         route_allow("TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED")
+        # The material records the design space resolves against are now produced by
+        # the skill's own material producer (I-3). The naming rule is the producer's:
+        # the first record occupies material.json, later records are
+        # material-<material_id>.json.
         for index, material in enumerate(material_artifacts(), start=1):
-            path = ws / ("material-base-oil.json" if index == 1 else "material-thickener-raw.json")
-            write_json(path, material)
-            check_schema("material", path)
+            material_request_path = write_input(
+                f"input-material-{index}.json", material_request(project_path, material)
+            )
+            artifact_name = "material.json" if index == 1 else f"material-{material['material_id']}.json"
+            material_path = drive(
+                stage_script["DESIGN_SPACE_DEFINED"] / "preflight_material.py",
+                stage_script["DESIGN_SPACE_DEFINED"] / "build_material_artifact.py",
+                stage_script["DESIGN_SPACE_DEFINED"] / "validate_material_artifact.py",
+                material_request_path,
+                artifact_name,
+            )
+            check_schema("material", material_path)
         design_space_request = write_input(
             "input-design-space.json", design_space_input(project_path, challenge_path, failure_path, method_path)
         )
@@ -1795,6 +1837,15 @@ def main() -> int:
         )
         baseline_artifact = check_schema("process", process_baseline_path)
         assert baseline_artifact["stage"] == "DESIGN_SPACE_DEFINED", baseline_artifact["stage"]
+        # I-3 closure (positive): the design space declares its fixed process BEFORE
+        # that record exists, so the first preflight prints a PENDING NOTE; once the
+        # companion process-baseline.json is written, re-running the SAME request must
+        # resolve the reference and print no PENDING NOTE.
+        resolved = run_ok(
+            stage_script["DESIGN_SPACE_DEFINED"] / "preflight_formulation_design.py", design_space_request
+        )
+        assert "is PENDING" not in resolved.stdout, resolved.stdout
+        assert baseline_artifact["process_id"] == "PROC-PGD-E2E-BASE-001", baseline_artifact["process_id"]
         driven_stages.append("DESIGN_SPACE_DEFINED")
 
         # --- 7. BENCH_RESOURCE_REGISTERED (bench-registration) -----------------
@@ -1930,6 +1981,28 @@ def main() -> int:
         sample_path = ws / "sample.json"
         check_schema("sample", sample_path)
         assert read_json(sample_path)["sample_id"] == "SMP-PGD-E2E-001", read_json(sample_path)
+        # The round's reference arm is batch-produced the same way. The paired design runs
+        # the candidate and the reference in the same round, and BOTH samples must clear
+        # the screen before either may spend a bench slot (E-3): the bench records of the
+        # reference arm reference the reference sample's own screening record.
+        reference_batch_request = write_input(
+            "input-batch-002.json",
+            batch_input(project_path, design_space_path, experiment_design_path,
+                        batch_id="BAT-PGD-E2E-002", sample_id="SMP-PGD-E2E-002",
+                        evidence_id="E-BAT-PG-E2E-002"),
+        )
+        reference_batch_path = drive(
+            stage_script["BATCH_PRODUCED"] / "preflight_grease_batch.py",
+            stage_script["BATCH_PRODUCED"] / "build_batch_artifact.py",
+            stage_script["BATCH_PRODUCED"] / "validate_batch_artifact.py",
+            reference_batch_request,
+            "batch-BAT-PGD-E2E-002.json",
+        )
+        reference_batch_artifact = check_schema("batch", reference_batch_path)
+        assert reference_batch_artifact["batch_id"] == "BAT-PGD-E2E-002", reference_batch_artifact
+        reference_sample_path = ws / "batch-BAT-PGD-E2E-002.sample.json"
+        check_schema("sample", reference_sample_path)
+        assert read_json(reference_sample_path)["sample_id"] == "SMP-PGD-E2E-002", read_json(reference_sample_path)
         driven_stages.append("BATCH_PRODUCED")
 
         # --- 11. SCREENING_PASSED (grease-screening) ---------------------------
@@ -1944,6 +2017,25 @@ def main() -> int:
         )
         screening_artifact = check_schema("screening", screening_path)
         assert screening_artifact["decision"] == "GO", screening_artifact["decision"]
+        # E-3: the reference sample's own screen. Its sample_reference is what the bench
+        # gate resolves the reference arm's runs against.
+        reference_screening_request = write_input(
+            "input-screening-002.json",
+            screening_input(project_path, reference_batch_path, screening_id="SCR-PGD-E2E-002",
+                            sample_reference="SMP-PGD-E2E-002",
+                            sample_artifact=reference_sample_path.name,
+                            evidence_id="E-SC-PG-E2E-002"),
+        )
+        reference_screening_path = drive(
+            stage_script["SCREENING_PASSED"] / "preflight_grease_screening.py",
+            stage_script["SCREENING_PASSED"] / "build_screening_artifact.py",
+            stage_script["SCREENING_PASSED"] / "validate_screening_artifact.py",
+            reference_screening_request,
+            "screening-SCR-PGD-E2E-002.json",
+        )
+        reference_screening_artifact = check_schema("screening", reference_screening_path)
+        assert reference_screening_artifact["overall_verdict"] == "PASS", reference_screening_artifact
+        assert reference_screening_artifact["gate_to_bench"] == "RELEASED", reference_screening_artifact
         driven_stages.append("SCREENING_PASSED")
 
         # --- 12. BENCH_TESTED (experiment-import, bench path) ------------------
@@ -1954,11 +2046,18 @@ def main() -> int:
             ("RUN-PGD-E2E-003", "BAT-PGD-E2E-002", "SMP-PGD-E2E-002", 4.40, True, "event observed inside the protocol window", "NONE"),
             ("RUN-PGD-E2E-004", "BAT-PGD-E2E-002", "SMP-PGD-E2E-002", 4.45, True, "event observed inside the protocol window", "NONE"),
         ]
+        # Each arm's runs name its own arm's screening record: the bench gate resolves
+        # them (E-3) and refuses a sample no PASS/RELEASED screen released.
+        screening_by_sample = {
+            "SMP-PGD-E2E-001": screening_path,
+            "SMP-PGD-E2E-002": reference_screening_path,
+        }
         bench_test_paths = []
         for index, (run_id, batch_reference, sample_reference, event_time, occurred, stop_reason, censoring) in enumerate(bench_runs):
             request = write_input(
                 f"input-bench-test-{run_id}.json",
-                bench_test_input(project_path, run_id, batch_reference, sample_reference, 1, event_time, occurred, stop_reason, censoring),
+                bench_test_input(project_path, run_id, batch_reference, sample_reference, 1, event_time, occurred,
+                                 stop_reason, censoring, [screening_by_sample[sample_reference].name]),
             )
             artifact_name = "bench_test.json" if index == 0 else f"bench_test-{PROJECT_ID}-{run_id}.json"
             path = drive(
@@ -1970,15 +2069,31 @@ def main() -> int:
             )
             artifact = check_schema("bench_test", path)
             assert artifact["stage"] == "BENCH_TESTED", artifact["stage"]
+            # E-2: the run records the CTQ it observed; the modeling entry links against it.
+            assert artifact["ctq_reference"] == CTQ_ID, artifact
             bench_test_paths.append(path)
         # The censoring discipline is real: an event-free run without a declared
         # reason is refused (never silently recorded as an end-point).
         bad_censoring = write_input(
             "input-bench-test-invalid-censoring.json",
-            bench_test_input(project_path, "RUN-PGD-E2E-BAD", "BAT-PGD-E2E-001", "SMP-PGD-E2E-001", 1, None, False, "", "NONE"),
+            bench_test_input(project_path, "RUN-PGD-E2E-BAD", "BAT-PGD-E2E-001", "SMP-PGD-E2E-001", 1, None, False, "",
+                             "NONE", [screening_path.name]),
         )
         refused = run(stage_script["BENCH_TESTED"] / "preflight_experiment_import.py", bad_censoring)
         assert refused.returncode != 0 and "stop_reason" in refused.stdout, refused.stdout
+        # E-3 (the positive rule's negative case): the bench gate RESOLVES the screening
+        # reference instead of trusting the path. The candidate sample pointed at the
+        # reference arm's screen is refused by name, with the screening id in the message.
+        cross_refused = run(
+            stage_script["BENCH_TESTED"] / "preflight_experiment_import.py",
+            write_input(
+                "input-bench-cross-screening.json",
+                bench_test_input(project_path, "RUN-PGD-E2E-CROSS", "BAT-PGD-E2E-001", "SMP-PGD-E2E-001", 1, 2.5, True,
+                                 "event observed inside the protocol window", "NONE", [reference_screening_path.name]),
+            ),
+        )
+        assert cross_refused.returncode != 0, cross_refused.stdout
+        assert "SMP-PGD-E2E-001" in cross_refused.stdout and "SCR-PGD-E2E-002" in cross_refused.stdout, cross_refused.stdout
 
         # Supporting material: one DOE_POINT experiment import beside the bench
         # runs. MODEL_BUILT (statistical-analysis) still requires the
@@ -2014,12 +2129,43 @@ def main() -> int:
         assert variance_artifact["computed_by"] == "ENGINE", variance_artifact["computed_by"]
         driven_stages.append("VARIANCE_ASSESSED")
 
+        # --- the round-1 boundary (W1, D-1): the ledger gains round 1 ----------
+        # The campaign was OPENED with an empty ledger; the round boundary is where the
+        # round's entry is appended. Round 1 ends CONTINUE (the loop advances), so the
+        # counter stands at the round that round opened, and the two exit-round
+        # references stay null (E2=B).
+        round_1_campaign_request = write_input(
+            "input-campaign-round-1.json",
+            campaign_input(project_path, bench_path, round_1_entry={
+                "iteration": 1,
+                "samples": ["SMP-PGD-E2E-001", "SMP-PGD-E2E-002"],
+                "stop_state": "CONTINUE",
+                "screening_reference": screening_artifact["screening_id"],
+                "variance_reference": variance_artifact["variance_id"],
+                "model_reference": None,
+                "next_batch_reference": None,
+                "bench_test_references": [read_json(path)["run_id"] for path in bench_test_paths],
+            }, current_iteration=2),
+        )
+        drive(
+            stage_script["CAMPAIGN_OPENED"] / "preflight_campaign_registration.py",
+            stage_script["CAMPAIGN_OPENED"] / "build_campaign_artifact.py",
+            stage_script["CAMPAIGN_OPENED"] / "validate_campaign_artifact.py",
+            round_1_campaign_request,
+            "campaign.json",
+        )
+        campaign_record = check_schema("campaign", campaign_path)
+        assert campaign_record["current_iteration"] == 2, campaign_record["current_iteration"]
+        assert [entry["iteration"] for entry in campaign_record["iterations"]] == [1], campaign_record["iterations"]
+        print("E2E ok: the round-1 boundary appended round 1's entry; the ledger stands at iteration 2 (W1)")
+
         # --- 14. MODEL_BUILT (statistical-analysis) ----------------------------
         route_allow("VARIANCE_ASSESSED", "MODEL_BUILT")
         model_request = write_input(
             "input-model.json",
             model_input(project_path, method_path, design_space_path, experiment_design_path,
-                        experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path),
+                        experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path,
+                        campaign_path),
         )
         model_path = drive(
             stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py",
@@ -2042,12 +2188,25 @@ def main() -> int:
         assert METHOD_ID in model_artifact["test_method_references"], model_artifact
         driven_stages.append("MODEL_BUILT")
 
+        # E-2: the campaign ledger is bound to the variance record ENTRY-LEVEL (the
+        # counter has already advanced past the recorded round at W1, so
+        # current_iteration could never match). The ledger's own reference to the
+        # variance is what is checked; a tampered ledger is refused by name.
+        tampered_campaign = read_json(campaign_path)
+        tampered_round = {**tampered_campaign["iterations"][0], "variance_reference": "VAR-NOT-THIS-ROUND"}
+        tampered_campaign = {**tampered_campaign, "iterations": [tampered_round]}
+        write_json(campaign_path, tampered_campaign)
+        binding_probe = run(stage_script["MODEL_BUILT"] / "preflight_statistical_analysis.py", model_request)
+        assert binding_probe.returncode != 0 and "variance link is invalid" in binding_probe.stdout, binding_probe.stdout
+        write_json(campaign_path, campaign_record)
+
         # The grease precondition is keyed on the supplied charter's project_type,
         # not on the request shape: the same PRECISION_GREASE_DEV analysis with the
         # four inner-loop artifacts omitted is REFUSED. (The fail-open hole this
         # chain used to record is closed; the refusal wording is the gate's own.)
         oil_shaped_payload = model_input(project_path, method_path, design_space_path, experiment_design_path,
-                                         experiment_path, batch_path, screening_path, bench_test_paths[0], variance_path)
+                                         experiment_path, batch_path, screening_path, bench_test_paths[0],
+                                         variance_path, campaign_path)
         for key in ("batch_artifact", "screening_artifact", "bench_test_artifact", "variance_artifact"):
             del oil_shaped_payload[key]
         oil_shaped_request = write_input("input-model-oil-shaped.json", oil_shaped_payload)
@@ -2084,11 +2243,13 @@ def main() -> int:
         assert next_batch_record["stage"] == "NEXT_BATCH_DECIDED", next_batch_record["stage"]
         # The iteration pair is DERIVED from the campaign carrier (the request never
         # supplies it), so the record cannot claim a round boundary the campaign does
-        # not have; the ids and the stop state must agree with the campaign's own
-        # round-1 entry, which is what authorises this decision.
+        # not have; the stop state must agree with the campaign's own round-1 entry,
+        # which is what authorises this decision. The carrier's next_batch_reference is
+        # a record kept for the reader (E2=B: written only on the exit round, and null
+        # on a CONTINUE round), so the self-comparison that used to sit here is gone.
         assert (next_batch_record["from_iteration"], next_batch_record["to_iteration"]) == (1, 2), next_batch_record
         assert next_batch_record["campaign_reference"] == campaign_record["campaign_id"], next_batch_record
-        assert next_batch_record["next_batch_id"] == campaign_record["iterations"][0]["next_batch_reference"], next_batch_record
+        assert campaign_record["iterations"][0]["next_batch_reference"] is None, campaign_record["iterations"][0]
         assert next_batch_record["stop_state"] == campaign_record["iterations"][0]["stop_state"] == "CONTINUE", next_batch_record
         assert next_batch_record["bench_slots_required"] == len(next_batch_record["proposed_samples"]) == 2, next_batch_record
         driven_stages.append("NEXT_BATCH_DECIDED")
@@ -2131,6 +2292,26 @@ def main() -> int:
         assert optimization_artifact["engine_handoff"] == "PHASE4_DETERMINISTIC_ENGINE", optimization_artifact
         driven_stages.append("NON_INFERIORITY_PASSED")
 
+        # E-1 on the SECOND consumer (step 16): the optimization gate reads the variance
+        # verdict the same way step 14 does -- NO_DETECTABLE_DIFFERENCE ("a capable design
+        # found nothing") is admissible even though its producer wrote HOLD, the blocking
+        # verdicts stay refused, and the original releasing record is put back afterwards.
+        no_difference_variance = {**variance_artifact, "verdict": "NO_DETECTABLE_DIFFERENCE",
+                                  "decision": "HOLD", "next_action": "Hold: the round's difference is not released."}
+        write_json(variance_path, no_difference_variance)
+        admission_probe = run(stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py", optimization_request)
+        assert admission_probe.returncode == 0, admission_probe.stdout
+        underpowered_variance = {**variance_artifact, "verdict": "UNDERPOWERED", "decision": "HOLD"}
+        write_json(variance_path, underpowered_variance)
+        blocking_probe = run(stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py", optimization_request)
+        assert blocking_probe.returncode != 0 and "never a synonym" in blocking_probe.stdout, blocking_probe.stdout
+        write_json(variance_path, variance_artifact)
+        assert run(stage_script["NON_INFERIORITY_PASSED"] / "preflight_optimization.py", optimization_request).returncode == 0, (
+            "the restored releasing variance record must keep the optimization entry READY"
+        )
+        print("gate ok: the optimization gate admits NO_DETECTABLE_DIFFERENCE (decision HOLD) and still refuses "
+              "UNDERPOWERED -- the same verdict-based dispatch as step 14")
+
         # --- 17. PROCESS_SCALE_VALIDATED (process-scale-up) --------------------
         route_allow("NON_INFERIORITY_PASSED", "PROCESS_SCALE_VALIDATED")
         scale_up_request = write_input("input-scale-up.json", scale_up_input(process_baseline_path, optimization_path))
@@ -2149,6 +2330,15 @@ def main() -> int:
         assert window_artifact["stage"] == "PROCESS_SCALE_VALIDATED", window_artifact["stage"]
         assert window_artifact["process_window"]["validated"] is True, window_artifact["process_window"]
         assert window_artifact["process_window"]["evidence_reference"] == "PROCESS-WINDOW:PW-PGD-E2E-001-PROD", window_artifact
+        # One fixed-window record, one batch identity (I-2): the amplified batch is
+        # written into BOTH fields, so the record cannot describe a window fixed on
+        # one batch while claiming another. Before this change the field still held
+        # the baseline lot (LOT-SYN-PG-E2E-001) and nothing compared the two.
+        assert window_artifact["material_batch_reference"] == "BATCH-PGD-E2E-PROD-001", window_artifact
+        assert (
+            window_artifact["material_batch_reference"]
+            == window_artifact["batch_scale"]["batch_size"]["material_batch"]
+        ), window_artifact["batch_scale"]
         driven_stages.append("PROCESS_SCALE_VALIDATED")
 
         # --- 18. VERIFIED (gate-review) ----------------------------------------
@@ -2206,6 +2396,12 @@ def main() -> int:
 
         # --- 19. APPLIED (application-definition + application-validation) ------
         route_allow("VERIFIED", "APPLIED")
+        # M4 (batch F): "who produces application.json" must answer with the producing
+        # skill, not the admission gate. The artifact-type literal is the fingerprint
+        # (has_producer), and the same pair is published by route_step --list-producers.
+        application_producers = has_producer("application")
+        assert any(Path(hit).parts[:2] == ("skills", "application-definition") for hit in application_producers), application_producers
+        assert not any(Path(hit).parts[:2] == ("skills", "application-validation") for hit in application_producers), application_producers
         application_request = write_input("input-application.json", application_input(None))
         application_path = drive(
             SKILLS / "application-definition" / "scripts" / "preflight_application_definition.py",
@@ -2260,7 +2456,7 @@ def main() -> int:
             "feasible_design_space": ("design_space.json", "design_space", "DESIGN_SPACE_DEFINED"),
             "critical_failure_boundaries": ("failure_ctq.json", "failure_ctq", "FAILURE_CTQ_DEFINED"),
             "evidence_package": ("application.json", "application", "APPLIED"),
-            "material_knowledge": ("material-base-oil.json", "material", "DESIGN_SPACE_DEFINED"),
+            "material_knowledge": ("material.json", "material", "DESIGN_SPACE_DEFINED"),
             "model": ("model.json", "model", "MODEL_BUILT"),
         }
         for key, (reference, artifact_type, stage) in asset_resolution.items():
@@ -2318,6 +2514,123 @@ def main() -> int:
         ok_lines = [line for line in audit.stdout.splitlines() if line.strip().startswith("ok")]
         assert ok_lines, audit.stdout
         print("audit_chain: no violation over the built workspace (" + str(len(ok_lines)) + " internal checks passed)")
+
+        # --- E2E-11: the same route WITHOUT a challenge artifact (C-1 item 3) ---
+        # The chain above is the retained WITH-challenge positive case: the route
+        # consumes an out-of-route Challenge Map member, exactly as before. This is
+        # the second positive case the plan requires. CHALLENGES_DEFINED is on no
+        # type_route, so the grease route must also close with NO challenge artifact
+        # at all, recording the Challenge Map link as the route's own
+        # ``UNROUTED:<project_id>`` gap. The assertion travels the whole way the gap
+        # is supposed to travel: the preflight prints the NOTE, the builder writes it
+        # into the artifact's evidence (ASSUMED, EV-UNROUTED-<project_id>, sourced to
+        # the route contract), the validator accepts the artifact, and the chain audit
+        # reads the marker as a recorded route property instead of a dangling
+        # reference. Without this the no-challenge shape would be protected only by
+        # an out-of-tree probe script.
+        probe = ws / "no-challenge-probe"
+        probe.mkdir()
+        # The probe replays the route UP TO this point: the artifacts of steps 1-5 are
+        # carried over, the challenge artifact is deliberately left out, and every
+        # record the legs below build is left out too (the probe builds it). The two
+        # process records are excluded for the same reason: on this route they are
+        # written AFTER the design space (step 6 produces the companion baseline), so
+        # carrying them over would put the probe ahead of the chain it is replaying.
+        probe_excluded = {
+            "challenge.json", "design_space.json", "experiment_design.json", "model.json",
+            "optimization.json", "gate.json", "process-baseline.json", "process.json",
+        }
+        for entry in sorted(ws.iterdir()):
+            if entry.is_file() and entry.name not in probe_excluded:
+                shutil.copyfile(entry, probe / entry.name)
+        assert not (probe / "challenge.json").exists(), "the probe workspace must carry no challenge artifact"
+        marker = f"UNROUTED:{PROJECT_ID}"
+        failure_record = read_json(probe / "failure_ctq.json")
+        failure_record["challenge_reference"] = marker
+        write_json(probe / "failure_ctq.json", failure_record)
+
+        expected_gap_evidence = {
+            "evidence_id": f"EV-UNROUTED-{PROJECT_ID}",
+            "statement": (
+                "challenge_artifact not supplied on the PRECISION_GREASE_DEV route "
+                "(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+                f"UNROUTED:{PROJECT_ID}"
+            ),
+            "source": "contracts/state-machine.json",
+            "status": "ASSUMED",
+        }
+
+        def failure_payload() -> dict:
+            # The failure record's own link becomes the recorded route gap, and the
+            # challenge key is dropped: this leg builds the route's first record from
+            # scratch, so it cannot inherit one the with-challenge chain produced.
+            payload = failure_input(project_path, challenge_path)
+            payload.pop("challenge_artifact")
+            payload["failure_ctq"] = {**payload["failure_ctq"], "challenge_reference": marker}
+            return payload
+
+        def method_payload() -> dict:
+            # The pre-existing cross-check reads test_method.challenge_reference against
+            # the failure record's own marker, unchanged.
+            payload = test_method_input(project_path, challenge_path, failure_path, reference_path)
+            payload.pop("challenge_artifact")
+            payload["test_method"] = {**payload["test_method"], "challenge_reference": marker}
+            return payload
+
+        # Each leg is one stage whose producer's own preflight is the gate under test.
+        probe_legs = (
+            ("FAILURE_MECHANISM_DEFINED", "preflight_failure_ctq.py", "build_failure_ctq_artifact.py",
+             "validate_failure_ctq_artifact.py", "probe-input-failure.json", "failure_ctq.json",
+             "failure_ctq", failure_payload()),
+            ("TEST_METHODS_QUALIFIED", "preflight_test_method.py", "build_test_method_artifact.py",
+             "validate_test_method_artifact.py", "probe-input-test-method.json", "test_method.json",
+             "test_method", method_payload()),
+            ("DESIGN_SPACE_DEFINED", "preflight_formulation_design.py", "build_design_space_artifact.py",
+             "validate_design_space_artifact.py", "probe-input-design-space.json", "design_space.json",
+             "design_space", design_space_input(project_path, challenge_path, failure_path, method_path)),
+            ("EXPERIMENT_DESIGNED", "preflight_doe_design.py", "build_experiment_design_artifact.py",
+             "validate_experiment_design_artifact.py", "probe-input-experiment-design.json", "experiment_design.json",
+             "experiment_design",
+             experiment_design_input(project_path, challenge_path, failure_path, method_path, design_space_path, bench_path)),
+            ("MODEL_BUILT", "preflight_statistical_analysis.py", "build_model_artifact.py",
+             "validate_model_artifact.py", "probe-input-model.json", "model.json", "model",
+             model_input(project_path, method_path, design_space_path, experiment_design_path, experiment_path,
+                         batch_path, screening_path, bench_test_paths[0], variance_path, campaign_path)),
+            ("NON_INFERIORITY_PASSED", "preflight_optimization.py", "build_optimization_artifact.py",
+             "validate_optimization_artifact.py", "probe-input-optimization.json", "optimization.json", "optimization",
+             optimization_input(project_path, method_path, design_space_path, experiment_design_path, experiment_path,
+                                model_path, variance_path)),
+            ("VERIFIED", "preflight_gate_review.py", "build_gate_artifact.py", "validate_gate_artifact.py",
+             "probe-input-gate.json", "gate.json", "gate",
+             gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
+                          experiment_design_path, experiment_path, model_path, optimization_path)),
+        )
+        for stage, preflight_name, builder_name, validator_name, request_name, artifact_name, schema_kind, payload in probe_legs:
+            scripts = stage_script[stage]
+            request = probe / request_name
+            write_json(request, {key: value for key, value in payload.items() if key != "challenge_artifact"})
+            ready = run(scripts / preflight_name, request)
+            assert ready.returncode == 0 and "READY:" in ready.stdout, (
+                f"{stage}: the preflight refused the grease route's no-challenge shape\n{ready.stdout}{ready.stderr}"
+            )
+            assert marker in ready.stdout, f"{stage}: the preflight printed no UNROUTED marker\n{ready.stdout}"
+            run_ok(scripts / builder_name, request, probe / artifact_name)
+            built = check_schema(schema_kind, probe / artifact_name)
+            recorded = [item for item in built.get("evidence", []) if item.get("evidence_id") == expected_gap_evidence["evidence_id"]]
+            assert recorded == [expected_gap_evidence], (
+                f"{stage}: the builder did not write the recorded gap as ASSUMED evidence: {recorded}"
+            )
+            run_ok(scripts / validator_name, probe / artifact_name)
+            print(f"E2E-11 ok: {stage} closes without a challenge artifact and records {marker} as ASSUMED evidence")
+
+        no_challenge_audit = run(AUDIT_SCRIPT, probe)
+        assert "chain audit over" in no_challenge_audit.stdout, no_challenge_audit.stdout + no_challenge_audit.stderr
+        assert audit_problem_lines(no_challenge_audit.stdout) == [], no_challenge_audit.stdout
+        assert "records the CHALLENGES_DEFINED gap" in no_challenge_audit.stdout, (
+            "the audit must read the UNROUTED marker as a recorded route property, not a dangling reference:\n"
+            + no_challenge_audit.stdout
+        )
+        print("E2E-11 ok: audit_chain reports the no-challenge workspace clean, with the UNROUTED gap recorded as a NOTE")
 
         # The scratch copies this test needed along the way (the oil-charter copy,
         # the SYNTHETIC-bench copy, the refused requests) all carry the ``input-``

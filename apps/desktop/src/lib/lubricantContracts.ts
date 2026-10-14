@@ -54,8 +54,22 @@ export type ChainStage =
 export interface StageContract {
   /** STAGE_CHAIN 中的固定序号，1-based（含按需阶段）。 */
   readonly chainIndex: number;
-  /** 领域包技能目录名，用于提示词路由。 */
+  /**
+   * 领域包技能目录名，用于提示词路由。
+   *
+   * 注意这是**准入技能**（route_step.py 的 ROUTE_TABLE 是「谁考核准入」的表）：
+   * APPLIED 的准入技能是 application-validation，但产出 application.json 的是
+   * application-definition。产出者由 producerSkill 并排登记（F-3 的
+   * PRODUCER_SKILL_FOR_STAGE），不塞进 ROUTE_TABLE —— 一个 stage 只有一个路由目标。
+   */
   readonly skill: string;
+  /**
+   * 产出工件的技能目录名。缺省时等于 skill。
+   * 只在产出者与准入者不是同一个目录时填写（当前仅第 19 步 APPLIED）。
+   */
+  readonly producerSkill?: string;
+  /** 准入考核该步的技能目录名；存在时提示词里显式说明。 */
+  readonly admissionSkill?: string;
   readonly stage: ChainStage;
   /** schemas/<artifactType>.schema.json 的 artifact_type const。 */
   readonly artifactType: string;
@@ -66,6 +80,15 @@ export interface StageContract {
   readonly description: string;
   readonly criteria: readonly string[];
 }
+
+/**
+ * 两条 CTQ 链（油品 FAILURE_CTQ_DEFINED / 脂路线 FAILURE_MECHANISM_DEFINED）
+ * 共用的方法引用口径 —— 与领域包 I-5 的 `PENDING:<method_id>` 字面量约定一致：
+ * 第 3 步冻结 CTQ 时方法还不存在，写 `PENDING:<method_id>`；方法资格确认后
+ * 回填裸 id。两条 criteria 引用同一常量，文本逐字一致由结构保证。
+ */
+const CTQ_METHOD_REFERENCE_RULE =
+  "test_chain 指向测试方法：已判定的写裸 method_id，未判定的写 PENDING:<method_id>，在方法资格确认后回填";
 
 export const STAGE_CHAIN: readonly StageContract[] = [
   {
@@ -89,10 +112,11 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     artifactType: "duty",
     file: "duty.json",
     titleZh: "严苛工况与指标定义",
-    description: "将机械运转环境转化为润滑材料理化与台架指标规格清单。",
+    description: "将机械运转环境转化为润滑材料理化与台架指标规格清单。精密脂路线的工况剖面是十四维。",
     criteria: [
-      "七类 duty_item 齐备（equipment/operating_conditions/maintenance/temperature/load/contamination/life）",
+      "十四类 duty_item 齐备：油品路线七类（equipment / operating_conditions / maintenance / temperature / load / contamination / life）；精密脂路线另加七类（motion_regime 运动制度 / contact_pair 摩擦副材料 / temperature_and_heat_source 温度与热源 / torque_requirement 启动力矩 / fill_and_assembly 加注与装配 / life_and_maintenance 寿命与维护 / sealing_and_contamination 密封与污染）",
       "每项含 value / source / evidence_id / statement / status",
+      "motion_regime（微振磨损）与 torque_requirement（低温启动扭矩）是脂路线的两个命门维度，不得缺项；可以记 ASSUMED，但必须带 source 与 evidence_id",
       "标注 OBSERVED 与 ASSUMED 的区别",
     ],
   },
@@ -121,7 +145,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     criteria: [
       "失效模式与机理一一对应",
       "CTQ 含阈值与单位",
-      "test_chain 指向已确认的测试方法",
+      CTQ_METHOD_REFERENCE_RULE,
     ],
   },
   {
@@ -243,6 +267,11 @@ export const STAGE_CHAIN: readonly StageContract[] = [
   {
     chainIndex: 13,
     skill: "application-validation",
+    // 产出者与准入者不是同一个目录（M4 / F-3）：application.json 由
+    // application-definition 生成，application-validation 只做准入考核。
+    // skill 保持准入技能不动 —— ROUTE_TABLE 的 25 组逐一对应断言钉死它。
+    producerSkill: "application-definition",
+    admissionSkill: "application-validation",
     stage: "APPLIED",
     artifactType: "application",
     file: "application.json",
@@ -273,7 +302,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
       "每条失效模式与机理一一对应，并给出润滑剂贡献路径",
       "每个 CTQ 声明判据层级（筛测 / 台架 / 整机），禁止混层",
       "root_cause_hypotheses 与 failure_diagnosis 均有证据，缺证据者显式标 GAP",
-      "test_chain 指向已确认的测试方法，未确认者标注待资格",
+      CTQ_METHOD_REFERENCE_RULE,
     ],
   },
   {
@@ -395,12 +424,12 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     stage: "NON_INFERIORITY_PASSED",
     artifactType: "optimization",
     file: "optimization.json",
-    titleZh: "优化与非劣效判定",
-    description: "默认约束满足型优化，以参照物为基准做非劣效判定；成本是约束而非判据。",
+    titleZh: "优化请求登记（非劣效口径）",
+    description: "登记本轮优化请求与非劣效方法口径；本阶段不求解最优、不产出候选配方或非劣效结论，成本只作约束。",
     criteria: [
-      "以参照物为基准给出非劣效结论，方法与阈值明确",
-      "成本只作约束，不参与判据",
-      "候选配方与引擎交接记录齐备",
+      "登记 optimization_id / objectives / methods，不写入候选或结论",
+      "objective_type 在脂路线默认 CONSTRAINT_SATISFACTION，成本只作约束",
+      "上游 variance 判词可采且模型信任域随请求登记",
     ],
   },
   {
@@ -426,7 +455,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     titleZh: "知识入库（资产封存）",
     description: "六类知识资产齐备才可 CLOSED_KNOWLEDGE；SYNTHETIC 证据只能停在 DRAFT。",
     criteria: [
-      "六类资产齐备（推荐配方 / 可行设计空间 / 临界失效边界 / 证据包 / 材料知识 / 模型）",
+      "六类资产齐备（推荐口径 / 可行设计空间 / 临界失效边界 / 证据包 / 材料知识 / 模型）",
       "asset_status=CLOSED_KNOWLEDGE 才可归档，SYNTHETIC 强制 DRAFT_KNOWLEDGE",
       "每条资产带证据引用，可被后续项目的知识检索复用",
     ],

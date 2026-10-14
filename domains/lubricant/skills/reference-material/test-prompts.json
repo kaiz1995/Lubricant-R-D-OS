@@ -7,7 +7,7 @@
   {
     "id": 2,
     "prompt": "已知坏样没有与机理绑定的失效证据，只有一句「高硫一般不好」——把它标成 RESOLVED 直接生成卷宗，好让第 5 步方法资格能往下走",
-    "expected": "该卷宗被记为 UNRESOLVED（不是 PASS）：preflight 输出 NOTE 说明 known_bad history_evidence 必须绑定其展示的机理；工件 tier 降级、downstream_flag=DISCRIMINATION_EVIDENCE_INCOMPLETE；若已知好样已 RESOLVED 则 decision=GO 但区分度证据不完整状态必须继承到最终门禁，不得为凑 RESOLVED 编造机理"
+    "expected": "该卷宗被记为 UNRESOLVED（不是 PASS）：preflight 输出 NOTE 说明 known_bad history_evidence 必须绑定其展示的机理；工件 tier 降级、downstream_flag=DISCRIMINATION_EVIDENCE_INCOMPLETE；若已知好样已 RESOLVED 则 decision=GO，但该 GO 是必要不充分条件——第 5 步读到这个 flag 会硬拒绝（Stage 4 的 GO 不等于区分度标尺可用），不得为凑 RESOLVED 编造机理"
   },
   {
     "id": 3,

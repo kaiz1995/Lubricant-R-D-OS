@@ -20,19 +20,27 @@
   "decision": "GO",
   "next_action": "Run iteration 2 with the A/B pair swapped.",
   "campaign_id": "CMP-001",
-  "bench_references": ["BENCH-SZ-01"],
+  "bench_references": [
+    "BENCH-SZ-01"
+  ],
   "max_iterations": 6,
   "current_iteration": 2,
   "iterations": [
     {
       "iteration": 1,
-      "samples": ["SAM-SYN-001", "SAM-SYN-002"],
+      "samples": [
+        "SAM-SYN-001",
+        "SAM-SYN-002"
+      ],
       "stop_state": "CONTINUE",
       "screening_reference": "SCR-001",
       "variance_reference": "VAR-001",
       "model_reference": null,
-      "next_batch_reference": "BATCH-SYN-002",
-      "bench_test_references": ["RUN-SYN-001", "RUN-SYN-002"]
+      "next_batch_reference": null,
+      "bench_test_references": [
+        "RUN-SYN-001",
+        "RUN-SYN-002"
+      ]
     }
   ],
   "pairing_design": {

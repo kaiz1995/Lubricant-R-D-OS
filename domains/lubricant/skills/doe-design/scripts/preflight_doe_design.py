@@ -66,6 +66,12 @@ INPUT_FIELDS = {"project_artifact", "challenge_artifact", "failure_ctq_artifact"
 OPTIONAL_INPUT_FIELDS = {"bench_artifact"}
 REQUIRED_INPUT_FIELDS = INPUT_FIELDS
 INPUT_FIELDS = REQUIRED_INPUT_FIELDS | OPTIONAL_INPUT_FIELDS
+# The grease route's own input shape: CHALLENGES_DEFINED is on no type_route, so that
+# route may legally omit the challenge artifact and records the Challenge Map link as
+# UNROUTED:<project_id> on the failure record instead. Only the shape differs; every
+# other route keeps validating against REQUIRED_INPUT_FIELDS verbatim.
+CHALLENGE_KEY = "challenge_artifact"
+GREASE_NO_CHALLENGE_FIELDS = REQUIRED_INPUT_FIELDS - {CHALLENGE_KEY}
 # mixture_total is only meaningful for the mixture channels, so it is optional at
 # the envelope level and required/forbidden per family by the bridge below.
 # resource_envelope (WP-04b) is the same: optional in the request shape, required on
@@ -92,6 +98,58 @@ FAMILY_CHANNEL = {
 
 def has_text(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def is_grease_route(project_type: object) -> bool:
+    """True when the supplied route marker carries the grease rules.
+
+    An absent or unknown project type is NOT the grease route, so every caller that
+    cannot determine the route keeps exactly the pre-change behaviour.
+    """
+    return project_type == GREASE_PROJECT_TYPE
+
+
+def challenge_note(project_id: object) -> str:
+    """The one audible line a grease run without a challenge artifact prints."""
+    return "NOTE: " + unrouted_statement(project_id)
+
+
+def unrouted_statement(project_id: object) -> str:
+    """The recorded-gap sentence. The preflight prints it, the artifact's evidence carries it."""
+    return (
+        f"challenge_artifact not supplied on the {GREASE_PROJECT_TYPE} route "
+        f"(CHALLENGES_DEFINED is on no type_route); the Challenge Map link is recorded as "
+        f"{UNROUTED_PREFIX}{project_id}"
+    )
+
+
+def unrouted_evidence(project_id: object) -> dict:
+    """The ASSUMED evidence item that records the missing challenge as a route property.
+
+    Never GAP: several preflights refuse a GAP-status item outright, and this is not an
+    unresolved gap in the record - it is a recorded property of the route.
+    """
+    return {
+        "evidence_id": f"EV-UNROUTED-{project_id}",
+        "statement": unrouted_statement(project_id),
+        "source": ROUTE_CONTRACT_SOURCE,
+        "status": "ASSUMED",
+    }
+
+
+def grease_without_challenge(data: object, project: object) -> bool:
+    """True for the grease route's legal no-challenge shape, and nothing else."""
+    return (
+        isinstance(data, dict)
+        and CHALLENGE_KEY not in data
+        and is_grease_route(project.get("project_type") if isinstance(project, dict) else None)
+    )
+
+
+UNROUTED_PREFIX = "UNROUTED:"
+# Provenance of the recorded gap: the route contract is what says the stage is on no
+# type_route, so it is what the recorded evidence cites.
+ROUTE_CONTRACT_SOURCE = "contracts/state-machine.json"
 
 
 def schema_dir() -> Path:
@@ -407,17 +465,38 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
     errors, artifacts = [], {}
-    if not REQUIRED_INPUT_FIELDS <= set(data) or not set(data) <= INPUT_FIELDS:
-        errors.append("input must contain only required upstream artifact paths and experiment_design")
     requirements = (
         ("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"),
         ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"),
         ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"),
     )
+    # The charter is read BEFORE the key-set verdict: whether the challenge key may be
+    # absent at all is a property of the route (CHALLENGES_DEFINED is on no type_route).
+    # Any other input shape, and a grease shape whose charter is not the grease route,
+    # gets the pre-existing verdict word for word.
+    project_path = resolved_path(data.get("project_artifact"), input_path)
+    charter = None
+    if project_path is not None and project_path.is_file():
+        try:
+            charter = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            charter = None
+    grease = is_grease_route(charter.get("project_type") if isinstance(charter, dict) else None)
+    no_challenge_shape = CHALLENGE_KEY not in set(data)
+    key_shape_ok = (
+        GREASE_NO_CHALLENGE_FIELDS <= set(data) <= INPUT_FIELDS - {CHALLENGE_KEY}
+        if no_challenge_shape and grease
+        else REQUIRED_INPUT_FIELDS <= set(data) <= INPUT_FIELDS
+    )
+    if not key_shape_ok:
+        errors.append("input must contain only required upstream artifact paths and experiment_design")
     for key, schema, stage in requirements:
         path = resolved_path(data.get(key), input_path)
         if path is None:
-            errors.append(key)
+            # The grease route's legal no-challenge state; the link lives on the failure
+            # record as UNROUTED:<project_id> instead of being consumable here.
+            if key != CHALLENGE_KEY or not grease:
+                errors.append(key)
             artifacts[key] = None
             continue
         item_errors, artifact = schema_artifact(path, schema, key)
@@ -442,13 +521,20 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         else:
             errors.extend(bench_capacity_errors(bench))
     project, challenge, failure, method, design_space = (artifacts[key] for key, _, _ in requirements)
-    present = [item for item in (project, challenge, failure, method, design_space) if item is not None]
     if method is not None and method.get("evidence_scope") not in {"SYNTHETIC", "PHYSICAL"}:
         errors.append("test_method_artifact must declare evidence_scope")
     if project is not None and project.get("status") != "ACTIVE":
         errors.append("project_artifact must have status ACTIVE")
-    if len(present) == 5 and len({item.get("project_id") for item in present}) != 1:
-        errors.append("all upstream artifact project_id values must match")
+    if challenge is not None:
+        present = [item for item in (project, challenge, failure, method, design_space) if item is not None]
+        if len(present) == 5 and len({item.get("project_id") for item in present}) != 1:
+            errors.append("all upstream artifact project_id values must match")
+    elif grease:
+        # The no-challenge shape's own uniformity rule, over the four artifacts that
+        # exist. Unreachable on any route that requires a challenge.
+        present = [item for item in (project, failure, method, design_space) if item is not None]
+        if len(present) == 4 and len({item.get("project_id") for item in present}) != 1:
+            errors.append("all upstream artifact project_id values must match")
     if challenge is not None and failure is not None and failure.get("challenge_reference") != challenge.get("challenge_id"):
         errors.append("failure_ctq_artifact.challenge_reference must equal challenge_artifact.challenge_id")
     if failure is not None and method is not None and method.get("target_failure_reference") != failure.get("failure_id"):
@@ -475,6 +561,28 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     return errors
 
 
+def route_notes(data: object, input_path: Path) -> list[str]:
+    """The audible NOTE for the grease route's recorded CHALLENGES_DEFINED gap.
+
+    Empty on every other shape: an oil request, and a grease request that supplied a
+    challenge artifact, print exactly what they printed before.
+    """
+    if not isinstance(data, dict):
+        return []
+    project_path = resolved_path(data.get("project_artifact"), input_path)
+    if project_path is None or not project_path.is_file():
+        return []
+    try:
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not is_grease_route(project.get("project_type") if isinstance(project, dict) else None):
+        return []
+    if resolved_path(data.get("challenge_artifact"), input_path) is not None:
+        return []
+    return [challenge_note(project.get("project_id"))]
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python preflight_doe_design.py <input.json>")
@@ -490,6 +598,8 @@ def main() -> int:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
     print("READY: input can form one EXPERIMENT_DESIGNED request only")
+    for note in route_notes(data, path):
+        print(note)
     return 0
 
 

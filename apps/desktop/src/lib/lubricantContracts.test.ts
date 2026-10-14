@@ -201,6 +201,69 @@ describe("lubricant 契约映射", () => {
   });
 });
 
+describe("步骤展示文案（G-2 / G-4 / G-5 / H-1 的面板侧）", () => {
+  const contractOf = (stage: string) => {
+    const contract = STAGE_CHAIN.find((c) => c.stage === stage);
+    if (!contract) throw new Error(`STAGE_CHAIN 缺 ${stage}`);
+    return contract;
+  };
+
+  it("G-4：duty 卡片说明十四维工况，两个命门维度都点名", () => {
+    const duty = contractOf("DUTY_DEFINED");
+    // 第一条 criteria 同时出现 motion_regime 与 torque_requirement，否则研发员
+    // 按卡片备料必漏这两个命门维度，到准入才被打回。
+    expect(duty.criteria[0]).toContain("十四类 duty_item 齐备");
+    expect(duty.criteria[0]).toContain("motion_regime");
+    expect(duty.criteria[0]).toContain("torque_requirement");
+    expect(duty.description).toContain("十四维");
+    // 命门条款：可以记 ASSUMED，但必须带 source 与 evidence_id
+    expect(duty.criteria.some((c) => c.includes("命门维度"))).toBe(true);
+  });
+
+  it("G-5：两条 CTQ 链 criteria 逐字一致（PENDING:<method_id> 前向引用口径）", () => {
+    const RULE =
+      "test_chain 指向测试方法：已判定的写裸 method_id，未判定的写 PENDING:<method_id>，在方法资格确认后回填";
+    const oil = contractOf("FAILURE_CTQ_DEFINED").criteria;
+    const grease = contractOf("FAILURE_MECHANISM_DEFINED").criteria;
+    expect(oil).toContain(RULE);
+    expect(grease).toContain(RULE);
+    // 旧口径（含糊表述）必须消失，两条链不得各说一套
+    for (const criteria of [oil, grease]) {
+      expect(criteria.some((c) => c.includes("未确认者标注待资格"))).toBe(false);
+    }
+  });
+
+  it("H-1：优化步骤改成「请求登记」口径，面板全表不再承诺非劣效结论", () => {
+    const optimization = contractOf("NON_INFERIORITY_PASSED");
+    expect(optimization.titleZh).toBe("优化请求登记（非劣效口径）");
+    expect(optimization.description).toContain("不产出候选配方或非劣效结论");
+    expect(optimization.criteria.some((c) => c.includes("不写入候选或结论"))).toBe(true);
+    // 验收口径：两条旧承诺串在面板源码零命中（shell grep -E 覆盖）。这里对整表
+    // 展示文案做同义断言；断言参数拆开拼接，避免本行成为那条 grep 的自命中源。
+    const text = STAGE_CHAIN.flatMap((c) => [c.titleZh, c.description, ...c.criteria]).join("\n");
+    expect(text).not.toContain("给出" + "非劣效结论");
+    expect(text).not.toContain("候选配方与" + "引擎交接");
+  });
+
+  it("H-1：知识入库第一条 criteria 用「推荐口径」，不再写「推荐配方」", () => {
+    const archive = contractOf("KNOWLEDGE_ARCHIVED");
+    expect(archive.criteria[0]).toContain("推荐口径");
+    expect(archive.criteria[0]).not.toContain("推荐配方");
+  });
+
+  it("G-2：APPLIED 是唯一登记「产出技能 ≠ 准入技能」的步骤", () => {
+    const applied = contractOf("APPLIED");
+    // skill 保持准入技能不动（ROUTE_TABLE 的 25 组逐一对应断言钉死它）
+    expect(applied.skill).toBe("application-validation");
+    expect(applied.producerSkill).toBe("application-definition");
+    expect(applied.admissionSkill).toBe("application-validation");
+    // 其余步骤的产出者 = skill，不填 producerSkill（防漂移：新增登记必须显式改这里）
+    expect(STAGE_CHAIN.filter((c) => c.producerSkill !== undefined).map((c) => c.stage)).toEqual([
+      "APPLIED",
+    ]);
+  });
+});
+
 describe("validateArtifactLite", () => {
   it("拒绝 V1.0 的非法 gate 草案", () => {
     const illegal = { artifact_type: "gate", stage: 1, decision: "GO", sign_off_by: "x" };

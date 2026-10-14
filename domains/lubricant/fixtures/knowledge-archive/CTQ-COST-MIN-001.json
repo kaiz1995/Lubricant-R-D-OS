@@ -1,0 +1,6 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "optimization",
+  "stage": "NON_INFERIORITY_PASSED",
+  "project_id": "PGD-REF-001"
+}

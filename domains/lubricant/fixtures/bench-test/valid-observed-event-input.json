@@ -1,5 +1,8 @@
 {
   "project_artifact": "project-active.json",
+  "screening_artifacts": [
+    "screening-observed-event.json"
+  ],
   "evidence_scope": "SYNTHETIC",
   "evidence": [
     {
@@ -14,6 +17,7 @@
     "bench_reference": "BENCH-SZ-01",
     "batch_reference": "BAT-PG-B4-EVT-001",
     "sample_reference": "SMP-PG-B4-EVT-001",
+    "ctq_reference": "CTQ-PG-B4-EVT-001",
     "protocol_version": "BENCH_PROTOCOL_V2",
     "setpoints": [
       "load 1.5 kN",

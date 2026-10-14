@@ -23,13 +23,24 @@ all fail-closed:
    CONTINUE; a campaign whose newest round ended GOAL_MET / NO_NEW_INFORMATION /
    RESOURCE_EXHAUSTED / PIVOT / KILL is still recorded truthfully, but its
    decision is HOLD -- the record does not authorize another bench round, and the
-   inner loop is not something this record may silently extend.
+   inner loop is not something this record may silently extend. A ledger that
+   records NO round yet (W0: the campaign is opened before round 1 runs) does
+   authorize the first round, so it is a GO.
 
-3. THE CAP IS A REAL BOUND. ``current_iteration`` must not exceed
-   ``max_iterations`` and the campaign may not record more rounds than the cap
-   allows (both stated by the schema). ``current_iteration`` also may not sit
-   before the rounds the record already lists: a campaign cannot be "at" round 1
-   while holding three completed rounds.
+3. THE CAP IS A REAL BOUND, AND current_iteration IS THE ROUND THE LEDGER STANDS
+   AT. ``current_iteration`` must not exceed ``max_iterations`` and the campaign
+   may not record more rounds than the cap allows (both stated by the schema).
+   With an empty ledger it is 1; with a newest round that ended CONTINUE it is
+   ``len(iterations) + 1`` (that round opened the next one, W1); with a newest
+   round that ended otherwise it is ``len(iterations)`` (the ledger closed at that
+   round, W2). A campaign cannot be "at" round 1 while holding three completed
+   rounds.
+
+3b. THE MODEL AND NEXT-BATCH REFERENCES ARE EXIT-ROUND ONLY (E2=B). ``model_reference``
+   and ``next_batch_reference`` are written only on the round that exits the inner
+   loop; every round that looped back (``stop_state == CONTINUE``) must carry null
+   for both. ``screening_reference`` and ``variance_reference`` are per-round and
+   carry no such rule.
 
 4. THE BENCH REFERENCES COME FROM REGISTERED BENCHES. Every
    ``bench_references`` entry must resolve to a supplied, schema-valid bench
@@ -91,7 +102,13 @@ ITERATION_FIELDS = {
     "bench_test_references",
 }
 REQUIRED_ITERATION_FIELDS = {"iteration", "samples", "stop_state"}
-REFERENCE_FIELDS = ("screening_reference", "variance_reference", "model_reference", "next_batch_reference")
+# screening_reference / variance_reference are PER-ROUND: a round that ran records what was
+# screened and what was assessed, whether it looped back or exited the loop.
+PER_ROUND_REFERENCE_FIELDS = ("screening_reference", "variance_reference")
+# model_reference / next_batch_reference are EXIT-ROUND ONLY (E2=B): the model update and the
+# sequential decision happen only on the round that exits the inner loop, so a round that
+# ended CONTINUE (it looped back) must leave both null. Enforced in iteration_errors.
+EXIT_ROUND_REFERENCE_FIELDS = ("model_reference", "next_batch_reference")
 STOP_STATES = ("CONTINUE", "GOAL_MET", "NO_NEW_INFORMATION", "RESOURCE_EXHAUSTED", "PIVOT", "KILL")
 CONTINUE = "CONTINUE"
 PAIRING_FIELDS = {"paired", "description"}
@@ -216,8 +233,8 @@ def evidence_errors(evidence: object, *, forbid_provenance_item: bool) -> list[s
 
 
 def iteration_errors(iterations: object, cap: object) -> list[str]:
-    if not isinstance(iterations, list) or not iterations:
-        return ["campaign.iterations must be a non-empty array"]
+    if not isinstance(iterations, list):
+        return ["campaign.iterations must be an array of round entries (empty until round 1's boundary is recorded)"]
     errors: list[str] = []
     for index, entry in enumerate(iterations):
         label = f"campaign.iterations[{index}]"
@@ -238,9 +255,18 @@ def iteration_errors(iterations: object, cap: object) -> list[str]:
                 f"{label}.stop_state must be {CONTINUE}: only {CONTINUE} authorizes another round, so no round "
                 "may follow one that ended otherwise"
             )
-        for field in REFERENCE_FIELDS:
+        for field in (*PER_ROUND_REFERENCE_FIELDS, *EXIT_ROUND_REFERENCE_FIELDS):
             if field in entry and entry.get(field) is not None and not has_text(entry.get(field)):
                 errors.append(f"{label}.{field} must be a non-empty string or null")
+        # E2=B exit-round-only references: a round that ended CONTINUE looped back, and the
+        # model update / next-batch decision are taken only on the round that exits the loop.
+        if entry.get("stop_state") == CONTINUE:
+            for field in EXIT_ROUND_REFERENCE_FIELDS:
+                if entry.get(field) is not None:
+                    errors.append(
+                        f"{label}.{field} must be null while this round ended {CONTINUE}: the model update and "
+                        "the next-batch decision are written only on the round that exits the inner loop"
+                    )
         if "bench_test_references" in entry:
             references = entry.get("bench_test_references")
             if not isinstance(references, list) or not all(has_text(item) for item in references):
@@ -302,19 +328,43 @@ def cross_field_errors(record: object, cap: object) -> list[str]:
     """The rules the schema cannot express, enforced here and reported by name.
 
     campaign.schema.json says so itself: pure JSON Schema has no keyword that
-    compares two instance numbers, so `current_iteration <= max_iterations` is
-    validator-enforced rather than structural (top-level description, the
-    `$comment` on max_iterations, and the schema's own `$comment`).
+    compares two instance values, so these are validator-enforced rather than
+    structural (top-level description, the `$comment` on max_iterations, and the
+    schema's own `$comment`):
+
+    * ``current_iteration`` must not exceed ``max_iterations``;
+    * ``current_iteration`` IS the round the ledger stands at: 1 while no round is
+      recorded (the ledger is opened before round 1 runs, W0), ``len(iterations) + 1``
+      when the newest recorded round ended CONTINUE (that round opened the next one, W1),
+      and ``len(iterations)`` when it ended otherwise (the ledger closed at that round, W2).
     """
     errors: list[str] = []
     current = record.get("current_iteration") if isinstance(record, dict) else None
     if is_positive_int(current) and is_positive_int(cap) and current > cap:
         errors.append(f"campaign.current_iteration {current} must not exceed max_iterations {cap}")
     iterations = record.get("iterations") if isinstance(record, dict) else None
-    if isinstance(iterations, list) and is_positive_int(current) and len(iterations) > current:
+    if not isinstance(iterations, list) or not is_positive_int(current):
+        return errors
+    if not iterations:
+        if current != 1:
+            errors.append(
+                f"campaign.current_iteration {current} must be 1 while no round is recorded: the ledger is opened "
+                "before round 1's boundary is reached"
+            )
+        return errors
+    newest = iterations[-1]
+    newest_state = newest.get("stop_state") if isinstance(newest, dict) else None
+    if newest_state == CONTINUE:
+        expected = len(iterations) + 1
+        if current != expected:
+            errors.append(
+                f"campaign.current_iteration {current} must be {expected}: the newest recorded round ended "
+                f"{CONTINUE}, so the campaign stands at the round that round opened"
+            )
+    elif current != len(iterations):
         errors.append(
-            f"campaign.current_iteration {current} is before the {len(iterations)} round(s) this campaign "
-            "already records"
+            f"campaign.current_iteration {current} must be {len(iterations)}: the newest recorded round ended "
+            f"{newest_state!r}, so the campaign stands at the round the ledger closed at"
         )
     return errors
 
@@ -352,7 +402,10 @@ def expected_decision_fields(record: dict, cap: int, defaulted: bool) -> dict[st
     benches = record.get("bench_references") if isinstance(record.get("bench_references"), list) else []
     current = record.get("current_iteration")
     within_cap = is_positive_int(current) and is_positive_int(cap) and current <= cap
-    open_loop = newest == CONTINUE
+    # W0 counts as open: a ledger that records no round yet has not closed the loop, it is
+    # standing at round 1. The two states that authorize another round are "no round has
+    # been recorded yet" and "the newest recorded round ended CONTINUE" (E2=B W0/W1).
+    open_loop = newest in (None, CONTINUE)
     gap = has_gap(record)
     ready = (not gap) and within_cap and open_loop
     cap_source = f"defaulted from {CONTRACT_SOURCE}" if defaulted else "supplied in the request"
@@ -360,6 +413,8 @@ def expected_decision_fields(record: dict, cap: int, defaulted: bool) -> dict[st
         reason = "an evidence item is GAP"
     elif not within_cap:
         reason = f"current_iteration {current} exceeds max_iterations {cap}"
+    elif newest is None:
+        reason = "no round is recorded yet"
     else:
         reason = f"the newest recorded round ended {newest}, and only {CONTINUE} authorizes another round"
     return {
@@ -374,12 +429,16 @@ def expected_decision_fields(record: dict, cap: int, defaulted: bool) -> dict[st
             "known before it runs."
         ),
         "decision_rule": (
-            f"Keep the loop open (GO) only when the newest recorded round ended {CONTINUE}, current_iteration is "
-            "within max_iterations, and no evidence item is GAP."
+            f"Keep the loop open (GO) only when the ledger authorizes it - no round is recorded yet (the ledger is "
+            f"opened at round 1) or the newest recorded round ended {CONTINUE} - current_iteration is within "
+            "max_iterations, and no evidence item is GAP."
         ),
         "result": (
             f"Campaign {campaign_id} holds {rounds} recorded round(s) and stands at iteration {current} of {cap} "
             f"(max_iterations={cap}, {cap_source}); the newest recorded round ended {newest}."
+            if rounds
+            else f"Campaign {campaign_id} has opened its ledger at iteration {current} of {cap} "
+            f"(max_iterations={cap}, {cap_source}) and records no round yet."
         ),
         "decision": "GO" if ready else "HOLD",
         "next_action": (

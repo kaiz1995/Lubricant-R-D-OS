@@ -1,4 +1,12 @@
-"""Validate one deterministic Phase 3 statistical-analysis request artifact."""
+"""Validate one deterministic Phase 3 statistical-analysis request artifact.
+
+E-2 boundary: the canonical decision block is re-derived with the default
+``grease=False`` on purpose. The policy's grease branch costs material the closed
+``schemas/model.schema.json`` does not let the artifact carry (the variance reference and
+verdict, the applicability boundary), so a validator that dispatched it would compute a
+different block than the builder wrote and FAIL every build; see the note in
+``build_model_artifact.py`` before wiring anything.
+"""
 
 from __future__ import annotations
 
