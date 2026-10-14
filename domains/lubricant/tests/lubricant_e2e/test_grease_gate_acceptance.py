@@ -359,7 +359,26 @@ def grease_process_window_dispatch() -> None:
         oil_probe = run(PREFLIGHT, with_process_pair(gate_request(oil_root)))
         assert "process_window_artifact must be stage PROCESS_WINDOW_DEFINED" in oil_probe.stdout, oil_probe.stdout
         assert "process_window_artifact must be stage PROCESS_SCALE_VALIDATED" not in oil_probe.stdout, oil_probe.stdout
-    print("PASS: the step-17 window dispatches PROCESS_SCALE_VALIDATED on the grease route and stays PROCESS_WINDOW_DEFINED on oil")
+
+        # 8e. P-1 (2026-10-14): on the grease route the step-17 window is REQUIRED whenever
+        # the gate is not a HOLD-only review. The pair-less request that HOLDs by design
+        # above is refused as incomplete the moment it would authorize a transition.
+        authorize_root = chain_workspace(base / "grease_authorize_without_window", GREASE_PROJECT_TYPE)
+        authorize_probe = run(PREFLIGHT, gate_request(authorize_root, gate_status="GO"))
+        assert authorize_probe.returncode == 1, authorize_probe.stdout
+        assert (
+            "process_artifact and process_window_artifact are required on the PRECISION_GREASE_DEV route"
+        ) in authorize_probe.stdout, authorize_probe.stdout
+
+        # ...and submitting the pair does NOT buy the transition: the fixtures' window is
+        # SYNTHETIC, and a synthetic window may never authorize one. The requirement and the
+        # refusal are two different rules, and this asserts they compose.
+        process_pair(authorize_root)
+        paired_authorize = run(PREFLIGHT, with_process_pair(gate_request(authorize_root, gate_status="GO")))
+        assert paired_authorize.returncode == 1, paired_authorize.stdout
+        assert "cannot authorize a state transition" in paired_authorize.stdout, paired_authorize.stdout
+    print("PASS: the step-17 window dispatches PROCESS_SCALE_VALIDATED on the grease route, is REQUIRED for a "
+          "transition there, and stays PROCESS_WINDOW_DEFINED (and optional) on oil")
 
 
 def grease_method_reference_ruler() -> None:

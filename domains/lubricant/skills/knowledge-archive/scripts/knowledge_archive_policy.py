@@ -166,7 +166,7 @@ def derived_present(entry: object, key: str, workspace, project_id: object) -> b
     reference = entry.get("artifact_reference")
     if not has_text(reference) or is_absence_marker(reference):
         return False
-    artifact_type, stages = ASSET_REQUIREMENTS[key]
+    artifact_type, stages = asset_requirement(key)
     label = f"knowledge_assets.{key}.artifact_reference"
     return not reference_file_errors(label, reference, artifact_type, stages, workspace, project_id)
 
@@ -211,7 +211,7 @@ def reference_errors(entry: object, key: str, workspace, project_id: object) -> 
         return [f"{label} must be a non-empty string; {ABSENCE_HINT}"]
     if entry.get("present") is False and is_absence_marker(reference):
         return []
-    artifact_type, stages = ASSET_REQUIREMENTS[key]
+    artifact_type, stages = asset_requirement(key)
     return reference_file_errors(label, reference, artifact_type, stages, workspace, project_id)
 
 
@@ -228,7 +228,14 @@ def qualification_errors(package: object, workspace, project_id: object) -> list
 
 
 def reference_file_errors(label, reference, artifact_type, stages, workspace, project_id) -> list[str]:
-    """Resolve one file citation and check it against the artifact it must name."""
+    """Resolve one file citation and check it against the artifact it must name.
+
+    Two failure shapes, reported with the most informative message available: a token that
+    is not a workspace file name at all (a document number) is refused as such, and a file
+    that DOES resolve is judged by what it actually contains -- the artifact type it
+    carries is named in the message, so ``model`` pointing at ``design_space.json`` reports
+    ``artifact_type 'design_space'`` rather than a name-shape complaint.
+    """
     name = Path(reference).name
     if name != reference or not reference.endswith(".json"):
         return [
@@ -236,14 +243,14 @@ def reference_file_errors(label, reference, artifact_type, stages, workspace, pr
             "this asset (canonical '<type>.json' or suffixed '<type>-<project_id>-<id>.json'), not a "
             "document number"
         ]
-    stem = name[: -len(".json")]
-    if stem != artifact_type and not stem.startswith(artifact_type + "-"):
-        return [
-            f"{label} {reference!r} is not the name of a {artifact_type!r} record: legal names are "
-            f"'{artifact_type}.json' or '{artifact_type}-<project_id>-<id>.json'"
-        ]
     path = referenced_path(reference, workspace)
     if path is None or not path.is_file():
+        stem = name[: -len(".json")]
+        if stem != artifact_type and not stem.startswith(artifact_type + "-"):
+            return [
+                f"{label} {reference!r} is not the name of a {artifact_type!r} record: legal names are "
+                f"'{artifact_type}.json' or '{artifact_type}-<project_id>-<id>.json'"
+            ]
         return [f"{label} {reference!r} is not a workspace file: no such record beside the request"]
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"))

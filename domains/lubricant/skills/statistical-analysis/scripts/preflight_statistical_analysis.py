@@ -10,10 +10,12 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from statistical_analysis_policy import (
+    TRUST_REGION_FIELD,
     VERDICT_CONSISTENT_DIFFERENCE,
     VERDICT_NO_DETECTABLE_DIFFERENCE,
     grease_route as routes_as_grease_route,
     has_gap,
+    trust_region_errors,
     variance_blockers,
 )
 
@@ -107,6 +109,11 @@ GREASE_NO_EXPERIMENT_FIELDS = INPUT_FIELDS - {EXPERIMENT_KEY}
 GREASE_NO_CHALLENGE_NO_EXPERIMENT_FIELDS = INPUT_FIELDS - {CHALLENGE_KEY, EXPERIMENT_KEY}
 OIL_INPUT_FIELDS = {key for key, _, _ in UPSTREAM_OIL} | {"analysis"}
 REQUEST_FIELDS = {"model_id", "requested_analyses", "response_references", "evidence"}
+# P-2 (2026-10-14): the applicability boundary is judged HERE, at the modelling step, and
+# persisted onto the model record (schemas/model.schema.json carries the slot since the
+# constraint was lifted). It stays OPTIONAL in the request -- an oil request that omits it
+# is exactly as valid as before -- and is validated for shape when it is supplied.
+OPTIONAL_REQUEST_FIELDS = {TRUST_REGION_FIELD}
 
 
 def schema_dir() -> Path:
@@ -214,11 +221,19 @@ def load_artifact(path: Path | None, schema_name: str, label: str) -> tuple[list
 
 
 def request_errors(request: object, project_id: str, evidence_scope: str | None = None) -> list[str]:
-    if not isinstance(request, dict) or set(request) != REQUEST_FIELDS:
-        return ["analysis must contain only model_id, requested_analyses, response_references, and evidence"]
+    if not isinstance(request, dict) or set(request) - OPTIONAL_REQUEST_FIELDS != REQUEST_FIELDS:
+        return ["analysis must contain only model_id, requested_analyses, response_references, evidence, and the "
+                "optional applicability_boundary"]
+    errors: list[str] = []
+    boundary = request.get(TRUST_REGION_FIELD)
+    if boundary is not None:
+        # P-2: judged here, persisted by the builder, so the record carries the region it was
+        # fitted on instead of the boundary being dropped after this gate.
+        errors.extend(trust_region_errors(boundary))
     candidate = {"schema_version": "0.1.0", "artifact_type": "model", "project_id": project_id or "input-project", "stage": "MODEL_BUILT", "evidence_scope": evidence_scope, "decision_question": "input", "hypothesis": "input", "uncertainty": "input", "decision_rule": "input", "result": "input", "decision": "GO", "next_action": "input", "experiment_reference": "input-experiment", "design_space_reference": "input-design-space", "test_method_references": ["input-method"], "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE", **request}
     schemas, registry = loaded_schemas()
-    return [f"analysis: {error.message}" for error in Draft202012Validator(schemas["model.schema.json"], registry=registry).iter_errors(candidate)]
+    errors.extend(f"analysis: {error.message}" for error in Draft202012Validator(schemas["model.schema.json"], registry=registry).iter_errors(candidate))
+    return errors
 
 
 def charter_project_type(data: object, input_path: Path) -> object:

@@ -10,10 +10,19 @@ the loop continues at all. This gate exists because both halves are easy to fake
   explanations is held, never filled in with a plausible one.
 * a stop is a decision like any other, so a ``stop_state`` other than CONTINUE must carry
   its non-empty reason - and, conversely, a reason is recorded only for a stop.
+* the three proposal fields (``proposed_samples`` / ``information_gain_basis`` /
+  ``bench_slots_required``) are CONTINUE-only, in BOTH directions (E2=B D-2): a CONTINUE
+  that omits them and a stop that carries them are each refused, so the request layer asks
+  for exactly the shape ``next_batch.schema.json``'s second if/then rule requires. A stop
+  opens no round, proposes no sample and spends no bench slot.
 * the decision is taken at ONE campaign round boundary: the campaign carrier, the round's
   design and the round's variance assessment must agree on the project, the evidence scope
   and the iteration, and the campaign's own iteration entry must tell the same story as
-  this record (same stop_state, same ``next_batch_reference``, same ``variance_reference``).
+  this record (same stop_state, same ``variance_reference``). The carrier's own
+  ``next_batch_reference`` is NOT compared against this record's ``next_batch_id``: by
+  E2=B that field is written only on the round that exits the inner loop, so it is null on
+  every CONTINUE round and the old self-comparison could only ever compare a record with
+  itself (D-2 removed it).
 * the round is bounded by the availability the round's design declares, and a CONTINUE may
   not open an iteration beyond the campaign's ``max_iterations`` - the state machine
   refuses that advance, so this record must not authorize it.
@@ -44,6 +53,7 @@ from next_batch_policy import (
     expected_decision_fields,
     has_text,
     is_count,
+    proposal_field_errors,
     statement_map,
     stop_rationale_errors,
 )
@@ -56,15 +66,20 @@ NEXT_BATCH_STAGE = "NEXT_BATCH_DECIDED"
 # preflight_doe_design.py), and neither are the campaign / variance contracts.
 SCHEMA_NAMES = ("common.schema.json", "next_batch.schema.json")
 INPUT_FIELDS = {"campaign_artifact", "experiment_design_artifact", "variance_artifact", "next_batch"}
-RECORD_REQUIRED_FIELDS = {
+# The request block's required fields, split by stop_state (E2=B). The three proposal fields
+# are CONTINUE-only, exactly as the schema's second if/then rule states it: a stop opens no
+# round, proposes no sample and spends no bench slot. They are required while the loop
+# continues and forbidden on any stop, so the request layer and the artifact contract agree
+# on one shape per state instead of contradicting each other (D-2 item 4: "not written and
+# not required on a stop").
+RECORD_ALWAYS_REQUIRED_FIELDS = {
     "next_batch_id",
     "stop_state",
-    "bench_slots_required",
-    "information_gain_basis",
     "competing_explanations",
-    "proposed_samples",
     "evidence",
 }
+RECORD_CONTINUE_REQUIRED_FIELDS = {"bench_slots_required", "information_gain_basis", "proposed_samples"}
+RECORD_REQUIRED_FIELDS = RECORD_ALWAYS_REQUIRED_FIELDS | RECORD_CONTINUE_REQUIRED_FIELDS
 RECORD_OPTIONAL_FIELDS = {"stop_rationale", "next_round_budget"}
 RECORD_ALLOWED_FIELDS = RECORD_REQUIRED_FIELDS | RECORD_OPTIONAL_FIELDS
 SAMPLE_ALLOWED_FIELDS = {"sample_reference", "formula_reference", "hypothesis", "separates"}
@@ -245,26 +260,43 @@ def record_errors(record: object, design: object) -> list[str]:
     if not isinstance(record, dict):
         return ["next_batch must be a JSON object"]
     errors: list[str] = []
-    if not RECORD_REQUIRED_FIELDS <= set(record) or not set(record) <= RECORD_ALLOWED_FIELDS:
+    stop_state = record.get("stop_state")
+    continuing = stop_state == CONTINUE
+    # The shape check is STOP-AWARE (E2=B): the three proposal fields are part of the request
+    # only while the loop continues, so a stop is not asked for them. Two shapes, one per
+    # state -- a stop that carries them is refused by proposal_field_errors below, and a
+    # CONTINUE that omits them is refused by the same function, so neither state can borrow
+    # the other's fields.
+    required = RECORD_ALWAYS_REQUIRED_FIELDS | (RECORD_CONTINUE_REQUIRED_FIELDS if continuing else set())
+    if not required <= set(record) or not set(record) <= RECORD_ALLOWED_FIELDS:
         # Reported, but not returned early: the per-field checks below name what is actually
         # missing or malformed (in particular the declared-explanation rule, whose refusal
         # must read as its own reason rather than as a generic shape error).
+        # The CONTINUE wording is unchanged from before this rule became stop-aware; only the
+        # stop side names the proposal fields it must not carry.
         errors.append(
             "next_batch must contain only the required fields "
-            f"{sorted(RECORD_REQUIRED_FIELDS)} plus the optional {sorted(RECORD_OPTIONAL_FIELDS)}")
+            f"{sorted(RECORD_REQUIRED_FIELDS)} plus the optional {sorted(RECORD_OPTIONAL_FIELDS)}"
+            if continuing else
+            f"next_batch must contain {sorted(RECORD_ALWAYS_REQUIRED_FIELDS)} plus the optional "
+            f"{sorted(RECORD_OPTIONAL_FIELDS)} for this stop_state; the proposal fields "
+            f"{sorted(RECORD_CONTINUE_REQUIRED_FIELDS)} are CONTINUE-only and must be omitted on a stop")
     if not has_text(record.get("next_batch_id")):
         errors.append("next_batch.next_batch_id must be a non-empty string")
-    if record.get("stop_state") not in STOP_STATES:
+    if stop_state not in STOP_STATES:
         errors.append(f"next_batch.stop_state must be one of {list(STOP_STATES)}")
     errors.extend(stop_rationale_errors(record))
-    if not is_count(record.get("bench_slots_required"), 1):
+    # Both directions of the CONTINUE-only proposal rule, as readable refusals (E2=B).
+    errors.extend(proposal_field_errors(record))
+    if continuing and not is_count(record.get("bench_slots_required"), 1):
         errors.append("next_batch.bench_slots_required must be an integer >= 1")
-    if not has_text(record.get("information_gain_basis")):
+    if continuing and not has_text(record.get("information_gain_basis")):
         errors.append(
             "next_batch.information_gain_basis must be a non-empty statement of why these are the informative "
             "samples rather than the alternatives considered")
     errors.extend(explanation_errors(record))
-    errors.extend(sample_errors(record))
+    if continuing:
+        errors.extend(sample_errors(record))
     budget = record.get("next_round_budget")
     if budget is not None:
         if not isinstance(budget, dict) or set(budget) != BUDGET_FIELDS:
@@ -272,14 +304,16 @@ def record_errors(record: object, design: object) -> list[str]:
         elif any(not is_count(budget.get(field), 0) for field in BUDGET_FIELDS):
             errors.append("next_batch.next_round_budget figures must be integers >= 0")
     errors.extend(evidence_errors(record.get("evidence")))
+    # The proposal checks speak only about a proposal: a stop spends no slot and proposes
+    # no sample, so there is nothing to bound.
     availability, source = design_availability(design)
     slots = record.get("bench_slots_required")
-    if is_count(slots, 1) and isinstance(availability, int) and slots > availability:
+    if continuing and is_count(slots, 1) and isinstance(availability, int) and slots > availability:
         errors.append(
             f"next_batch.bench_slots_required={slots} exceeds the round's declared bench availability "
             f"{availability} ({source}): a round may not plan more positions than it has")
     samples = record.get("proposed_samples")
-    if isinstance(samples, list) and is_count(slots, 1) and len(samples) > slots:
+    if continuing and isinstance(samples, list) and is_count(slots, 1) and len(samples) > slots:
         errors.append(
             f"next_batch proposes {len(samples)} sample(s) but requires only {slots} bench slot(s): every "
             "proposed sample would run in the next round and therefore needs a slot")
@@ -570,10 +604,18 @@ def main() -> int:
         return 1
     record = data["next_batch"]
     print("READY: input can form one NEXT_BATCH_DECIDED record only")
-    print(
-        f"GATE: stop_state={record['stop_state']} bench_slots_required={record['bench_slots_required']} "
-        f"proposed_samples={len(record['proposed_samples'])} "
-        f"declared_explanations={len(record['competing_explanations'])}")
+    # The GATE line reports the proposal only when there is one: a stop carries none of the
+    # three proposal fields (E2=B), so reading them unconditionally would crash on the very
+    # record the contract now requires a stop to be.
+    if record.get("stop_state") == CONTINUE:
+        print(
+            f"GATE: stop_state={record['stop_state']} bench_slots_required={record['bench_slots_required']} "
+            f"proposed_samples={len(record['proposed_samples'])} "
+            f"declared_explanations={len(record['competing_explanations'])}")
+    else:
+        print(
+            f"GATE: stop_state={record['stop_state']} no round is opened: no proposed samples and no bench slot "
+            f"are spent; declared_explanations={len(record['competing_explanations'])}")
     for note in notes_for(data, path):
         print(f"NOTE: {note}")
     return 0

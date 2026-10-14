@@ -429,6 +429,55 @@ def case_f(workspace: Path) -> None:
     print("(f) bench_test.ctq_reference outside the round -> " + output(result))
 
 
+def case_g(workspace: Path) -> None:
+    """(g) P-2 (2026-10-14): a model is BUILT from the campaign round when no experiment
+    travels, and the applicability boundary judged here is persisted onto the record."""
+    grease_dir = workspace / "grease"
+    grease_dir.mkdir(parents=True)
+    stage_grease_workspace(grease_dir)
+    campaign = read_json(grease_dir / "campaign.json")
+    rounds = campaign.get("iterations") if isinstance(campaign.get("iterations"), list) else []
+    newest = rounds[-1] if rounds and isinstance(rounds[-1], dict) else {}
+    request = grease_request()
+    # P-2: the route reaches modelling without an experiment stage, so the record names the
+    # campaign round it was fitted on instead; and the boundary is declared here so the
+    # record can carry it.
+    del request["experiment_artifact"]
+    request["analysis"]["applicability_boundary"] = {
+        "variable_references": ["P-PG-THICKENER", "P-PG-BASEOIL"],
+        "region_statement": "The fitted region: thickener and base-oil levels held inside the round's design space.",
+        "lower_bounds": {"P-PG-THICKENER": 6.0, "P-PG-BASEOIL": 65.0},
+        "upper_bounds": {"P-PG-THICKENER": 15.0, "P-PG-BASEOIL": 90.0},
+    }
+    request_path = grease_dir / "input-model-campaign-driven.json"
+    write_json(request_path, request)
+    model_path = grease_dir / "model.json"
+    result = run(BUILDER, request_path, model_path)
+    assert result.returncode == 0, output(result)
+    artifact = read_json(model_path)
+    # The record names the round it was fitted on, by campaign rather than by experiment.
+    assert "experiment_reference" not in artifact, artifact
+    assert artifact["campaign_reference"] == campaign["campaign_id"], artifact
+    assert artifact["iteration"] == newest.get("iteration"), (artifact["iteration"], newest)
+    # ...and the boundary judged at this step is ON the record, not dropped after the gate.
+    assert artifact["applicability_boundary"]["variable_references"] == ["P-PG-THICKENER", "P-PG-BASEOIL"], artifact
+    assert schema_errors("model", artifact) == [], schema_errors("model", artifact)
+    result = run(VALIDATOR, model_path)
+    assert result.returncode == 0, output(result)
+    print(f"(g) no-experiment model built from campaign round {artifact['iteration']} with its "
+          "applicability boundary persisted and schema-valid")
+
+    # A malformed boundary is refused at the gate, not silently written.
+    broken = grease_request()
+    del broken["experiment_artifact"]
+    broken["analysis"]["applicability_boundary"] = {"region_statement": "no variables named"}
+    broken_path = grease_dir / "input-model-broken-boundary.json"
+    write_json(broken_path, broken)
+    result = run(PREFLIGHT, broken_path)
+    assert result.returncode != 0 and "applicability_boundary" in output(result), output(result)
+    print("(g) boundary without variable_references -> " + output(result))
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
         workspace = Path(temporary)
@@ -438,11 +487,13 @@ def main() -> int:
         case_c(workspace / "c")
         case_e(workspace / "e")
         case_f(workspace / "f")
+        case_g(workspace / "g")
     print("PASS: statistical-analysis MODEL_BUILT gate — bench_test UNDECIDED admits the grease "
           "chain, the inner-loop keys (campaign included) are required by project_type (fail-closed), "
           "the variance verdict decides admissibility (NO_DETECTABLE_DIFFERENCE READY, UNDERPOWERED "
           "never a synonym, decision checked against the verdict), the grease request reaches MODEL_BUILT "
-          "without the experiment path with its observed CTQs linked off the bench records, and the oil "
+          "without the experiment path with its observed CTQs linked off the bench records, a model is "
+          "BUILT from the campaign round with its applicability boundary persisted (P-2), and the oil "
           "route's outputs are byte-for-byte unchanged")
     return 0
 

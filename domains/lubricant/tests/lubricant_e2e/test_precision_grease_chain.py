@@ -807,7 +807,12 @@ def process_input(design_space_path: Path) -> dict:
             "cpk": {"value": 1.33, "ctq_reference": CTQ_ID, "sample_size": 30},
             "material_batch_reference": "LOT-SYN-PG-E2E-001",
             "factor_role": "SUB_PLOT",
-            "evidence_scope": "SYNTHETIC",
+            # PHYSICAL, like every other artifact this chain declares that way: the SIM
+            # marker in the evidence text is the honesty marker, and the scope field is
+            # what the route's gates read. The step-18 gate now REQUIRES the process pair
+            # (P-1), so the pair has to be the same scope as the rest of the chain or the
+            # weakest-scope rule would hold the gate at HOLD by construction.
+            "evidence_scope": "PHYSICAL",
             "evidence": [
                 {
                     "evidence_id": "EV-PG-E2E-PROC-001",
@@ -1508,7 +1513,7 @@ def scale_up_input(process_path: Path, optimization_path: Path) -> dict:
                 "scale_class": "PRODUCTION",
                 "batch_size": measurement(500, "kg", "BATCH-PGD-E2E-PROD-001", "v0.2"),
             },
-            "evidence_scope": "SYNTHETIC",
+            "evidence_scope": "PHYSICAL",
             "evidence": [
                 {
                     "evidence_id": "EV-PGD-E2E-SCALE-001",
@@ -1523,8 +1528,16 @@ def scale_up_input(process_path: Path, optimization_path: Path) -> dict:
 
 def gate_request(project_path: Path, challenge_path: Path, failure_path: Path, method_path: Path,
                  design_space_path: Path, experiment_design_path: Path, experiment_path: Path,
-                 model_path: Path, optimization_path: Path) -> dict:
-    return {
+                 model_path: Path, optimization_path: Path,
+                 process_path: Path | None = None, process_window_path: Path | None = None) -> dict:
+    """The step-18 gate request.
+
+    P-1 (2026-10-14): on the grease route the step-17 fixed window is required whenever the
+    gate is not a HOLD-only review, so the caller passes the process pair. The two legs that
+    deliberately replay a shape without the pair (the oil charter, and the no-challenge
+    probe's HOLD recording) leave the defaults in place.
+    """
+    request = {
         "project_artifact": project_path.name,
         "challenge_artifact": challenge_path.name,
         "failure_ctq_artifact": failure_path.name,
@@ -1553,6 +1566,10 @@ def gate_request(project_path: Path, challenge_path: Path, failure_path: Path, m
             ],
         },
     }
+    if process_path is not None and process_window_path is not None:
+        request["process_artifact"] = process_path.name
+        request["process_window_artifact"] = process_window_path.name
+    return request
 
 
 def next_batch_input(campaign_path: Path, experiment_design_path: Path, variance_path: Path) -> dict:
@@ -2369,7 +2386,8 @@ def main() -> int:
         gate_request_path = write_input(
             "input-gate.json",
             gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
-                         experiment_design_path, experiment_path, model_path, optimization_path),
+                         experiment_design_path, experiment_path, model_path, optimization_path,
+                         process_baseline_path, window_path),
         )
         gate_path = drive(
             stage_script["VERIFIED"] / "preflight_gate_review.py",
@@ -2597,6 +2615,16 @@ def main() -> int:
             return payload
 
         # Each leg is one stage whose producer's own preflight is the gate under test.
+        # P-1 (2026-10-14): the gate leg records a HOLD-only review on purpose. The probe
+        # replays the route WITHOUT the process pair (it excludes both process records, so
+        # nothing could be submitted), and a HOLD-only review is exactly the shape that may
+        # omit them -- a HOLD authorizes nothing. The main chain above is the leg that proves
+        # the pair is submitted and the gate GOes.
+        no_challenge_gate_payload = gate_request(project_path, challenge_path, failure_path, method_path,
+                                                 design_space_path, experiment_design_path, experiment_path,
+                                                 model_path, optimization_path)
+        no_challenge_gate_payload["gate"] = {**no_challenge_gate_payload["gate"], "gate_status": "HOLD",
+                                             "reason": "no-challenge replay records a HOLD-only review"}
         probe_legs = (
             ("FAILURE_MECHANISM_DEFINED", "preflight_failure_ctq.py", "build_failure_ctq_artifact.py",
              "validate_failure_ctq_artifact.py", "probe-input-failure.json", "failure_ctq.json",
@@ -2620,9 +2648,7 @@ def main() -> int:
              optimization_input(project_path, method_path, design_space_path, experiment_design_path, experiment_path,
                                 model_path, variance_path)),
             ("VERIFIED", "preflight_gate_review.py", "build_gate_artifact.py", "validate_gate_artifact.py",
-             "probe-input-gate.json", "gate.json", "gate",
-             gate_request(project_path, challenge_path, failure_path, method_path, design_space_path,
-                          experiment_design_path, experiment_path, model_path, optimization_path)),
+             "probe-input-gate.json", "gate.json", "gate", no_challenge_gate_payload),
         )
         for stage, preflight_name, builder_name, validator_name, request_name, artifact_name, schema_kind, payload in probe_legs:
             scripts = stage_script[stage]

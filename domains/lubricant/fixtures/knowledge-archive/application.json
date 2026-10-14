@@ -1,6 +1,34 @@
 {
   "schema_version": "0.1.0",
   "artifact_type": "application",
+  "project_id": "PGD-REF-001",
   "stage": "APPLIED",
-  "project_id": "PGD-REF-001"
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Did the recorded formula meet the application acceptance criteria?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-APPLICATION-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against application.schema.json.",
+  "result": "GAP",
+  "decision": "GO",
+  "next_action": "Use the record as the archive's evidence package.",
+  "application_id": "APP-PGD-REF-001",
+  "project_reference": "PGD-REF-001",
+  "formula_reference": "FORM-PGD-REF-001",
+  "acceptance_criteria": [],
+  "counterexamples": [],
+  "life_claim_boundary": {
+    "claim_scope": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: life claim not yet bounded.",
+    "status": "GAP",
+    "validated_conditions": []
+  },
+  "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+  "evidence_id": "E-APPLICATION-REF-001"
 }

@@ -154,7 +154,7 @@ Authority schema: `../../schemas/campaign.schema.json`. Shared policy: `scripts/
     "iterations": [
       { "iteration": 1, "samples": ["SMP-PGD-B1-R1A", "SMP-PGD-B1-R1B"], "stop_state": "CONTINUE",
         "screening_reference": "SCR-PGD-B1-R1", "variance_reference": "VAR-PGD-B1-R1",
-        "model_reference": null, "next_batch_reference": "NEXT-PGD-B1-R1",
+        "model_reference": null, "next_batch_reference": null,
         "bench_test_references": ["BT-PGD-B1-R1A-1", "BT-PGD-B1-R1B-1"] }
     ],
     "pairing_design": { "paired": true, "description": "A/B pair runs in the same round and is swapped in the next round." },
@@ -173,14 +173,15 @@ Authority schema: `../../schemas/campaign.schema.json`. Shared policy: `scripts/
 - Identity: `campaign_id`, `project_reference`, `source`, `evidence_id` are required non-empty strings.
 - `bench_references`: non-empty array of distinct bench ids, every one of them registered and supplied.
 - `max_iterations`: optional positive integer. **If absent it is read from `contracts/state-machine.json` (`max_iterations`, currently 12) and the artifact writes that provenance into `result` and into the appended evidence item `E-CONTRACT-CAMPAIGN-MAX-ITERATIONS`; no other number is ever invented.** An absent cap with an unreadable contract is a HOLD.
-- `current_iteration`: positive integer, 1-based. It must not exceed `max_iterations` and must not sit before the rounds already recorded.
-- `iterations`: non-empty array, oldest first, one entry per round actually run; `iteration` numbering is 1-based and contiguous; every entry needs `samples` (non-empty) and `stop_state` (one of `CONTINUE`, `GOAL_MET`, `NO_NEW_INFORMATION`, `RESOURCE_EXHAUSTED`, `PIVOT`, `KILL`). **Only `CONTINUE` authorizes another round**, so no round may follow one that ended otherwise, and the count may not exceed `max_iterations`.
+- `current_iteration`: positive integer, 1-based. It must not exceed `max_iterations` and it IS the round the ledger stands at (validator-enforced, not structurally expressible): `1` while the ledger is empty (the campaign is opened *before* round 1 runs — W0), `len(iterations) + 1` when the newest recorded round ended `CONTINUE` (that round opened the next one — W1), and `len(iterations)` when the newest recorded round ended otherwise (the ledger closed at that round — W2).
+- `iterations`: array of round entries, oldest first, **legitimately empty until round 1's boundary is reached** (the ledger is opened at `CAMPAIGN_OPENED`, before any round has run, so W0 authorizes the first round and the decision is `GO`); `iteration` numbering is 1-based and contiguous; every entry needs `samples` (non-empty) and `stop_state` (one of `CONTINUE`, `GOAL_MET`, `NO_NEW_INFORMATION`, `RESOURCE_EXHAUSTED`, `PIVOT`, `KILL`). **Only `CONTINUE` authorizes another round**, so no round may follow one that ended otherwise, and the count may not exceed `max_iterations`.
+- `model_reference` / `next_batch_reference` are **exit-round only** (E2=B): they are written only on the round that exits the inner loop, so every round that looped back (`stop_state == CONTINUE`) must carry `null` for both. `screening_reference` / `variance_reference` are per-round and carry no such rule.
 - `pairing_design`: exactly `paired` (boolean) and `description` (non-empty). The paired A/B design is the one this project prefers: at a fixed sigma, pairing buys more resolution than trying to measure sigma precisely.
 - Evidence: non-empty, no `GAP`; the reserved id `E-CONTRACT-CAMPAIGN-MAX-ITERATIONS` may not be supplied by the caller.
 - A `SYNTHETIC` bench record must never back a `PHYSICAL` campaign (Part A red line 6).
 
 ### Decision rule (deterministic)
-`decision` is `GO` exactly when no evidence item is `GAP`, `current_iteration <= max_iterations`, and the newest recorded round ended `CONTINUE`; otherwise `HOLD`. A campaign whose newest round ended `GOAL_MET` / `NO_NEW_INFORMATION` / `RESOURCE_EXHAUSTED` / `PIVOT` / `KILL` is still recorded truthfully, with `HOLD`: the record does not authorize another bench round. The validator re-derives the whole block and refuses a hand-edited artifact.
+`decision` is `GO` exactly when no evidence item is `GAP`, `current_iteration <= max_iterations`, and the ledger is open — i.e. **no round is recorded yet (W0: the campaign is opened before round 1 runs) or the newest recorded round ended `CONTINUE` (W1)**; otherwise `HOLD`. A campaign whose newest round ended `GOAL_MET` / `NO_NEW_INFORMATION` / `RESOURCE_EXHAUSTED` / `PIVOT` / `KILL` is still recorded truthfully, with `HOLD`: the record does not authorize another bench round. The validator re-derives the whole block and refuses a hand-edited artifact.
 
 ## 7. Deterministic Execution Workflow (campaign)
 

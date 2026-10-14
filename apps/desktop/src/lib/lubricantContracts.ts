@@ -667,7 +667,11 @@ const OWN_REQUIRED: Record<string, readonly string[]> = {
     "run_plan", "responses", "guardrails", "expected_information_value"],
   experiment: ["artifact_type", "evidence_scope", "experiment_id",
     "experiment_design_reference", "design_space_reference", "test_method_references", "runs"],
-  model: ["artifact_type", "stage", "evidence_scope", "model_id", "experiment_reference",
+  // model: `experiment_reference` is NOT required since P-2 (2026-10-14) -- the grease
+  // route's model is fitted from a campaign round (campaign_reference + iteration) and
+  // carries no experiment stage. The lite check must not be wider than the schema's own
+  // `required`, which is what the consistency guard below asserts.
+  model: ["artifact_type", "stage", "evidence_scope", "model_id",
     "design_space_reference", "test_method_references", "requested_analyses",
     "response_references", "engine_handoff"],
   optimization: ["artifact_type", "stage", "evidence_scope", "optimization_id",

@@ -32,12 +32,12 @@ from knowledge_archive_policy import (
     QUALIFIED_ASSET_FIELDS,
     QUALIFIED_ASSET_KEY,
     STAGE,
-    asset_requirement,
     cost_criterion_errors,
     has_gap,
     has_text,
-    is_absence_marker,
     present_keys,
+    qualification_errors,
+    reference_errors,
     status_notes,
 )
 
@@ -149,55 +149,20 @@ def asset_entry_errors(value: object, key: str, workspace: Path | None = None,
             errors.append(f"{label}.qualification_reference is required whenever a qualification is recorded")
     # E7=A resolution runs AFTER the cost-criterion check (which is a whole-request rule
     # in archive_errors), so a reference that reads as a cost CTQ is reported as that,
-    # not merely as an unresolvable path.
+    # not merely as an unresolvable path. The resolver itself lives in the policy module
+    # so the preflight, the builder and the validator cannot disagree about what a
+    # readable citation is.
+    #
+    # The resolver is called for BOTH flag values (its own contract): an explicit absence
+    # marker is the legal way to record absence, and a citation that still RESOLVES is
+    # accepted even when the flag says absent -- `present` is a derived value, so that
+    # disagreement is recorded as present and made audible as a NOTE by the builder
+    # (``knowledge_archive_policy.presence_notes``), never a HOLD.
     if has_text(reference) and workspace is not None and not errors:
-        if value.get("present") is True:
-            errors.extend(asset_reference_errors(reference, label, workspace, project_id, key))
-        elif value.get("present") is False and not is_absence_marker(reference):
-            errors.append(
-                f"{label}.artifact_reference {reference!r} records an absence, so it must be one of the "
-                f"explicit absence markers ({ABSENCE_HINT})"
-            )
+        errors.extend(reference_errors(value, key, workspace, project_id))
+    if key == QUALIFIED_ASSET_KEY and workspace is not None and not errors:
+        errors.extend(qualification_errors(value, workspace, project_id))
     return errors
-
-
-def asset_reference_errors(reference: str, label: str, workspace: Path,
-                           project_id: str | None, key: str) -> list[str]:
-    """Resolve one present:true reference and check what it points at (E7=A)."""
-    path = Path(reference)
-    if not path.is_absolute():
-        path = workspace / path
-    if not path.is_file():
-        return [
-            f"{label}.artifact_reference {reference!r} does not resolve to a file in the workspace: a present "
-            "asset must cite the record itself, not a document number"
-        ]
-    try:
-        record = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        return [f"{label}.artifact_reference {reference!r} cannot be read as a record: {error}"]
-    if not isinstance(record, dict) or not has_text(record.get("artifact_type")):
-        return [
-            f"{label}.artifact_reference {reference!r} is not an artifact record: a cited asset must carry an "
-            "artifact_type and a stage"
-        ]
-    expected_type, allowed_stages = asset_requirement(key)
-    if record.get("artifact_type") != expected_type:
-        return [
-            f"{label}.artifact_reference {reference!r} carries artifact_type {record.get('artifact_type')!r}, "
-            f"but this asset must cite a {expected_type!r} record"
-        ]
-    if record.get("stage") not in allowed_stages:
-        return [
-            f"{label}.artifact_reference {reference!r} carries stage {record.get('stage')!r}, which is not one "
-            f"of the stages this asset may cite ({', '.join(allowed_stages)})"
-        ]
-    if project_id is not None and record.get("project_id") not in (None, project_id):
-        return [
-            f"{label}.artifact_reference {reference!r} belongs to project {record.get('project_id')!r}, not to "
-            f"this project {project_id!r}: an asset may only be cited from its own project"
-        ]
-    return []
 
 
 def knowledge_assets_errors(value: object, workspace: Path | None = None,

@@ -21,6 +21,7 @@ from referencing import Registry, Resource
 from optimization_policy import (
     ADMISSIBLE_VARIANCE_VERDICTS,
     BLOCKING_VARIANCE_VERDICTS,
+    MODEL_TRUST_REGION_FIELD,
     MODEL_TRUST_REGION_INPUT_FIELD,
     default_note,
     grease_route,
@@ -46,8 +47,10 @@ UPSTREAM_GREASE = UPSTREAM[8:]
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"optimization"}
 OIL_INPUT_FIELDS = {key for key, _, _ in UPSTREAM_OIL} | {"optimization"}
 # The grease route additionally carries the model's applicability boundary. It is an
-# INPUT-side field: schemas/model.schema.json is closed (unevaluatedProperties false)
-# and the batch-3 scope does not permit changing it.
+# INPUT-side field and stays one: the boundary the modelling step judged is now PERSISTED on
+# the model record (P-2, 2026-10-14 -- schemas/model.schema.json gained the slot when the
+# earlier constraint was lifted), and this request's region is cross-checked against it. The
+# request still declares its own numeric box, because that is what the engine consumes.
 GREASE_INPUT_FIELDS = INPUT_FIELDS | {MODEL_TRUST_REGION_INPUT_FIELD}
 OIL_INPUT_FIELDS_WITH_REGION = OIL_INPUT_FIELDS | {MODEL_TRUST_REGION_INPUT_FIELD}
 # The one upstream key the grease route may legally omit: CHALLENGES_DEFINED is on no
@@ -188,13 +191,17 @@ def request_errors(request: object, project_id: str, evidence_scope: str | None 
     return [f"optimization: {error.message}" for error in Draft202012Validator(schemas["optimization.schema.json"], registry=registry).iter_errors(candidate)]
 
 
-def grease_reference_errors(variance: dict | None, boundary: object) -> list[str]:
+def grease_reference_errors(variance: dict | None, boundary: object, model: dict | None = None) -> list[str]:
     """The two references the grease route adds: the variance gate and the trust region.
 
     A round whose variance verdict is UNDERPOWERED or REPLICATE_INCONSISTENT must not be
     optimized: the design could not resolve the question, so optimizing it optimizes
     noise. And the model's applicability boundary must be declared and numerically
     enforceable, because a recommendation outside it is an extrapolation.
+
+    P-2 (2026-10-14): when the model record carries the boundary it was fitted on, the
+    requested region must lie inside it. Before this the boundary was judged at step 14 and
+    dropped, so step 16 asked for it again with nothing to check it against.
     """
     errors: list[str] = []
     verdict = variance.get("verdict") if isinstance(variance, dict) else None
@@ -216,6 +223,21 @@ def grease_reference_errors(variance: dict | None, boundary: object) -> list[str
         errors.extend(f"{MODEL_TRUST_REGION_INPUT_FIELD}: {message}" for message in boundary_errors)
         if not boundary_errors and trust_region_from_boundary(boundary) is None:
             errors.append(f"{MODEL_TRUST_REGION_INPUT_FIELD} must declare numeric lower_bounds and upper_bounds for its variables: a boundary with no enforceable box cannot be passed to the engine, and optimizing without one is refused rather than done silently")
+        # P-2: the recorded boundary the model was fitted on is the outer limit of the
+        # region that may be optimized in. Only the variable set is compared here -- the
+        # numeric box is the request's own, and the engine still enforces it -- so an
+        # optimization may narrow the fitted region but never widen it past the model.
+        if isinstance(model, dict):
+            recorded = model.get(MODEL_TRUST_REGION_FIELD)
+            recorded_variables = recorded.get("variable_references") if isinstance(recorded, dict) else None
+            requested_variables = boundary.get("variable_references") if isinstance(boundary, dict) else None
+            if isinstance(recorded_variables, list) and recorded_variables and isinstance(requested_variables, list):
+                outside = sorted(set(requested_variables) - set(recorded_variables))
+                if outside:
+                    errors.append(
+                        f"{MODEL_TRUST_REGION_INPUT_FIELD} names {outside} which the model's recorded "
+                        f"applicability_boundary ({sorted(recorded_variables)}) does not cover: a recommendation "
+                        "outside the region the model was fitted on is an extrapolation")
     return errors
 
 
@@ -263,7 +285,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if grease and variance is None:
         errors.append("variance_artifact is required on the PRECISION_GREASE_DEV route")
     if grease:
-        errors.extend(grease_reference_errors(variance, data.get(MODEL_TRUST_REGION_INPUT_FIELD)))
+        errors.extend(grease_reference_errors(variance, data.get(MODEL_TRUST_REGION_INPUT_FIELD), model))
     available = [value for value in (project, challenge, failure, method, design_space, experiment_design, experiment, model) if value]
     scopes = {value.get("evidence_scope") for value in (method, experiment_design, experiment, model) if value is not None}
     if scopes - {"SYNTHETIC", "PHYSICAL"} or len(scopes) != 1:

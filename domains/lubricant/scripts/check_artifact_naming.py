@@ -36,11 +36,16 @@ import sys
 
 # The stage types tracked by the stage-gate panel (canonical names:
 # <type>.json). Order here is display order; suffix matching uses longest-prefix.
-# Mirrors the panel's STAGE_CHAIN unique artifact types (apps/desktop
-# src/lib/lubricantContracts.ts, 25 stages / 22 unique types); ``bench`` and
-# ``campaign`` were added 2026-10-13 with the WP-05 / WP-14 registrations, and
-# ``sample`` is kept because grease-batch emits sample.json beside batch.json
-# even though the panel does not probe it.
+# The panel's STAGE_CHAIN (apps/desktop/src/lib/lubricantContracts.ts) carries 25
+# stages over 22 unique artifact types; this list is deliberately two wider, and both
+# extras are records the panel does not probe:
+#   * ``sample`` -- grease-batch emits sample.json beside batch.json.
+#   * ``material`` -- formulation-design emits the material records the design space
+#     resolves (I-3, 2026-10-14). Carrying it here is what makes a mangled material
+#     name a violation instead of an ignored file; the plan's "do not extend
+#     STAGE_TYPES" line predates that producer and was superseded by I-3's own
+#     acceptance, which requires exactly this verdict.
+# ``bench`` and ``campaign`` were added 2026-10-13 with the WP-05 / WP-14 registrations.
 STAGE_TYPES = [
     "project",
     "duty",

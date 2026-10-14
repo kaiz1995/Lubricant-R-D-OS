@@ -21,9 +21,12 @@ Two layers, deliberately separated so the six oil routes are untouched:
      while "we could not measure it" is not.
    * **THE MODEL CARRIES ITS APPLICABILITY BOUNDARY (TRUST REGION).** Step 13's rule is
      that a model may only predict inside the region it was fitted on. The boundary is
-     optional at the contract level (``schemas/model.schema.json`` carries no such
-     field, and this skill must not change that) and is enforced here on the grease
-     route, so an oil request that omits it stays valid exactly as before.
+     optional in the REQUEST -- an oil request that omits it stays valid exactly as
+     before -- and when it is supplied the preflight validates it, the builder persists it
+     onto the record, and step 16 checks its requested region against what was recorded.
+     ``schemas/model.schema.json`` carries the slot since P-2 (2026-10-14) lifted the
+     earlier "this skill must not change that" constraint; the decision block's grease
+     branch still waits on a variance-reference slot this contract does not have.
 
 Both rules are implemented in this module so the preflight, the builder and the
 validator cannot disagree about the same input.

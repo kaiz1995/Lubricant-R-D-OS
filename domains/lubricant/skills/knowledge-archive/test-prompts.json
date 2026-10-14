@@ -2,7 +2,7 @@
   {
     "id": 1,
     "prompt": "为已收口的精密传动脂项目做知识入库：六类知识资产齐备（推荐配方 / 可行设计空间 / 关键失效边界 / 证据包（QUALIFIED）/ 材料知识 / 模型），证据为物理口径，生成 knowledge_asset.json",
-    "expected": "执行 scripts/preflight_knowledge_archive.py 校验上游 project.json 与六类资产条目，执行 build_knowledge_asset_artifact.py 生成临时工件（stage=KNOWLEDGE_ARCHIVED、asset_status=CLOSED_KNOWLEDGE、decision=FREEZE，decision 块由策略推导），执行 validate_knowledge_asset_artifact.py 通过后原子落盘至 knowledge_asset.json"
+    "expected": "执行 scripts/preflight_knowledge_archive.py 校验上游 project.json 与六类资产条目，执行 build_knowledge_asset_artifact.py 生成临时工件（stage=KNOWLEDGE_ARCHIVED、asset_status=CLOSED_KNOWLEDGE、decision=GO，decision 块由策略推导；本阶段不执行 FREEZE/CLOSE），执行 validate_knowledge_asset_artifact.py 通过后原子落盘至 knowledge_asset.json"
   },
   {
     "id": 2,

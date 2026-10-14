@@ -1,6 +1,32 @@
 {
   "schema_version": "0.1.0",
   "artifact_type": "gate",
+  "project_id": "PGD-REF-001",
   "stage": "VERIFIED",
-  "project_id": "PGD-REF-001"
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Did the review gate verify this chain?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-GATE-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against gate.schema.json.",
+  "result": "Gate record verified with no open conditions.",
+  "decision": "GO",
+  "next_action": "Use the record as the archive's qualification reference.",
+  "gate_id": "GATE-PGD-REF-001",
+  "experiment_reference": "EXP-PGD-REF-001",
+  "scope": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: verification of the recorded chain.",
+  "gate_status": "GO",
+  "satisfied_conditions": [
+    "Every upstream record exists and validates."
+  ],
+  "unsatisfied_conditions": [],
+  "evidence_gaps": [],
+  "risks": []
 }

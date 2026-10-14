@@ -42,17 +42,17 @@ six asset entries, the evidence scope, and the artifact-level evidence.
     "evidence_package": {
       "artifact_reference": "application.json",
       "present": true,
-      "qualification_reference": "evidence_qualification.json",
+      "qualification_reference": "gate.json",
       "qualification": "QUALIFIED"
     },
-    "material_knowledge": { "artifact_reference": "material-base-oil.json", "present": true },
+    "material_knowledge": { "artifact_reference": "material.json", "present": true },
     "model": { "artifact_reference": "model.json", "present": true }
   },
   "evidence": [
     {
       "evidence_id": "E-KA-PGD-001",
       "statement": "The closure evidence package is qualified.",
-      "source": "qualification record evidence_qualification.json",
+      "source": "qualification record gate.json",
       "status": "OBSERVED"
     }
   ]
@@ -64,6 +64,35 @@ number: every entry whose `present` is true is resolved and checked for its `art
 its `stage` and its `project_id`, so a fabricated or borrowed citation is a HOLD. The
 `recommended_formula` asset cites the optimization request record — this pack registers the
 request and its non-inferiority criterion; it does not compute a recommended formulation.
+
+### Reference format (contract in)
+
+Two legal shapes, and nothing else:
+
+| `present` | `artifact_reference` must be | Example |
+|---|---|---|
+| `true` | the file name of the record that carries this asset, beside the request: canonical `<artifact_type>.json`, or suffixed `<artifact_type>-<project_id>-<id>.json` | `optimization.json` |
+| `false` | one of the explicit absence markers `MISSING` / `NOT_SUPPLIED` | `MISSING` |
+
+Which record each asset must resolve to (`artifact_type` and the legal `stage` values):
+
+| asset key | record | stage |
+|---|---|---|
+| `recommended_formula` | `optimization` | `NON_INFERIORITY_PASSED` |
+| `feasible_design_space` | `design_space` | `DESIGN_SPACE_DEFINED` |
+| `critical_failure_boundaries` | `failure_ctq` | `FAILURE_CTQ_DEFINED` |
+| `evidence_package` | `application` | `APPLIED` |
+| `material_knowledge` | `material` | `DESIGN_SPACE_DEFINED` |
+| `model` | `model` | `MODEL_BUILT` |
+
+The `evidence_package` also carries `qualification_reference`, which must resolve to a
+`gate` record at stage `VERIFIED`. A citation that names a document number, a dangling file,
+or the wrong kind of record is a HOLD.
+
+`present` is a DERIVED value, not an authority: the builder records what the workspace
+justifies (a reference that resolves is present, one that does not is absent) and prints a
+`NOTE:` line whenever the declared flag and the derivation disagree. A disagreement is never
+a HOLD, so an older artifact still citing a document number stays readable.
 
 ### Field Invariants (contract in)
 - Upstream (hard): `project_artifact` is mandatory. It must validate against
@@ -98,9 +127,14 @@ derived_status = CLOSED_KNOWLEDGE  iff  evidence_scope is PHYSICAL
                  DRAFT_KNOWLEDGE   otherwise
 recorded_status = CLOSED_KNOWLEDGE iff the claim is CLOSED_KNOWLEDGE and it is justified
                   DRAFT_KNOWLEDGE  otherwise (downgrade-only)
-decision        = FREEZE  iff CLOSED_KNOWLEDGE and no artifact-level GAP
-                  HOLD    otherwise
+decision        = GO    iff CLOSED_KNOWLEDGE and no artifact-level GAP
+                  HOLD  otherwise
 ```
+This stage does NOT execute `FREEZE` / `CLOSE`. `FREEZE` is the separate signed
+`APPLIED → FROZEN` gate action (it requires a `technical_reviewer` signoff and no unresolved
+dissent), and `CLOSE` requires `FROZEN → CLOSED`; neither is an alias for landing the
+knowledge assets, so the closure decision uses the plain `GO` / `HOLD` vocabulary.
+
 `DRAFT_KNOWLEDGE` is always legal. The six-asset requirement is not a formality: a knowledge
 record missing the model asset cannot be reused for prediction, and one missing the
 critical-failure boundaries cannot warn the next project away from a known wall.

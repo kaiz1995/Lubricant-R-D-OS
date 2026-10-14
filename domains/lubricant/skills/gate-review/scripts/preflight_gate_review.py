@@ -258,7 +258,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     no_challenge_shape = grease and CHALLENGE_KEY not in data
     missing = (GREASE_NO_CHALLENGE_FIELDS if no_challenge_shape else INPUT_FIELDS) - set(data)
     if unexpected or missing:
-        errors.append("input must contain only required upstream artifact paths and gate (process artifacts optional but permitted)")
+        errors.append("input must contain only required upstream artifact paths and gate (process artifacts are permitted on every route, and required on the PRECISION_GREASE_DEV route when the gate is not a HOLD-only review)")
     project_value = None
     for key, schema, stage in UPSTREAM:
         # The grease route's legal no-challenge state: CHALLENGES_DEFINED is on no
@@ -338,6 +338,19 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(request, dict): return errors
     status = request.get("gate_status")
     if effective_scope == "SYNTHETIC" and status != "HOLD": errors.append("SYNTHETIC evidence_scope permits Gate HOLD workflow validation only")
+    # P-1 (E5=A second half, 2026-10-14): on the grease route the step-17 fixed window is
+    # REQUIRED whenever the gate is asked to decide something other than a HOLD-only
+    # recording. Step 17 precedes step 18 on that route, so a real grease project always
+    # holds the pair; a request that would authorize (GO / PIVOT / KILL / FREEZE) without
+    # it is incomplete. A HOLD-only review stays runnable without it, because a HOLD
+    # authorizes nothing -- that is the shape every synthetic replay uses, and the
+    # SYNTHETIC-window refusal above already forbids a synthetic window from authorizing.
+    # Gated on the grease route, so every oil request keeps its verdict byte for byte.
+    if grease and status != "HOLD" and "process_artifact" not in data and "process_window_artifact" not in data:
+        errors.append(
+            f"process_artifact and process_window_artifact are required on the {GREASE_PROJECT_TYPE} route "
+            "when the gate is not a HOLD-only review: submit the step-17 fixed window before the gate may "
+            "authorize a transition")
     if status == "GO" and has_gap(request): errors.append("GO cannot use GAP evidence")
     if status in {"PIVOT", "KILL", "FREEZE"} and (not isinstance(request.get("reason"), str) or not request["reason"].strip() or has_gap(request)): errors.append(f"{status} requires explicit reason and evidence without GAP")
     return errors
