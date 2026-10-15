@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench",
+  "project_id": "PGD-001",
+  "stage": "BENCH_RESOURCE_REGISTERED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Invalid fixture: can the merged record register a bench and open its round plan without a declared pairing design?",
+  "hypothesis": "This invalid fixture evaluates no product hypothesis.",
+  "uncertainty": "Fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-BENCH-BAD-001",
+      "statement": "This is a schema-validation fixture, not product evidence.",
+      "source": "fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A round plan must declare whether its rounds are paired; without it the resolution benefit of pairing is unrecorded.",
+  "result": "Rejected.",
+  "decision": "UNDECIDED",
+  "next_action": "Do not use this fixture for R&D decisions.",
+  "bench_id": "BENCH-SZ-01",
+  "project_reference": "PGD-001",
+  "bench_name": "Suzhou grease bench (synthetic fixture)",
+  "location": "Suzhou",
+  "availability_window": [
+    { "window_id": "W-1", "start": "2026-01-01", "end": "2026-01-10" }
+  ],
+  "cycle_days": 3,
+  "cost_per_run": { "value": 1200, "unit": "CNY/run", "source": "Synthetic bench quote (fixture only)" },
+  "available_bench_slots": 3,
+  "source": "Synthetic bench-registration fixture (INVALID: no pairing design)",
+  "evidence_id": "E-BENCH-BAD-001",
+  "campaign_id": "CMP-BAD-001",
+  "max_iterations": 6,
+  "current_iteration": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": ["SAM-SYN-001", "SAM-SYN-002"],
+      "stop_state": "CONTINUE"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "sample",
+  "project_id": "PGD-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the labelled sample be traced to the bench without a chain of custody?",
+  "hypothesis": "A sample with no recorded custody cannot support a downstream measurement.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record attempts to omit chain_of_custody.",
+  "evidence": [
+    {
+      "evidence_id": "E-SMP-BAD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the sample record carries a label and storage but no custody handovers.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Accept a sample record only with a printed label, a preparation date, a storage condition, a non-empty chain of custody, and a status.",
+  "result": "The sample record is rejected because the chain of custody is absent.",
+  "decision": "HOLD",
+  "next_action": "Record every handover from preparation onward before the sample is used as evidence.",
+  "sample_id": "SMP-2026-BAD-001",
+  "batch_reference": "BAT-2026-001",
+  "formula_reference": "FORM-GREASE-001@v1",
+  "label": {
+    "printed_text": "SMP-2026-BAD-001 | BAT-2026-001 | FORM-GREASE-001@v1 | 2026-09-02",
+    "printed_at": "2026-09-02T10:15:00"
+  },
+  "prepared_at": "2026-09-02",
+  "storage": "Sealed 1 kg drum at 25 degC, dry indoor cabinet, sample shelf S-03.",
+  "status": "PREPARED"
+}

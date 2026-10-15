@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench_test",
+  "project_id": "PGD-APP-001",
+  "stage": "BENCH_TESTED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Did the bench run complete?",
+  "hypothesis": "The run records setpoints and any censoring.",
+  "uncertainty": "Synthetic fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-001",
+      "statement": "Synthetic bench-run fixture.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Record the run with its censoring discipline.",
+  "result": "Synthetic bench run recorded.",
+  "decision": "GO",
+  "next_action": "Carry the run into the variance assessment.",
+  "run_id": "BT-APP-001",
+  "bench_reference": "BENCH-SZ-01",
+  "batch_reference": "BATCH-APP-001",
+  "sample_reference": "S-1",
+  "ctq_reference": "C-STARTUP",
+  "protocol_version": "proto-v1",
+  "setpoints": [
+    "80 degC soak",
+    "1500 rpm load step",
+    "rated torque 6 h"
+  ],
+  "environment": {
+    "temperature_c": 25,
+    "humidity_percent": 45
+  },
+  "raw_record_reference": "RAW-BT-APP-001",
+  "event_occurred": true,
+  "event_time": 6.5,
+  "censoring_type": "NONE",
+  "anomalies": [],
+  "campaign_iteration": 3
+}

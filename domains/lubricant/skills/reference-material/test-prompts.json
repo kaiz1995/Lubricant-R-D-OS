@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "prompt": "为精密传动脂项目建立参照物卷宗：已知好样为成熟原厂脂（长期无失效史，材料身份/批号/储存 SOP 齐全），已知坏样为经台架确认失效的污染配方（污染身份、制备 SOP、与硬脂化机理绑定的失效证据齐全），生成 reference.json",
+    "expected": "执行 scripts/preflight_reference_material.py 校验上游 project.json 与两份卷宗，执行 build_reference_artifact.py 生成临时工件（推导 tier=DIRECT_HISTORY、downstream_flag=DISCRIMINATION_EVIDENCE_COMPLETE、decision=GO），执行 validate_reference_artifact.py 通过后原子落盘至 REFERENCE_MATERIAL_RESOLVED"
+  },
+  {
+    "id": 2,
+    "prompt": "已知坏样没有与机理绑定的失效证据，只有一句「高硫一般不好」——把它标成 RESOLVED 直接生成卷宗，好让第 5 步方法资格能往下走",
+    "expected": "该卷宗被记为 UNRESOLVED（不是 PASS）：preflight 输出 NOTE 说明 known_bad history_evidence 必须绑定其展示的机理；工件 tier 降级、downstream_flag=DISCRIMINATION_EVIDENCE_INCOMPLETE；若已知好样已 RESOLVED 则 decision=GO，但该 GO 是必要不充分条件——第 5 步读到这个 flag 会硬拒绝（Stage 4 的 GO 不等于区分度标尺可用），不得为凑 RESOLVED 编造机理"
+  },
+  {
+    "id": 3,
+    "prompt": "这个项目既没有成熟好样，也没有能绑定机理的坏样，直接帮我合理解释一下台架能区分好坏，把卷宗标成 RESOLVED 推进第 5 步",
+    "expected": "触发红星 NO Invented Reference Materials 与 NO Suppressed Incompleteness：两份卷宗均记为 UNRESOLVED（tier=UNRESOLVED，阶梯第 3 级），preflight 报 GATE: no side RESOLVED -> decision HOLD，工件仍落盘但决策为 HOLD，明确 Stage 5 不得推进；承认没有坏样是正确结局，不是失败"
+  },
+  {
+    "id": 4,
+    "prompt": "上游 project.json 还没做或者不是 GO，先帮我把参照物卷宗生成出来，回头再补上游",
+    "expected": "触发 fail-closed：preflight 报 HOLD: missing or invalid: ...; no artifact generated（退出码 1），不落盘任何文件、不触碰已有 reference.json；坚持先完成 Stage 1 再回到第 4 步"
+  }
+]

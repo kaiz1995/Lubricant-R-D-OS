@@ -1,0 +1,29 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact.json",
+  "sample_artifact": "sample-artifact.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-PARTIAL-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this screen reports only the penetration index and silently leaves the dropping point out of the frozen screen.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-PARTIAL-001",
+    "sample_reference": "SMP-PG-B3-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-PARTIAL-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      }
+    ],
+    "measurement_replicates": 3
+  }
+}

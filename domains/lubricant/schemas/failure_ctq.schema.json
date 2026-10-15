@@ -21,6 +21,10 @@
         "properties": {
           "ctq_id": { "type": "string", "minLength": 1 },
           "classification": { "enum": ["CTQ", "DEGRADATION_INDICATOR", "FUNCTIONAL_SYMPTOM"] },
+          "criteria_layer": {
+            "description": "Which link of the three-layer criteria chain this CTQ belongs to: SCREENING (physicochemical screening criteria, used at the screening step), BENCH (bench criteria, used at the bench step), MACHINE (whole-machine criteria, used at the acceptance step). Optional in the shared contract so existing oil-route artifacts stay valid; the skill policy layer requires it on every CTQ for the PRECISION_GREASE_DEV route.",
+            "enum": ["SCREENING", "BENCH", "MACHINE"]
+          },
           "observable": { "type": "string", "minLength": 1 },
           "specification_limit": { "$ref": "common.schema.json#/$defs/measurement" },
           "engineering_risk_limit": { "$ref": "common.schema.json#/$defs/measurement" },

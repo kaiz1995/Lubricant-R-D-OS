@@ -34,8 +34,19 @@ import json
 import os
 import sys
 
-# The 13 stage types tracked by the stage-gate panel (canonical names:
+# The stage types tracked by the stage-gate panel (canonical names:
 # <type>.json). Order here is display order; suffix matching uses longest-prefix.
+# The panel's STAGE_CHAIN (apps/desktop/src/lib/lubricantContracts.ts) carries 24
+# stages over 21 unique artifact types; this list is deliberately two wider, and both
+# extras are records the panel does not probe:
+#   * ``sample`` -- grease-batch emits sample.json beside batch.json.
+#   * ``material`` -- formulation-design emits the material records the design space
+#     resolves (I-3, 2026-10-14). Carrying it here is what makes a mangled material
+#     name a violation instead of an ignored file; the plan's "do not extend
+#     STAGE_TYPES" line predates that producer and was superseded by I-3's own
+#     acceptance, which requires exactly this verdict.
+# ``bench`` was added 2026-10-13 with the WP-05 registration; the v1.0.0 merge
+# folded the former campaign record into it, so ``campaign`` is gone.
 STAGE_TYPES = [
     "project",
     "duty",
@@ -43,6 +54,14 @@ STAGE_TYPES = [
     "failure_ctq",
     "test_method",
     "design_space",
+    # 2026-10-14 (I-3): the material registrations the design space resolves its
+    # material_reference against are produced by formulation-design itself (the
+    # step-6 companion records). ``material`` is not a panel stage -- the panel
+    # never probes ``material.json`` -- but it is kept here for the same reason
+    # ``sample`` is: the producer emits the canonical name ``material.json``
+    # first and ``material-<material_id>.json`` afterwards, and those names must
+    # read as canonical/suffixed rather than as unrelated json.
+    "material",
     "experiment_design",
     "experiment",
     "model",
@@ -50,6 +69,15 @@ STAGE_TYPES = [
     "process",
     "gate",
     "application",
+    "reference",
+    "bench",
+    "batch",
+    "sample",
+    "screening",
+    "variance",
+    "bench_test",
+    "next_batch",
+    "knowledge_asset",
 ]
 
 # Longest-first so that ``experiment_design-*.json`` is never misattributed

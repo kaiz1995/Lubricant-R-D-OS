@@ -18,7 +18,35 @@
         "temperature": { "$ref": "#/$defs/duty_item" },
         "load": { "$ref": "#/$defs/duty_item" },
         "contamination": { "$ref": "#/$defs/duty_item" },
-        "life": { "$ref": "#/$defs/duty_item" }
+        "life": { "$ref": "#/$defs/duty_item" },
+        "motion_regime": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Oscillation amplitude, frequency, cycle count and bidirectional duty. Lifeline dimension: it drives fretting wear, the core failure mode of a harmonic-drive flexspline. Optional in the shared contract so oil-route artifacts stay valid; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "contact_pair": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Flexspline / rigid-wheel materials, DLC coating (presence and film system), seal and plastic-part materials. Determines the interface-compatibility CTQ. Optional in the shared contract; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "temperature_and_heat_source": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Service temperature window plus the heat source (servo temperature rise, continuous-duty rise). Bounds low-temperature start-up torque against high-temperature oil separation. Optional in the shared contract; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "torque_requirement": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Low-temperature start-up torque ceiling, no-load breakaway torque and running torque. Lifeline dimension: grease hardening shows up as out-of-specification torque and is the number-one field complaint. Optional in the shared contract so oil-route artifacts stay valid; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "fill_and_assembly": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Fill mass / fill ratio and assembly method. Fill quantity drives temperature rise and start-up torque: an assembly parameter that determines grease performance. Optional in the shared contract; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "life_and_maintenance": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Maintenance-free whole-life target, target hours and whether replenishment is possible. The grease must outlive the reducer design life with no replenishment opportunity. Optional in the shared contract; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        },
+        "sealing_and_contamination": {
+          "description": "Grease duty dimension (PRECISION_GREASE_DEV). Seal class and whether external media are contacted. Retained but simplified to one sealing-integrity dimension. Optional in the shared contract; the skill policy layer requires it for the grease route.",
+          "$ref": "#/$defs/duty_item"
+        }
       },
       "required": ["equipment", "operating_conditions", "maintenance", "temperature", "load", "contamination", "life"],
       "additionalProperties": false

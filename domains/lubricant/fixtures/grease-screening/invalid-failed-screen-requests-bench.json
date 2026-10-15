@@ -1,0 +1,38 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact.json",
+  "sample_artifact": "sample-artifact.json",
+  "bench_request": "SMP-PG-B3-001",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-N14-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the dropping point of this sample is below its lower limit, so the screen fails.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-N14-001",
+    "sample_reference": "SMP-PG-B3-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-N14-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-N14-002",
+        "test_name": "DROPPING_POINT",
+        "value": 150,
+        "unit": "degC",
+        "limit": "180 min",
+        "verdict": "FAIL"
+      }
+    ],
+    "measurement_replicates": 3
+  }
+}

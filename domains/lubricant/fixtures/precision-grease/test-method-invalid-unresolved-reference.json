@@ -1,0 +1,121 @@
+{
+  "project_artifact": "project-active.json",
+  "challenge_artifact": "challenge-defined.json",
+  "failure_ctq_artifact": "failure-ctq-defined.json",
+  "evidence_scope": "PHYSICAL",
+  "evidence": [
+    {
+      "evidence_id": "E-TM-PG-B1-STD",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the torque-bench protocol identity is supplied.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-REP",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the same sample was measured many times and the engine computed the repeatability spread.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-DIS",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the engine computed the discrimination between the Known Good and Known Bad dossiers.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-BATCH",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: both conclusions were re-verified on a fresh batch, not on the batch that produced them.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "test_method": {
+    "method_id": "TM-PG-B1-001",
+    "name": "Low-temperature starting torque bench",
+    "standard": "Synthetic torque-bench protocol P-001",
+    "challenge_reference": "CHG-PG-B1-001",
+    "target_failure_reference": "FM-PG-B1-001",
+    "role": [
+      "D",
+      "P"
+    ],
+    "qualification_metrics": [
+      {
+        "metric": "REPEATABILITY",
+        "measurement": {
+          "value": 3.2,
+          "unit": "mNm",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "torque-bench-v1",
+          "material_batch": "LOT-SYN-PG-B1-001",
+          "formula_version": "baseline-v1"
+        },
+        "computed_by": "ENGINE"
+      },
+      {
+        "metric": "DISCRIMINATION",
+        "measurement": {
+          "value": 18.0,
+          "unit": "mNm",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "torque-bench-v1",
+          "material_batch": "LOT-SYN-PG-B1-001",
+          "formula_version": "baseline-v1"
+        },
+        "computed_by": "ENGINE"
+      },
+      {
+        "metric": "MECHANISM_RELEVANCE",
+        "measurement": {
+          "value": 1,
+          "unit": "qualitative rank",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "torque-bench-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "not_applicable"
+        }
+      },
+      {
+        "metric": "BENCHMARK_RANKING",
+        "measurement": {
+          "value": 2,
+          "unit": "rank positions",
+          "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+          "method_version": "torque-bench-v1",
+          "material_batch": "not_applicable",
+          "formula_version": "not_applicable"
+        }
+      }
+    ],
+    "qualification_pipeline": {
+      "repeatability": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-REP",
+        "computed_by": "ENGINE"
+      },
+      "discrimination": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-DIS",
+        "computed_by": "ENGINE"
+      },
+      "independent_batch": {
+        "status": "PASS",
+        "evidence_reference": "E-TM-PG-B1-BATCH"
+      }
+    },
+    "reference_material_reference": "REF-PGD-001",
+    "qualification_basis": [
+      "engine-computed repeatability",
+      "engine-computed discrimination against the resolved reference dossiers",
+      "independent new batch re-verification"
+    ],
+    "qualification_status": "QUALIFIED",
+    "method_source_evidence_id": "E-TM-PG-B1-STD",
+    "qualification_evidence_ids": [
+      "E-TM-PG-B1-REP",
+      "E-TM-PG-B1-DIS",
+      "E-TM-PG-B1-BATCH"
+    ]
+  },
+  "reference_material_artifact": "reference-material-unresolved.json"
+}

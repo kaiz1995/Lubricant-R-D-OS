@@ -51,6 +51,13 @@ CTQ_ID_RE = re.compile(r"[A-Z0-9]+-CTQ-\d+-[A-Z]")
 # such as "ISO 3744:2025 (...)" are legal content); but an entry that *looks
 # like* a bare method id must resolve to a test_method artifact.
 METHOD_ID_FULL_RE = re.compile(r"[A-Z0-9]+(?:-[A-Z0-9]+)*-TM-\d+")
+# The one literal a CTQ writes while the method it needs does not exist yet: the
+# step-3 CTQ freezes PENDING:<method_id> (the method is produced two stages later, at
+# step 5), and step 5/6 backfill the bare id once the method is QUALIFIED. A PENDING
+# entry whose bare id does not resolve is therefore the LEGAL forward reference this
+# chain is built on - never a dangling link. A pending entry whose method IS already
+# QUALIFIED is the opposite defect: the backfill was skipped.
+PENDING_PREFIX = "PENDING:"
 
 
 def load_json(path):
@@ -112,12 +119,33 @@ def direction_a(workspace, ctqs, methods):
     violations = []
 
     # Dangling bare method ids referenced from failure CTQs (standards-citation
-    # entries are not method ids and are ignored).
+    # entries are not method ids and are ignored). The prefix is stripped first:
+    # a bare id that does not resolve is today's dangling error, while the same id
+    # written PENDING:<id> is the legal forward reference (the method is produced
+    # two stages later). A PENDING entry whose method IS already QUALIFIED is
+    # reported instead: the CTQ was never backfilled with the bare id.
     for cid, rec in sorted(ctqs.items()):
-        for mid in rec["refs"]:
-            if METHOD_ID_FULL_RE.fullmatch(mid) and mid not in methods:
+        for raw in rec["refs"]:
+            if not isinstance(raw, str):
+                continue
+            pending = raw.startswith(PENDING_PREFIX)
+            mid = raw[len(PENDING_PREFIX):] if pending else raw
+            if not METHOD_ID_FULL_RE.fullmatch(mid):
+                # A prose citation, or a marker whose remainder is not a method-id
+                # shape: not a bare-id reference, so this guard has nothing to say
+                # about it. (The failure-ctq preflight owns the well-formedness of
+                # the PENDING marker itself.)
+                continue
+            if mid not in methods:
+                if not pending:
+                    violations.append(
+                        f"{cid} ({rec['failure']}): test_references points at unknown method {mid}"
+                    )
+                continue
+            if pending and methods.get(mid) == "QUALIFIED":
                 violations.append(
-                    f"{cid} ({rec['failure']}): test_references points at unknown method {mid}"
+                    f"{cid} ({rec['failure']}): test_references {raw} is marked PENDING but the method "
+                    "is QUALIFIED; the CTQ must be backfilled with the bare id"
                 )
 
     # Every design space: method exists & QUALIFIED, CTQs exist & linked bare-id.

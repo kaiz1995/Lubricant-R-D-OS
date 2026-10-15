@@ -1,0 +1,30 @@
+{
+  "project_artifact": "project-active.json",
+  "reference_id": "REF-PGD-004",
+  "evidence_scope": "SYNTHETIC",
+  "known_good": [
+    {
+      "reference_id": "REF-PGD-004-G1",
+      "resolution": "RESOLVED",
+      "material_identity": "Synthetic precision-gear grease, trade name SYN-PG-GOOD, lot LOT-SYN-PG-0001",
+      "formula_identity": "FORM-PG-000@v1",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic history record SYN-PG-H-004: 24 months in the reference harmonic drive with no bearing event recorded.",
+          "mechanism_reference": "MECHANISM-NONE: no failure mechanism is demonstrated by this no-event history."
+        }
+      ],
+      "storage_sop": "SOP-SYN-PG-STORE-001",
+      "safety_reference": "SDS-SYN-PG-GOOD-2025"
+    }
+  ],
+  "known_bad": [],
+  "evidence": [
+    {
+      "evidence_id": "E-REF-PG-301",
+      "statement": "Synthetic negative fixture / NOT_FOR_PHYSICAL_EXECUTION: the Known Good dossier omits selection_rung, so the ladder rung it claims cannot be verified and the request is not recordable.",
+      "source": "Synthetic negative fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

@@ -84,6 +84,35 @@ def main():
     errs = validate("cost_result_schema.json", good_cost)
     assert not errs, f"good cost should pass {[e.message for e in errs]}"
     print("PASS: valid cost result")
+    # 7. DOE result: the factorial-channel design_type enum keeps the legacy
+    #    sequential label and accepts RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL,
+    #    the honest name the engine reports in method/parameters (purely
+    #    additive: BAYESIAN_SEQUENTIAL stays valid, so pre-rename artifacts
+    #    keep validating; the engine still maps the result value to the legacy
+    #    label, so no produced envelope changes).
+    doe_result = json.loads((SCHEMA_DIR / "doe_result_schema.json").read_text(encoding="utf-8"))
+
+    def collect_design_type_enums(node, found):
+        if isinstance(node, dict):
+            for key, child in node.items():
+                if key == "design_type" and isinstance(child, dict) and "enum" in child:
+                    found.append(child)
+                collect_design_type_enums(child, found)
+        elif isinstance(node, list):
+            for child in node:
+                collect_design_type_enums(child, found)
+        return found
+
+    sequential_enums = [
+        node for node in collect_design_type_enums(doe_result, []) if "BAYESIAN_SEQUENTIAL" in node["enum"]
+    ]
+    assert len(sequential_enums) == 1, f"expected one sequential design_type enum, got {len(sequential_enums)}"
+    sequential_enum = sequential_enums[0]
+    assert "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL" in sequential_enum["enum"], sequential_enum["enum"]
+    assert "BAYESIAN_SEQUENTIAL" in sequential_enum["enum"], "the legacy alias must stay valid"
+    assert not list(Draft202012Validator(sequential_enum).iter_errors("RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"))
+    assert list(Draft202012Validator(sequential_enum).iter_errors("NOT_A_DESIGN_TYPE")), "unknown values must still be rejected"
+    print("PASS: doe_result design_type enum keeps the legacy alias and accepts the honest sequential name")
     print("ALL PASS")
     return 0
 

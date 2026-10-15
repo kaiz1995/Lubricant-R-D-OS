@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench",
+  "project_id": "PGD-APP-001",
+  "stage": "BENCH_RESOURCE_REGISTERED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "May the merged bench record (bench resource + round plan) be registered?",
+  "hypothesis": "Scarce bench slots are allocated across rounds.",
+  "uncertainty": "Synthetic fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-CMP-001",
+      "statement": "Synthetic bench fixture (merged bench resource + inner-loop ledger).",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Register the bench with the recorded round plan.",
+  "result": "Synthetic bench record registered.",
+  "decision": "GO",
+  "next_action": "Run round 1.",
+  "campaign_id": "CMP-APP-001",
+  "max_iterations": 12,
+  "current_iteration": 3,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": [
+        "S-1"
+      ],
+      "screening_reference": "SCR-1",
+      "bench_test_references": [
+        "BT-1"
+      ],
+      "variance_reference": "VAR-1",
+      "model_reference": null,
+      "next_batch_reference": null,
+      "stop_state": "CONTINUE"
+    }
+  ],
+  "pairing_design": {
+    "paired": true,
+    "description": "Paired A/B runs within each round; arms swapped in the next round."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/formula.schema.json",
+  "title": "Lubricant R&D formula definition",
+  "description": "Design-space formula object (break-point B3). A formula separates what is CHARGED (inputs) from what the batch actually CONTAINS (products), because a soap thickener is created in situ: fatty acid plus LiOH react during saponification and the soap percentage is a PRODUCT of the batch, not a charge. A 100 % mixture-closure constraint therefore closes the CHARGE, and on grease that constraint does not hold for what determines the product - the charged fatty acid and base are not the same substances as the soap and water that leave the kettle. inputs and products are both non-empty, mixture_basis declares which side the closure applies to, and baseline_process_reference is required so a fraction without a process has no meaning.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "formula" },
+    "stage": { "const": "DESIGN_SPACE_DEFINED" },
+    "formula_id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "inputs": {
+      "description": "Materials charged into the batch. fraction is the charge fraction on a 0..1 basis; a charge-fraction sum near 1 is not evidence that the product composition closes.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/input_entry" }
+    },
+    "products": {
+      "description": "Substances the batch is intended to contain, including in-situ reaction products such as lithium soap. target_fraction is on the same 0..1 basis and reaction_reference names the reaction that produces it.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/product_entry" }
+    },
+    "mixture_basis": {
+      "description": "Which side the 0..1 fraction basis closes: INPUTS means the constraint closes the charge, PRODUCTS means it closes the intended product composition.",
+      "enum": ["INPUTS", "PRODUCTS"]
+    },
+    "baseline_process_reference": {
+      "description": "Required process baseline (kettle, saponification, milling, homogenization settings). A fraction list without a process reference cannot be reproduced or compared.",
+      "type": "string",
+      "minLength": 1
+    },
+    "supersedes": { "type": "string", "minLength": 1 }
+  },
+  "required": [
+    "artifact_type",
+    "formula_id",
+    "version",
+    "inputs",
+    "products",
+    "mixture_basis",
+    "baseline_process_reference"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "input_entry": {
+      "description": "One charged material and the role it plays in the batch (for example base_oil, fatty_acid, alkali, additive).",
+      "type": "object",
+      "properties": {
+        "material_id": { "type": "string", "minLength": 1 },
+        "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "role": { "type": "string", "minLength": 1 }
+      },
+      "required": ["material_id", "fraction", "role"],
+      "additionalProperties": false
+    },
+    "product_entry": {
+      "description": "One intended product substance. A product created in situ binds to the reaction that creates it, so a soap percentage can never be read back as a charge.",
+      "type": "object",
+      "properties": {
+        "product_id": { "type": "string", "minLength": 1 },
+        "target_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reaction_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": ["product_id", "target_fraction", "reaction_reference"],
+      "additionalProperties": false
+    }
+  }
+}

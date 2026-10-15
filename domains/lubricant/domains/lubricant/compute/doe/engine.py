@@ -47,12 +47,50 @@ DEFERRED_DESIGN_TYPES = ("TAGUCHI_ROBUST",)
 MAX_FULL_FACTORIAL_FACTORS = 8
 HALF_FRACTION_MIN_FACTORS, HALF_FRACTION_MAX_FACTORS = 3, 7
 
-# WP-04b resource-constrained channel. BAYESIAN_SEQUENTIAL stops being a bare enum
+# WP-04b resource-constrained channel. The sequential family stops being a bare enum
 # label and becomes a runnable (deterministic, non-probabilistic) greedy path: it
 # picks the batch that maximises accumulated information per bench slot instead of
 # returning a fixed matrix. The plan's downgrade clause ("只做资源可行性过滤 +
 # 人工排序") is why there is no posterior sampling here.
-SEQUENTIAL_DESIGN_TYPES = ("BAYESIAN_SEQUENTIAL",)
+#
+# Grease route (step 8) honest rename, purely additive: this implementation is
+# "deterministic greedy selection from candidate lattice points", NOT model-driven
+# true sequential design -- the engine has no Gaussian process and never samples a
+# posterior, so the old label promised more than the code does. The honest name is
+# RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL. The legacy identifier stays a working
+# alias and keeps emitting the legacy method string, so every pre-rename input
+# produces the byte-identical envelope it produced before. The algorithm is
+# untouched: both names run the same `_sequential_batch` greedy path.
+SEQUENTIAL_DESIGN_TYPE = "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"
+LEGACY_SEQUENTIAL_DESIGN_TYPE = "BAYESIAN_SEQUENTIAL"
+SEQUENTIAL_DESIGN_TYPES = (SEQUENTIAL_DESIGN_TYPE, LEGACY_SEQUENTIAL_DESIGN_TYPE)# Requested design_type -> emitted method name. The rename is reported in `method`
+# (and echoed in `parameters.design_type`), which is the honest surface: it says
+# what the engine actually did, not what the caller hoped for.
+SEQUENTIAL_METHODS = {
+    SEQUENTIAL_DESIGN_TYPE: "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL_V1",
+    LEGACY_SEQUENTIAL_DESIGN_TYPE: "BAYESIAN_SEQUENTIAL_GREEDY_V1",
+}
+# The frozen result contract (domains/lubricant/schemas/doe_result_schema.json)
+# enumerates only the legacy sequential label, so `result.design_type` keeps that
+# contract value for both spellings until the registry pass adds the honest name
+# to the result enum. The honest name is never lost: `method` and
+# `parameters.design_type` carry it.
+RESULT_DESIGN_TYPES = {SEQUENTIAL_DESIGN_TYPE: LEGACY_SEQUENTIAL_DESIGN_TYPE}
+
+# --- Grease route (PRECISION_GREASE_DEV step 8, purely additive) -------------
+# The bench is the bottleneck: about two concurrent positions per round and about
+# 30 days per round, so one big fixed design is not feasible. A single 20-point
+# design is roughly 7 months of bench time under that constraint (20 runs /
+# 2 positions x 30 days per round) and a project gets about one of those a year.
+# The grease route therefore defaults to a SMALL SEQUENTIAL BATCH instead: 3-6
+# samples per round, each round decided from the previous round's result. The six
+# oil routes declare no project_type and keep their existing behaviour byte for
+# byte: every branch below is entered only when project_type is the grease one.
+GREASE_PROJECT_TYPE = "PRECISION_GREASE_DEV"
+GREASE_SMALL_BATCH_MIN = 3
+GREASE_SMALL_BATCH_MAX = 6
+GREASE_BENCH_POSITIONS_PER_ROUND = 2
+GREASE_BENCH_ROUND_DAYS = 30
 FACTOR_CHANNEL_DESIGN_TYPES = FACTORIAL_DESIGN_TYPES + SEQUENTIAL_DESIGN_TYPES
 RESOURCE_ENVELOPE_FIELDS = ("bench_slots", "lot_capacity", "cycle_days", "cost_cap", "external_test_lead_time")
 FACTOR_ROLES = ("WHOLE_PLOT", "SUB_PLOT")
@@ -436,6 +474,12 @@ def generate_doe(input_dict, input_bytes=None):
     if schema_errors:
         return _build_rejected(input_dict, input_bytes,
             [f"input schema validation failed: {schema_errors[0]}"])
+    # Grease step 8 routing guard: a bench artifact is only meaningful where the
+    # bench-schedule rule applies, and it is rejected by name anywhere else rather
+    # than silently ignored. A no-op for every input that carries no bench artifact.
+    routing_reasons = _bench_artifact_reasons(input_dict)
+    if routing_reasons:
+        return _build_rejected(input_dict, input_bytes, routing_reasons)
     if isinstance(input_dict, dict) and input_dict.get("input_type") == "MIXTURE_DOE_DESIGN":
         return _generate_mixture(input_dict, input_bytes)
     return _generate_factors(input_dict, input_bytes)
@@ -549,23 +593,34 @@ def _generate_mixture(input_dict, input_bytes):
         for sid, frac in zip(sorted_ids, pt):
             props[sid] = float(frac) / 1.0
         runs.append({"run_index": idx, "proportions": props})
+    # Grease route: the bench-schedule hard constraint applies here too when a bench
+    # artifact is supplied (a mixture design on the grease route still has to fit the
+    # registered bench). A no-op for every other route.
+    grease_size_reasons = _grease_size_reasons(input_dict, len(runs))
+    if grease_size_reasons:
+        return _build_rejected(input_dict, input_bytes, grease_size_reasons)
 
     card = input_dict["experiment_card"]
     if input_bytes is not None:
         digest = _digest_bytes(input_bytes)
     else:
         digest = _digest_bytes(json.dumps(input_dict, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    mixture_parameters = {
+        "design_type": design_type,
+        "model_order": model_order,
+        "target_runs": input_dict["target_runs"],
+        "convergence_threshold": CONVERGENCE_THRESHOLD
+    }
+    grease_plan = _grease_plan_parameters(input_dict, len(runs))
+    if grease_plan is not None:
+        # Grease-route audit trail; never emitted for any other route.
+        mixture_parameters["grease_plan"] = grease_plan
     envelope = {
         "schema_version": "0.1.0",
         "engine_name": ENGINE_NAME,
         "engine_version": ENGINE_VERSION,
         "method": method,
-        "parameters": {
-            "design_type": design_type,
-            "model_order": model_order,
-            "target_runs": input_dict["target_runs"],
-            "convergence_threshold": CONVERGENCE_THRESHOLD
-        },
+        "parameters": mixture_parameters,
         "input_digest": digest,
         "status": "OK",
         "rejection_reasons": [],
@@ -826,6 +881,133 @@ def _frozen_formula_reasons(input_dict):
     return reasons
 
 
+def _bench_capacity_reasons(input_dict):
+    """Grease-route bench-schedule hard constraint (step 8, plan section 7.2 D-4).
+
+    Returns ``(capacity, reasons)``. ``capacity`` is the derived
+    ``bench_artifact.available_bench_slots`` when a bench artifact is supplied on
+    the grease route, otherwise None (the hand-filled envelope path, unchanged).
+    The derived value is the authority: a hand-filled ``resource_envelope.bench_slots``
+    that disagrees with it is rejected instead of silently overriding the bench
+    schedule, because the slot count is derived from the bench's availability
+    window by bench-registration and must never be hand-set.
+
+    Every other route (no project_type, or any of the six oil project types) is
+    untouched: the function returns immediately.
+    """
+    if input_dict.get("project_type") != GREASE_PROJECT_TYPE:
+        return None, []
+    bench = input_dict.get("bench_artifact")
+    if bench is None:
+        return None, []
+    capacity = bench.get("available_bench_slots")
+    if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 0:
+        return None, ["bench_artifact.available_bench_slots must be a non-negative integer derived by bench-registration"]
+    envelope = input_dict.get("resource_envelope")
+    if envelope is not None and int(envelope["bench_slots"]) != capacity:
+        return None, [
+            f"resource_envelope.bench_slots={int(envelope['bench_slots'])} contradicts the bench artifact's derived "
+            f"available_bench_slots={capacity}: on the grease route the bench schedule is the authority and the "
+            "hand-filled slot count must equal the bench's derived capacity"]
+    return capacity, []
+
+
+def _bench_artifact_reasons(input_dict):
+    """A supplied bench artifact is only meaningful on the grease route.
+
+    Outside the grease route there is no bench-schedule rule to apply, so accepting
+    the object would silently ignore a constraint the caller declared. It is
+    rejected by name instead (fail-closed), and the rejection text names the route
+    marker that would make it meaningful. On the grease route the artifact is
+    consumed on both channels: the factor channel sizes its sequential round by it,
+    and either channel refuses a design larger than its derived capacity.
+    """
+    if "bench_artifact" not in input_dict:
+        return []
+    if input_dict.get("project_type") == GREASE_PROJECT_TYPE:
+        return []
+    return [
+        "bench_artifact is only consumed on the PRECISION_GREASE_DEV route: supply project_type "
+        f"{GREASE_PROJECT_TYPE} to activate the bench-schedule constraint, or omit the bench artifact "
+        "and keep using the hand-filled resource_envelope.bench_slots"]
+
+
+def _grease_batch_limit(input_dict):
+    """Sequential round size on the grease route: a small batch, never above the bench.
+
+    The window is 3-6 samples per round and it is a DEFAULT: one big design is
+    months of bench time at the registered capacity, so a grease sequential round
+    is capped at the window's top instead of being sized by a large declared
+    envelope. The bench is the hard authority and may pull the round BELOW the
+    window's floor: a 2-position round is exactly the paired round the plan asks
+    for, so a short horizon is honoured rather than refused. The authority is the
+    bench artifact's derived capacity when one is supplied, otherwise the
+    hand-filled envelope slot count (the pre-existing path).
+    """
+    authority = int(input_dict["resource_envelope"]["bench_slots"])
+    capacity, reasons = _bench_capacity_reasons(input_dict)
+    if reasons:
+        return None, reasons
+    if capacity is not None:
+        authority = capacity
+    if authority < 1:
+        return None, [
+            "the registered bench horizon provides no free position (available_bench_slots=0), "
+            "so this round cannot be scheduled; widen the bench availability window or re-register the bench"]
+    return min(authority, GREASE_SMALL_BATCH_MAX), []
+
+
+def _grease_size_reasons(input_dict, run_count):
+    """Grease-route hard constraint: the design size must not exceed the bench.
+
+    Only the bench capacity is hard here (step 8 release criterion: design size <=
+    available bench positions). The 3-6 window is a DEFAULT, not a cap, so a pure
+    process-factor design that happens to need more than six runs stays expressible
+    -- that is itself a step-8 release criterion ("a pure process-factor experiment
+    must be expressible"). It is the *sequential round* that is sized into the
+    window by _grease_batch_limit; a one-shot design is bounded by the bench only.
+    """
+    if input_dict.get("project_type") != GREASE_PROJECT_TYPE:
+        return []
+    capacity, reasons = _bench_capacity_reasons(input_dict)
+    if reasons:
+        return reasons
+    if capacity is not None and run_count > capacity:
+        reasons.append(
+            f"design size {run_count} exceeds the bench's available positions {capacity} "
+            "(bench_artifact.available_bench_slots): the design size must not exceed the bench capacity")
+    return reasons
+
+
+def _grease_plan_parameters(input_dict, run_count):
+    """Audit trail for the grease route; never emitted for any other route."""
+    if input_dict.get("project_type") != GREASE_PROJECT_TYPE:
+        return None
+    capacity, _ = _bench_capacity_reasons(input_dict)
+    envelope = input_dict.get("resource_envelope")
+    return {
+        "project_type": GREASE_PROJECT_TYPE,
+        "small_batch_window": [GREASE_SMALL_BATCH_MIN, GREASE_SMALL_BATCH_MAX],
+        "design_size": run_count,
+        "bench_slots": int(envelope["bench_slots"]) if envelope is not None else None,
+        "bench_capacity": capacity,
+        "bench_positions_per_round": GREASE_BENCH_POSITIONS_PER_ROUND,
+        "bench_round_days": GREASE_BENCH_ROUND_DAYS,
+        "bench_schedule_source": "bench_artifact" if capacity is not None else "hand_filled_resource_envelope",
+    }
+
+
+def _sequential_is_honest(input_dict, design_type):
+    """True when the sequential channel must report its honest name.
+
+    Either the caller already asked for the honest identifier, or the input is on
+    the grease route (where the honest name is the only label reported, whichever
+    spelling the caller used). A legacy request on any other route keeps the
+    legacy method string, so pre-rename inputs stay byte-identical.
+    """
+    return design_type == SEQUENTIAL_DESIGN_TYPE or input_dict.get("project_type") == GREASE_PROJECT_TYPE
+
+
 def _sequential_batch(factor_ids, candidates, limit):
     """Greedy D-optimal sequential batch: add the candidate that maximises det(X'X).
 
@@ -861,7 +1043,14 @@ def _generate_factors(input_dict, input_bytes):
     reasons += factor_reasons
     reasons += _resource_reasons(input_dict)
     if design_type in SEQUENTIAL_DESIGN_TYPES and input_dict.get("resource_envelope") is None:
-        reasons.append("BAYESIAN_SEQUENTIAL requires resource_envelope: the next batch must be bounded by bench_slots")
+        reasons.append(
+            f"{design_type} requires resource_envelope: the next batch must be bounded by bench_slots")
+    # Grease route (step 8): the small-batch default and the bench-schedule hard
+    # constraint. Both are no-ops for every other route.
+    grease_limit = None
+    if input_dict.get("project_type") == GREASE_PROJECT_TYPE:
+        grease_limit, grease_reasons = _grease_batch_limit(input_dict)
+        reasons += grease_reasons
     if reasons:
         return _build_rejected(input_dict, input_bytes, reasons)
 
@@ -882,12 +1071,26 @@ def _generate_factors(input_dict, input_bytes):
                      f"with {replicates} whole-plot replicate(s)")
     elif design_type in SEQUENTIAL_DESIGN_TYPES:
         pool = two_level_runs(varying_ids)
-        batch = _sequential_batch(varying_ids, pool, int(input_dict["resource_envelope"]["bench_slots"]))
+        # Grease route: the round is sized by the small-batch window bounded by the
+        # bench's derived capacity; every other route keeps bench_slots verbatim.
+        batch_size = int(input_dict["resource_envelope"]["bench_slots"]) if grease_limit is None else grease_limit
+        batch = _sequential_batch(varying_ids, pool, batch_size)
         coded = batch
         replicates = 1
-        method = "BAYESIAN_SEQUENTIAL_GREEDY_V1"
-        structure = (f"sequential greedy batch of {len(batch)} run(s) drawn from the 2^{len(varying_ids)} candidate "
-                     "lattice to maximise accumulated det(X'X) per bench slot (deterministic; no posterior sampling)")
+        method = SEQUENTIAL_METHODS[design_type]
+        # Grease route: the honest name is always the one reported, whichever
+        # spelling the caller used, so the grease route never emits the label that
+        # promises a model-driven design the engine does not implement.
+        if _sequential_is_honest(input_dict, design_type):
+            method = SEQUENTIAL_METHODS[SEQUENTIAL_DESIGN_TYPE]
+        if _sequential_is_honest(input_dict, design_type):
+            structure = (f"resource-constrained greedy sequential batch of {len(batch)} run(s) drawn from the "
+                         f"2^{len(varying_ids)} candidate lattice to maximise accumulated det(X'X) per bench slot "
+                         "(deterministic; no posterior sampling, so the batch is a greedy selection and not a "
+                         "model-driven sequential design)")
+        else:
+            structure = (f"sequential greedy batch of {len(batch)} run(s) drawn from the 2^{len(varying_ids)} candidate "
+                         "lattice to maximise accumulated det(X'X) per bench slot (deterministic; no posterior sampling)")
     elif design_type == "FRACTIONAL_FACTORIAL":
         base = half_fraction_runs(varying_ids)
         coded = [run for _ in range(replicates) for run in base]
@@ -920,6 +1123,12 @@ def _generate_factors(input_dict, input_bytes):
 
     columns = effect_columns(varying_ids, coded)
     run_count = len(runs)
+    # Grease route: the design size must not exceed the bench's available positions,
+    # and a one-shot design bigger than the small-batch window is refused. Checked
+    # before any degree-of-freedom work so the reason names the bench constraint.
+    grease_size_reasons = _grease_size_reasons(input_dict, run_count)
+    if grease_size_reasons:
+        return _build_rejected(input_dict, input_bytes, grease_size_reasons)
     total_df = run_count - 1
     replicate_df = replicates - 1
     model_df = sum(1 for column in columns if column["kind"] == "MAIN_EFFECT") if model_order == "LINEAR" else len(columns)
@@ -974,8 +1183,14 @@ def _generate_factors(input_dict, input_bytes):
     envelope_resource = input_dict.get("resource_envelope")
     if envelope_resource is not None:
         parameters["resource_envelope"] = envelope_resource
+    grease_plan = _grease_plan_parameters(input_dict, run_count)
+    if grease_plan is not None:
+        # Grease-route audit trail: the round size, the bench schedule it was
+        # bounded by, and whether that schedule came from the bench artifact or
+        # from the hand-filled envelope. Never emitted for any other route.
+        parameters["grease_plan"] = grease_plan
     result = {
-        "design_type": design_type,
+        "design_type": RESULT_DESIGN_TYPES.get(design_type, design_type),
         "model_order": model_order,
         "runs": runs,
         "run_count": run_count,

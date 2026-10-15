@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench_test",
+  "project_id": "PGD-VAR-001",
+  "stage": "BENCH_TESTED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Did bench run RUN-D02 produce the defined event inside the observation window?",
+  "hypothesis": "The run either produces the defined event inside the window or ends without it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: a single bench run cannot separate bench drift from a formulation effect.",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-RUN-D02",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: run RUN-D02 is recorded for contract validation only; it is not product evidence.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Record the observation exactly as it happened: a right-censored run is never recorded or used as an end-point value.",
+  "result": "Run RUN-D02 produced the defined event at 4.15 h.",
+  "decision": "UNDECIDED",
+  "next_action": "Hand run RUN-D02 to the variance assessment of campaign iteration 1.",
+  "run_id": "RUN-D02",
+  "bench_reference": "BENCH-SZ-01",
+  "batch_reference": "BATCH-402",
+  "sample_reference": "SAM-D02",
+  "protocol_version": "BENCH_PROTOCOL_V2",
+  "setpoints": [
+    "load 1.5 kN",
+    "speed 1200 rpm",
+    "temperature 80 degC"
+  ],
+  "environment": {
+    "temperature_c": 23.5,
+    "humidity_percent": 45.0
+  },
+  "raw_record_reference": "RAW-RUN-D02",
+  "event_occurred": true,
+  "event_time": 4.15,
+  "censoring_type": "NONE",
+  "stop_reason": "event observed inside the protocol window",
+  "anomalies": [],
+  "campaign_iteration": 1
+}

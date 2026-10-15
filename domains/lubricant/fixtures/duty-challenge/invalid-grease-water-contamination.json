@@ -1,0 +1,23 @@
+{
+  "duty_artifact": "duty-grease-active.json",
+  "project_artifact": "project-grease-active.json",
+  "challenge": {
+    "duty_reference": "DP-PGD-001",
+    "challenge_id": "CH-PGD-N7",
+    "category": "WATER_CONTAMINATION",
+    "description": "Potential water ingress during service.",
+    "severity": "HIGH",
+    "exposure": "HIGH",
+    "lubricant_sensitivity": "HIGH",
+    "evidence_gap": "No quantified field water history.",
+    "priority": "HIGH"
+  },
+  "challenge_evidence": [
+    {
+      "evidence_id": "E-PG-C-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the recorded grease duty profile states +/-3 deg oscillation at 5 Hz and 10e6 cycles for contract testing only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ]
+}

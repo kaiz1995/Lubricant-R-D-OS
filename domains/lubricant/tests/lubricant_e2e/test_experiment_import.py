@@ -67,7 +67,12 @@ def non_doe_input(workspace: Path, evidence_class: str, **record_overrides) -> d
 
 def statistical_input(workspace: Path, experiment_artifact: Path) -> dict:
     """A statistical-analysis request whose experiment artifact is supplied."""
-    input_path = FIXTURES / "statistical-analysis" / "valid-input.synthetic.json"
+    # hold-input.synthetic.json is the honest name: this request's own upstreams
+    # (test-method-qualified.json, experiment-design.json, experiment-running.json)
+    # all carry decision HOLD, so the fixture's own preflight result is HOLD. It is
+    # used here only as a request template; statistical_input() overrides every
+    # upstream decision to GO before the request is expected to pass.
+    input_path = FIXTURES / "statistical-analysis" / "hold-input.synthetic.json"
     data = read(input_path)
     source = FIXTURES / "statistical-analysis"
     artifacts = workspace / "stat-artifacts"

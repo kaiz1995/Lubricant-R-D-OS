@@ -1,0 +1,62 @@
+{
+  "bench": {
+    "bench_id": "BENCH-PGD-B1-01",
+    "project_reference": "PGD-B1-001",
+    "bench_name": "Precision-gear grease bench 1 (synthetic fixture)",
+    "location": "Synthetic bench location",
+    "availability_window": [
+      { "window_id": "W-1", "start": "2027-01-01", "end": "2027-07-01" },
+      { "window_id": "W-2", "start": "2027-07-02", "end": "2027-12-31" }
+    ],
+    "cycle_days": 30,
+    "cost_per_run": {
+      "value": 12000,
+      "unit": "CNY/run",
+      "source": "Synthetic bench quote (fixture; not a real quotation)"
+    },
+    "source": "Synthetic bench-registration fixture",
+    "evidence_id": "EV-BENCH-PGD-B1-01",
+    "evidence_scope": "SYNTHETIC",
+    "evidence": [
+      {
+        "evidence_id": "EV-BENCH-PGD-B1-01",
+        "statement": "Synthetic bench availability supplied for contract validation only; not a booked or qualified capacity.",
+        "source": "Synthetic bench fixture (fixtures/bench-registration/bench-input--explicit-cap.json)",
+        "status": "ASSUMED"
+      }
+    ]
+  },
+  "campaign": {
+    "campaign_id": "CMP-PGD-B1-001-EXPLICIT-CAP",
+    "project_reference": "PGD-B1-001",
+    "max_iterations": 6,
+    "current_iteration": 2,
+    "iterations": [
+      {
+        "iteration": 1,
+        "samples": ["SMP-PGD-B1-R1A", "SMP-PGD-B1-R1B"],
+        "stop_state": "CONTINUE",
+        "screening_reference": "SCR-PGD-B1-R1",
+        "variance_reference": "VAR-PGD-B1-R1",
+        "model_reference": null,
+        "next_batch_reference": null,
+        "bench_test_references": ["BT-PGD-B1-R1A-1", "BT-PGD-B1-R1B-1"]
+      }
+    ],
+    "pairing_design": {
+      "paired": true,
+      "description": "Synthetic fixture: paired A/B rounds with the arms swapped in the next round."
+    },
+    "evidence_scope": "SYNTHETIC",
+    "source": "Synthetic round-plan fixture (explicit cap)",
+    "evidence_id": "EV-CMP-PGD-B1-002",
+    "evidence": [
+      {
+        "evidence_id": "EV-CMP-PGD-B1-002",
+        "statement": "Synthetic round plan with an explicit iteration cap supplied in the request; contract validation only, not product evidence.",
+        "source": "Synthetic round-plan fixture (fixtures/bench-registration/bench-input--explicit-cap.json)",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 ---
 name: optimization
-description: Record one evidence-bound optimization request at OPTIMIZED; preflight verifies 8 upstream stage artifacts through MODEL_BUILT, objective response links, and supported optimization methods (PARETO, DESIRABILITY, NON_INFERIORITY). Use when user mentions "optimization", "多目标优化", "帕累托前沿", "满意度函数", "DESIRABILITY", "PARETO", "NON_INFERIORITY", or advancing to Stage 8 in lubricant R&D.
+description: Record one evidence-bound optimization request at OPTIMIZED; preflight verifies 8 upstream stage artifacts through MODEL_BUILT, objective response links, and supported optimization methods (PARETO, DESIRABILITY, NON_INFERIORITY). Use when user mentions "optimization", "多目标优化", "帕累托前沿", "满意度函数", "DESIRABILITY", "PARETO", "NON_INFERIORITY", or advancing to OPTIMIZED in lubricant R&D.
 ---
 
-# Optimization (Stage 8)
+# Optimization (OPTIMIZED · NON_INFERIORITY_PASSED on PRECISION_GREASE_DEV)
 
 Record an evidence-bound optimization request at `OPTIMIZED` for the Lubricant R&D Domain Pack.
 This is an optimization problem specification and handoff contract, NOT a simulated Pareto solution or recipe recommendation.
@@ -15,6 +15,13 @@ Authority schema: `../../schemas/optimization.schema.json` (or local `references
 ## 1. Input Specification & Supported Methods
 
 A single JSON input object providing the 8 upstream artifacts through `MODEL_BUILT` and the `optimization` request:
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: the preflight prints a `NOTE:` line instead
+of demanding the artifact, and the built record carries the recorded-gap sentence
+(`UNROUTED:<project_id>`) as `ASSUMED` evidence. Supplying a challenge artifact on either
+route behaves exactly as before.
 
 ```json
 {
@@ -81,7 +88,7 @@ python skills/optimization/scripts/validate_optimization_artifact.py <temporary-
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 8 stops here at OPTIMIZED. Pass to Phase 4 compute engine or Stage 9 (gate-review).
+# 🔴 CHECKPOINT · STOP: the optimization request stops here at OPTIMIZED (oil routes) / NON_INFERIORITY_PASSED (PRECISION_GREASE_DEV). Next station: VERIFIED (gate-review) / PROCESS_SCALE_VALIDATED (process-scale-up).
 ```
 
 ---

@@ -37,7 +37,7 @@
         "properties": {
           "design": {
             "properties": {
-              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL", "MIXTURE_PROCESS"] }
+              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL", "MIXTURE_PROCESS"] }
             },
             "required": ["family"]
           }
@@ -51,7 +51,7 @@
         "properties": {
           "design": {
             "properties": {
-              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL"] }
+              "family": { "enum": ["FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"] }
             },
             "required": ["family"]
           }
@@ -65,6 +65,21 @@
   "properties": {
     "artifact_type": { "const": "experiment_design" },
     "stage": { "const": "EXPERIMENT_DESIGNED" },
+    "project_type": {
+      "$comment": "Grease step 8, purely additive and optional. Route marker copied from the validated project artifact so a downstream reader (and this contract's own validator) can tell which route's design policy produced the record. Optional on purpose: every pre-existing artifact and fixture omits it and stays valid, and an absent value keeps the pre-grease decision wording.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bench_reference": {
+      "$comment": "Grease step 8, purely additive and optional. bench_id of the registered bench artifact that bounded this round, recorded only when a bench artifact was supplied. Absent on the hand-filled resource_envelope path.",
+      "type": "string",
+      "minLength": 1
+    },
+    "available_bench_slots": {
+      "$comment": "Grease step 8, purely additive and optional. A COPY of the bench artifact's DERIVED available_bench_slots (never hand-set, never recomputed here): the capacity this design was checked against. Recorded only when a bench artifact was supplied.",
+      "type": "integer",
+      "minimum": 0
+    },
     "experiment_design_id": { "type": "string", "minLength": 1 },
     "design_space_reference": { "type": "string", "minLength": 1 },
     "test_method_references": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
@@ -72,7 +87,10 @@
     "design": {
       "type": "object",
       "properties": {
-        "family": { "enum": ["MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL"] },
+        "family": {
+          "$comment": "Grease step 8: RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL is the honest name of the family the engine actually runs (deterministic greedy selection from candidate lattice points, no Gaussian process), added as an enum value. BAYESIAN_SEQUENTIAL stays valid as its alias.",
+          "enum": ["MIXTURE", "CONSTRAINED_MIXTURE", "MIXTURE_PROCESS", "FULL_FACTORIAL", "FRACTIONAL_FACTORIAL", "SPLIT_PLOT", "BAYESIAN_SEQUENTIAL", "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL"]
+        },
         "rationale": { "type": "string", "minLength": 1 },
         "effects_to_estimate": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
       },

@@ -9,10 +9,25 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from failure_ctq_policy import (
+    is_precision_grease,
+    policy_errors,
+    resolved_project_type,
+    unrouted_errors,
+    unrouted_note,
+    unrouted_reference,
+)
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 MEASUREMENT_FIELDS = ("value", "unit", "source", "method_version", "material_batch", "formula_version")
 CTQ_CLASSES = {"CTQ", "DEGRADATION_INDICATOR", "FUNCTIONAL_SYMPTOM"}
+# The contract's CTQ item keys, in the schema's own order. The builder projects each input
+# CTQ onto this list so a stray input key can never reach the artifact.
+CTQ_ITEM_FIELDS = (
+    "ctq_id", "classification", "criteria_layer", "observable", "specification_limit",
+    "engineering_risk_limit", "test_references", "evidence_required",
+)
 EVIDENCE_STATUSES = {"OBSERVED", "ASSUMED", "GAP"}
 UNCERTAINTY_MARKERS = ("may", "possible", "potential", "hypothesis", "pending", "to be verified", "可能", "待验证", "尚待", "假设", "潜在", "需验证", "未证实")
 CONFIRMED_CAUSE_MARKERS = ("confirmed root cause", "confirmed cause", "proven cause", "direct cause", "已确认根因", "已证实为原因", "确定由")
@@ -145,14 +160,21 @@ def evidence_errors(value: object) -> list[str]:
     return errors
 
 
-def failure_ctq_errors(value: object, challenge: dict | None) -> list[str]:
+def failure_ctq_errors(value: object, challenge: dict | None, challenge_optional: bool = False) -> list[str]:
+    """The record's own errors. ``challenge_optional`` is the grease route's no-challenge shape.
+
+    On that shape the challenge_id comparison cannot run (there is no challenge artifact);
+    what must hold instead is checked by :func:`unrouted_errors`, so this function only
+    drops the comparison it can no longer make. Every other key, the oil routes included,
+    keeps the pre-existing checks word for word.
+    """
     if not isinstance(value, dict):
         return ["failure_ctq"]
     errors: list[str] = []
     for field in ("challenge_reference", "failure_id", "failure_mode", "mechanism", "failure_diagnosis"):
         if not has_text(value.get(field)):
             errors.append(f"failure_ctq.{field}")
-    if challenge is not None and value.get("challenge_reference") != challenge.get("challenge_id"):
+    if not challenge_optional and challenge is not None and value.get("challenge_reference") != challenge.get("challenge_id"):
         errors.append("failure_ctq.challenge_reference must equal challenge_artifact.challenge_id")
     errors.extend(root_cause_errors(value.get("root_cause_hypotheses")))
     errors.extend(contribution_errors(value.get("lubricant_contribution")))
@@ -180,6 +202,19 @@ def failure_ctq_errors(value: object, challenge: dict | None) -> list[str]:
     return errors
 
 
+def route_type_for(data: object, project: dict | None) -> object:
+    """The route this input runs under, resolved without the challenge artifact.
+
+    ``resolved_project_type`` consults the charter first and the record's own shape
+    second; the second probe needs the failure record, which is available before the
+    challenge artifact is read. Resolving it early is what lets the take-item loop know
+    whether a missing challenge is the grease route's legal state or an oil-route error.
+    """
+    if not isinstance(data, dict):
+        return None
+    return resolved_project_type(project, data.get("failure_ctq"))
+
+
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
@@ -193,9 +228,15 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         errors.extend(project_errors)
         if project is not None and (project.get("stage") != "PROJECT_DEFINED" or project.get("status") != "ACTIVE"):
             errors.append("project_artifact must be stage PROJECT_DEFINED and status ACTIVE")
+    project_type = route_type_for(data, project)
+    grease = is_precision_grease(project_type)
     challenge_path = resolved_path(data.get("challenge_artifact"), input_path)
     if challenge_path is None:
-        errors.append("challenge_artifact")
+        # CHALLENGES_DEFINED is on no type_route, so on the grease route its absence is
+        # a legal state, not a missing input. On every other route the requirement is
+        # exactly what it was.
+        if not grease:
+            errors.append("challenge_artifact")
         challenge = None
     else:
         challenge_errors, challenge = schema_errors(challenge_path, "challenge.schema.json", "challenge_artifact")
@@ -204,9 +245,47 @@ def errors_for(data: object, input_path: Path) -> list[str]:
             errors.append("challenge_artifact must be stage CHALLENGES_DEFINED")
     if project is not None and challenge is not None and project.get("project_id") != challenge.get("project_id"):
         errors.append("project_artifact.project_id must equal challenge_artifact.project_id")
-    errors.extend(failure_ctq_errors(data.get("failure_ctq"), challenge))
+    failure_ctq = data.get("failure_ctq")
+    challenge_optional = grease and challenge is None
+    errors.extend(failure_ctq_errors(failure_ctq, challenge, challenge_optional))
+    if challenge_optional:
+        # The recorded gap must be the exact marker, so the downstream records that
+        # compare against it (test_method.challenge_reference, the audit's UNROUTED
+        # branch) have one agreed value to compare.
+        errors.extend(unrouted_errors(failure_ctq, project.get("project_id") if isinstance(project, dict) else None))
+    # Policy layer, gated on the project type: the grease route requires a declared
+    # criteria layer on every CTQ, a harmonic-drive failure mode, and the full
+    # Failure Diagnosis -> Root-Cause Hypothesis -> Lubricant Contribution chain. Oil
+    # routes resolve to None and add nothing, so their output is unchanged.
+    errors.extend(policy_errors(failure_ctq, project_type))
     errors.extend(evidence_errors(data.get("evidence")))
     return errors
+
+
+def route_notes(data: object, input_path: Path) -> list[str]:
+    """The audible NOTE for the grease route's recorded CHALLENGES_DEFINED gap.
+
+    Empty on every other shape: an oil request, and a grease request that supplied a
+    challenge artifact, print exactly what they printed before.
+    """
+    if not isinstance(data, dict):
+        return []
+    project_path = resolved_path(data.get("project_artifact"), input_path)
+    project = None
+    if project_path is not None and project_path.is_file():
+        try:
+            project = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            project = None
+    if not is_precision_grease(route_type_for(data, project)):
+        return []
+    if resolved_path(data.get("challenge_artifact"), input_path) is not None:
+        return []
+    owned = data.get("failure_ctq")
+    expected = unrouted_reference(project.get("project_id") if isinstance(project, dict) else None)
+    if expected is None or not isinstance(owned, dict) or owned.get("challenge_reference") != expected:
+        return []
+    return [unrouted_note(project["project_id"])]
 
 
 def failure_query(data: object) -> str:
@@ -269,6 +348,8 @@ def main() -> int:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
     print("READY: input can form one FAILURE_CTQ_DEFINED record only")
+    for line in route_notes(data, input_path):
+        print(line)
     for line in history_lines(data, input_path):
         print(line)
     return 0

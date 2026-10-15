@@ -1,0 +1,66 @@
+{
+  "project_artifact": "../precision-grease/project-active.json",
+  "challenge_artifact": "../precision-grease/challenge-defined.json",
+  "failure_ctq_artifact": "../precision-grease/failure-ctq-defined.json",
+  "test_method_artifact": "../precision-grease/test-method-qualified.json",
+  "design_space_artifact": "../precision-grease/design-space-artifact.json",
+  "bench_artifact": "grease-bench-artifact-6-slots.json",
+  "experiment_design": {
+    "experiment_design_id": "ED-PG-B1-002",
+    "factor_references": [
+      "VAR-SOAP-CONCENTRATION",
+      "VAR-BASE-OIL-FRACTION",
+      "VAR-SOAP-HOLD-TIME"
+    ],
+    "design": {
+      "family": "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL",
+      "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the inner loop runs small sequential rounds, so the next batch is chosen from the previous round's result rather than from one large fixed design.",
+      "effects_to_estimate": [
+        "soap concentration effect",
+        "base oil fraction effect",
+        "soap hold time effect"
+      ]
+    },
+    "run_plan": {
+      "target_count": 6,
+      "replicate_count": 0,
+      "center_point_count": 0,
+      "randomized": true,
+      "point_generation": "PHASE4_DETERMINISTIC_ENGINE"
+    },
+    "resource_envelope": {
+      "bench_slots": 6,
+      "lot_capacity": 4,
+      "cycle_days": 30,
+      "cost_cap": 60000,
+      "external_test_lead_time": 14
+    },
+    "responses": [
+      {
+        "ctq_reference": "CTQ-PG-B1-001",
+        "test_method_reference": "TM-PG-B1-001",
+        "role": "OPTIMIZATION_RESPONSE"
+      }
+    ],
+    "guardrails": [
+      "Remain within DS-PG-B1-001.",
+      "Do not exceed the registered bench capacity per round."
+    ],
+    "expected_information_value": {
+      "classification": "RECOMMENDED",
+      "decision_relevance": "Separates feasible precision-gear grease routes inside the frozen design space.",
+      "expected_information_gain": "Can inform the next batch decision of the inner loop.",
+      "cost": "Synthetic planning estimate only.",
+      "duration": "Synthetic planning estimate only.",
+      "redundancy": "No duplicate response is represented by this fixture."
+    },
+    "evidence": [
+      {
+        "evidence_id": "E-ED-PG-B1-002",
+        "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record references a bounded design space, a qualified method and the registered bench for contract validation only.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

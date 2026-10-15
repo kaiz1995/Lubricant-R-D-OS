@@ -1,0 +1,41 @@
+{
+  "project_artifact": "project-active.json",
+  "asset_status": "CLOSED_KNOWLEDGE",
+  "knowledge_assets": {
+    "recommended_formula": {
+      "artifact_reference": "optimization.json",
+      "present": true
+    },
+    "feasible_design_space": {
+      "artifact_reference": "design_space.json",
+      "present": true
+    },
+    "critical_failure_boundaries": {
+      "artifact_reference": "failure_ctq.json",
+      "present": true
+    },
+    "evidence_package": {
+      "artifact_reference": "application.json",
+      "present": true,
+      "qualification_reference": "gate.json",
+      "qualification": "QUALIFIED"
+    },
+    "material_knowledge": {
+      "artifact_reference": "material.json",
+      "present": true
+    },
+    "model": {
+      "artifact_reference": "model.json",
+      "present": true
+    }
+  },
+  "evidence_scope": "PHYSICAL",
+  "evidence": [
+    {
+      "evidence_id": "E-KA-PGD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the closure evidence package is qualified.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ]
+}

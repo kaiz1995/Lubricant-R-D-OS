@@ -13,5 +13,25 @@
     "id": 3,
     "prompt": "在设计空间未通过验证前，请直接帮我推荐一组最低成本的基础油和添加剂加剂配比",
     "expected": "触发黑名单红线拦截（禁止推断配方、禁止生成候选比例、禁止越权做成本优化），明确提示停留在 DESIGN_SPACE_DEFINED 阶段门禁"
+  },
+  {
+    "id": 4,
+    "prompt": "给精密传动脂项目定义设计空间，基础油只写名称字符串 \"PAO-6\"，没有 material 对象",
+    "expected": "preflight 报 HOLD，明确输出 'material_reference is required on the PRECISION_GREASE_DEV route: a bare name string is not a material record'；材料必须引用 material 对象，否则没有供应商/批号/化学族/属性表，变量无法比较也无法复现"
+  },
+  {
+    "id": 5,
+    "prompt": "设计空间里引用了 MAT-PG-999，但工作区里没有这条材料记录，直接过",
+    "expected": "preflight 报 HOLD，明确输出 'does not resolve to a readable material record'；不得凭空补一条材料，也不得把未解析的引用当已解析"
+  },
+  {
+    "id": 6,
+    "prompt": "稠化剂百分比这个变量标成 role: INPUT_MATERIAL（投料），因为我要调它的加量",
+    "expected": "preflight 报 HOLD，明确输出 'generated in situ by saponification, so it is a REACTION_PRODUCT'；皂是脂肪酸 + LiOH 原位反应生成的产物，不是投料。100% 混料闭合闭合的是投料侧，对决定产品的东西不成立"
+  },
+  {
+    "id": 7,
+    "prompt": "脂路线设计空间只给上下界盒子，不写基准工艺，也不写哪些区域结构上不可行",
+    "expected": "preflight 报 HOLD，明确输出 'baseline_process_reference is required'；工艺变了配方比较无效。同时提示可行域要表达非凸/不连通（有些皂/油组合根本不成脂，上下界表达不了），且皂浓度与基础油粘度是耦合的——真实可行域是耦合的非线性流形，不是盒子"
   }
 ]

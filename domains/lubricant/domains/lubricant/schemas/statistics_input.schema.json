@@ -100,7 +100,10 @@
           "ANOVA",
           "REGRESSION",
           "RESIDUAL",
-          "LACK_OF_FIT"
+          "LACK_OF_FIT",
+          "VARIANCE_COMPONENTS",
+          "POWER_ANALYSIS",
+          "CONSISTENCY_CHECK"
         ]
       }
     }

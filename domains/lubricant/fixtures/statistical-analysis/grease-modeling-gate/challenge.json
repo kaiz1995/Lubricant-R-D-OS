@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "challenge",
+  "project_id": "PGD-B1-001",
+  "stage": "CHALLENGES_DEFINED",
+  "decision_question": "Which duty-derived challenge needs analysis first?",
+  "hypothesis": "Soap-fibre structure degradation can raise low-temperature torque in the harmonic drive.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: field exposure frequency is incomplete.",
+  "evidence": [
+    {
+      "evidence_id": "E-CG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the duty profile records micro-oscillation and a low-temperature start.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Prioritize high severity and exposure challenges.",
+  "result": "Soap-fibre structure is recorded as a challenge, not a formulation cause.",
+  "decision": "GO",
+  "next_action": "Analyze failure mechanisms.",
+  "duty_reference": "DP-PG-B1-001",
+  "challenge_id": "CHG-PG-B1-001",
+  "category": "SOAP_FIBER_STRUCTURE",
+  "description": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: soap-fibre structure may harden under the harmonic-drive duty.",
+  "severity": "HIGH",
+  "exposure": "HIGH",
+  "lubricant_sensitivity": "HIGH",
+  "evidence_gap": "No quantified field grease-hardening history.",
+  "priority": "HIGH"
+}

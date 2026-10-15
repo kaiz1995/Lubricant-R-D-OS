@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "design_space",
+  "project_id": "PGD-REF-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Which design space was frozen for this project?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-DESIGN_SPACE-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against design_space.schema.json.",
+  "result": "Design space recorded as the feasible operating region.",
+  "decision": "GO",
+  "next_action": "Use the recorded space as the archive's feasible design space.",
+  "design_space_id": "DS-PGD-REF-001",
+  "scope": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: precision-gear grease formulation space.",
+  "variables": [
+    {
+      "variable_id": "VAR-BASE-OIL-FRACTION",
+      "variable_type": "FORMULATION_VARIABLE",
+      "lower_bound": {
+        "value": 70,
+        "unit": "wt%",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "fixture-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "fixture-v1"
+      },
+      "upper_bound": {
+        "value": 90,
+        "unit": "wt%",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "fixture-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "fixture-v1"
+      },
+      "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: outside this range the grease does not form a stable structure."
+    }
+  ],
+  "ctq_references": [
+    "CTQ-PGD-REF-001"
+  ],
+  "qualified_test_method_references": [
+    "TM-PGD-REF-001"
+  ],
+  "constraints": [
+    "The charge must close within the recorded mixture bounds."
+  ],
+  "baseline_process_reference": "PROC-PGD-REF-BASE-001"
+}

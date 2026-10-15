@@ -24,7 +24,18 @@
     "cost_input": {"type": "object", "properties": {"materials": {"type": "array", "minItems": 1, "items": {"type": "object"}}, "formula_template": {"type": "object", "properties": {"formula_id": {"type": "string"}, "version": {"type": "string"}, "components": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"component_id": {"type": "string"}}, "required": ["component_id"], "additionalProperties": false}}}, "required": ["formula_id", "version", "components"], "additionalProperties": false}, "price_timestamp": {"type": "string"}}, "required": ["materials", "formula_template", "price_timestamp"], "additionalProperties": false},
     "ranking_method": {"enum": ["PARETO", "WEIGHTED_OBJECTIVE"]},
     "weights": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"objective_ref": {"type": "string"}, "weight": {"type": "number", "exclusiveMinimum": 0}}, "required": ["objective_ref", "weight"], "additionalProperties": false}},
-    "max_recommendations": {"type": "integer", "minimum": 1, "default": 10}
+    "max_recommendations": {"type": "integer", "minimum": 1, "default": 10},
+    "trust_region": {
+      "description": "ADDITIVE (precision-grease step 14, plan section 7.3 O-3). The model's applicability boundary (trust region). Optional: when absent the engine behaves exactly as before and no trust-region output is emitted, which is what keeps the frozen gold output byte-identical. When present, a recommended point outside the region is removed (mode EXCLUDE, the default) or explicitly degraded and ranked below every in-region point (mode DEGRADE); an extrapolated point is never silently recommended.",
+      "type": "object",
+      "properties": {
+        "region_statement": {"type": "string", "minLength": 1},
+        "mode": {"enum": ["EXCLUDE", "DEGRADE"], "default": "EXCLUDE"},
+        "variable_bounds": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {"component_id": {"type": "string", "minLength": 1}, "lower": {"type": "number"}, "upper": {"type": "number"}}, "required": ["component_id", "lower", "upper"], "additionalProperties": false}}
+      },
+      "required": ["region_statement", "variable_bounds"],
+      "additionalProperties": false
+    }
   },
   "required": ["input_type", "statistical_models", "candidate_space", "source_doe_design_points", "hard_constraints", "guardrails", "non_inferiority", "baseline", "cost_input", "ranking_method"],
   "additionalProperties": false

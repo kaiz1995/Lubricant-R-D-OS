@@ -1,0 +1,39 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "model",
+  "project_id": "PGD-REF-001",
+  "stage": "MODEL_BUILT",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Which model was built from this round?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-MODEL-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against model.schema.json.",
+  "result": "Model request recorded against the campaign round.",
+  "decision": "GO",
+  "next_action": "Use the record as the archive's model asset.",
+  "model_id": "MODEL-PGD-REF-001",
+  "campaign_reference": "CAMP-PGD-REF-001",
+  "iteration": 1,
+  "design_space_reference": "DS-PGD-REF-001",
+  "test_method_references": [
+    "TM-PGD-REF-001"
+  ],
+  "requested_analyses": [
+    "REGRESSION"
+  ],
+  "response_references": [
+    {
+      "ctq_reference": "CTQ-PGD-REF-001",
+      "test_method_reference": "TM-PGD-REF-001"
+    }
+  ],
+  "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE"
+}

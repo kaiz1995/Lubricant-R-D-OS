@@ -1,0 +1,51 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "next_batch",
+  "project_id": "PGD-001",
+  "stage": "NEXT_BATCH_DECIDED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Which samples should inner-loop round 2 run, and does the loop continue?",
+  "hypothesis": "One more paired round can separate a formulation effect from bench-to-bench drift.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the first round cannot yet tell the two explanations apart, and only two bench positions are free.",
+  "evidence": [
+    {
+      "evidence_id": "E-NB-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the round 1 variance assessment reports an unresolved arm difference.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-NB-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the campaign record still has bench slots left before max_iterations.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Run the next round only while stop_state is CONTINUE and a sample exists that separates two competing hypotheses; stop the loop when it does not.",
+  "result": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: round 1 ended CONTINUE, so round 2 is opened with the paired samples swapped.",
+  "decision": "GO",
+  "next_action": "Hand the proposed samples to the doe-design step as the round 2 request.",
+  "next_batch_id": "NEXT-SYN-002",
+  "campaign_reference": "CMP-001",
+  "from_iteration": 1,
+  "to_iteration": 2,
+  "proposed_samples": [
+    {
+      "sample_reference": "SAM-SYN-003",
+      "hypothesis": "The round 1 arm difference is a formulation effect rather than bench-to-bench drift.",
+      "discriminates": "Formulation effect explains the round 1 difference vs bench drift explains the round 1 difference."
+    },
+    {
+      "sample_reference": "SAM-SYN-004",
+      "hypothesis": "The soap fraction, not the base oil, sets the observed difference.",
+      "discriminates": "Soap fraction drives the response vs base oil drives the response."
+    }
+  ],
+  "information_gain_basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the two proposed samples are the swapped halves of the round 1 pair, so the round 2 contrast cancels bench drift instead of measuring it, which no single-arm sample can do.",
+  "bench_slots_required": 2,
+  "stop_state": "CONTINUE",
+  "next_round_budget": {
+    "bench_slots_remaining": 4,
+    "calendar_days_remaining": 60
+  }
+}

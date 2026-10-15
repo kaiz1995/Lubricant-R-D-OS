@@ -117,7 +117,9 @@ def main() -> int:
     # 0. The published route is the 8-stage production-reproduction sequence and
     #    WP-06 has added APPLIED to the stage universe (between VERIFIED and FROZEN).
     assert tuple(contract["type_routes"][PROJECT_TYPE]) == EXPECTED_ROUTE, contract["type_routes"][PROJECT_TYPE]
-    assert len(contract["type_routes"]) == 6, sorted(contract["type_routes"])
+    # Seven since PRECISION_GREASE_DEV (the precision-gear grease workflow) was
+    # published alongside the six oil routes. The oil routes are untouched.
+    assert len(contract["type_routes"]) == 7, sorted(contract["type_routes"])
     assert "APPLIED" in contract["stages"], contract["stages"]
     assert contract["stages"].index("APPLIED") == contract["stages"].index("VERIFIED") + 1, contract["stages"]
     assert contract["stages"].index("FROZEN") == contract["stages"].index("APPLIED") + 1, contract["stages"]

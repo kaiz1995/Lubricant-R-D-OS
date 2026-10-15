@@ -1,0 +1,37 @@
+{
+  "project_artifact": "project-active.json",
+  "reference_id": "REF-PGD-003",
+  "evidence_scope": "SYNTHETIC",
+  "known_good": [
+    {
+      "reference_id": "REF-PGD-003-G1",
+      "resolution": "UNRESOLVED",
+      "selection_rung": "UNRESOLVED",
+      "material_identity": "MISSING",
+      "formula_identity": "MISSING",
+      "history_evidence": [],
+      "storage_sop": "MISSING",
+      "safety_reference": "MISSING"
+    }
+  ],
+  "known_bad": [
+    {
+      "reference_id": "REF-PGD-003-B1",
+      "resolution": "UNRESOLVED",
+      "selection_rung": "UNRESOLVED",
+      "material_identity": "MISSING",
+      "formula_identity": "MISSING",
+      "history_evidence": [],
+      "storage_sop": "MISSING",
+      "safety_reference": "MISSING"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E-REF-PG-201",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: no mature good sample and no mechanism-bound failure record exist; both sides are recorded UNRESOLVED rather than invented.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ]
+}

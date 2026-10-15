@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "project",
+  "project_id": "PGD-B4-001",
+  "stage": "PROJECT_DEFINED",
+  "status": "ACTIVE",
+  "decision_question": "Proceed to duty definition for the precision-gear grease campaign?",
+  "hypothesis": "The supplied precision-gear grease brief is sufficient to define duty conditions.",
+  "uncertainty": "Duty conditions are not yet defined; success criteria are provisional until the reference material dossier is resolved.",
+  "evidence": [
+    {
+      "evidence_id": "E-PG-B4-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: approved brief requests a precision-gear grease with an OEM grease as the performance benchmark.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Recorded goals, constraints, and success criteria are required.",
+  "result": "Project Charter recorded for the precision-gear grease campaign.",
+  "decision": "GO",
+  "next_action": "Define duty conditions.",
+  "project_name": "Precision-gear grease bench-test campaign",
+  "project_type": "PRECISION_GREASE_DEV",
+  "product_family": "Precision-gear (harmonic drive) grease",
+  "business_objective": "Qualify a precision-gear grease against the OEM reference grease.",
+  "technical_objective": "Maintain the required CTQ and risk boundaries under the harmonic-drive duty.",
+  "hard_constraints": [
+    "Reference materials must exist as physical samples before method qualification."
+  ],
+  "target_cost": {
+    "value": 120,
+    "unit": "CNY/kg",
+    "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+    "method_version": "cost-baseline-v1",
+    "material_batch": "not_applicable",
+    "formula_version": "baseline-v1"
+  },
+  "benchmark_products": [
+    "Synthetic OEM precision-gear grease reference"
+  ],
+  "success_criteria": [
+    "Critical CTQs have evidence."
+  ],
+  "risk_class": "STRATEGIC",
+  "owner": "R&D owner"
+}

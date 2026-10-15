@@ -1,9 +1,9 @@
 ---
 name: statistical-analysis
-description: Record one evidence-bound statistical-analysis request at MODEL_BUILT; preflight verifies 7 upstream artifacts through EXPERIMENT_RUNNING and response CTQ method chains before building the artifact. Use when user mentions "statistical-analysis", "统计分析", "显著性分析", "响应面拟合", "ANOVA", "回归建模", or advancing to Stage 7 in lubricant R&D.
+description: Record one evidence-bound statistical-analysis request at MODEL_BUILT; preflight verifies 7 upstream artifacts through EXPERIMENT_RUNNING and response CTQ method chains before building the artifact. Use when user mentions "statistical-analysis", "统计分析", "显著性分析", "响应面拟合", "ANOVA", "回归建模", or advancing to MODEL_BUILT in lubricant R&D.
 ---
 
-# Statistical Analysis (Stage 7)
+# Statistical Analysis (MODEL_BUILT)
 
 Record an evidence-bound statistical analysis request at `MODEL_BUILT` for the Lubricant R&D Domain Pack.
 This is an analysis request and handoff contract, NOT a simulated regression result or optimization claim.
@@ -14,7 +14,17 @@ Authority schema: `../../schemas/model.schema.json` (or local `references/model.
 
 ## 1. Input Specification & Response Chain Invariants
 
-A single JSON input object providing the 7 upstream artifacts and the `analysis` request:
+A single JSON input object providing the 7 upstream artifacts and the `analysis` request.
+A `PRECISION_GREASE_DEV` charter additionally supplies the four inner-loop artifacts
+(`batch_artifact`, `screening_artifact`, `bench_test_artifact`, `variance_artifact`), for
+eleven upstream keys in total.
+
+`challenge_artifact` is required on the six oil routes. The `PRECISION_GREASE_DEV` route
+carries no `CHALLENGES_DEFINED` step (`contracts/state-machine.json` puts it on no
+`type_route`), so that route may omit the key: the preflight prints a `NOTE:` line instead
+of demanding the artifact, and the built record carries the recorded-gap sentence
+(`UNROUTED:<project_id>`) as `ASSUMED` evidence. Supplying a challenge artifact on either
+route behaves exactly as before.
 
 ```json
 {
@@ -42,13 +52,14 @@ A single JSON input object providing the 7 upstream artifacts and the `analysis`
 ```
 
 ### Invariants
-1. **Full Chain Traceability (7 Artifacts)**: All 7 artifacts through `EXPERIMENT_RUNNING` must be present, schema-valid, with `decision: "GO"`.
-2. **Response Chain Continuity**: Every `response_references` item must exist in:
+1. **Full Chain Traceability (7 Artifacts)**: All 7 artifacts through `EXPERIMENT_RUNNING` must be present and schema-valid. `decision: "GO"` is required wherever the upstream carries a GO/HOLD verdict (test_method, design_space, experiment_design; and batch, screening, variance on the grease route), because a non-GO verdict is a legitimate producer output that must be refused here. The precision-grease `bench_test` record is the one exception: its own contract fixes its decision to `UNDECIDED`, since a single bench run is a record and not a verdict.
+2. **Grease Route Precondition (`PRECISION_GREASE_DEV`)**: the route is read from the supplied charter's `project_type` (never from the request's key set). On that route all four inner-loop artifacts must be supplied — a request that omits any of them HOLDs — and the oil routes keep exactly the seven upstream artifacts they always had.
+3. **Response Chain Continuity**: Every `response_references` item must exist in:
    - Failure CTQ record (`ctqs`).
    - Design space (`ctq_references`).
    - Observed experiment measurements (`measured_responses`).
    - Linked qualified test method.
-3. **Engine Boundary**: ANOVA, Scheffé polynomial regression, R² fitting, p-values, and lack-of-fit belong exclusively to the Phase 4 deterministic engine (`run_compute.py`).
+4. **Engine Boundary**: ANOVA, Scheffé polynomial regression, R² fitting, p-values, and lack-of-fit belong exclusively to the Phase 4 deterministic engine (`run_compute.py`).
 
 ---
 
@@ -77,7 +88,7 @@ python skills/statistical-analysis/scripts/validate_model_artifact.py <temporary
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to `<output.json>` only after Step 3 passes.
 ```bash
-# 🔴 CHECKPOINT · STOP: Stage 7 stops here at MODEL_BUILT. Pass to Phase 4 compute engine or Stage 8 (optimization).
+# 🔴 CHECKPOINT · STOP: the model stops here at MODEL_BUILT. Next station: OPTIMIZED (optimization) or NEXT_BATCH_DECIDED (PRECISION_GREASE_DEV inner loop, doe-design).
 ```
 
 ---

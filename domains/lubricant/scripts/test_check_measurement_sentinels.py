@@ -159,6 +159,43 @@ class SentinelScanTests(unittest.TestCase):
         self.assertTrue(any(line.startswith("WARN: bad.json:") for line in lines))
         self.assertIn("0 violation(s)", lines[-1])
 
+    # --- regression: schema definitions are not measurement instances ---
+
+    def test_schema_definition_fragment_does_not_crash_scan(self):
+        # Regression for the AttributeError: 'dict' object has no attribute
+        # 'upper' at check_object (old line 77). Scanning a workspace that
+        # contains common.schema.json made find_measurements report
+        # $defs.measurement.properties, because that object's keys are exactly
+        # the six measurement field names -- while unit/source there are nested
+        # schema objects, so text.upper() blew up.
+        schema_path = Path(__file__).resolve().parent.parent / "schemas" / "common.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        fragment = {"$defs": {"measurement": schema["$defs"]["measurement"]}}
+
+        found = []
+        cms.find_measurements(fragment, "", found)
+        self.assertEqual(found, [], "the measurement schema definition must not count as an instance")
+
+        # The exact object that used to raise now returns cleanly when called
+        # directly (non-string unit/source are skipped, not .upper()-ed).
+        self.assertIsNone(cms.check_object(schema["$defs"]["measurement"]["properties"]))
+
+        last, lines = self.run_scan({"common.schema.json": fragment})
+        self.assertTrue(last.startswith("PASS:"), "\n".join(lines))
+        self.assertFalse(any("measurement" in line for line in lines), lines)
+
+    def test_package_root_scan_does_not_crash(self):
+        # The original report was "crashes when scanning the package root";
+        # the root still holds real sentinel/legacy fixtures, so only the
+        # absence of a crash and of a schema-definition hit is asserted.
+        package_root = Path(__file__).resolve().parent.parent
+        lines = cms.scan_workspace(package_root)
+        self.assertTrue(lines[-1].startswith(("PASS:", "HOLD:")), lines[-1])
+        self.assertFalse(
+            any("common.schema.json#" in line and "measurement" in line for line in lines),
+            [line for line in lines if "common.schema.json#" in line],
+        )
+
     # --- unit-level ---
 
     def test_check_object_unit(self):

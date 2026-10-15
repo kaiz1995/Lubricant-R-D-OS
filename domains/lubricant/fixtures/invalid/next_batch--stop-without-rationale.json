@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "next_batch",
+  "project_id": "PGD-001",
+  "stage": "NEXT_BATCH_DECIDED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Invalid fixture: may the loop be stopped without recording why it stopped?",
+  "hypothesis": "This invalid fixture evaluates no product hypothesis.",
+  "uncertainty": "Fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-NB-BAD-001",
+      "statement": "This is a schema-validation fixture, not product evidence.",
+      "source": "fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A stop_state other than CONTINUE requires a recorded stop_rationale.",
+  "result": "Rejected.",
+  "decision": "UNDECIDED",
+  "next_action": "Do not use this fixture for R&D decisions.",
+  "next_batch_id": "NEXT-SYN-BAD-001",
+  "campaign_reference": "CMP-001",
+  "from_iteration": 1,
+  "to_iteration": 2,
+  "proposed_samples": [
+    {
+      "sample_reference": "SAM-SYN-BAD-001",
+      "hypothesis": "The round 1 difference is a formulation effect rather than bench-to-bench drift.",
+      "discriminates": "Formulation effect explains the round 1 difference vs bench drift explains the round 1 difference."
+    }
+  ],
+  "information_gain_basis": "Fixture only: the single proposed sample would repeat round 1 without adding a contrast.",
+  "bench_slots_required": 1,
+  "stop_state": "NO_NEW_INFORMATION"
+}

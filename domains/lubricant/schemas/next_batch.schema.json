@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/next_batch.schema.json",
+  "title": "Next batch decision (inner-loop step 13b: which samples run next, or stop)",
+  "description": "Stage contract for inner-loop step 13b of PRECISION_GREASE_DEV, the sequential decision taken at one campaign round boundary. It decides two things at once, and only one of them produces a proposal. (i) While the loop continues: which samples the NEXT round runs. Every proposed sample must name the competing hypotheses it separates, because the whole point of the inner loop is that the next batch is chosen to be informative, and a sample that cannot separate two competing explanations is not worth a bench slot; information_gain_basis states why these are the informative samples rather than others, and bench_slots_required is what the round costs. (ii) Whether the loop continues at all: stop_state carries the same six values as campaign.schema.json's iteration stop_state. Only CONTINUE carries a proposal (see the second if/then rule): a stop proposes nothing and spends no bench slot, so it records its cause in stop_rationale instead (first if/then rule). Stopping the loop is a decision that needs its reason recorded exactly like continuing does.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "Stopping the loop is a decision like any other: a stop_state other than CONTINUE requires a non-empty stop_rationale, so no round can end the loop without a recorded reason.",
+      "if": {
+        "properties": { "stop_state": { "not": { "const": "CONTINUE" } } },
+        "required": ["stop_state"]
+      },
+      "then": {
+        "required": ["stop_rationale"],
+        "properties": { "stop_rationale": { "type": "string", "minLength": 1 } }
+      }
+    },
+    {
+      "$comment": "The proposal is CONTINUE-only (E2=B): while the loop continues the record must say which samples the next round would run, why they are the informative ones and what they cost; on any stop it must carry none of the three, because a stop opens no round, proposes no sample and spends no bench slot. The two directions are one rule stated twice, exactly as stop_rationale's rule is.",
+      "if": {
+        "properties": { "stop_state": { "const": "CONTINUE" } },
+        "required": ["stop_state"]
+      },
+      "then": {
+        "required": ["proposed_samples", "information_gain_basis", "bench_slots_required"]
+      },
+      "else": {
+        "properties": {
+          "proposed_samples": false,
+          "information_gain_basis": false,
+          "bench_slots_required": false
+        }
+      }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "next_batch" },
+    "stage": { "const": "NEXT_BATCH_DECIDED" },
+    "next_batch_id": { "type": "string", "minLength": 1 },
+    "campaign_reference": {
+      "description": "Campaign (inner-loop carrier) this round belongs to. The iteration history and its stop_state sequence live on that campaign; this record is the decision for one round boundary.",
+      "type": "string",
+      "minLength": 1
+    },
+    "from_iteration": {
+      "description": "Bench round just completed, 1-based. Strictly positive.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "to_iteration": {
+      "description": "Bench round this decision opens, 1-based, strictly positive. While the loop continues it is from_iteration + 1 (the next round is opened); on any stop the decision opens no round at all, so it equals from_iteration and proposed_samples is forbidden (see the second if/then rule).",
+      "type": "integer",
+      "minimum": 1
+    },
+    "proposed_samples": {
+      "description": "Samples the next round would run. CONTINUE only (see the second if/then rule): minItems 1, because a next-batch decision that proposes nothing can only be a stop, and that stop is expressed by stop_state instead. Every entry names the competing hypotheses it separates, so a bench slot is never spent on a sample that cannot discriminate. Forbidden on any stop_state other than CONTINUE.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/proposed_sample" }
+    },
+    "information_gain_basis": {
+      "description": "Why these are the informative samples rather than the alternatives considered: what the round buys that the previous round did not settle. CONTINUE only (see the second if/then rule); forbidden on any stop_state other than CONTINUE, which records its cause in stop_rationale instead.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bench_slots_required": {
+      "description": "Bench slots the next round consumes if it runs. Strictly positive. CONTINUE only (see the second if/then rule); forbidden on any stop_state other than CONTINUE, because a stop spends no slot.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "stop_state": {
+      "description": "How this round boundary ends: CONTINUE (another round is planned), GOAL_MET, NO_NEW_INFORMATION, RESOURCE_EXHAUSTED, PIVOT or KILL. Same six values as campaign.schema.json's iteration stop_state; only CONTINUE authorizes another round, and every other value requires stop_rationale.",
+      "enum": ["CONTINUE", "GOAL_MET", "NO_NEW_INFORMATION", "RESOURCE_EXHAUSTED", "PIVOT", "KILL"]
+    },
+    "stop_rationale": {
+      "description": "Why the loop stops. Hard-required and non-empty whenever stop_state is not CONTINUE (see the if/then rule); omitted when the loop continues, so no stop can be recorded without its cause.",
+      "type": "string",
+      "minLength": 1
+    },
+    "next_round_budget": { "$ref": "#/$defs/next_round_budget" },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "next_batch_id",
+    "campaign_reference",
+    "from_iteration",
+    "to_iteration",
+    "stop_state",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "proposed_sample": {
+      "description": "One sample the next round would run. It must name the hypothesis it discriminates and the pair of competing hypotheses it separates: a sample that cannot separate two competing explanations is not worth a bench slot. sample_reference and formula_reference are alternatives -- a sample that exists already is named by reference, while a formula the next round has yet to produce is named by its formula reference; at least one of the two must be present.",
+      "type": "object",
+      "properties": {
+        "sample_reference": { "type": "string", "minLength": 1 },
+        "formula_reference": { "type": "string", "minLength": 1 },
+        "hypothesis": {
+          "description": "The hypothesis this sample is run to discriminate.",
+          "type": "string",
+          "minLength": 1
+        },
+        "discriminates": {
+          "description": "The pair of competing hypotheses this sample separates (for example 'A explains the result' vs 'B explains the result').",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["hypothesis", "discriminates"],
+      "anyOf": [
+        { "required": ["sample_reference"] },
+        { "required": ["formula_reference"] }
+      ],
+      "additionalProperties": false
+    },
+    "next_round_budget": {
+      "description": "Optional remaining inner-loop budget at this round boundary. Both figures are recorded together when the object is present, so the next round can be checked against what is left of the campaign allowance.",
+      "type": "object",
+      "properties": {
+        "bench_slots_remaining": {
+          "description": "Bench slots left for this campaign after the next round. Never negative.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "calendar_days_remaining": {
+          "description": "Calendar days left for this campaign after the next round. Never negative.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["bench_slots_remaining", "calendar_days_remaining"],
+      "additionalProperties": false
+    }
+  }
+}

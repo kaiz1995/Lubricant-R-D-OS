@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "material",
+  "project_id": "PGD-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the base oil candidate be recorded as a design-space material with a traceable property set?",
+  "hypothesis": "A base oil whose identity, lot, chemistry family, and solvency-relevant properties are recorded can enter the design space without any property being invented.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record attempts to enter a property without a source.",
+  "evidence": [
+    {
+      "evidence_id": "E-MAT-BAD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: one property entry is recorded with no source.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Register a material only with identity, a chemistry family, at least one recorded property, and a dated price; every property must carry a source.",
+  "result": "The material record is rejected because one property has no source.",
+  "decision": "HOLD",
+  "next_action": "Supply the missing property source or record the property as a GAP.",
+  "material_id": "MAT-BO-BAD-001",
+  "category": "BASE_OIL",
+  "identity": {
+    "supplier": "Synthetic supplier A",
+    "trade_name": "Synthetic PAO-6",
+    "lot": "LOT-SYN-2026-001"
+  },
+  "chemistry": {
+    "base_oil_family": "PAO",
+    "notes": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: non-polar polyalphaolefin."
+  },
+  "properties": [
+    { "property_id": "kv40", "value": 31.0, "unit": "mm2/s", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-BAD-001", "status": "ASSUMED" },
+    { "property_id": "kv100", "value": 6.0, "unit": "mm2/s", "evidence_id": "E-MAT-BAD-001", "status": "ASSUMED" }
+  ],
+  "cost": {
+    "value": 4.2,
+    "unit": "CNY/kg",
+    "price_timestamp": "2026-09-01"
+  }
+}

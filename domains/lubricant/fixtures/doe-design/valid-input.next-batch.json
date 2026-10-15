@@ -1,0 +1,51 @@
+{
+  "campaign_artifact": "bench-opened.json",
+  "experiment_design_artifact": "next-batch-round-design.json",
+  "variance_artifact": "next-batch-variance.json",
+  "next_batch": {
+    "next_batch_id": "NEXT-PGD-NB-001",
+    "stop_state": "CONTINUE",
+    "bench_slots_required": 2,
+    "information_gain_basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the round-1 pair ran inside one bench window, so running the same two arms swapped in round 2 makes the A-minus-B contrast cancel bench-to-bench drift instead of measuring it. Neither single arm separates the two declared explanations on its own, and the registered bench offers exactly two positions, so this pair is what the round can buy that round 1 did not settle.",
+    "competing_explanations": [
+      {
+        "explanation_id": "EXPL-FORMULATION-EFFECT",
+        "statement": "the round-1 candidate/reference difference follows the formulation and travels with the formula into round 2"
+      },
+      {
+        "explanation_id": "EXPL-BENCH-DRIFT",
+        "statement": "the round-1 difference is bench-to-bench drift that follows the run order instead of the formula"
+      }
+    ],
+    "proposed_samples": [
+      {
+        "formula_reference": "FORM-PG-NB@v1",
+        "hypothesis": "EXPL-FORMULATION-EFFECT",
+        "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"]
+      },
+      {
+        "formula_reference": "FORM-PG-NB-REF@v1",
+        "hypothesis": "EXPL-BENCH-DRIFT",
+        "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"]
+      }
+    ],
+    "next_round_budget": {
+      "bench_slots_remaining": 6,
+      "calendar_days_remaining": 240
+    },
+    "evidence": [
+      {
+        "evidence_id": "E-NB-SYN-001",
+        "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the round-1 variance assessment records a consistent difference between the candidate and the reference, and round 1 ended with stop_state CONTINUE.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: bench-opened.json + next-batch-variance.json",
+        "status": "ASSUMED"
+      },
+      {
+        "evidence_id": "E-NB-SYN-002",
+        "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the round's design declares two bench positions for the next round, matching the registered bench capacity.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: next-batch-round-design.json",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

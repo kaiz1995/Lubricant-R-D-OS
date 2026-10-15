@@ -5,6 +5,15 @@ process-definition) and one OPTIMIZED optimization artifact with `decision: GO`.
 A process window is fixed only from both, at a strictly later scale class, on
 evidence without GAP. Every rule is fail-closed: an unmet condition yields HOLD,
 never a default.
+
+ADDITIVE (plan section 4.4.3 item 3-8): the precision-grease route is recognized from
+its upstream optimization artifact, whose stage is NON_INFERIORITY_PASSED rather than
+OPTIMIZED. On that route the process record must cover the grease route's
+structure-setting steps and the scale-up evidence must contain at least one OBSERVED
+item, because `validated: true` means the window has been FIXED, not that a scale-up
+experiment verified it - a window claim with nothing but assumed evidence is exactly
+that ambiguity. The on-demand PROCESS_WINDOW_DEFINED semantics are frozen: an oil
+(a.k.a. OPTIMIZED) request is validated exactly as before.
 """
 
 from __future__ import annotations
@@ -17,7 +26,17 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from scale_up_policy import SCALE_ORDER, has_gap
+from scale_up_policy import (
+    GREASE_STAGE,
+    GREASE_STEP_TYPES,
+    ON_DEMAND_STAGE,
+    REQUIRED_GREASE_STEP_TYPES,
+    SCALE_ORDER,
+    grease_batch_identity_notes,
+    grease_step_notes,
+    has_gap,
+    has_observed_evidence,
+)
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +46,9 @@ INPUT_FIELDS = {"process_artifact", "optimization_artifact", "scale_up"}
 SCALE_UP_FIELDS = {"window_id", "basis", "amplification_factor", "batch_scale", "evidence_scope", "evidence"}
 EVIDENCE_SCOPES = {"SYNTHETIC", "PHYSICAL"}
 SCALE_CLASSES = set(SCALE_ORDER)
+# The upstream stage that marks the precision-grease route. On the oil routes the
+# optimization artifact is OPTIMIZED, which keeps this preflight byte-identical there.
+GREASE_UPSTREAM_STAGE = "NON_INFERIORITY_PASSED"
 
 
 def has_text(value: object) -> bool:
@@ -129,6 +151,36 @@ def scale_up_errors(value: object, process: dict | None) -> list[str]:
     return errors
 
 
+def grease_route_errors(process: dict | None, scale_up: object) -> list[str]:
+    """The grease route's extra rules, reached only when the upstream stage marks it.
+
+    `validated: true` means the window has been FIXED, not that a scale-up experiment
+    verified it. Fixing a window on assumed evidence alone is therefore refused: the
+    requirement is at least one OBSERVED item, plus coverage of the structure-setting
+    steps that make a grease window a grease window.
+    """
+    errors: list[str] = []
+    if process is not None:
+        steps = process.get("process_step")
+        recorded = {step.get("step_type") for step in steps if isinstance(step, dict)} if isinstance(steps, list) else set()
+        unknown = sorted(recorded - set(GREASE_STEP_TYPES))
+        if unknown:
+            errors.append("process_artifact process_step step_type must be one of the grease route items; unknown " + ", ".join(unknown))
+        for required in REQUIRED_GREASE_STEP_TYPES:
+            if required not in recorded:
+                errors.append(
+                    f"process_artifact must cover the structure-setting step {required} on the PRECISION_GREASE_DEV "
+                    "route: the soap is generated in situ, so a window without it is not a fixed grease window"
+                )
+    if isinstance(scale_up, dict) and not has_observed_evidence(scale_up):
+        errors.append(
+            "scale_up.evidence must contain at least one OBSERVED item on the PRECISION_GREASE_DEV route: "
+            "validated=true records that the window has been fixed, not that a scale-up experiment verified it, "
+            "so a window claim on assumed evidence alone is refused"
+        )
+    return errors
+
+
 def errors_for(data: object, input_path: Path) -> list[str]:
     if not isinstance(data, dict):
         return ["input must be a JSON object"]
@@ -156,6 +208,8 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     if process is not None and optimization is not None and process.get("project_id") != optimization.get("project_id"):
         errors.append("process_artifact and optimization_artifact must belong to the same project_id")
     errors.extend(scale_up_errors(data.get("scale_up"), process))
+    if optimization is not None and optimization.get("stage") == GREASE_UPSTREAM_STAGE:
+        errors.extend(grease_route_errors(process, data.get("scale_up")))
     return errors
 
 
@@ -173,8 +227,29 @@ def main() -> int:
     if errors:
         print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
         return 1
-    print("READY: input can fix one PROCESS_WINDOW_DEFINED process record only")
+    grease = _upstream_stage(data, path) == GREASE_UPSTREAM_STAGE
+    print(f"READY: input can fix one {GREASE_STAGE if grease else ON_DEMAND_STAGE} process record only")
+    if grease:
+        print(
+            f"NOTE: PRECISION_GREASE_DEV route: the window is fixed at {GREASE_STAGE}, and validated=true "
+            "records that the window has been FIXED, not that a scale-up experiment verified it"
+        )
+        _, process = schema_artifact(resolved_path(data["process_artifact"], path), "process.schema.json", "process_artifact")
+        for line in grease_step_notes(process):
+            print(line)
+        for line in grease_batch_identity_notes(process, data.get("scale_up")):
+            print(line)
     return 0
+
+
+def _upstream_stage(data: dict, input_path: Path) -> object:
+    path = resolved_path(data.get("optimization_artifact"), input_path)
+    if path is None:
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("stage")
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 if __name__ == "__main__":

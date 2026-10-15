@@ -13,5 +13,20 @@
     "id": 3,
     "prompt": "将 specification_limit 与 engineering_risk_limit 混淆合并，或直接开始配方设计",
     "expected": "触发黑名单拦截，严格要求规格限与风险限分立，严禁越级跨入配方或测试台架评定"
+  },
+  {
+    "id": 4,
+    "prompt": "PRECISION_GREASE_DEV 精密脂项目：定义柔轮齿面微振磨损失效模式，CTQ 分别声明 SCREENING（工作锥入度变化）/ BENCH（SRV 磨痕深度）/ MACHINE（整机低温启动扭矩），失效诊断写摩擦学状态，根因写润滑剂关联网假设，贡献度保持 POSSIBLE 待验证",
+    "expected": "策略层放行：每个 CTQ 都带 criteria_layer，失效模式命中谐波专属四类之一，诊断链 Failure Diagnosis → Root-Cause Hypothesis → Lubricant Contribution 完整；builder 生成工件，validate PASS 后落盘 FAILURE_CTQ_DEFINED"
+  },
+  {
+    "id": 5,
+    "prompt": "精密脂项目的某个 CTQ 没写 criteria_layer（只写了 ctq_id/observable/双限值），说「和油项目一样先不区分判据层」",
+    "expected": "策略层拒绝：HOLD: missing or invalid: failure_ctq.ctqs[0].criteria_layer is required for PRECISION_GREASE_DEV: every CTQ must declare which layer of the three-layer criteria chain (SCREENING, BENCH, MACHINE) it belongs to；不落盘（对应负向用例 N8）"
+  },
+  {
+    "id": 6,
+    "prompt": "精密脂记录的失效诊断直接写「抗磨剂不足」——从现场看到的轴承磨损一步跳到润滑剂原因，并要求据此定 CTQ",
+    "expected": "策略层拒绝：HOLD: ... failure_diagnosis must not name a lubricant cause: record the physical or tribological state here and keep the lubricant linkage in root_cause_hypotheses -> lubricant_contribution；要求重写诊断步，禁止从「轴承磨损」直跳「抗磨剂不足」"
   }
 ]

@@ -9,22 +9,18 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from duty_challenge_policy import (
+    CHALLENGE_FIELDS,
+    EVIDENCE_FIELDS,
+    LEVELS,
+    category_errors,
+    has_text,
+    resolved_path,
+    resolved_project_type,
+)
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-CHALLENGE_FIELDS = (
-    "duty_reference", "challenge_id", "category", "description", "severity",
-    "exposure", "lubricant_sensitivity", "evidence_gap", "priority",
-)
-CHALLENGE_CATEGORIES = {
-    "MECHANICAL_LOAD", "CONTACT", "HIGH_TEMPERATURE", "LOW_TEMPERATURE", "OXIDATION",
-    "WATER_CONTAMINATION", "AIR_FOAM", "PARTICLE_CONTAMINATION", "MATERIAL_COMPATIBILITY",
-    "LONG_TERM_STABILITY", "MIXING", "RAW_MATERIAL_VARIATION",
-}
-LEVELS = {"LOW", "MEDIUM", "HIGH"}
-
-
-def has_text(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
 
 
 def schema_dir() -> Path:
@@ -50,6 +46,25 @@ def duty_errors(path: Path) -> tuple[list[str], dict | None]:
     return errors, artifact if not errors else None
 
 
+def project_type(data: object, input_path: Path, duty_artifact: object) -> object:
+    """The project type to enforce, read from the optional upstream project charter.
+
+    The upstream charter is optional here (the stage's declared upstream is the duty
+    artifact, whose ``project_reference`` is an id, not a type), so an absent or unreadable
+    file falls back to the duty artifact's own shape rather than failing: this skill has
+    never required a project artifact and oil-route callers do not supply one.
+    """
+    path = resolved_path(data.get("project_artifact"), input_path) if isinstance(data, dict) else None
+    if path is not None and path.is_file():
+        try:
+            project = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            project = None
+        if isinstance(project, dict):
+            return resolved_project_type(project, duty_artifact)
+    return resolved_project_type(None, duty_artifact)
+
+
 def evidence_list_errors(value: object, label: str) -> list[str]:
     if not isinstance(value, list) or not value:
         return [label]
@@ -58,7 +73,7 @@ def evidence_list_errors(value: object, label: str) -> list[str]:
         if not isinstance(item, dict):
             errors.append(f"{label}[{index}]")
             continue
-        for field in ("evidence_id", "statement", "source"):
+        for field in EVIDENCE_FIELDS:
             if not has_text(item.get(field)):
                 errors.append(f"{label}[{index}].{field}")
         if item.get("status") != "OBSERVED":
@@ -81,6 +96,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
         duty_errors_found, duty_artifact = duty_errors(resolved)
         errors.extend(duty_errors_found)
 
+    route_type = project_type(data, input_path, duty_artifact)
     challenge = data.get("challenge")
     if not isinstance(challenge, dict):
         errors.append("challenge")
@@ -90,8 +106,7 @@ def errors_for(data: object, input_path: Path) -> list[str]:
                 errors.append(f"challenge.{field}")
         if duty_artifact and challenge.get("duty_reference") != duty_artifact.get("duty_id"):
             errors.append("challenge.duty_reference must equal duty_artifact.duty_id")
-        if challenge.get("category") not in CHALLENGE_CATEGORIES:
-            errors.append("challenge.category is invalid")
+        errors.extend(category_errors(challenge.get("category"), route_type))
         for field in ("severity", "exposure", "lubricant_sensitivity", "priority"):
             if challenge.get(field) not in LEVELS:
                 errors.append(f"challenge.{field} is invalid")

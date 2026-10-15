@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "formula",
+  "project_id": "PGD-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the trial formula be recorded without a process baseline?",
+  "hypothesis": "A fraction list without a process reference cannot be reproduced or compared.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record attempts to omit baseline_process_reference.",
+  "evidence": [
+    {
+      "evidence_id": "E-FR-BAD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the formula carries inputs and products but no process baseline.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Record a formula only with non-empty inputs and products, an explicit mixture_basis, and a required baseline_process_reference.",
+  "result": "The formula record is rejected because the baseline process reference is absent.",
+  "decision": "HOLD",
+  "next_action": "Attach the process baseline before the formula is used to make a batch.",
+  "formula_id": "FORM-GREASE-BAD-001",
+  "version": "v1",
+  "inputs": [
+    { "material_id": "MAT-BO-001", "fraction": 0.87, "role": "base_oil" },
+    { "material_id": "MAT-FA-001", "fraction": 0.10, "role": "fatty_acid" },
+    { "material_id": "MAT-LIOH-001", "fraction": 0.03, "role": "alkali" }
+  ],
+  "products": [
+    { "product_id": "PROD-BASE-OIL", "target_fraction": 0.87, "reaction_reference": "REACTION-NONE: base oil carries through the saponification unchanged" },
+    { "product_id": "PROD-LI-SOAP", "target_fraction": 0.12, "reaction_reference": "REACTION-SAPONIFICATION-001: fatty acid + LiOH -> lithium soap + water" }
+  ],
+  "mixture_basis": "INPUTS"
+}

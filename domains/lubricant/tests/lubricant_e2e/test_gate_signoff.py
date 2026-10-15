@@ -186,7 +186,7 @@ def main() -> int:
                 {"condition_id": cid, "satisfied": True,
                  "evidence_reference": ("PROCESS-WINDOW:PW-001" if cid == "MANUFACTURABILITY_ACCEPTABLE" else "E-1")}
                 for cid in (
-                    "CRITICAL_CTQ_SATISFIED", "CRITICAL_RISK_EVIDENCE_SUFFICIENT", "COST_TARGET_MET",
+                    "CRITICAL_CTQ_SATISFIED", "CRITICAL_RISK_EVIDENCE_SUFFICIENT", "COST_CEILING_RESPECTED",
                     "RAW_MATERIAL_SUPPLY_ACCEPTABLE", "MANUFACTURABILITY_ACCEPTABLE",
                     "CRITICAL_BENCHMARK_NO_DEGRADATION", "COMPATIBILITY_PASSED", "RISK_REVIEW_PASSED",
                 )

@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "failure_ctq",
+  "project_id": "PGD-REF-001",
+  "stage": "FAILURE_CTQ_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Which failure mechanism and CTQs bound this project?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-FAILURE_CTQ-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against failure_ctq.schema.json.",
+  "result": "Critical failure boundaries recorded with their CTQs.",
+  "decision": "GO",
+  "next_action": "Use the recorded boundaries as the archive's critical failure boundaries.",
+  "challenge_reference": "UNROUTED:PGD-REF-001",
+  "failure_id": "FAIL-PGD-REF-001",
+  "failure_mode": "Grease hardening with a start-up torque rise.",
+  "mechanism": "Under-milled soap structure collapses and the base oil separates.",
+  "failure_diagnosis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: soap fibre structure is under-developed for the duty.",
+  "root_cause_hypotheses": [
+    "Insufficient milling energy",
+    "Base-oil solvency too low"
+  ],
+  "lubricant_contribution": "The lubricant structure, not the machine, drives the failure.",
+  "ctqs": [
+    {
+      "ctq_id": "CTQ-PGD-REF-001",
+      "classification": "CTQ",
+      "observable": "Start-up torque",
+      "specification_limit": {
+        "value": 0.03,
+        "unit": "Nm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "fixture-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "fixture-v1"
+      },
+      "engineering_risk_limit": {
+        "value": 0.05,
+        "unit": "Nm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "fixture-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "fixture-v1"
+      },
+      "test_references": [
+        "TM-PGD-REF-001"
+      ],
+      "evidence_required": [
+        "E-CTQ-REF-001"
+      ]
+    }
+  ],
+  "test_chain": [
+    "TM-PGD-REF-001"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact.json",
+  "sample_artifact": "sample-artifact.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-DERIVED-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this request tries to declare the aggregate verdict and the bench gate by hand so a failed index stays invisible.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-DERIVED-001",
+    "sample_reference": "SMP-PG-B3-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-DERIVED-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-DERIVED-002",
+        "test_name": "DROPPING_POINT",
+        "value": 150,
+        "unit": "degC",
+        "limit": "180 min",
+        "verdict": "FAIL"
+      }
+    ],
+    "measurement_replicates": 3,
+    "overall_verdict": "PASS",
+    "gate_to_bench": "RELEASED"
+  }
+}

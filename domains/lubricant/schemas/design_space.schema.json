@@ -18,7 +18,16 @@
           "lower_bound": { "$ref": "common.schema.json#/$defs/measurement" },
           "upper_bound": { "$ref": "common.schema.json#/$defs/measurement" },
           "constraint_rationale": { "type": "string", "minLength": 1 },
-          "constraint_role": { "enum": ["MIXTURE_CLOSED", "INDEPENDENT"] }
+          "constraint_role": { "enum": ["MIXTURE_CLOSED", "INDEPENDENT"] },
+          "material_reference": {
+            "description": "Reference to the material object (material_id) this variable ranges over. A bare name string is not a material record: without the referenced object there is no supplier, lot, chemistry family, or property list, so the variable cannot be compared or reproduced. Optional in the shared contract so the six oil routes keep validating; the PRECISION_GREASE_DEV skill policy layer requires it and requires the referenced material_id to resolve.",
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "description": "Whether this variable is a CHARGED input or a substance the batch is intended to CONTAIN. Grease soap is generated in situ by saponification, so a thickener percentage is a reaction PRODUCT, never a charge: marking a generated product as INPUT_MATERIAL puts a reaction product into the charge-closure arithmetic, where it does not belong. Optional in the shared contract so the six oil routes keep validating.",
+            "enum": ["INPUT_MATERIAL", "REACTION_PRODUCT"]
+          }
         },
         "required": ["variable_id", "variable_type", "lower_bound", "upper_bound", "constraint_rationale"],
         "additionalProperties": false
@@ -26,9 +35,59 @@
     },
     "ctq_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "qualified_test_method_references": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-    "constraints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "constraints": {
+      "description": "Declared constraints on the space. Both forms are accepted: the legacy free-text string, and the structured object form that names what kind of constraint it is. MIXTURE_CLOSURE_INPUTS closes the CHARGE only - on an in-situ grease formula a 100 % charge closure does not hold for what determines the product, because the charged fatty acid and base are not the substances the batch contains. FEASIBILITY_STRUCTURAL records that some combinations simply do not form a stable grease (non-convex and possibly disconnected feasible sets).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "anyOf": [
+          { "type": "string", "minLength": 1 },
+          { "$ref": "#/$defs/constraint_object" }
+        ]
+      }
+    },
+    "baseline_process_reference": {
+      "description": "The process baseline held fixed for this iteration round. If the process changed, comparing formulae is invalid: two fractions lists run over different kettle settings are not the same experiment. Optional in the shared contract so the six oil routes keep validating; the PRECISION_GREASE_DEV skill policy layer requires it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "feasibility_regions": {
+      "description": "Structurally feasible regions of the space, for the case bounds cannot express: some soap/oil combinations simply do not form a stable grease, and the feasible set may be non-convex or disconnected. Optional in the shared contract so the six oil routes keep validating.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/feasibility_region" }
+    },
     "process_reference": { "type": "string", "minLength": 1 }
   },
   "required": ["artifact_type", "design_space_id", "scope", "variables", "ctq_references", "qualified_test_method_references", "constraints"],
-  "unevaluatedProperties": false
+  "unevaluatedProperties": false,
+  "$defs": {
+    "constraint_object": {
+      "description": "One structured constraint. kind states what the expression means, rationale states why the bound exists, and evidence_id names the record it rests on.",
+      "type": "object",
+      "properties": {
+        "constraint_id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["BOUND", "MIXTURE_CLOSURE_INPUTS", "FEASIBILITY_STRUCTURAL"] },
+        "expression": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 }
+      },
+      "required": ["constraint_id", "kind", "expression", "rationale"],
+      "additionalProperties": false
+    },
+    "feasibility_region": {
+      "description": "One declared feasible region. convexity records whether the region is convex, and connected records whether a single region describes one continuous set, so a disconnected feasible set is written as more than one region rather than as a box that silently claims the gap between them.",
+      "type": "object",
+      "properties": {
+        "region_id": { "type": "string", "minLength": 1 },
+        "expression": { "type": "string", "minLength": 1 },
+        "convexity": { "enum": ["CONVEX", "NON_CONVEX"] },
+        "connected": { "type": "boolean" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 }
+      },
+      "required": ["region_id", "expression", "convexity", "connected", "rationale"],
+      "additionalProperties": false
+    }
+  }
 }

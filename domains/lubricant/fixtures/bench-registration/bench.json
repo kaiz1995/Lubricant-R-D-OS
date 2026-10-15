@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench",
+  "project_id": "PGD-B1-001",
+  "stage": "BENCH_RESOURCE_REGISTERED",
+  "evidence_scope": "SYNTHETIC",
+  "source": "Synthetic bench-registration fixture",
+  "evidence_id": "EV-BENCH-PGD-B1-01",
+  "decision_question": "Is the supplied input sufficient to register bench BENCH-PGD-B1-01 and open its round plan?",
+  "hypothesis": "BENCH-PGD-B1-01 records its availability windows, cycle time and per-run cost sufficient for later slot planning, and CMP-PGD-B1-001 records its rounds, their stop states and its paired design, so the inner loop can run up to 12 bench rounds.",
+  "uncertainty": "Supplied availability, cycle time and cost are not independently verified; recorded ASSUMED evidence remains assumed and this record does not reserve capacity, book a run, or establish a capability conclusion. The plan's rounds are recorded as they happened, and a later round's outcome is not known before it runs.",
+  "decision_rule": "Register the bench and open its round plan only when availability windows, a positive cycle time, per-run cost with source, a recorded pairing design, and evidence without GAP are supplied; the cross-field ledger rules (current_iteration within max_iterations, only CONTINUE authorizes another round, exit-round-only model/next-batch references) are enforced by the validator.",
+  "result": "BENCH-PGD-B1-01 is sufficient to register a bench record; available_bench_slots=12; no round recorded yet (the ledger stands at round 1 of 12, max_iterations=12, defaulted from contracts/state-machine.json).",
+  "decision": "GO",
+  "next_action": "Open bench round 1 of 12 with the pairing design recorded above.",
+  "evidence": [
+    {
+      "evidence_id": "EV-BENCH-PGD-B1-01",
+      "statement": "Synthetic bench availability supplied for contract validation only; not a booked or qualified capacity.",
+      "source": "Synthetic bench fixture (fixtures/bench-registration/bench-input.json)",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "EV-CMP-PGD-B1-001",
+      "statement": "Synthetic round plan supplied for contract validation only; the ledger is opened before round 1 runs (W0) and no round is recorded yet.",
+      "source": "Synthetic round-plan fixture (fixtures/bench-registration/bench-input.json)",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-CONTRACT-CAMPAIGN-MAX-ITERATIONS",
+      "statement": "max_iterations=12 was defaulted from contracts/state-machine.json (max_iterations); no explicit cap was supplied in the campaign block, so the plan is bounded by the contract's published figure rather than by an invented one.",
+      "source": "contracts/state-machine.json",
+      "status": "OBSERVED"
+    }
+  ],
+  "available_bench_slots": 12,
+  "bench_id": "BENCH-PGD-B1-01",
+  "project_reference": "PGD-B1-001",
+  "bench_name": "Precision-gear grease bench 1 (synthetic fixture)",
+  "location": "Synthetic bench location",
+  "availability_window": [
+    {
+      "window_id": "W-1",
+      "start": "2027-01-01",
+      "end": "2027-07-01"
+    },
+    {
+      "window_id": "W-2",
+      "start": "2027-07-02",
+      "end": "2027-12-31"
+    }
+  ],
+  "cycle_days": 30,
+  "cost_per_run": {
+    "value": 12000,
+    "unit": "CNY/run",
+    "source": "Synthetic bench quote (fixture; not a real quotation)"
+  },
+  "campaign_id": "CMP-PGD-B1-001",
+  "max_iterations": 12,
+  "current_iteration": 1,
+  "iterations": [],
+  "pairing_design": {
+    "paired": true,
+    "description": "Synthetic fixture: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels; at a fixed sigma, pairing buys more resolution than measuring sigma precisely."
+  }
+}

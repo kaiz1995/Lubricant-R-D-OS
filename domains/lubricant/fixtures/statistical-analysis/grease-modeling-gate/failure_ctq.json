@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "failure_ctq",
+  "project_id": "PGD-B1-001",
+  "stage": "FAILURE_CTQ_DEFINED",
+  "decision_question": "What CTQ and test chain address the grease-hardening failure risk?",
+  "hypothesis": "Grease hardening requires controlled low-temperature torque evidence.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: field correlation remains to be qualified.",
+  "evidence": [
+    {
+      "evidence_id": "E-FG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: soap-fibre structure is a duty-derived challenge.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Do not act on formulation until diagnosis, hypothesis and lubricant contribution are recorded.",
+  "result": "A testable CTQ chain is defined; no performance conclusion is made.",
+  "decision": "GO",
+  "next_action": "Qualify the proposed test method.",
+  "challenge_reference": "CHG-PG-B1-001",
+  "failure_id": "FM-PG-B1-001",
+  "failure_mode": "Grease hardening under micro-oscillation",
+  "mechanism": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: soap-fibre structure change can raise low-temperature starting torque.",
+  "failure_diagnosis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: soap-fibre structure change is assessed as a hardening contributor.",
+  "root_cause_hypotheses": [
+    "Hypothesis: under-milling leaves a soap structure that hardens in service."
+  ],
+  "lubricant_contribution": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: thickener structure may influence low-temperature torque and remains pending verification.",
+  "ctqs": [
+    {
+      "ctq_id": "CTQ-PG-B1-001",
+      "classification": "CTQ",
+      "criteria_layer": "BENCH",
+      "observable": "Low-temperature starting torque",
+      "specification_limit": {
+        "value": 120,
+        "unit": "mNm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "torque-bench-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "baseline-v1"
+      },
+      "engineering_risk_limit": {
+        "value": 100,
+        "unit": "mNm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "risk-model-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "baseline-v1"
+      },
+      "test_references": ["TM-PG-B1-001"],
+      "evidence_required": ["qualified test method", "reference material comparison"]
+    }
+  ],
+  "test_chain": ["TM-PG-B1-001"]
+}

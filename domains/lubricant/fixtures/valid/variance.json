@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "variance",
+  "project_id": "PGD-001",
+  "stage": "VARIANCE_ASSESSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the difference between the A and B arm of campaign iteration 1 real?",
+  "hypothesis": "The observed arm difference exceeds what the recorded bench sigma can explain.",
+  "uncertainty": "The estimate rests on a small number of bench rounds and one censored observation.",
+  "evidence": [
+    {
+      "evidence_id": "E-VA-001",
+      "statement": "Synthetic variance components recorded for schema validation only; this is not product evidence.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Report the engine verdict as computed: UNDERPOWERED is never collapsed into NO_DETECTABLE_DIFFERENCE.",
+  "result": "The engine reports a consistent arm difference within the recorded variance structure.",
+  "decision": "UNDECIDED",
+  "next_action": "Carry the verdict into the campaign stop_state decision for iteration 1.",
+  "variance_id": "VAR-001",
+  "campaign_reference": "CMP-001",
+  "iteration": 1,
+  "replicate_structure": [
+    { "level": "MEASUREMENT", "n": 3, "group_reference": "RUN-SYN-001" },
+    { "level": "BENCH", "n": 2, "group_reference": "BENCH-SZ-01" },
+    { "level": "BATCH", "n": 2, "group_reference": "BATCH-SYN-001" }
+  ],
+  "censoring": [
+    {
+      "observation_reference": "RUN-SYN-001",
+      "event_occurred": false,
+      "event_time": null,
+      "censoring_type": "RIGHT",
+      "stop_reason": "ADMINISTRATIVE_10H_END"
+    }
+  ],
+  "intervention_events": [
+    {
+      "event_id": "IE-001",
+      "description": "Synthetic fixture: bench recalibration between the two arms.",
+      "at": "2026-09-01T09:00:00+08:00",
+      "confounds": false
+    }
+  ],
+  "components": {
+    "sigma_meas": 0.4,
+    "sigma_meas_ci_low": 0.25,
+    "sigma_meas_ci_high": 0.7,
+    "sigma_bench": 1.1,
+    "sigma_bench_ci_low": 0.7,
+    "sigma_bench_ci_high": 1.8,
+    "sigma_batch": 0.6,
+    "sigma_batch_ci_low": 0.3,
+    "sigma_batch_ci_high": 1.2,
+    "sigma_total": 1.34,
+    "sigma_total_ci_low": 0.9,
+    "sigma_total_ci_high": 2.0
+  },
+  "effect_size": 1.6,
+  "power": 0.82,
+  "k_ratio": 1.12,
+  "sigma_max_requirement": 0.5,
+  "resolution_table": [
+    { "replicates_per_group": 3, "detectable_difference": 1.5, "detectable": true, "note": "Synthetic resolution row for schema validation only." },
+    { "replicates_per_group": 9, "detectable_difference": 0.87, "detectable": true, "note": "Synthetic resolution row for schema validation only." }
+  ],
+  "verdict": "CONSISTENT_DIFFERENCE",
+  "computed_by": "ENGINE",
+  "frozen_sigma_reference": "SIGMA-FREEZE-SYN-001",
+  "preregistered_delta": 1.5
+}

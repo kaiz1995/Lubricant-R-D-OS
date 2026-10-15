@@ -1,0 +1,48 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "material",
+  "project_id": "PGD-REF-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Which material does this record register?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-MATERIAL-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against material.schema.json.",
+  "result": "One base-oil material registered with its identity and properties.",
+  "decision": "GO",
+  "next_action": "Use the record as the archive's material knowledge.",
+  "material_id": "MAT-PGD-REF-BO-001",
+  "category": "BASE_OIL",
+  "identity": {
+    "supplier": "Synthetic supplier",
+    "trade_name": "Synthetic PAO-6",
+    "lot": "LOT-PGD-REF-001"
+  },
+  "chemistry": {
+    "base_oil_family": "PAO",
+    "notes": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: synthetic base oil."
+  },
+  "properties": [
+    {
+      "property_id": "kv100",
+      "value": 6.0,
+      "unit": "mm2/s",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "evidence_id": "E-MATERIAL-REF-001",
+      "status": "ASSUMED"
+    }
+  ],
+  "cost": {
+    "value": 120,
+    "unit": "CNY/kg",
+    "price_timestamp": "2026-01-01"
+  }
+}

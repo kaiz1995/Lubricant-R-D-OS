@@ -1,58 +1,73 @@
 ---
 name: hello-lubricant
-description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 11 R&D stages, and guides project setup. Use when user mentions "hello-lubricant", "润滑材料开发帮助", "研发体系导引", "环境检查", "润滑材料流程说明", or wants an overview of the lubricant R&D pipeline.
+description: Interactive orientation and workspace diagnostic smoke skill for the Lubricant R&D Domain Pack. Inspects environment readiness, explains the 27-stage contract and its 7 project-type routes, and guides project setup. Use when user mentions "hello-lubricant", "润滑材料开发帮助", "研发体系导引", "环境检查", "润滑材料流程说明", or wants an overview of the lubricant R&D pipeline.
 ---
 
 # Hello Lubricant (Orientation & Diagnostic Smoke Skill)
 
 Orientation, environment diagnostic, and interactive onboarding guide for the Lubricant R&D Domain Pack.
-Provides a comprehensive roadmap of the 11-stage forward development lifecycle and validates local schema/toolchain readiness.
+Provides a roadmap of the shared stage contract `contracts/state-machine.json` (currently v1.0.0): 27 stages,
+7 project-type routes, 1 on-demand stage and 1 inner-loop ring. Validates local schema/toolchain readiness.
 
 ---
 
 ## 1. Domain Pack Architecture Overview
 
-The Lubricant R&D Domain Pack implements evidence-bound, scientific lubricant engineering across 11 stages:
+The Lubricant R&D Domain Pack implements evidence-bound, scientific lubricant engineering on the shared
+stage contract `contracts/state-machine.json`. Its 27 stages break down as: 23 sit on the 7 `type_routes`,
+1 is on-demand by design (`PROCESS_WINDOW_DEFINED`, on no route), and `DRAFT` / `FROZEN` / `CLOSED` are
+lifecycle stages.
+
+The full forward-development route (`NEW_PRODUCT`) walks 12 stages:
 
 ```
-[Stage 0: project-definition]      -> 立项与 6 类研发性质确认 (PROJECT_DEFINED)
+[Stage 1: project-definition]       -> 立项与研发性质确认 (PROJECT_DEFINED)
   ↓
-[Stage 1: duty-definition]         -> 7 项工况剖面录入与声明 (DUTY_DEFINED)
+[Stage 2: duty-definition]          -> 7 项工况剖面录入与声明 (DUTY_DEFINED)
   ↓
-[Stage 2: duty-challenge-analysis] -> 工况挑战图谱映射 (CHALLENGES_DEFINED)
+[Stage 3: duty-challenge-analysis]  -> 工况挑战图谱映射 (CHALLENGES_DEFINED)
   ↓
-[Stage 3: failure-ctq-analysis]    -> 失效假设与双限 CTQ (FAILURE_CTQ_DEFINED)
+[Stage 4: failure-ctq-analysis]     -> 失效假设与双限 CTQ (FAILURE_CTQ_DEFINED)
   ↓
-[Stage 3.5: test-method-qualification] -> 台架方法区分度/预测度评定 (TEST_METHODS_QUALIFIED)
+[Stage 5: test-method-qualification] -> 台架方法区分度/预测度评定 (TEST_METHODS_QUALIFIED)
   ↓
-[Stage 4: formulation-design]      -> 配方设计空间与质量守恒 (DESIGN_SPACE_DEFINED)
+[Stage 6: formulation-design]       -> 配方设计空间与质量守恒 (DESIGN_SPACE_DEFINED)
   ↓
-[Stage 5: doe-design]              -> 受限混料实验规划 (EXPERIMENT_DESIGNED)
+[Stage 7: doe-design]               -> 受限混料实验规划 (EXPERIMENT_DESIGNED)
   ↓
-[Stage 6: experiment-import]       -> 物理台架实测数据接入 (EXPERIMENT_RUNNING)
+[Stage 8: experiment-import]        -> 物理台架实测数据接入 (EXPERIMENT_RUNNING)
   ↓
-[Stage 7: statistical-analysis]    -> ANOVA 响应面拟合建模 (MODEL_BUILT)
+[Stage 9: statistical-analysis]     -> ANOVA 响应面拟合建模 (MODEL_BUILT)
   ↓
-[Stage 8: optimization]            -> 多目标权衡与帕累托优化 (OPTIMIZED)
+[Stage 10: optimization]            -> 多目标权衡与帕累托优化 (OPTIMIZED)
   ↓
-[Stage 9: gate-review]             -> 综合门禁决议评审与冻结 (VERIFIED)
+[Stage 11: gate-review]             -> 综合门禁决议评审与冻结 (VERIFIED)
+  ↓
+[Stage 12: application-validation]  -> 应用工件准入复检 (APPLIED)
 ```
 
 ---
 
-## 2. Supported Development Routes (6 Project Types)
+## 2. Supported Development Routes (7 Project Types)
 
-1. **NEW_PRODUCT** (新产品正向开发): 完整经历 11 步研发全链条。
-2. **IMPROVEMENT** (已有产品性能优化): 跳过工况定义，由失效分析切入瓶颈指标。
-3. **COST_DOWN** (降本替代): 聚焦非劣效性 (Non-inferiority)，保留 CTQ 红线等效验证。
-4. **CUSTOMIZATION** (客户定制): 客户专属工况驱动，对齐技术协议与指定台架。
-5. **EXPLORATION** (机理/平台型探索): 科学假设驱动，允许失败，探究组分响应规律。
-6. **PROCESS_ROBUSTNESS** (工艺稳健性): 配方已定，只考工艺——跳过工况定义与挑战推导，不做多目标优化，以工艺窗口为主输出，末尾经 `APPLIED` 证明批次一致性。
+Route order and length are published by the contract — print a route instead of retyping it:
 
-用 `--list-stages <TYPE>` 可打印任一路线的完整段序列，例如：
 ```bash
 python skills/lubricant-rd-agent/scripts/route_step.py --list-stages PROCESS_ROBUSTNESS
+python skills/lubricant-rd-agent/scripts/route_step.py --list-loop-edges PRECISION_GREASE_DEV
 ```
+
+1. **NEW_PRODUCT** (新产品正向开发): 完整经历 12 步研发全链条。
+2. **IMPROVEMENT** (已有产品性能优化): 跳过工况定义，由失效分析切入瓶颈指标（10 步）。
+3. **COST_DOWN** (降本替代): 聚焦非劣效性 (Non-inferiority)，保留 CTQ 红线等效验证（8 步）。
+4. **CUSTOMIZATION** (客户定制): 客户专属工况驱动，对齐技术协议与指定台架（8 步）。
+5. **EXPLORATION** (机理/平台型探索): 科学假设驱动，允许失败，探究组分响应规律（7 步）。
+6. **PROCESS_ROBUSTNESS** (工艺稳健性): 配方已定，只考工艺——跳过工况定义与挑战推导，不做多目标优化，以工艺窗口为主输出，末尾经 `APPLIED` 证明批次一致性（8 步）。
+7. **PRECISION_GREASE_DEV** (精密传动脂开发): 第 7 条路线，**19 个 stage / 17 个工艺步骤**，分三环 —— 外环配方与工艺设计（8 步）、内环台架迭代（5 步，循环 N 轮）、收口（4 步）。内环只有两条契约声明的回边（`SCREENING_PASSED → BATCH_PRODUCED` REWORK；`VARIANCE_ASSESSED → BATCH_PRODUCED` LOOP_BACK），轮次上限 `max_iterations = 12`。**环间回退（如台架发现方法不可靠、判据不可达）系统仍 `DENY`**：没有 `BACKTRACK` 通道，只能人工判断 + 系统外决策 + 手工构造新工件（不留系统痕迹）。
+
+Two capabilities sit outside every route: `PROCESS_WINDOW_DEFINED` is an on-demand stage on no route
+(produced by `process-scale-up`, handing off to `VERIFIED`), while the grease route's step 15 uses its own
+`PROCESS_SCALE_VALIDATED` and never reuses it.
 
 ---
 

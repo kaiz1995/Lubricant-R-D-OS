@@ -1,0 +1,114 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "design_space",
+  "project_id": "PGD-B2-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the supplied input sufficient to define testable design space DS-PG-B2-001?",
+  "hypothesis": "DS-PG-B2-001 records supplied variables, bounds, constraints, CTQ links, and qualified-method links sufficient for later testing.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: supplied bounds, constraints, sources, and provenance are not independently verified; recorded ASSUMED evidence remains assumed and this record does not establish formula, experiment, performance, cost, or optimization conclusions.",
+  "evidence": [
+    {
+      "evidence_id": "E-DS-PG-B2-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: bounds, the charge-closure basis, and the structural feasibility limit are supplied for contract validation only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Define the design space only when upstream links, complete bound metadata, ordered same-unit bounds, constraints, and evidence without GAP are supplied.",
+  "result": "DS-PG-B2-001 is sufficient to define a testable design space from supplied input only.",
+  "decision": "GO",
+  "next_action": "Retain DS-PG-B2-001 as the supplied design-space record for the batch-2 campaign.",
+  "design_space_id": "DS-PG-B2-001",
+  "scope": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: precision-gear grease formulation and process window for the step 9 batch contract.",
+  "variables": [
+    {
+      "variable_id": "VAR-SOAP-CONCENTRATION",
+      "variable_type": "FORMULATION_VARIABLE",
+      "material_reference": "MAT-PG-FA-B2-001",
+      "role": "REACTION_PRODUCT",
+      "constraint_role": "INDEPENDENT",
+      "lower_bound": {
+        "value": 8.0,
+        "unit": "mass percent",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "baseline-v1"
+      },
+      "upper_bound": {
+        "value": 14.0,
+        "unit": "mass percent",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "baseline-v1"
+      },
+      "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: below 8 % the soap network does not form a stable grease, above 14 % the low-temperature torque requirement is at risk."
+    },
+    {
+      "variable_id": "VAR-BASE-OIL-FRACTION",
+      "variable_type": "MATERIAL_FAMILY",
+      "material_reference": "MAT-PG-BO-B2-001",
+      "role": "INPUT_MATERIAL",
+      "lower_bound": {
+        "value": 80.0,
+        "unit": "mass percent",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "LOT-SYN-PG-B2-001",
+        "formula_version": "baseline-v1"
+      },
+      "upper_bound": {
+        "value": 92.0,
+        "unit": "mass percent",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "LOT-SYN-PG-B2-001",
+        "formula_version": "baseline-v1"
+      },
+      "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: charged base oil fraction; it is a real charge, so it closes the charge side."
+    },
+    {
+      "variable_id": "VAR-SOAP-HOLD-TIME",
+      "variable_type": "PROCESS_VARIABLE",
+      "lower_bound": {
+        "value": 20,
+        "unit": "min",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "upper_bound": {
+        "value": 60,
+        "unit": "min",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "design-space-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      },
+      "constraint_rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the soap hold time is the step 9 SAPONIFICATION hold and is recorded in the batch trajectory."
+    }
+  ],
+  "ctq_references": ["CTQ-PG-B2-001"],
+  "qualified_test_method_references": ["TM-PG-B2-001"],
+  "constraints": [
+    {
+      "constraint_id": "CON-MIXTURE-CLOSURE",
+      "kind": "MIXTURE_CLOSURE_INPUTS",
+      "expression": "charged base oil + charged fatty acid + charged base + additive package = 100 mass percent of the CHARGE",
+      "rationale": "The charge closes on the charged inputs only; the soap the batch contains is generated in situ by saponification and is not a charged fraction.",
+      "evidence_id": "E-DS-PG-B2-001"
+    },
+    {
+      "constraint_id": "CON-FEASIBILITY-STRUCTURAL",
+      "kind": "FEASIBILITY_STRUCTURAL",
+      "expression": "soap concentration below 8 mass percent does not form a stable grease network",
+      "rationale": "The feasible set is not the whole box: some soap/oil combinations simply do not form a stable grease.",
+      "evidence_id": "E-DS-PG-B2-001"
+    }
+  ],
+  "baseline_process_reference": "PROC-PG-B2-BASELINE",
+  "process_reference": "PROC-PG-B2-001"
+}

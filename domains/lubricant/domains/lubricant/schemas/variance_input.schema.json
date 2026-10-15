@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/domains/lubricant/schemas/variance_input.schema.json",
+  "title": "Variance input",
+  "description": "Input contract for the step-12 variance assessment (is the difference real?). It exists because statistics_input.schema.json cannot carry the four things step 12 needs: replicate structure, censoring flags, a frozen sigma reference and a pre-registered delta. Three data-quality rules are structural here, taken from the WGO_001 empirical lessons: (1) a censoring time is never an endpoint, so every censored observation must declare event_occurred / event_time / censoring_type and a non-empty stop_reason; (2) material identity must be verifiable, so every observation traces to sample_id + batch_id; (3) confounders must be excludable, so intervention windows are declared explicitly. Censoring is rejected fail-closed: an observation censored without a stop_reason is refused rather than estimated around.",
+  "type": "object",
+  "properties": {
+    "input_type": {
+      "const": "VARIANCE_ANALYSIS"
+    },
+    "analyses": {
+      "description": "Which step-12 analyses to run. VARIANCE_COMPONENTS is the nested decomposition, POWER_ANALYSIS the power / required-n block, CONSISTENCY_CHECK the same-arm replicate agreement rule.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "VARIANCE_COMPONENTS",
+          "POWER_ANALYSIS",
+          "CONSISTENCY_CHECK"
+        ]
+      }
+    },
+    "replicate_structure": {
+      "description": "Declared nesting of the runs, one entry per level. The declared n is what the plan assumed; the engine reports it next to the observed counts so a shortfall is visible rather than silent.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "enum": [
+              "MEASUREMENT",
+              "BENCH",
+              "BATCH"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "group_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sample_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "batch_reference": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "level",
+          "n",
+          "group_reference"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "observations": {
+      "description": "The runs being assessed. sample_id + batch_id are required on every entry: an observation that cannot be traced to a specific sample from a specific batch cannot be used as a replicate at all. event_occurred is required because same-arm outcome agreement is judged on it, and `at` is how an observation is tested against intervention windows.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "observation_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "level": {
+            "enum": [
+              "MEASUREMENT",
+              "BENCH",
+              "BATCH"
+            ]
+          },
+          "group_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sample_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "batch_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "run_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "number"
+          },
+          "at": {
+            "description": "ISO-8601 instant of the observation. Required in practice whenever a confounds=true intervention exists, because the engine must be able to prove the observation is outside the window.",
+            "type": "string",
+            "minLength": 1
+          },
+          "event_occurred": {
+            "description": "Whether the failure event happened. Required: same-arm replicates that disagree here are REPLICATE_INCONSISTENT regardless of the numbers.",
+            "type": "boolean"
+          },
+          "event_time": {
+            "description": "Event time when the event occurred; null when it did not. A censoring time is never recorded here.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "observation_reference",
+          "level",
+          "group_reference",
+          "sample_id",
+          "batch_id",
+          "run_reference",
+          "value",
+          "event_occurred",
+          "event_time"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "censoring": {
+      "description": "One entry per observation whose outcome is unknown. stop_reason is required whenever censoring_type is not NONE, so a censored value can never be presented without its cause; a censored observation missing it is rejected fail-closed.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "observation_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "event_occurred": {
+            "type": "boolean"
+          },
+          "event_time": {
+            "description": "Null for a censored observation: the censoring time must not be recorded as an endpoint.",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "censoring_type": {
+            "enum": [
+              "RIGHT",
+              "LEFT",
+              "INTERVAL",
+              "NONE"
+            ]
+          },
+          "stop_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "observation_reference",
+          "event_occurred",
+          "event_time",
+          "censoring_type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "intervention_events": {
+      "description": "Non-protocol events that could confound the comparison. An entry with confounds=true defines a window [at, until]; observations inside it are flagged and excluded from the variance estimate. Omit `until` for an open-ended window, which is the conservative reading.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "until": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confounds": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "event_id",
+          "description",
+          "at",
+          "confounds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "comparison_arms": {
+      "description": "The two arms whose difference is being judged. Omitted when only the nested decomposition is wanted; without it no difference can be claimed, and the verdict then cannot be NO_DETECTABLE_DIFFERENCE.",
+      "type": "object",
+      "properties": {
+        "arm_a_group_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arm_b_group_reference": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "arm_a_group_reference",
+        "arm_b_group_reference"
+      ],
+      "additionalProperties": false
+    },
+    "frozen_sigma_reference": {
+      "description": "Pointer to the step-5 method-characterisation record the frozen sigma came from. Sigma is an asset that accumulates from blank reference samples included in every round; step 12 compares against it and does not re-estimate it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "frozen_sigma": {
+      "description": "The frozen noise baseline imported from method characterisation. Preferred over the freshly estimated sigma for the power calculation, because estimating sigma needs an order of magnitude more data than using a known one.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "control_band": {
+      "description": "Control band for the same frozen baseline, when the method is characterised by a band rather than a single sigma.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "preregistered_delta": {
+      "description": "The smallest difference worth detecting, pre-registered at step 3 before the runs. Required in practice for POWER_ANALYSIS: without a pre-registered delta no power can be computed, and a design whose power is unknown cannot be declared free of a difference.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "k_required": {
+      "description": "Frozen separation factor for SIGMA_MAX = delta / k. Defaults to 3. When k < 3 the design rule is NOT to add replicates but to change the method or the criterion.",
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 3
+    },
+    "alpha": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 1,
+      "default": 0.05
+    },
+    "target_power": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 1,
+      "default": 0.8
+    },
+    "resolution_n_values": {
+      "description": "Replicate counts to tabulate in the resolution table. Defaults to 2, 3, 6, 12 (the pack's step-12 table).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    }
+  },
+  "required": [
+    "input_type",
+    "analyses",
+    "replicate_structure",
+    "observations",
+    "censoring",
+    "intervention_events"
+  ],
+  "additionalProperties": false
+}

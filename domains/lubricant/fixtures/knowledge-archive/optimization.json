@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "optimization",
+  "project_id": "PGD-REF-001",
+  "stage": "NON_INFERIORITY_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Which optimization request was registered for this round?",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-OPTIMIZATION-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against optimization.schema.json.",
+  "result": "Optimization request registered for the precision-grease round.",
+  "decision": "GO",
+  "next_action": "Carry the registered request into the knowledge archive.",
+  "optimization_id": "OPT-PGD-REF-001",
+  "model_reference": "MODEL-PGD-REF-001",
+  "objective_type": "CONSTRAINT_SATISFACTION",
+  "objectives": [
+    {
+      "response_reference": "CTQ-PGD-REF-001",
+      "direction": "MINIMIZE",
+      "criterion": "Start-up torque at the machine must not regress."
+    }
+  ],
+  "methods": [
+    "NON_INFERIORITY"
+  ],
+  "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE"
+}

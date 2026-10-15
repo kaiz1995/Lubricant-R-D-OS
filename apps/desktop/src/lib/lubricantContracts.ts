@@ -3,7 +3,8 @@
  *
  * 派生自：
  *   - contracts/state-machine.json 的 stages / type_routes / on_demand_stages
- *     （16 段、6 类路由 + 1 个按需阶段）
+ *     （v1.0.0：27 段、7 类路由 + 1 个按需阶段；第 7 类 PRECISION_GREASE_DEV
+ *     是精密传动脂开发路线，独占 11 个新 stage）
  *   - skills/lubricant-rd-agent/scripts/route_step.py 的 ROUTE_TABLE（skill → stage 顺序）
  *   - schemas/<artifact_type>.schema.json 的 artifact_type const 与 required
  *   - fixtures/valid/*.json 的文件名
@@ -17,7 +18,8 @@ export type ProjectType =
   | "COST_DOWN"
   | "CUSTOMIZATION"
   | "EXPLORATION"
-  | "PROCESS_ROBUSTNESS";
+  | "PROCESS_ROBUSTNESS"
+  | "PRECISION_GREASE_DEV";
 
 /** STAGE_CHAIN 覆盖的 stage 子集（含不在任何路由上的按需阶段）。 */
 export type ChainStage =
@@ -33,14 +35,41 @@ export type ChainStage =
   | "OPTIMIZED"
   | "PROCESS_WINDOW_DEFINED"
   | "VERIFIED"
-  | "APPLIED";
+  | "APPLIED"
+  // v0.8.0 精密传动脂（PRECISION_GREASE_DEV）路线的新 stage（v1.0.0 合并台架
+  // 资源与轮次计划两步后共 11 个）。
+  | "FAILURE_MECHANISM_DEFINED"
+  | "REFERENCE_MATERIAL_RESOLVED"
+  | "BENCH_RESOURCE_REGISTERED"
+  | "BATCH_PRODUCED"
+  | "SCREENING_PASSED"
+  | "BENCH_TESTED"
+  | "VARIANCE_ASSESSED"
+  | "NEXT_BATCH_DECIDED"
+  | "NON_INFERIORITY_PASSED"
+  | "PROCESS_SCALE_VALIDATED"
+  | "KNOWLEDGE_ARCHIVED";
 
 /** 契约绑定部分：与领域包一一对应，不得随意改动。 */
 export interface StageContract {
   /** STAGE_CHAIN 中的固定序号，1-based（含按需阶段）。 */
   readonly chainIndex: number;
-  /** 领域包技能目录名，用于提示词路由。 */
+  /**
+   * 领域包技能目录名，用于提示词路由。
+   *
+   * 注意这是**准入技能**（route_step.py 的 ROUTE_TABLE 是「谁考核准入」的表）：
+   * APPLIED 的准入技能是 application-validation，但产出 application.json 的是
+   * application-definition。产出者由 producerSkill 并排登记（F-3 的
+   * PRODUCER_SKILL_FOR_STAGE），不塞进 ROUTE_TABLE —— 一个 stage 只有一个路由目标。
+   */
   readonly skill: string;
+  /**
+   * 产出工件的技能目录名。缺省时等于 skill。
+   * 只在产出者与准入者不是同一个目录时填写（当前仅第 18 步 APPLIED）。
+   */
+  readonly producerSkill?: string;
+  /** 准入考核该步的技能目录名；存在时提示词里显式说明。 */
+  readonly admissionSkill?: string;
   readonly stage: ChainStage;
   /** schemas/<artifactType>.schema.json 的 artifact_type const。 */
   readonly artifactType: string;
@@ -52,6 +81,15 @@ export interface StageContract {
   readonly criteria: readonly string[];
 }
 
+/**
+ * 两条 CTQ 链（油品 FAILURE_CTQ_DEFINED / 脂路线 FAILURE_MECHANISM_DEFINED）
+ * 共用的方法引用口径 —— 与领域包 I-5 的 `PENDING:<method_id>` 字面量约定一致：
+ * 第 3 步冻结 CTQ 时方法还不存在，写 `PENDING:<method_id>`；方法资格确认后
+ * 回填裸 id。两条 criteria 引用同一常量，文本逐字一致由结构保证。
+ */
+const CTQ_METHOD_REFERENCE_RULE =
+  "test_chain 指向测试方法：已判定的写裸 method_id，未判定的写 PENDING:<method_id>，在方法资格确认后回填";
+
 export const STAGE_CHAIN: readonly StageContract[] = [
   {
     chainIndex: 1,
@@ -60,10 +98,15 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     artifactType: "project",
     file: "project.json",
     titleZh: "立项与项目定义",
-    description: "确定项目代号、应用场景目标、成本上限约束与团队权责。",
+    description:
+      "按七板块立项：① 项目基本信息与性质 ② 减速器机型与硬件载体 ③ 商业诉求与交付形态 " +
+      "④ 技术攻关焦点 ⑤ 边界与硬约束 ⑥ 成本天花板 ⑦ 成功判据与风险评级。",
     criteria: [
-      "明确应用机型与工况环境",
-      "锁定 target_cost（含单位）",
+      "七板块齐备：基本信息与性质、机型与硬件载体、商业诉求与交付形态、技术攻关焦点、边界与硬约束、成本天花板、成功判据与风险评级",
+      "机型与硬件载体（reducer_model）声明的三个必填子字段齐全：model_size（14/17/20/25/32）、structure_form（CUP/HAT/ULTRA_FLAT/OTHER）、friction_pair_materials（摩擦副材质）",
+      "对标是可选背景（benchmark_products 不填合法，无需豁免理由）；真正的对标在第 4 步参照物卷宗按实物建档",
+      "成本是天花板：cost_position = CEILING（性能与寿命优先，不设主动降本目标）",
+      "成功判据可暂定：success_criteria_status = PROVISIONAL 或 FIXED，暂定态在第 3 步细化",
       "完成立项评审批准",
     ],
   },
@@ -74,10 +117,11 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     artifactType: "duty",
     file: "duty.json",
     titleZh: "严苛工况与指标定义",
-    description: "将机械运转环境转化为润滑材料理化与台架指标规格清单。",
+    description: "将机械运转环境转化为润滑材料理化与台架指标规格清单。精密脂路线的工况剖面是十四维。",
     criteria: [
-      "七类 duty_item 齐备（equipment/operating_conditions/maintenance/temperature/load/contamination/life）",
+      "十四类 duty_item 齐备：油品路线七类（equipment / operating_conditions / maintenance / temperature / load / contamination / life）；精密脂路线另加七类（motion_regime 运动制度 / contact_pair 摩擦副材料 / temperature_and_heat_source 温度与热源 / torque_requirement 启动力矩 / fill_and_assembly 加注与装配 / life_and_maintenance 寿命与维护 / sealing_and_contamination 密封与污染）",
       "每项含 value / source / evidence_id / statement / status",
+      "motion_regime（微振磨损）与 torque_requirement（低温启动扭矩）是脂路线的两个命门维度，不得缺项；可以记 ASSUMED，但必须带 source 与 evidence_id",
       "标注 OBSERVED 与 ASSUMED 的区别",
     ],
   },
@@ -106,7 +150,7 @@ export const STAGE_CHAIN: readonly StageContract[] = [
     criteria: [
       "失效模式与机理一一对应",
       "CTQ 含阈值与单位",
-      "test_chain 指向已确认的测试方法",
+      CTQ_METHOD_REFERENCE_RULE,
     ],
   },
   {
@@ -228,6 +272,11 @@ export const STAGE_CHAIN: readonly StageContract[] = [
   {
     chainIndex: 13,
     skill: "application-validation",
+    // 产出者与准入者不是同一个目录（M4 / F-3）：application.json 由
+    // application-definition 生成，application-validation 只做准入考核。
+    // skill 保持准入技能不动 —— ROUTE_TABLE 的 24 组逐一对应断言钉死它。
+    producerSkill: "application-definition",
+    admissionSkill: "application-validation",
     stage: "APPLIED",
     artifactType: "application",
     file: "application.json",
@@ -240,6 +289,171 @@ export const STAGE_CHAIN: readonly StageContract[] = [
       "bench_references 至少引用一个已登记台架",
     ],
   },
+  /* ---- v0.8.0 精密传动脂路线（PRECISION_GREASE_DEV）独享的 11 个 stage ---- *
+   * v1.0.0 合并台架资源与轮次计划后：前 6 条（14~19）是调和油路线跳过或折叠
+   * 掉的工序，后 5 条（20~24）是内环迭代与知识封存的闭环工序。注意三条**共用
+   * 工件**（跨路线复用，同一条 route 内不会重复出现）：failure_ctq.json（失效
+   * 机制 + CTQ 两段共享）、optimization.json（优化 + 非劣效共享）、
+   * process.json（工艺窗口按需阶段 + 工艺放大共享）。routeFor() 按 stage 取
+   * 契约，共用不影响进度推导。                                              */
+  {
+    chainIndex: 14,
+    skill: "failure-ctq-analysis",
+    stage: "FAILURE_MECHANISM_DEFINED",
+    artifactType: "failure_ctq",
+    file: "failure_ctq.json",
+    titleZh: "失效机制与判据界定",
+    description: "把失效模式落到机理与判据层：每个 CTQ 必须声明它属于筛测、台架还是整机判据。",
+    criteria: [
+      "每条失效模式与机理一一对应，并给出润滑剂贡献路径",
+      "每个 CTQ 声明判据层级（筛测 / 台架 / 整机），禁止混层",
+      "root_cause_hypotheses 与 failure_diagnosis 均有证据，缺证据者显式标 GAP",
+      CTQ_METHOD_REFERENCE_RULE,
+    ],
+  },
+  {
+    chainIndex: 15,
+    skill: "reference-material",
+    stage: "REFERENCE_MATERIAL_RESOLVED",
+    artifactType: "reference",
+    file: "reference.json",
+    titleZh: "参照物卷宗（已知好/坏样）",
+    description: "登记已知好样与已知坏样实物及其历史证据，至少一方 RESOLVED 才可进入方法资格。",
+    criteria: [
+      "known_good / known_bad 至少一方有实物与可追溯来源",
+      "tier 明确（DIRECT_HISTORY / LONG_RUN_NO_EVENT / UNRESOLVED）",
+      "历史证据与参照物绑定，每条可回指 evidence_id",
+      "downstream_flag 如实反映区分性证据是否齐备",
+    ],
+  },
+  {
+    chainIndex: 16,
+    skill: "bench-registration",
+    stage: "BENCH_RESOURCE_REGISTERED",
+    artifactType: "bench",
+    file: "bench.json",
+    titleZh: "台架资源与轮次计划",
+    description: "登记可用台架位数、单轮占用天数与单轮成本，并声明内环轮次计划与上限，作为台架迭代的资源包络。",
+    criteria: [
+      "可用位数由档期与单轮天数换算得出，不得手填",
+      "单轮成本含数值、单位与来源",
+      "availability_window 起止合法（start 早于 end），reserved_days 已扣除",
+      "pairing_design 成对比较设计齐备，缺失不得进入内环",
+      "iterations 每轮记录 stop_state，且不得超过 max_iterations",
+    ],
+  },
+  {
+    chainIndex: 17,
+    skill: "grease-batch",
+    stage: "BATCH_PRODUCED",
+    artifactType: "batch",
+    file: "batch.json",
+    titleZh: "制脂与制样（工艺全轨迹）",
+    description: "记录皂化 / 脱水 / 转相 / 冷却 / 研磨全轨迹与原材料批次，工艺偏差显式登记。",
+    criteria: [
+      "trajectory 覆盖全部单元操作，工艺偏差显式记录、不得抹平",
+      "raw_material_lots 与 formula_reference 可追溯，样品交接链完整",
+      "batch_verdict 取值合法（VALID / DEVIATED / VOID），偏差未判定不得放行",
+    ],
+  },
+  {
+    chainIndex: 18,
+    skill: "grease-screening",
+    stage: "SCREENING_PASSED",
+    artifactType: "screening",
+    file: "screening.json",
+    titleZh: "理化筛测（送台架门槛）",
+    description: "先做理化筛测再送台架：筛测只当门槛，不当选优依据。",
+    criteria: [
+      "overall_verdict 为 PASS 才可 gate_to_bench=RELEASED",
+      "FAIL / INCONCLUSIVE 一律不得送台架（gate_to_bench=BLOCKED）",
+      "tests 与 measurement_replicates 齐备，每个结果可回指原始测量",
+    ],
+  },
+  {
+    chainIndex: 19,
+    skill: "experiment-import",
+    stage: "BENCH_TESTED",
+    artifactType: "bench_test",
+    file: "bench_test.json",
+    titleZh: "台架实测与删失登记",
+    description: "录入台架实测记录：删失不得记为终点值，停机原因必填。",
+    criteria: [
+      "censoring_type 明确（RIGHT / LEFT / INTERVAL / NONE），删失值不得当终点值",
+      "event_occurred / event_time 与 anomalies 一致，停机原因必填",
+      "raw_record_reference 指向原始记录，不得只留整理稿",
+    ],
+  },
+  {
+    chainIndex: 20,
+    skill: "variance-assessment",
+    stage: "VARIANCE_ASSESSED",
+    artifactType: "variance",
+    file: "variance.json",
+    titleZh: "方差与重复性判定",
+    description: "判定观测差异是否真实存在；测不出差异时要区分「真的没差异」与「功效不足」。",
+    criteria: [
+      "verdict 明确（真实差异 / 无可检出差异 / 功效不足 / 重复不一致）",
+      "power 与 k_ratio 支撑判定，UNDERPOWERED 不得当作没差异",
+      "computed_by 指向计算引擎，禁止手工计算方差",
+    ],
+  },
+  {
+    chainIndex: 21,
+    skill: "doe-design",
+    stage: "NEXT_BATCH_DECIDED",
+    artifactType: "next_batch",
+    file: "next_batch.json",
+    titleZh: "模型更新与序贯决策",
+    description: "用新数据更新模型并给出下一轮小批的决策与理由（或显式终止理由）。",
+    criteria: [
+      "指明下一轮批次与理由，或显式记录终止理由",
+      "模型更新引用了最新一轮台架与筛测数据",
+      "结论与证据链一致，不得以单点结果下结论",
+    ],
+  },
+  {
+    chainIndex: 22,
+    skill: "optimization",
+    stage: "NON_INFERIORITY_PASSED",
+    artifactType: "optimization",
+    file: "optimization.json",
+    titleZh: "优化请求登记（非劣效口径）",
+    description: "登记本轮优化请求与非劣效方法口径；本阶段不求解最优、不产出候选配方或非劣效结论，成本只作约束。",
+    criteria: [
+      "登记 optimization_id / objectives / methods，不写入候选或结论",
+      "objective_type 在脂路线默认 CONSTRAINT_SATISFACTION，成本只作约束",
+      "上游 variance 判词可采且模型信任域随请求登记",
+    ],
+  },
+  {
+    chainIndex: 23,
+    skill: "process-scale-up",
+    stage: "PROCESS_SCALE_VALIDATED",
+    artifactType: "process",
+    file: "process.json",
+    titleZh: "工艺窗口与放大验证",
+    description: "固化 validated 的工艺窗口并验证放大可行性，制造可行性须指向 PROCESS-WINDOW 引用。",
+    criteria: [
+      "process_window.validated 为 true，窗口有 basis 与来源",
+      "制造可行性引用 PROCESS-WINDOW:<window_id>，不得空口声明",
+      "放大倍数有来源，换釜复现记录一致，scale_class 沿 LAB→PILOT→PRODUCTION 前进",
+    ],
+  },
+  {
+    chainIndex: 24,
+    skill: "knowledge-archive",
+    stage: "KNOWLEDGE_ARCHIVED",
+    artifactType: "knowledge_asset",
+    file: "knowledge_asset.json",
+    titleZh: "知识入库（资产封存）",
+    description: "六类知识资产齐备才可 CLOSED_KNOWLEDGE；SYNTHETIC 证据只能停在 DRAFT。",
+    criteria: [
+      "六类资产齐备（推荐口径 / 可行设计空间 / 临界失效边界 / 证据包 / 材料知识 / 模型）",
+      "asset_status=CLOSED_KNOWLEDGE 才可归档，SYNTHETIC 强制 DRAFT_KNOWLEDGE",
+      "每条资产带证据引用，可被后续项目的知识检索复用",
+    ],
+  },
 ];
 
 const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
@@ -247,13 +461,17 @@ const BY_STAGE: ReadonlyMap<string, StageContract> = new Map(
 );
 
 /**
- * 镜像 state-machine.json 的 type_routes（6 类）。
+ * 镜像 state-machine.json 的 type_routes（7 类）。
  *
  * 注意：PROCESS_WINDOW_DEFINED **不在任何一条路由上** —— 它是 on-demand
  * 阶段（见 ON_DEMAND_STAGES）。工艺窗口固化对润滑脂是一等维度（皂化 / 转相 /
  * 冷却速率决定皂纤维骨架，同配方换釜可出不同产品），对调和油只是二阶变量
  * （物理混合，不生成产品结构）。把它排进每条油品链会迫使研发员为走完流程
  * 填写一个无意义的工件 —— 与本领域包 NO Invented Process Data 红线直接冲突。
+ *
+ * 第 7 类 PRECISION_GREASE_DEV（精密传动脂）是唯一走满 19 步的路线：它用
+ * 独立的 PROCESS_SCALE_VALIDATED 表达工艺放大，不复用按需阶段
+ * PROCESS_WINDOW_DEFINED（契约 on_demand_stages 的 note 明确此事）。
  */
 export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
   NEW_PRODUCT: [
@@ -283,6 +501,17 @@ export const TYPE_ROUTES: Record<ProjectType, readonly ChainStage[]> = {
     "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING",
     "MODEL_BUILT", "APPLIED",
   ],
+  // 精密传动脂开发：19 步，逐项照抄契约 type_routes（含 11 个新 stage）。
+  // 与油品路线并列，不是它的延长线：内环迭代（轮次计划 → 制脂 → 筛测 → 台架 →
+  // 方差 → 下一批）插在 DOE 与模型之间，末端多出非劣效 / 工艺放大 / 知识入库。
+  PRECISION_GREASE_DEV: [
+    "PROJECT_DEFINED", "DUTY_DEFINED", "FAILURE_MECHANISM_DEFINED",
+    "REFERENCE_MATERIAL_RESOLVED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED",
+    "BENCH_RESOURCE_REGISTERED", "EXPERIMENT_DESIGNED",
+    "BATCH_PRODUCED", "SCREENING_PASSED", "BENCH_TESTED", "VARIANCE_ASSESSED",
+    "MODEL_BUILT", "NEXT_BATCH_DECIDED", "NON_INFERIORITY_PASSED",
+    "PROCESS_SCALE_VALIDATED", "VERIFIED", "APPLIED", "KNOWLEDGE_ARCHIVED",
+  ],
 };
 
 /**
@@ -299,13 +528,94 @@ export function isProjectType(value: unknown): value is ProjectType {
   return typeof value === "string" && value in TYPE_ROUTES;
 }
 
-/** 某 project_type 下的有序步骤列表；未知类型回退 NEW_PRODUCT。 */
-export function routeFor(projectType: string | null | undefined): StageContract[] {
+/* ------------------------------------------------------------------ *
+ * 内环（环内迭代）—— 镜像 state-machine.json 的 loop_edges / max_iterations
+ *
+ * 精密传动脂路线的内环 5 步是**带退出判据的循环体**，不是顺序链：
+ *   BATCH_PRODUCED → SCREENING_PASSED → BENCH_TESTED → VARIANCE_ASSESSED
+ *        ↑                 │                                    │
+ *        └── REWORK ───────┘              └──── LOOP_BACK ──────┘
+ * 两条回边由契约声明（`loop_edges`）。环内推进**不改写** stage 序列历史
+ * （version 不变），只增加 iteration 计数；证据只追加 —— 第 3 轮不得让第 1、2
+ * 轮的记录失效（铁律 8），所以环结构不是 ROLLBACK。
+ *
+ * ★ 环间回退（台架发现方法不可靠 → 回方法资格；判据不可达 → 回判据）**不在**
+ * `loop_edges` 里，系统仍然拒绝（决策 3 不做 BACKTRACK）：那是人工判断，不是
+ * 环边。面板不提供任何"回退"入口。
+ *
+ * 回边是**路线内**的例外：只有同时含两个端点的路线才成立，6 条油品路线一条都
+ * 不受影响（mirror 用例反向守住这一点）。
+ * ------------------------------------------------------------------ */
+
+export type LoopEdgeKind = "LOOP_BACK" | "REWORK";
+
+export interface LoopEdge {
+  readonly from: ChainStage;
+  readonly to: ChainStage;
+  readonly kind: LoopEdgeKind;
+}
+
+/** 契约 loop_edges 逐条镜像（只镜像驱动行为的 from / to / kind）。 */
+export const LOOP_EDGES: readonly LoopEdge[] = [
+  { from: "VARIANCE_ASSESSED", to: "BATCH_PRODUCED", kind: "LOOP_BACK" },
+  { from: "SCREENING_PASSED", to: "BATCH_PRODUCED", kind: "REWORK" },
+];
+
+/**
+ * 内环轮次上限（契约 max_iterations）。单位：内环迭代的台架轮次 —— 12 ≈ 一年
+ * 12 轮台架迭代。超限必须退出内环（PIVOT / KILL），不得再开新一轮。
+ */
+export const MAX_ITERATIONS = 12;
+
+/**
+ * 某条路线上的内环阶段切片，由 LOOP_EDGES **推导**（不另立第三份清单）：
+ * 从最靠前的回边目标（环首，BATCH_PRODUCED）到最靠后的回边起点（环尾，
+ * VARIANCE_ASSESSED），闭区间。路线不含全部端点时返回 []（油品路线即如此）。
+ */
+export function innerLoopStages(projectType: string | null | undefined): ChainStage[] {
   const key: ProjectType = isProjectType(projectType) ? projectType : "NEW_PRODUCT";
+  const route = TYPE_ROUTES[key];
+  const heads = LOOP_EDGES.map((edge) => route.indexOf(edge.to)).filter((index) => index >= 0);
+  const tails = LOOP_EDGES.map((edge) => route.indexOf(edge.from)).filter((index) => index >= 0);
+  if (heads.length === 0 || tails.length === 0) return [];
+  return route.slice(Math.min(...heads), Math.max(...tails) + 1);
+}
+
+/**
+ * 开发期告警：只在 DEV 构建里输出。
+ *
+ * 旧实现遇到契约/镜像漂移是**静默**的：路由里的未知 stage 被直接丢掉、
+ * 未知 project_type 被静默换成 NEW_PRODUCT，界面上完全看不出来 —— 面板
+ * 只是少几步或悄悄走错链。这里把漂移变成可见的 console.warn（生产构建下
+ * `import.meta.env.DEV` 为 false，分支被静态剔除）。
+ */
+function warnDev(message: string): void {
+  if (import.meta.env.DEV) console.warn(`[lubricantContracts] ${message}`);
+}
+
+/** 某 project_type 下的有序步骤列表；未知类型回退 NEW_PRODUCT（DEV 下告警）。 */
+export function routeFor(projectType: string | null | undefined): StageContract[] {
+  const known = isProjectType(projectType);
+  if (!known && typeof projectType === "string" && projectType.length > 0) {
+    // 非空但不在枚举里 = 契约新增了类型而镜像没跟上，或工作区写错了值。
+    // null / undefined / "" 是「项目尚未声明类型」的合法回退路径，不告警。
+    warnDev(
+      `未知 project_type "${projectType}"，已回退 NEW_PRODUCT；请核对 ` +
+        `domains/lubricant/contracts/state-machine.json 的 type_routes 与 TYPE_ROUTES 是否漂移`,
+    );
+  }
+  const key: ProjectType = known ? projectType : "NEW_PRODUCT";
   const out: StageContract[] = [];
   for (const stage of TYPE_ROUTES[key]) {
     const contract = BY_STAGE.get(stage);
-    if (contract) out.push(contract);
+    if (contract) {
+      out.push(contract);
+    } else {
+      warnDev(
+        `${key} 的路由含 STAGE_CHAIN 未定义的 stage "${stage}"，该步已跳过；` +
+          `请核对 state-machine.json 的 stages 与 STAGE_CHAIN 是否漂移`,
+      );
+    }
   }
   return out;
 }
@@ -329,10 +639,12 @@ const COMMON_REQUIRED: readonly string[] = [
 /** 各 schema 自身的 required（不含 common 部分）。 */
 const OWN_REQUIRED: Record<string, readonly string[]> = {
   project: ["artifact_type", "status", "project_name", "project_type", "product_family",
-    "business_objective", "technical_objective", "hard_constraints", "target_cost",
-    // benchmark_products 已由领域包改为条件必填：凭 benchmark_waiver_reason 豁免
-    // （schema 走 allOf if/then），故不列入 required。lite 校验刻意只做结构必填、
-    // 不复刻业务条件（见上方「轻量结构校验」说明，不引入 jsonschema）。
+    "business_objective", "technical_objective", "hard_constraints",
+    // target_cost 已由领域包移出 required（成本是天花板不是目标）：改由
+    // cost_basis_reason 条件必填（schema 走 allOf if/then），且可改用 cost_ceiling。
+    // lite 校验只做结构必填、不复刻业务条件（见上方「轻量结构校验」说明）。
+    // benchmark_products 自 2026-10-15 立项重构起是纯可选背景（对标在第 4 步参照物
+    // 卷宗按实物建档），benchmark_waiver_reason 降为 legacy 字段，二者都不进本表。
     "success_criteria", "risk_class", "owner"],
   duty: ["artifact_type", "duty_id", "project_reference", "duty"],
   challenge: ["artifact_type", "duty_reference", "challenge_id", "category", "description",
@@ -350,7 +662,11 @@ const OWN_REQUIRED: Record<string, readonly string[]> = {
     "run_plan", "responses", "guardrails", "expected_information_value"],
   experiment: ["artifact_type", "evidence_scope", "experiment_id",
     "experiment_design_reference", "design_space_reference", "test_method_references", "runs"],
-  model: ["artifact_type", "stage", "evidence_scope", "model_id", "experiment_reference",
+  // model: `experiment_reference` is NOT required since P-2 (2026-10-14) -- the grease
+  // route's model is fitted from a campaign round (campaign_reference + iteration) and
+  // carries no experiment stage. The lite check must not be wider than the schema's own
+  // `required`, which is what the consistency guard below asserts.
+  model: ["artifact_type", "stage", "evidence_scope", "model_id",
     "design_space_reference", "test_method_references", "requested_analyses",
     "response_references", "engine_handoff"],
   optimization: ["artifact_type", "stage", "evidence_scope", "optimization_id",

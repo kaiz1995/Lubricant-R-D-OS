@@ -1,15 +1,17 @@
 ---
 name: process-scale-up
-description: Fix the grease manufacturing process window at the amplified batch scale and emit a PROCESS_WINDOW_DEFINED process artifact carrying the 工艺窗口 evidence. ON-DEMAND capability — it sits on no project-type route, because the window only exists for products whose structure is set by the manufacturing process (grease: saponification / phase inversion / milling); a blended oil is physically mixed and has none. Call it directly for grease projects, or when a customer explicitly demands a scale-up record; its published hand-off is VERIFIED. Use when user mentions "process-scale-up", "工艺窗口", "放大", "scale-up", "PROCESS_WINDOW_DEFINED", "工艺窗口固化", "manufacturability", "换釜复现".
+description: Fix the grease manufacturing process window at the amplified batch scale and emit a fixed-window process artifact carrying the 工艺窗口 evidence. ON-DEMAND capability — it sits on no oil project-type route, because the window only exists for products whose structure is set by the manufacturing process (grease: saponification / phase inversion / milling); a blended oil is physically mixed and has none. On the precision-grease route (upstream stage NON_INFERIORITY_PASSED) the window lands at PROCESS_SCALE_VALIDATED; the on-demand PROCESS_WINDOW_DEFINED path and its published hand-off to VERIFIED are unchanged. Use when user mentions "process-scale-up", "工艺窗口", "放大", "scale-up", "PROCESS_WINDOW_DEFINED", "PROCESS_SCALE_VALIDATED", "工艺窗口固化", "manufacturability", "换釜复现".
 ---
 
 # Process Scale-Up (工艺窗口固化)
 
-Fix one manufacturing window from two upstream conclusions: the evidence-bound process record (what the kettle can hold) and the OPTIMIZED conclusion (which candidate the design converged on). The output is the only artifact that may be cited as the 工艺窗口: `PROCESS-WINDOW:<window_id>`.
+Fix one manufacturing window from two upstream conclusions: the evidence-bound process record (what the kettle can hold) and the optimization conclusion (which candidate the design converged on). The output is the only artifact that may be cited as the 工艺窗口: `PROCESS-WINDOW:<window_id>`.
 
 The window is a **fixed** conclusion, not a range of possibilities. Assigning a window from a single lab batch, or from evidence that still carries a GAP, is a hard reject.
 
-Authority schema: `../../schemas/process.schema.json` (or local `references/process.schema.json` in deployed bundle). Upstream contracts: `../../schemas/process.schema.json` and `../../schemas/optimization.schema.json`. Downstream consumer: `../../schemas/design_freeze.schema.json` — its `MANUFACTURABILITY_ACCEPTABLE` condition cites this window **when the product has one**; a blended oil establishes manufacturability through the qualified blending process instead, which is why this skill is on no route.
+**What `validated: true` means — read this before using the field.** In this contract `validated: true` records that **the window has been FIXED**, NOT that a scale-up experiment verified it (handoff doc §5.2 item 6). The field is forced by the builder: it is not part of the input field set, so a caller that supplies its own `validated` is rejected. Because the field is a fixing statement rather than an experiment-verification statement, the precision-grease route additionally requires at least one OBSERVED scale-up evidence item before it will fix a window — a window claim resting only on assumed evidence is refused, never written.
+
+Authority schema: `../../schemas/process.schema.json` (or local `references/process.schema.json` in deployed bundle). Upstream contracts: `../../schemas/process.schema.json` and `../../schemas/optimization.schema.json`. Downstream consumer: `../../schemas/design_freeze.schema.json` — its `MANUFACTURABILITY_ACCEPTABLE` condition cites this window **when the product has one**; a blended oil establishes manufacturability through the qualified blending process instead, which is why this skill is on no oil route. On the precision-grease route the fixed window lands at `PROCESS_SCALE_VALIDATED` (the route's own step-15 stage); the stage is selected from the upstream optimization artifact's stage and the on-demand `PROCESS_WINDOW_DEFINED` semantics stay frozen.
 
 ---
 
@@ -17,8 +19,9 @@ Authority schema: `../../schemas/process.schema.json` (or local `references/proc
 
 Before requesting scale-up input:
 - A `DESIGN_SPACE_DEFINED` process record MUST exist and validate against `process.schema.json`. If it is missing, redirect to `process-definition` first.
-- An `OPTIMIZED` optimization artifact MUST exist with `decision: "GO"` and the **same** `project_id`. If it is missing or `HOLD`, redirect to `optimization` first.
+- An optimization artifact MUST exist with `decision: "GO"` and the **same** `project_id`: stage `OPTIMIZED` on the oil routes, stage `NON_INFERIORITY_PASSED` on the precision-grease route (which selects the `PROCESS_SCALE_VALIDATED` output stage and the grease process-item rules). If it is missing or `HOLD`, redirect to `optimization` first.
 - The declared `scale_up.batch_scale.scale_class` MUST advance strictly along `LAB → PILOT → PRODUCTION` relative to the process record, and `scale_up.amplification_factor` MUST exceed the process record's `amplification_factor`.
+- On the precision-grease route the process record MUST cover the structure-setting step `SAPONIFICATION` (the soap is generated in situ), every `step_type` must belong to the grease route items, and `scale_up.evidence` MUST contain at least one OBSERVED item. Grease-specific steps the record does not cover are reported as NOTE lines and are never invented.
 
 ---
 
@@ -47,12 +50,14 @@ Input must be a single JSON object containing both upstream artifact paths and t
 ```
 
 ### Field Invariants
-- Upstream alignment: the process record and the OPTIMIZED conclusion MUST share one `project_id`; a cross-project window is rejected.
+- Upstream alignment: the process record and the optimization conclusion MUST share one `project_id`; a cross-project window is rejected.
 - Scale step (hard): `scale_class` MUST be strictly later than the process record's class (`LAB < PILOT < PRODUCTION`) and `amplification_factor` MUST be strictly greater. A "scale-up" that does not scale is rejected.
 - Scope retention: `scale_up.evidence_scope` MUST equal the process record's `evidence_scope`. A window fixed on synthetic evidence stays synthetic and can never reach `CLOSED`.
-- Window evidence (hard): `process_window.validated` MUST become `true` and `process_window.evidence_reference` MUST be exactly `PROCESS-WINDOW:<window_id>`. That string is what `design_freeze` cites for `MANUFACTURABILITY_ACCEPTABLE`.
-- Evidence integrity: the retained evidence list is the process record's evidence plus the scale-up evidence; `scale_up.evidence` MUST be non-empty, well-formed, and contain no `GAP` status.
-- Provenance of the OPTIMIZED link: the OPTIMIZED linkage is enforced by the preflight (artifact existence, stage, `decision: "GO"`, project match) and recorded in each scale-up evidence `source`; no new process field was added for it.
+- Window evidence (hard): `process_window.validated` MUST become `true` and `process_window.evidence_reference` MUST be exactly `PROCESS-WINDOW:<window_id>`. That string is what `design_freeze` cites for `MANUFACTURABILITY_ACCEPTABLE`. `validated` is FORCED by the builder (the input field set does not contain it) and means the window has been fixed — not that a scale-up experiment verified it.
+- Evidence integrity: the retained evidence list is the process record's evidence plus the scale-up evidence; `scale_up.evidence` MUST be non-empty, well-formed, and contain no `GAP` status. On the precision-grease route it MUST also contain at least one `OBSERVED` item.
+- Provenance of the optimization link: the linkage is enforced by the preflight (artifact existence, stage, `decision: "GO"`, project match) and recorded in each scale-up evidence `source`; no new process field was added for it.
+- Precision-grease route (additive): when the optimization artifact's stage is `NON_INFERIORITY_PASSED`, the output stage is `PROCESS_SCALE_VALIDATED`, the process record must cover `SAPONIFICATION`, and every `step_type` must belong to the grease route items.
+- Batch identity (precision-grease route): a fixed-window record carries **one** batch identity. `material_batch_reference` names the amplified batch the window was fixed at — the builder writes it from `scale_up.batch_scale.batch_size.material_batch`, and the validator asserts the two agree (`material_batch_reference must equal batch_scale.batch_size.material_batch`). The oil routes keep the pre-change copy-through of the baseline record's value, where the two fields legitimately differ.
 
 ---
 
@@ -82,9 +87,8 @@ python skills/process-scale-up/scripts/validate_process_window_artifact.py <temp
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the window stops here. It links DESIGN_SPACE_DEFINED (process) +
-# OPTIMIZED (optimization) → PROCESS_WINDOW_DEFINED, and its ONLY published hand-off is
-# VERIFIED (contract on_demand_stages). It is not a step of any project-type route.
+# 🔴 CHECKPOINT · STOP: the window stops here at PROCESS_WINDOW_DEFINED (on-demand) / PROCESS_SCALE_VALIDATED (PRECISION_GREASE_DEV). It links the process record and the
+# optimization request, and its ONLY published hand-off is VERIFIED (contract on_demand_stages). It is not a step of any oil project-type route.
 # Do NOT run gate-review, mark the project VERIFIED, or claim release approval from this skill.
 ```
 
@@ -115,3 +119,6 @@ Atomically copy/move `<temporary-file.json>` to the target artifact path only wh
 6. **NO Cross-Stage Spillover**: DO NOT run gate-review, FREEZE the design, or advance the state machine in this skill.
 7. **NO Bypass of Preflight**: DO NOT create the output artifact without running `preflight_process_scale_up.py` first.
 8. **NO Soft Guidance Words**: Forbidden ambiguous words: "灵活调整", "视情况而定", "酌情设置", "可以考虑". All values must be concrete numbers with verifiable metadata.
+9. **NO Claimed `validated`**: DO NOT supply `validated` in `scale_up` and DO NOT read `validated: true` as "a scale-up experiment verified this". The builder forces the field; it means the window has been FIXED.
+10. **NO Assumed-Only Window (grease route)**: DO NOT fix a `PROCESS_SCALE_VALIDATED` window whose scale-up evidence is all ASSUMED. At least one OBSERVED item is required.
+11. **NO Invented Grease Steps (grease route)**: DO NOT write a process step the record does not carry. Uncovered grease-specific steps are reported as NOTE lines; a fixed window without `SAPONIFICATION` is a hard HOLD.

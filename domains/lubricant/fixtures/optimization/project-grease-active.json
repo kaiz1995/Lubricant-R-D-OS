@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "project",
+  "status": "ACTIVE",
+  "project_id": "PGD-OPT-001",
+  "stage": "PROJECT_DEFINED",
+  "decision_question": "Can the synthetic project proceed?",
+  "hypothesis": "A constrained project can frame the decision.",
+  "uncertainty": "Synthetic fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-P-001",
+      "statement": "Synthetic project brief.",
+      "source": "synthetic source",
+      "status": "OBSERVED"
+    }
+  ],
+  "decision_rule": "Advance only with constraints.",
+  "result": "Synthetic charter recorded.",
+  "decision": "GO",
+  "next_action": "Define duty.",
+  "project_name": "Synthetic precision-gear grease campaign (optimization leg)",
+  "project_type": "PRECISION_GREASE_DEV",
+  "product_family": "Precision-gear (harmonic drive) grease",
+  "business_objective": "Qualify a precision-gear grease against the OEM reference grease.",
+  "technical_objective": "Maintain the required CTQ and risk boundaries under the harmonic-drive duty.",
+  "hard_constraints": [
+    "Synthetic fixture only: score the constraint satisfaction space, never a cost objective."
+  ],
+  "benchmark_products": [
+    "synthetic benchmark"
+  ],
+  "success_criteria": [
+    "synthetic criterion"
+  ],
+  "risk_class": "LOW",
+  "owner": "Synthetic owner",
+  "cost_ceiling": {
+    "value": 150,
+    "unit": "CNY/kg",
+    "source": "synthetic approved ceiling",
+    "method_version": "cost-baseline-v1",
+    "material_batch": "not_applicable",
+    "formula_version": "baseline-v1"
+  },
+  "cost_basis_reason": "Synthetic fixture: performance-first grease; cost is a ceiling to respect, not a target to optimise toward."
+}

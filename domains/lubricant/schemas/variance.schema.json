@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/variance.schema.json",
+  "title": "Variance assessment (is the difference real?)",
+  "description": "Stage contract recording whether an observed difference between conditions is real, and under which of four verdicts. UNDERPOWERED is deliberately its own value and must NEVER be collapsed into NO_DETECTABLE_DIFFERENCE: 'cannot measure it' is not 'there is no difference', and conflating the two justifies a wrong product decision -- the most expensive mistake in grease R&D. A NO_DETECTABLE_DIFFERENCE verdict asserts only that the design could have detected the pre-registered effect and did not; REPLICATE_INCONSISTENT blocks any difference claim until the replicate structure is repaired. Every statistic here is produced by the deterministic engine and only reported through this artifact: computed_by is const ENGINE, because this pack forbids hand-entered numbers for computed statistics (the LLM must not do deterministic computation).",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "variance" },
+    "stage": { "const": "VARIANCE_ASSESSED" },
+    "variance_id": { "type": "string", "minLength": 1 },
+    "campaign_reference": { "type": "string", "minLength": 1 },
+    "iteration": {
+      "description": "Inner-loop campaign iteration this variance assessment belongs to. Strictly positive.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "replicate_structure": {
+      "description": "How the observations are nested, one entry per level (MEASUREMENT / BENCH / BATCH). The structure decides which sigma components are estimable at all.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/replicate_level" }
+    },
+    "censoring": {
+      "description": "One entry per observation that is not a clean end-point. May be empty only when every observation is uncensored; stop_reason is hard-required on every entry so an administrative stop can never masquerade as a completed observation.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/censoring_entry" }
+    },
+    "intervention_events": {
+      "description": "Non-protocol events that occurred during the campaign and could confound the comparison. May be empty. An entry with confounds true weakens any difference claim.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/intervention_event" }
+    },
+    "components": { "$ref": "#/$defs/components" },
+    "effect_size": {
+      "description": "Computed effect size. Null when not estimable (for example under heavy censoring).",
+      "type": ["number", "null"]
+    },
+    "power": {
+      "description": "Computed power of the design against the pre-registered delta. Null when not estimable. A low value is what makes verdict UNDERPOWERED.",
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "k_ratio": {
+      "description": "Ratio between the sigma this design can tolerate and the sigma actually required; the frozen k of SIGMA_MAX <= delta / k. Null when not computable.",
+      "type": ["number", "null"]
+    },
+    "sigma_max_requirement": {
+      "description": "The owner-set requirement threshold the measured sigma_total is compared against. Null when no frozen requirement exists yet.",
+      "type": ["number", "null"]
+    },
+    "resolution_table": {
+      "description": "Engine-computed resolution table: what difference this design could detect at the recorded replicate counts. May be empty when the design is not estimable.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/resolution_row" }
+    },
+    "verdict": {
+      "description": "CONSISTENT_DIFFERENCE (real difference, replicates agree) / NO_DETECTABLE_DIFFERENCE (properly powered, nothing found) / UNDERPOWERED (design cannot resolve the question -- never a synonym for no difference) / REPLICATE_INCONSISTENT (replicates contradict, structure must be repaired).",
+      "enum": [
+        "CONSISTENT_DIFFERENCE",
+        "NO_DETECTABLE_DIFFERENCE",
+        "UNDERPOWERED",
+        "REPLICATE_INCONSISTENT"
+      ]
+    },
+    "computed_by": {
+      "description": "Always ENGINE: this pack forbids hand-entered numbers for computed statistics (the LLM must not do deterministic computation; the engine does).",
+      "const": "ENGINE"
+    },
+    "frozen_sigma_reference": {
+      "description": "Optional reference to the frozen sigma/SIGMA_MAX record the comparison used.",
+      "type": "string",
+      "minLength": 1
+    },
+    "preregistered_delta": {
+      "description": "Optional difference pre-registered before the runs, against which power was computed. Null when none was registered.",
+      "type": ["number", "null"]
+    },
+    "evidence_scope": { "$ref": "common.schema.json#/$defs/evidence_scope" }
+  },
+  "required": [
+    "artifact_type",
+    "variance_id",
+    "campaign_reference",
+    "iteration",
+    "replicate_structure",
+    "censoring",
+    "intervention_events",
+    "components",
+    "effect_size",
+    "power",
+    "k_ratio",
+    "sigma_max_requirement",
+    "resolution_table",
+    "verdict",
+    "computed_by",
+    "evidence_scope"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "replicate_level": {
+      "type": "object",
+      "properties": {
+        "level": { "enum": ["MEASUREMENT", "BENCH", "BATCH"] },
+        "n": { "type": "integer", "minimum": 1 },
+        "group_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": ["level", "n", "group_reference"],
+      "additionalProperties": false
+    },
+    "censoring_entry": {
+      "type": "object",
+      "properties": {
+        "observation_reference": { "type": "string", "minLength": 1 },
+        "event_occurred": { "type": "boolean" },
+        "event_time": {
+          "description": "Event time when the event occurred; null for a censored observation. A censoring time is never recorded as an event time.",
+          "type": ["number", "null"]
+        },
+        "censoring_type": { "enum": ["RIGHT", "LEFT", "INTERVAL", "NONE"] },
+        "stop_reason": {
+          "description": "Why the observation stopped. Hard-required on every censoring entry (never optional, never empty), so no censored value can be presented without its cause.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["observation_reference", "event_occurred", "event_time", "censoring_type", "stop_reason"],
+      "additionalProperties": false
+    },
+    "intervention_event": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "at": {
+          "description": "When the intervention happened, as recorded by the operator (ISO date-time or a protocol step marker).",
+          "type": "string",
+          "minLength": 1
+        },
+        "confounds": {
+          "description": "Whether this event can confound the comparison under assessment.",
+          "type": "boolean"
+        }
+      },
+      "required": ["event_id", "description", "at", "confounds"],
+      "additionalProperties": false
+    },
+    "components": {
+      "description": "Variance components, engine-computed, each number-or-null. The optional confidence interval for a component uses the flat <component>_ci_low / <component>_ci_high shape consistently for all four components (there is no nested ci object).",
+      "type": "object",
+      "properties": {
+        "sigma_meas": { "type": ["number", "null"] },
+        "sigma_meas_ci_low": { "type": "number" },
+        "sigma_meas_ci_high": { "type": "number" },
+        "sigma_bench": { "type": ["number", "null"] },
+        "sigma_bench_ci_low": { "type": "number" },
+        "sigma_bench_ci_high": { "type": "number" },
+        "sigma_batch": { "type": ["number", "null"] },
+        "sigma_batch_ci_low": { "type": "number" },
+        "sigma_batch_ci_high": { "type": "number" },
+        "sigma_total": { "type": ["number", "null"] },
+        "sigma_total_ci_low": { "type": "number" },
+        "sigma_total_ci_high": { "type": "number" }
+      },
+      "required": ["sigma_meas", "sigma_bench", "sigma_batch", "sigma_total"],
+      "additionalProperties": false
+    },
+    "resolution_row": {
+      "type": "object",
+      "properties": {
+        "replicates_per_group": { "type": "integer", "minimum": 1 },
+        "detectable_difference": { "type": "number" },
+        "detectable": { "type": "boolean" },
+        "note": { "type": "string", "minLength": 1 }
+      },
+      "required": ["replicates_per_group", "detectable_difference", "detectable"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "screening",
+  "project_id": "PGD-001",
+  "stage": "SCREENING_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Invalid fixture: does a FAILED screen still release the sample to the bench?",
+  "hypothesis": "This invalid fixture evaluates no product hypothesis.",
+  "uncertainty": "Fixture only.",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-BAD-001",
+      "statement": "This is a schema-validation fixture, not product evidence.",
+      "source": "fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "A failed screen must never reach the bench; the fixture breaks exactly that rule.",
+  "result": "Rejected.",
+  "decision": "UNDECIDED",
+  "next_action": "Do not use this fixture for R&D decisions.",
+  "screening_id": "SCR-BAD-001",
+  "sample_reference": "SAM-SYN-BAD-001",
+  "tests": [
+    { "test_id": "ST-BAD-001", "test_name": "DROPPING_POINT", "value": 150, "unit": "degC", "limit": "180 min", "verdict": "FAIL" }
+  ],
+  "overall_verdict": "FAIL",
+  "measurement_replicates": 1,
+  "gate_to_bench": "RELEASED"
+}

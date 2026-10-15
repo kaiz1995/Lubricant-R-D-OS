@@ -180,8 +180,8 @@ def main() -> int:
         from integrations.open_science import install_skill
         from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-        assert len(SKILLS) == 19, sorted(SKILLS)
-        assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
+        assert len(SKILLS) == 24, sorted(SKILLS)
+        assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json", "bench.schema.json", "bench_test.schema.json"), SKILLS["application-validation"]
 
         deploy_ws = workspace / "deploy"
         deploy_target = deploy_ws / ".opencode" / "skills"

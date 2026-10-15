@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "test_method",
+  "project_id": "PGD-B1-001",
+  "stage": "TEST_METHODS_QUALIFIED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Is TM-PG-B1-001 (Low-temperature starting torque bench) qualified to measure the target failure/CTQ?",
+  "hypothesis": "TM-PG-B1-001 can provide role-bound measurement evidence for the target failure/CTQ.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this qualification uses supplied standard/method provenance; its authenticity and validity are not independently verified, and it does not prove product risk, field prediction, or product performance.",
+  "decision_rule": "Qualify only when every role carries REPEATABILITY and DISCRIMINATION, the repeatability -> discrimination -> independent new batch pipeline is serial and passed, repeatability and discrimination are ENGINE-computed, and OBSERVED evidence, qualification basis, and PHYSICAL evidence scope are complete; PHYSICAL is a source declaration, not approval.",
+  "result": "TM-PG-B1-001 is qualified for its recorded roles to measure the target failure/CTQ from supplied provenance and evidence only.",
+  "decision": "GO",
+  "next_action": "Register TM-PG-B1-001 as an eligible response for later design and retain the Evidence Stack.",
+  "evidence": [
+    {
+      "evidence_id": "E-TM-PG-B1-STD",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the torque-bench protocol identity is supplied.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-REP",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the same sample was measured many times and the engine computed the repeatability spread.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-DIS",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the engine computed the discrimination between the Known Good and Known Bad dossiers.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    },
+    {
+      "evidence_id": "E-TM-PG-B1-BATCH",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: both conclusions were re-verified on a fresh batch, not on the batch that produced them.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "OBSERVED"
+    }
+  ],
+  "method_id": "TM-PG-B1-001",
+  "name": "Low-temperature starting torque bench",
+  "standard": "Synthetic torque-bench protocol P-001",
+  "target_failure_reference": "FM-PG-B1-001",
+  "role": ["D", "P"],
+  "qualification_metrics": [
+    {
+      "metric": "REPEATABILITY",
+      "measurement": {
+        "value": 3.2,
+        "unit": "mNm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "torque-bench-v1",
+        "material_batch": "LOT-SYN-PG-B1-001",
+        "formula_version": "baseline-v1"
+      },
+      "computed_by": "ENGINE"
+    },
+    {
+      "metric": "DISCRIMINATION",
+      "measurement": {
+        "value": 18.0,
+        "unit": "mNm",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "torque-bench-v1",
+        "material_batch": "LOT-SYN-PG-B1-001",
+        "formula_version": "baseline-v1"
+      },
+      "computed_by": "ENGINE"
+    },
+    {
+      "metric": "MECHANISM_RELEVANCE",
+      "measurement": {
+        "value": 1,
+        "unit": "qualitative rank",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "torque-bench-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      }
+    },
+    {
+      "metric": "BENCHMARK_RANKING",
+      "measurement": {
+        "value": 2,
+        "unit": "rank positions",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "torque-bench-v1",
+        "material_batch": "not_applicable",
+        "formula_version": "not_applicable"
+      }
+    }
+  ],
+  "qualification_pipeline": {
+    "repeatability": {
+      "status": "PASS",
+      "evidence_reference": "E-TM-PG-B1-REP",
+      "computed_by": "ENGINE"
+    },
+    "discrimination": {
+      "status": "PASS",
+      "evidence_reference": "E-TM-PG-B1-DIS",
+      "computed_by": "ENGINE"
+    },
+    "independent_batch": {
+      "status": "PASS",
+      "evidence_reference": "E-TM-PG-B1-BATCH"
+    }
+  },
+  "reference_material_reference": "REF-PGD-001",
+  "qualification_basis": [
+    "engine-computed repeatability",
+    "engine-computed discrimination against the resolved reference dossiers",
+    "independent new batch re-verification"
+  ],
+  "qualification_status": "QUALIFIED"
+}
