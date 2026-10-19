@@ -8,7 +8,10 @@
     "artifact_type": { "const": "challenge" },
     "duty_reference": { "type": "string", "minLength": 1 },
     "challenge_id": { "type": "string", "minLength": 1 },
-    "category": { "enum": ["MECHANICAL_LOAD", "CONTACT", "HIGH_TEMPERATURE", "LOW_TEMPERATURE", "OXIDATION", "WATER_CONTAMINATION", "AIR_FOAM", "PARTICLE_CONTAMINATION", "MATERIAL_COMPATIBILITY", "LONG_TERM_STABILITY", "MIXING", "RAW_MATERIAL_VARIATION"] },
+    "category": {
+      "description": "Challenge category. The enum is a single shared list: the twelve original oil-route values stay valid for the six oil project types, and the eight grease values carry the PRECISION_GREASE_DEV challenges. Values that state no grease challenge (WATER_CONTAMINATION, AIR_FOAM, MIXING) are rejected for the grease route by the skill policy layer, not by the shared contract, so oil-route fixtures keep validating.",
+      "enum": ["MECHANICAL_LOAD", "CONTACT", "HIGH_TEMPERATURE", "LOW_TEMPERATURE", "OXIDATION", "WATER_CONTAMINATION", "AIR_FOAM", "PARTICLE_CONTAMINATION", "MATERIAL_COMPATIBILITY", "LONG_TERM_STABILITY", "MIXING", "RAW_MATERIAL_VARIATION", "FRETTING_WEAR", "THIN_FILM_EP", "LOW_TEMP_TORQUE", "SHEAR_STABILITY", "SOAP_FIBER_STRUCTURE", "INTERFACE_COMPATIBILITY", "HIGH_TEMP_OIL_SEPARATION", "EVAPORATION"]
+    },
     "description": { "type": "string", "minLength": 1 },
     "severity": { "enum": ["LOW", "MEDIUM", "HIGH"] },
     "exposure": { "enum": ["LOW", "MEDIUM", "HIGH"] },

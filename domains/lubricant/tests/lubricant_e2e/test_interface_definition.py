@@ -123,10 +123,11 @@ def freeze_errors(policy, condition: dict, interfaces: dict) -> list[str]:
 
 def main() -> int:
     # 1. validate_schemas green with the new schema in place (inventory arithmetic
-    #    is asserted in test_application_bench.py; 19 -> 20 with interface).
+    #    is asserted in test_application_bench.py; 19 -> 20 with interface, then
+    #    PRECISION_GREASE_DEV brings the inventory to 31, and the bench/campaign merge (2026-10-14) drops it to 30).
     schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.schema.json"))
     assert "interface.schema.json" in schema_names, schema_names
-    assert len(schema_names) == 21, (len(schema_names), schema_names)
+    assert len(schema_names) == 30, (len(schema_names), schema_names)
     validated = subprocess.run(
         [sys.executable, "-B", "scripts/validate_schemas.py"], cwd=ROOT, capture_output=True, text=True
     )
@@ -228,7 +229,7 @@ def main() -> int:
             from integrations.open_science import install_skill
             from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-            assert len(SKILLS) == 19, sorted(SKILLS)
+            assert len(SKILLS) == 24, sorted(SKILLS)
             assert SKILLS["interface-definition"] == ("common.schema.json", "interface.schema.json"), SKILLS["interface-definition"]
 
             deploy_ws = workspace / "deploy"

@@ -1,0 +1,117 @@
+{
+  "application_validation": {
+    "project_reference": "PGD-APP-001",
+    "current_stage": "VERIFIED",
+    "application": {
+      "schema_version": "0.1.0",
+      "artifact_type": "application",
+      "project_id": "PGD-APP-001",
+      "stage": "APPLIED",
+      "evidence_scope": "SYNTHETIC",
+      "source": "Synthetic machine protocol",
+      "evidence_id": "EV-APP-001",
+      "decision_question": "Does the supplied application evidence justify application APP-PGD-001?",
+      "hypothesis": "APP-PGD-001 records acceptance criteria, counterexamples and the life-claim boundary for the applied formula+process.",
+      "uncertainty": "Supplied criteria, observations and conditions are not independently verified; recorded ASSUMED evidence remains assumed and this record does not by itself establish a field, life, or release conclusion.",
+      "decision_rule": "Record the supplied verdict as-is; a PASS is only admissible with determined OBSERVED criteria, a non-empty OBSERVED life-claim boundary, and no counterexamples.",
+      "result": "PASS",
+      "decision": "GO",
+      "next_action": "Retain APP-PGD-001 as an application record with verdict PASS.",
+      "evidence": [
+        {
+          "evidence_id": "EV-APP-001",
+          "statement": "Synthetic machine protocol run; not product evidence.",
+          "source": "synthetic fixture only",
+          "status": "ASSUMED"
+        }
+      ],
+      "application_id": "APP-PGD-001",
+      "project_reference": "PGD-APP-001",
+      "formula_reference": "FORM-PGD-001",
+      "process_window_reference": "PROCESS-WINDOW:PW-PGD-001",
+      "bench_references": [
+        "BENCH-SZ-01"
+      ],
+      "acceptance_criteria": [
+        {
+          "criterion_id": "C-STARTUP",
+          "statement": "Start-up torque at -40 degC below the OEM ceiling.",
+          "threshold": 0.35,
+          "operator": "<=",
+          "unit": "Nm",
+          "source": "Synthetic machine protocol",
+          "evidence_id": "EV-APP-001",
+          "status": "OBSERVED"
+        },
+        {
+          "criterion_id": "C-BACKLASH",
+          "statement": "Backlash drift after the duty cycle below the limit.",
+          "threshold": 3.0,
+          "operator": "<=",
+          "unit": "arcmin",
+          "source": "Synthetic machine protocol",
+          "evidence_id": "EV-APP-001",
+          "status": "OBSERVED"
+        },
+        {
+          "criterion_id": "C-TEMPRISE",
+          "statement": "Steady-state temperature rise below the limit.",
+          "threshold": 45.0,
+          "operator": "<=",
+          "unit": "K",
+          "source": "Synthetic machine protocol",
+          "evidence_id": "EV-APP-001",
+          "status": "OBSERVED"
+        },
+        {
+          "criterion_id": "C-LIFE",
+          "statement": "No torque-rise event within the validated life condition.",
+          "threshold": 6000.0,
+          "operator": ">=",
+          "unit": "h",
+          "source": "Synthetic machine protocol",
+          "evidence_id": "EV-APP-001",
+          "status": "OBSERVED"
+        }
+      ],
+      "counterexamples": [],
+      "life_claim_boundary": {
+        "claim_scope": "10-year service life at the rated duty",
+        "status": "OBSERVED",
+        "validated_conditions": [
+          {
+            "condition_id": "LC-1",
+            "parameter": "temperature",
+            "lower_bound": 40,
+            "upper_bound": 100,
+            "unit": "degC"
+          }
+        ],
+        "extrapolation_basis": "Synthetic bench extrapolation",
+        "evidence_reference": "EV-APP-001"
+      }
+    },
+    "application_artifact": "application-grease.json",
+    "project_type": "PRECISION_GREASE_DEV",
+    "campaign_artifact": "bench-grease.json",
+    "bench_test_artifact": "bench-test-grease.json",
+    "machine_indicators": [
+      {
+        "indicator": "START_UP_TORQUE",
+        "criterion_reference": "C-NOT-THERE"
+      },
+      {
+        "indicator": "BACKLASH",
+        "criterion_reference": "C-BACKLASH"
+      },
+      {
+        "indicator": "TEMPERATURE_RISE",
+        "criterion_reference": "C-TEMPRISE"
+      },
+      {
+        "indicator": "LIFE",
+        "criterion_reference": "C-LIFE"
+      }
+    ]
+  }
+}

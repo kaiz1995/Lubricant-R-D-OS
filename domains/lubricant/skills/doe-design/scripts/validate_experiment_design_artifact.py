@@ -30,7 +30,10 @@ def main() -> int:
     errors = [error.message for error in Draft202012Validator(loaded["experiment_design.schema.json"], registry=registry).iter_errors(artifact)]
     if artifact.get("stage") != "EXPERIMENT_DESIGNED":
         errors.append("stage must be EXPERIMENT_DESIGNED")
-    for field, value in expected_decision_fields(artifact).items():
+    # Grease step 8: the record carries the route marker it was built under, so the
+    # validator checks against the same route's wording. An artifact without the
+    # marker (every pre-existing one) resolves to the shared, pre-grease wording.
+    for field, value in expected_decision_fields(artifact, artifact.get("project_type")).items():
         if artifact.get(field) != value:
             errors.append(f"{field} must equal the deterministic DOE-design policy")
     if errors:

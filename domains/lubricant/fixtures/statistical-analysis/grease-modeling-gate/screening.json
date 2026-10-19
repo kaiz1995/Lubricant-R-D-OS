@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "screening",
+  "project_id": "PGD-B1-001",
+  "stage": "SCREENING_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Does sample SMP-PG-B1-001 clear the cheap physical/chemical screen before it may occupy a bench slot?",
+  "hypothesis": "No screened index is out of limit, so the sample is not obviously unqualified for the bench; the screen is a gate and not a claim that this candidate is better than another.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. physical/chemical indices usually have LOW discrimination power between close candidate formulas: this screen is a GATE, never a SELECTION criterion, and PASS means only 'not obviously unqualified', never 'better'. The recorded values are supplied screen results, not independently verified, and a PASS does not establish bench or product performance. overall_verdict=PASS.",
+  "decision_rule": "Release the sample to the bench only when no screened index fails: overall_verdict FAIL forces gate_to_bench BLOCKED (schemas/screening.schema.json: overall_verdict FAIL -> gate_to_bench BLOCKED), because the bench is the scarcest resource of the inner loop and a failed screen must go back to Stage 9 instead.",
+  "result": "screen SCR-PG-B3-001: 7 PASS, 0 FAIL, 0 INCONCLUSIVE; overall_verdict=PASS; gate_to_bench=RELEASED.",
+  "decision": "GO",
+  "next_action": "Queue sample SMP-PG-B1-001 for the next bench round: screen SCR-PG-B3-001 found nothing obviously unqualified, so the bench slot may be spent on it.",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the screening lab worksheet supplied for this sample records value, unit, limit and verdict for each screened index.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-SC-PG-B3-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the appearance check is a visual grade, not a measured number, and is recorded as the qualitative observation the operator reported.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening_id": "SCR-PG-B3-001",
+  "sample_reference": "SMP-PG-B1-001",
+  "tests": [
+    {
+      "test_id": "ST-PG-B3-001",
+      "test_name": "PENETRATION",
+      "value": 265,
+      "unit": "0.1 mm",
+      "limit": 340,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-002",
+      "test_name": "WORKED_PENETRATION_CHANGE",
+      "value": 12,
+      "unit": "0.1 mm",
+      "limit": 30,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-003",
+      "test_name": "DROPPING_POINT",
+      "value": 185,
+      "unit": "degC",
+      "limit": "180 min",
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-004",
+      "test_name": "OIL_SEPARATION",
+      "value": 1.2,
+      "unit": "percent mass",
+      "limit": 5,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-005",
+      "test_name": "EVAPORATION_LOSS",
+      "value": 2.5,
+      "unit": "percent mass",
+      "limit": 3,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-006",
+      "test_name": "SHEAR_STABILITY",
+      "value": 8,
+      "unit": "percent change",
+      "limit": 10,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B3-007",
+      "test_name": "APPEARANCE_UNIFORMITY",
+      "value": "uniform",
+      "unit": "visual grade",
+      "limit": "uniform",
+      "verdict": "PASS"
+    }
+  ],
+  "overall_verdict": "PASS",
+  "measurement_replicates": 3,
+  "gate_to_bench": "RELEASED"
+}

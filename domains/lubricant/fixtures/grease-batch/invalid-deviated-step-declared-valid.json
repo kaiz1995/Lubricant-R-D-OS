@@ -1,0 +1,70 @@
+{
+  "project_artifact": "project-active.json",
+  "design_space_artifact": "design-space-artifact.json",
+  "experiment_design_artifact": "experiment-design-artifact.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-BAT-PG-B2-BAD-VALID-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the milling step is far out of tolerance while the batch is declared VALID.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "batch": {
+    "batch_id": "BAT-PG-B2-BAD-VALID-001",
+    "formula_reference": "FORM-PG-B2-001@v1",
+    "scale_class": "LAB",
+    "trajectory": [
+      {
+        "step_type": "SAPONIFICATION",
+        "setpoint": 195,
+        "actual": 196,
+        "unit": "degC",
+        "duration_s": 5400,
+        "deviation": 1,
+        "deviation_verdict": "WITHIN",
+        "tolerance": 3,
+        "source": "Synthetic kettle log KL-B2-BAD-001 line 12",
+        "evidence_id": "E-BAT-PG-B2-BAD-VALID-001"
+      },
+      {
+        "step_type": "MILLING",
+        "setpoint": 320,
+        "actual": 240,
+        "unit": "1/s",
+        "duration_s": 900,
+        "deviation": -80,
+        "deviation_verdict": "DEVIATED",
+        "tolerance": 20,
+        "source": "Synthetic kettle log KL-B2-BAD-001 line 37",
+        "evidence_id": "E-BAT-PG-B2-BAD-VALID-001"
+      }
+    ],
+    "raw_material_lots": [
+      "LOT-SYN-PG-B2-001"
+    ],
+    "operator": "Synthetic operator OP-PG-02",
+    "equipment": "Synthetic 5 L pilot kettle K-PG-01",
+    "anomalies": [],
+    "batch_verdict": "VALID"
+  },
+  "sample": {
+    "sample_id": "SMP-PG-B2-BAD-VALID-001",
+    "label": {
+      "printed_text": "SMP-PG-B2-BAD-VALID-001 | BAT-PG-B2-BAD-VALID-001 | FORM-PG-B2-001@v1 | 2026-10-07",
+      "printed_at": "2026-10-07T09:00:00"
+    },
+    "prepared_at": "2026-10-07",
+    "storage": "Sealed 1 kg drum at 25 degC, dry indoor cabinet, sample shelf S-03.",
+    "chain_of_custody": [
+      {
+        "from": "Synthetic kettle operator OP-PG-02",
+        "to": "Synthetic sample store SS-PG-01",
+        "at": "2026-10-07",
+        "purpose": "Store the drum until the bench slot opens."
+      }
+    ],
+    "status": "PREPARED"
+  }
+}

@@ -1,4 +1,13 @@
-"""Validate one deterministic test-method qualification artifact."""
+"""Validate one deterministic test-method qualification artifact.
+
+The validator sees the artifact without its upstream charter, so it detects the
+grease extension from the artifact itself: a record that carries the
+``qualification_pipeline`` or a ``reference_material_reference`` is held to the
+whole grease rule set (serial pipeline, ENGINE-computed repeatability and
+discrimination, PASS on the independent new batch check). A record that carries
+neither keeps exactly the pre-change rule set, which is what the six oil routes
+produce.
+"""
 
 from __future__ import annotations
 
@@ -9,8 +18,19 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from preflight_test_method import METRICS, QUALIFICATION_STATUSES, ROLES, evidence_errors, has_text, measurement_errors, schema_dir
-from qualification_policy import expected_decision_fields, go_qualification_errors, role_metric_errors
+from preflight_test_method import METRICS, QUALIFICATION_STATUSES, ROLES, evidence_errors, has_text, measurement_errors, pipeline_errors, schema_dir
+from qualification_policy import GREASE_PROJECT_TYPE, expected_decision_fields, go_qualification_errors, role_metric_errors
+
+
+# Presence of any of these fields marks the artifact as using the grease extension.
+GREASE_EXTENSION_FIELDS = ("qualification_pipeline", "reference_material_reference")
+
+
+def artifact_route(artifact: dict) -> str | None:
+    """Return the grease project type when the artifact uses the extension, else None."""
+    if any(field in artifact for field in GREASE_EXTENSION_FIELDS):
+        return GREASE_PROJECT_TYPE
+    return None
 
 
 def semantic_errors(artifact: dict) -> list[str]:
@@ -37,6 +57,8 @@ def semantic_errors(artifact: dict) -> list[str]:
                 errors.append(f"{label}.metric is duplicated")
             seen.add(item["metric"])
             errors.extend(measurement_errors(item.get("measurement"), f"{label}.measurement"))
+            if "computed_by" in item and item.get("computed_by") not in {"ENGINE", "MANUAL"}:
+                errors.append(f"{label}.computed_by")
     basis = artifact.get("qualification_basis")
     if not isinstance(basis, list) or not basis or not all(has_text(item) for item in basis):
         errors.append("qualification_basis")
@@ -44,10 +66,17 @@ def semantic_errors(artifact: dict) -> list[str]:
     errors.extend(evidence_problems)
     if artifact.get("qualification_status") not in QUALIFICATION_STATUSES:
         errors.append("qualification_status")
-    errors.extend(role_metric_errors(artifact))
+    project_type = artifact_route(artifact)
+    if "qualification_pipeline" in artifact:
+        errors.extend(pipeline_errors(artifact.get("qualification_pipeline"), project_type))
+    if project_type is not None and not has_text(artifact.get("reference_material_reference")):
+        # The dossier id is the ruler the qualification claims to have used; a
+        # grease record without it cannot say what the discrimination was against.
+        errors.append("reference_material_reference is required when the qualification pipeline is recorded")
+    errors.extend(role_metric_errors(artifact, project_type))
     if artifact.get("qualification_status") == "QUALIFIED":
-        errors.extend(go_qualification_errors(artifact))
-    for field, value in expected_decision_fields(artifact).items():
+        errors.extend(go_qualification_errors(artifact, project_type))
+    for field, value in expected_decision_fields(artifact, project_type).items():
         if artifact.get(field) != value:
             errors.append(f"{field} must equal the deterministic qualification policy")
     return errors

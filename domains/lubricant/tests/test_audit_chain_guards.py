@@ -197,6 +197,25 @@ def main():
         patch(root, "failure_ctq.json",
               lambda d: d["ctqs"][0]["test_references"].append(f"{PID}-TM-999"))
         expect_reject("dangling-id-among-citations", run_guard(LINKAGE, root), "unknown method")
+
+        # ---- 8. a second, non-canonical charter cannot hijack the dispatch ---
+        # The stage expectation for a kind is dispatched on the charter's
+        # project_type. A stray json declaring artifact_type "project" is not a
+        # stage artifact (so every other rule skips it), but it used to win the
+        # charter lookup by filename order and silently flip the dispatch. Two
+        # charters is an ambiguous workspace and must be reported, not resolved
+        # by luck.
+        root = base / "f8"
+        healthy_workspace(root)
+        (root / "charter.json").write_text(
+            json.dumps({
+                "schema_version": "0.1.0", "artifact_type": "project",
+                "project_id": PID, "project_type": "PRECISION_GREASE_DEV",
+            }, indent=2),
+            encoding="utf-8",
+        )
+        expect_reject("second-charter/ambiguous-workspace", run_guard(AUDIT, root),
+                      "more than one artifact declares artifact_type 'project'")
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

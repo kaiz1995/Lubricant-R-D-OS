@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "experiment_design",
+  "project_id": "PGD-B2-001",
+  "stage": "EXPERIMENT_DESIGNED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "What experiment design request should be handed to the deterministic engine for the batch-2 campaign?",
+  "hypothesis": "A small sequential round over the frozen design space can reduce the stated decision uncertainty within two bench positions.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: no DOE points or product-performance result have been generated.",
+  "evidence": [
+    {
+      "evidence_id": "E-ED-PG-B2-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record references a bounded design space and a qualified method for contract validation only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Hand off only the stated request to the Phase 4 deterministic engine; the round must fit inside the registered bench capacity.",
+  "result": "Synthetic design request is sufficient for deterministic point generation; no points are present.",
+  "decision": "GO",
+  "next_action": "Run the Phase 4 deterministic engine and produce the batch of this round.",
+  "experiment_design_id": "ED-PG-B2-001",
+  "design_space_reference": "DS-PG-B2-001",
+  "test_method_references": ["TM-PG-B2-001"],
+  "factor_references": ["VAR-SOAP-CONCENTRATION", "VAR-BASE-OIL-FRACTION", "VAR-SOAP-HOLD-TIME"],
+  "design": {
+    "family": "BAYESIAN_SEQUENTIAL",
+    "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the inner loop runs small sequential rounds, so the next batch is chosen from the previous round's result rather than from one large fixed design.",
+    "effects_to_estimate": ["soap concentration effect", "base oil fraction effect", "soap hold time effect"]
+  },
+  "run_plan": {
+    "target_count": 3,
+    "replicate_count": 0,
+    "center_point_count": 0,
+    "randomized": true,
+    "point_generation": "PHASE4_DETERMINISTIC_ENGINE"
+  },
+  "resource_envelope": {
+    "bench_slots": 2,
+    "lot_capacity": 4,
+    "cycle_days": 30,
+    "cost_cap": 60000,
+    "external_test_lead_time": 14
+  },
+  "responses": [
+    { "ctq_reference": "CTQ-PG-B2-001", "test_method_reference": "TM-PG-B2-001", "role": "OPTIMIZATION_RESPONSE" }
+  ],
+  "guardrails": ["Remain within DS-PG-B2-001 constraints.", "Do not exceed the registered two bench positions per round."],
+  "expected_information_value": {
+    "classification": "RECOMMENDED",
+    "decision_relevance": "Separates feasible precision-gear grease routes inside the frozen design space.",
+    "expected_information_gain": "Can inform the next batch decision of the inner loop.",
+    "cost": "Synthetic planning estimate only.",
+    "duration": "Synthetic planning estimate only.",
+    "redundancy": "No duplicate response is represented by this fixture."
+  }
+}

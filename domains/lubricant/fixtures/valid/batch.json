@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "batch",
+  "project_id": "PGD-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Was the lithium grease batch produced inside its process window, step by step, from the recorded lots?",
+  "hypothesis": "A batch whose trajectory records setpoint, actual, duration, and a per-step deviation verdict is the landing point where recipe plus process becomes a traceable product.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the trajectory values are fabricated for contract validation and do not describe a real kettle.",
+  "evidence": [
+    {
+      "evidence_id": "E-BAT-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the batch log records the saponification, dehydration, milling, and filling steps with their setpoints and actuals.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Accept a batch record only with a formula reference, a scale class, a non-empty trajectory, the charged lots, the operator, the equipment, and a batch verdict; anomalies may be empty when none were recorded.",
+  "result": "The batch is recorded as produced with one deviated step (milling gap) and a DEVIATED batch verdict.",
+  "decision": "HOLD",
+  "next_action": "Decide whether the milling deviation invalidates the sample taken from this batch before it is sent to the bench.",
+  "batch_id": "BAT-2026-001",
+  "formula_reference": "FORM-GREASE-001@v1",
+  "scale_class": "LAB",
+  "trajectory": [
+    {
+      "step_type": "SAPONIFICATION",
+      "setpoint": 195,
+      "actual": 196,
+      "unit": "degC",
+      "duration_s": 5400,
+      "deviation": 1,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "DEHYDRATION",
+      "setpoint": 200,
+      "actual": 201,
+      "unit": "degC",
+      "duration_s": 3600,
+      "deviation": 1,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "MILLING",
+      "setpoint": 320,
+      "actual": 240,
+      "unit": "1/s",
+      "duration_s": 900,
+      "deviation": -80,
+      "deviation_verdict": "DEVIATED"
+    },
+    {
+      "step_type": "DILUTION_COOLING",
+      "setpoint": 120,
+      "actual": 118,
+      "unit": "degC",
+      "duration_s": 2400,
+      "deviation": -2,
+      "deviation_verdict": "WITHIN"
+    },
+    {
+      "step_type": "FILLING",
+      "setpoint": "manual fill to 1 kg drum",
+      "actual": "manual fill to 1 kg drum",
+      "unit": "qualitative",
+      "duration_s": 600,
+      "deviation": "none recorded",
+      "deviation_verdict": "WITHIN"
+    }
+  ],
+  "raw_material_lots": ["LOT-SYN-2026-001", "LOT-SYN-2026-014", "LOT-SYN-2026-021"],
+  "operator": "Synthetic operator OP-01",
+  "equipment": "Synthetic 5 L pilot kettle K-01",
+  "anomalies": ["Milling shear rate fell below setpoint for the whole step; cause not yet identified."],
+  "batch_verdict": "DEVIATED"
+}

@@ -13,5 +13,25 @@
     "id": 3,
     "prompt": "在实验数据接入阶段直接进行响应面拟合、生成回归公式或下结论说产品已达标",
     "expected": "触发黑名单拦截，严格限制在实验数据摄取与溯源记录，严禁统计回归或宣称性能达标"
+  },
+  {
+    "id": 4,
+    "prompt": "精密脂路线第 11 步：把一次台架实测（run_id、台架编号、批次号、样品号、协议版本、设定值、环境、原始记录引用、删失字段、轮次）导入为 bench_test.json",
+    "expected": "preflight 逐条打印观测与删失纪律，GATE 给出第 11 步结论，build_bench_test_artifact.py 生成 BENCH_TESTED 工件，validate_bench_test_artifact.py 通过（decision=UNDECIDED，交第 12 步方差判定）"
+  },
+  {
+    "id": 5,
+    "prompt": "把右删失的 10 小时观测记成终点值（event_occurred=true、event_time=10），即 N9 负向用例",
+    "expected": "HOLD：censored observation must not carry an event_time: a RIGHT-censored run is never recorded as an end-point value；不落盘。删失不得当终点（铁律 3）"
+  },
+  {
+    "id": 6,
+    "prompt": "提交一条删失观测但不写 stop_reason，或一条无事件又未声明删失的 run",
+    "expected": "HOLD：censored observation without a stop_reason is refused: an unexplained stop is not an observation；无事件且未声明删失的 run 也必须说明停机原因"
+  },
+  {
+    "id": 7,
+    "prompt": "在六条油路线的项目章程（如 project_type=COST_DOWN）下请求台架实测，或提交缺 bench_reference 的台架 run",
+    "expected": "HOLD：BENCH_TESTED 只属于 PRECISION_GREASE_DEV 路线；台架 run 必须挂齐 run/bench/batch/sample/协议版本/原始记录六项引用"
   }
 ]

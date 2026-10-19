@@ -1,0 +1,85 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "screening",
+  "project_id": "PGD-B4-001",
+  "stage": "SCREENING_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Did sample SMP-PG-B4-EVT-001 clear the frozen seven-index screen?",
+  "hypothesis": "The cheap screen records value, unit, limit and verdict for every intended index; a PASS means only that the sample is not obviously unqualified.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: physical/chemical indices have low discrimination power between close candidate formulas; this stage is a gate, never a selection criterion.",
+  "evidence": [
+    {
+      "evidence_id": "E-SCR-PG-B4-EVT-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the screening lab worksheet supplied for sample SMP-PG-B4-EVT-001 records value, unit, limit and verdict for each screened index.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Release the sample into a bench slot only when every screened index passed; a FAIL forces gate_to_bench BLOCKED.",
+  "result": "Sample SMP-PG-B4-EVT-001 cleared all seven screened indices; gate_to_bench RELEASED.",
+  "decision": "GO",
+  "next_action": "Hand sample SMP-PG-B4-EVT-001 to the bench queue of its campaign round.",
+  "screening_id": "SCR-PG-B4-EVT-001",
+  "sample_reference": "SMP-PG-B4-EVT-001",
+  "tests": [
+    {
+      "test_id": "ST-PG-B4-001",
+      "test_name": "PENETRATION",
+      "value": 265,
+      "unit": "0.1 mm",
+      "limit": 340,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-002",
+      "test_name": "WORKED_PENETRATION_CHANGE",
+      "value": 12,
+      "unit": "0.1 mm",
+      "limit": 30,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-003",
+      "test_name": "DROPPING_POINT",
+      "value": 185,
+      "unit": "degC",
+      "limit": "180 min",
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-004",
+      "test_name": "OIL_SEPARATION",
+      "value": 1.2,
+      "unit": "percent mass",
+      "limit": 5,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-005",
+      "test_name": "EVAPORATION_LOSS",
+      "value": 2.5,
+      "unit": "percent mass",
+      "limit": 3,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-006",
+      "test_name": "SHEAR_STABILITY",
+      "value": 8,
+      "unit": "percent change",
+      "limit": 10,
+      "verdict": "PASS"
+    },
+    {
+      "test_id": "ST-PG-B4-007",
+      "test_name": "APPEARANCE_UNIFORMITY",
+      "value": "uniform",
+      "unit": "visual grade",
+      "limit": "uniform",
+      "verdict": "PASS"
+    }
+  ],
+  "measurement_replicates": 3,
+  "overall_verdict": "PASS",
+  "gate_to_bench": "RELEASED"
+}

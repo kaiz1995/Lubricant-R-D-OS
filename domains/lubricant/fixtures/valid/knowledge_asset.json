@@ -17,7 +17,7 @@
   ],
   "decision_rule": "CLOSED_KNOWLEDGE requires all six assets and a QUALIFIED evidence package.",
   "result": "All six knowledge assets are present and the evidence package is QUALIFIED.",
-  "decision": "FREEZE",
+  "decision": "GO",
   "next_action": "Archive the knowledge assets for reuse.",
   "asset_status": "CLOSED_KNOWLEDGE",
   "knowledge_assets": {

@@ -101,6 +101,44 @@ def go_project_type(event: dict, before: dict) -> object:
     return declared if declared is not None else before.get("project_type")
 
 
+def loop_edge(before_stage: object, after_stage: object) -> dict | None:
+    """The declared inner-loop ring edge before -> after, or None.
+
+    `loop_edges` (contract v0.9.0) is the whole sanctioned exception to "a stage
+    only ever advances one step": it publishes the controlled back edges of the
+    PRECISION_GREASE_DEV inner loop (BATCH_PRODUCED -> SCREENING_PASSED ->
+    BENCH_TESTED -> VARIANCE_ASSESSED -> BATCH_PRODUCED). Inter-ring backtracking
+    (bench shows the method unusable, go back to method qualification) is a
+    different thing and stays DENIED — decision 3 adds no `BACKTRACK` action.
+    """
+    for edge in CONTRACT.get("loop_edges", ()):
+        if edge["from"] == before_stage and edge["to"] == after_stage:
+            return edge
+    return None
+
+
+def iteration_error(event: dict) -> str | None:
+    """Validate the inner-loop iteration counter when an event carries one.
+
+    The counter is 1-based, matching `schemas/bench.schema.json`'s
+    `current_iteration`, and is capped by the contract's `max_iterations`
+    (unit: bench rounds per campaign, ≈12 rounds in a year — plan §4.3). This
+    validator is stateless, so it can only bound the number carried by the
+    event, never prove the counter advanced — same convention as the optional
+    `revision.revision_index`. Past the cap the loop must stop, so the message
+    names the exit actions rather than silently denying.
+    """
+    iteration = event.get("iteration")
+    if iteration is None:
+        return None
+    if isinstance(iteration, bool) or not isinstance(iteration, int) or iteration < 1:
+        return "iteration must be a positive integer"
+    limit = CONTRACT["max_iterations"]
+    if iteration > limit:
+        return f"iteration {iteration} exceeds max_iterations {limit}; stop the inner loop and record PIVOT or KILL"
+    return None
+
+
 def advances_one_routed_step(event: dict, before: dict, after: dict) -> bool:
     """True when after.stage is the next stage of the declared project_type route.
 
@@ -113,12 +151,21 @@ def advances_one_routed_step(event: dict, before: dict, after: dict) -> bool:
     callable capabilities rather than workflow steps, so their hand-off is the
     `next_stage` published alongside them — checked first, because `before` is
     by definition absent from every route in that case.
+
+    Ring edges (`loop_edges`) add exactly one more legal pair each: the declared
+    inner-loop back edge, and only inside a route that declares *both* endpoints.
+    The exemption is therefore route-local by construction — an oil route never
+    contains the pair — and the single-step assertion below is untouched for
+    every other before/after combination.
     """
     project_type = go_project_type(event, before)
     route = CONTRACT["type_routes"].get(project_type) if isinstance(project_type, str) else None
     on_demand = CONTRACT.get("on_demand_stages", {})
     if before["stage"] in on_demand:
         return after["stage"] == on_demand[before["stage"]]["next_stage"]
+    if route is not None and loop_edge(before["stage"], after["stage"]) is not None:
+        if before["stage"] in route and after["stage"] in route:
+            return True
     if route is None:
         stages = CONTRACT["stages"]
         return stages.index(after["stage"]) == stages.index(before["stage"]) + 1
@@ -147,6 +194,12 @@ def validate(event: object) -> str | None:
     error = lifecycle_error(kind, gate, before, after)
     if error:
         return error
+    # Last of the event-level checks on purpose: the new counter rule can never
+    # mask an error that already existed, and `iteration` is optional everywhere
+    # except on a ring-edge GO (checked below).
+    error = iteration_error(event)
+    if error:
+        return error
 
     stages = CONTRACT["stages"]
     before_index, after_index = stages.index(before["stage"]), stages.index(after["stage"])
@@ -156,10 +209,29 @@ def validate(event: object) -> str | None:
         if after["stage"] in ("FROZEN", "CLOSED") or not advances_one_routed_step(event, before, after):
             return "GO must advance exactly one stage"
         if before["status"] == "HOLD":
+            # Deliberately first: a ring-edge GO out of HOLD must still satisfy
+            # the pre-existing rule, so the ring exemption can never relax it.
             if not retains_evidence(before, after) or len(after["evidence"]) <= len(before["evidence"]):
                 return "GO from HOLD requires newly added evidence"
             if not same(before, after, ("project_id", "decision_question", "version")):
                 return "GO must preserve the current project version and decision question"
+            return None
+        if loop_edge(before["stage"], after["stage"]) is not None:
+            # Ring edge (contract `loop_edges`): the inner loop's controlled back
+            # edge. The stage pointer returns to the loop head without rewriting
+            # the stage-sequence history, so the version is preserved (plan §4.3:
+            # "each back edge does not change the stage sequence history, it
+            # increments an `iteration` counter"). Evidence stays append-only —
+            # the new round's records are added and nothing already recorded may
+            # be dropped or voided (铁律 8). ROLLBACK's "invalidate the rounds you
+            # passed" semantics is exactly what must NOT happen here, which is why
+            # the ring is an edge and not a ROLLBACK (plan §4.5.5 N25).
+            if "iteration" not in event:
+                return "GO ring-edge advance must carry the inner-loop iteration counter"
+            if not same(before, after, ("project_id", "decision_question", "version")):
+                return "GO ring-edge advance must preserve the project version and decision question"
+            if not retains_evidence(before, after):
+                return "GO ring-edge advance must retain prior evidence"
             return None
         if not same(before, after, immutable + ("version",)):
             return "GO must preserve the current project version and evidence"
@@ -192,6 +264,14 @@ def validate(event: object) -> str | None:
         return None
 
     if kind == "ROLLBACK":
+        # Decision 3 boundary (implementation plan §4.5.2 item 4-8) — unchanged on
+        # purpose. ROLLBACK demands `accepted == stages[:after_index+1]`, i.e. the
+        # canonical FULL-stage prefix, and that semantics does not hold for a route
+        # that skips steps: neither the six oil routes nor PRECISION_GREASE_DEV
+        # ever accumulates that prefix, so the grease route does not use ROLLBACK.
+        # Inner-loop movement is the ring (`loop_edges`); inter-ring backtracking
+        # (bench shows the method unusable -> back to method qualification) stays
+        # DENIED here and in the router — a human decides that outside the system.
         accepted = event.get("accepted_stages")
         if not isinstance(accepted, list) or not accepted or accepted[-1] != after["stage"]:
             return "ROLLBACK must return to the nearest accepted stage"

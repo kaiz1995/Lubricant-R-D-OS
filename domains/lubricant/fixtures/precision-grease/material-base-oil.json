@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "material",
+  "project_id": "PGD-B1-001",
+  "stage": "DESIGN_SPACE_DEFINED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can the base oil candidate be recorded as a design-space material with a traceable property set?",
+  "hypothesis": "A base oil whose identity, lot, chemistry family, and solvency-relevant properties are recorded can enter the design space without any property being invented.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: supplier values are supplied, not independently verified, and the aniline point has not been measured yet.",
+  "evidence": [
+    {
+      "evidence_id": "E-MAT-PG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the supplier datasheet records the trade name, lot, and KV100 of the base oil.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED",
+      "claim_class": "MANUFACTURER_DATASHEET"
+    },
+    {
+      "evidence_id": "E-MAT-PG-B1-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the aniline point is not yet available from the supplier, so it is recorded as a GAP, not guessed.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "GAP"
+    }
+  ],
+  "decision_rule": "Register a material only with identity (supplier / trade name / lot), a chemistry family, at least one recorded property, and a dated price; a property without a supplier value is recorded with status GAP.",
+  "result": "The base oil candidate is recorded as a design-space material; the solvency-relevant aniline point remains an open GAP.",
+  "decision": "GO",
+  "next_action": "Obtain or measure the aniline point before any soap-thickener consistency argument is made from this material.",
+  "material_id": "MAT-PG-BO-001",
+  "category": "BASE_OIL",
+  "identity": {
+    "supplier": "Synthetic supplier A",
+    "trade_name": "Synthetic PAO-6",
+    "lot": "LOT-SYN-PG-B1-001"
+  },
+  "chemistry": {
+    "base_oil_family": "PAO",
+    "notes": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: non-polar polyalphaolefin."
+  },
+  "properties": [
+    { "property_id": "kv40", "value": 31.0, "unit": "mm2/s", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-001", "status": "ASSUMED" },
+    { "property_id": "kv100", "value": 6.0, "unit": "mm2/s", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-001", "status": "ASSUMED" },
+    { "property_id": "vi", "value": 138, "unit": "dimensionless", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-001", "status": "ASSUMED" },
+    { "property_id": "aniline_point", "value": "not supplied by the manufacturer", "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-002", "status": "GAP" },
+    { "property_id": "polarity", "value": "non-polar", "unit": "qualitative", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "E-MAT-PG-B1-001", "status": "ASSUMED" }
+  ],
+  "cost": {
+    "value": 4.2,
+    "unit": "CNY/kg",
+    "price_timestamp": "2026-09-01"
+  }
+}

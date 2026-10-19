@@ -1,0 +1,105 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "variance",
+  "project_id": "PGD-NB-001",
+  "stage": "VARIANCE_ASSESSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the round-1 candidate/reference difference real, or noise?",
+  "hypothesis": "The paired round-1 difference follows the formulation and exceeds bench-to-bench drift.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the engine-computed numbers below are recorded so the next-batch producer reads a real VARIANCE_ASSESSED record; the round was never run.",
+  "evidence": [
+    {
+      "evidence_id": "E-VAR-NB-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the frozen sigma comes from a step-5 method-characterisation record; the values are recorded for contract validation only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Release the step-13 model update only on CONSISTENT_DIFFERENCE; never soften UNDERPOWERED into NO_DETECTABLE_DIFFERENCE.",
+  "result": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: verdict CONSISTENT_DIFFERENCE with both arms' replicates agreeing on outcome.",
+  "decision": "GO",
+  "next_action": "Update the model from the observations that passed this check, carrying the applicability boundary.",
+  "variance_id": "VAR-PGD-NB-001",
+  "campaign_reference": "CMP-PGD-NB-001",
+  "iteration": 1,
+  "replicate_structure": [
+    {
+      "level": "BATCH",
+      "n": 2,
+      "group_reference": "ARM-CANDIDATE"
+    },
+    {
+      "level": "BATCH",
+      "n": 2,
+      "group_reference": "ARM-REFERENCE"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "RUN-PGD-NB-R1A-1"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "RUN-PGD-NB-R1B-1"
+    }
+  ],
+  "censoring": [
+    {
+      "observation_reference": "OBS-PGD-NB-001",
+      "event_occurred": true,
+      "event_time": 2.55,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-PGD-NB-002",
+      "event_occurred": true,
+      "event_time": 2.6,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-PGD-NB-003",
+      "event_occurred": true,
+      "event_time": 4.4,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    },
+    {
+      "observation_reference": "OBS-PGD-NB-004",
+      "event_occurred": true,
+      "event_time": 4.45,
+      "censoring_type": "NONE",
+      "stop_reason": "event observed inside the protocol window"
+    }
+  ],
+  "intervention_events": [],
+  "components": {
+    "sigma_meas": 0.04,
+    "sigma_bench": 0.13,
+    "sigma_batch": 0.06,
+    "sigma_total": 0.15
+  },
+  "effect_size": 1.85,
+  "power": 0.86,
+  "k_ratio": 3.2,
+  "sigma_max_requirement": 0.5,
+  "resolution_table": [
+    {
+      "replicates_per_group": 2,
+      "detectable_difference": 0.42,
+      "detectable": true,
+      "note": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: 4 * sigma_total / sqrt(n) at n = 2."
+    },
+    {
+      "replicates_per_group": 3,
+      "detectable_difference": 0.35,
+      "detectable": true,
+      "note": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: 4 * sigma_total / sqrt(n) at n = 3."
+    }
+  ],
+  "verdict": "CONSISTENT_DIFFERENCE",
+  "computed_by": "ENGINE",
+  "preregistered_delta": 0.5
+}

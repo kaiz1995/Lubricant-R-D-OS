@@ -1,0 +1,83 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact.json",
+  "sample_artifact": "sample-artifact.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the screening lab worksheet supplied for this sample records value, unit, limit and verdict for each screened index.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-SC-PG-B3-002",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the appearance check is a visual grade, not a measured number, and is recorded as the qualitative observation the operator reported.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-001",
+    "sample_reference": "SMP-PG-B3-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-002",
+        "test_name": "WORKED_PENETRATION_CHANGE",
+        "value": 12,
+        "unit": "0.1 mm",
+        "limit": 30,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-003",
+        "test_name": "DROPPING_POINT",
+        "value": 185,
+        "unit": "degC",
+        "limit": "180 min",
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-004",
+        "test_name": "OIL_SEPARATION",
+        "value": 1.2,
+        "unit": "percent mass",
+        "limit": 5,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-005",
+        "test_name": "EVAPORATION_LOSS",
+        "value": 2.5,
+        "unit": "percent mass",
+        "limit": 3,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-006",
+        "test_name": "SHEAR_STABILITY",
+        "value": 8,
+        "unit": "percent change",
+        "limit": 10,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-007",
+        "test_name": "APPEARANCE_UNIFORMITY",
+        "value": "uniform",
+        "unit": "visual grade",
+        "limit": "uniform",
+        "verdict": "PASS"
+      }
+    ],
+    "measurement_replicates": 3
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "experiment_design",
+  "project_id": "PGD-B1-001",
+  "stage": "EXPERIMENT_DESIGNED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Can supplied RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL request ED-PG-B1-001 be handed to the Phase 4 deterministic engine as one small sequential round?",
+  "hypothesis": "ED-PG-B1-001 records supplied RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL planning inputs for one small sequential round of 3-6 samples per round, decided from the previous round's result rather than from one large fixed design.",
+  "uncertainty": "Supplied design family, factors, target count, replicates, center points, randomization, response roles, guardrails, total, and information-value statements are not independently verified; statistical sufficiency is not verified and no DOE point, formula, measurement, result, cost, performance, optimization, or downstream conclusion is established. The declared bench capacity is a planning input and reserves no capacity.",
+  "decision_rule": "Hand off only a supplied MIXTURE/CONSTRAINED_MIXTURE/FULL_FACTORIAL/FRACTIONAL_FACTORIAL/SPLIT_PLOT/BAYESIAN_SEQUENTIAL/MIXTURE_PROCESS request with linked qualified D/P method, feasible same-unit bounds, complete responses and guardrails, role-consistent design-space variables, evidence without GAP, a round of 3-6 samples per round, and a design size within the registered bench capacity.",
+  "result": "ED-PG-B1-001 is eligible for Phase 4 deterministic point generation as one small sequential round; family RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL and target count 2 are supplied planning inputs, the round is bounded by the declared bench capacity (2 position(s) for the next round), and no DOE point or statistical-sufficiency conclusion is established.",
+  "decision": "GO",
+  "next_action": "Hand ED-PG-B1-001 to the Phase 4 deterministic engine for one small sequential round without adding DOE points; size the round to the registered bench capacity.",
+  "evidence": [
+    {
+      "evidence_id": "E-ED-PG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record references a bounded design space, a qualified method and the registered bench for contract validation only.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "design_space_reference": "DS-PG-B1-001",
+  "test_method_references": [
+    "TM-PG-B1-001"
+  ],
+  "experiment_design_id": "ED-PG-B1-001",
+  "factor_references": [
+    "VAR-SOAP-CONCENTRATION",
+    "VAR-BASE-OIL-FRACTION",
+    "VAR-SOAP-HOLD-TIME"
+  ],
+  "design": {
+    "family": "RESOURCE_CONSTRAINED_GREEDY_SEQUENTIAL",
+    "rationale": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the inner loop runs small sequential rounds, so the next batch is chosen from the previous round's result rather than from one large fixed design.",
+    "effects_to_estimate": [
+      "soap concentration effect",
+      "base oil fraction effect",
+      "soap hold time effect"
+    ]
+  },
+  "run_plan": {
+    "target_count": 2,
+    "replicate_count": 0,
+    "center_point_count": 0,
+    "randomized": true,
+    "point_generation": "PHASE4_DETERMINISTIC_ENGINE"
+  },
+  "responses": [
+    {
+      "ctq_reference": "CTQ-PG-B1-001",
+      "test_method_reference": "TM-PG-B1-001",
+      "role": "OPTIMIZATION_RESPONSE"
+    }
+  ],
+  "guardrails": [
+    "Remain within DS-PG-B1-001.",
+    "Do not exceed the registered bench capacity per round."
+  ],
+  "expected_information_value": {
+    "classification": "RECOMMENDED",
+    "decision_relevance": "Separates feasible precision-gear grease routes inside the frozen design space.",
+    "expected_information_gain": "Can inform the next batch decision of the inner loop.",
+    "cost": "Synthetic planning estimate only.",
+    "duration": "Synthetic planning estimate only.",
+    "redundancy": "No duplicate response is represented by this fixture."
+  },
+  "resource_envelope": {
+    "bench_slots": 2,
+    "lot_capacity": 4,
+    "cycle_days": 30,
+    "cost_cap": 60000,
+    "external_test_lead_time": 14
+  },
+  "project_type": "PRECISION_GREASE_DEV",
+  "bench_reference": "BENCH-SZ-PG-01",
+  "available_bench_slots": 2
+}

@@ -72,6 +72,18 @@ def gate(application_path: Path, **overrides) -> subprocess.CompletedProcess:
         return run(GATE_PREFLIGHT, path)
 
 
+def load_policy():
+    """The policy module the preflight itself calls (same file, same directory)."""
+    import importlib.util
+
+    path = ROOT / "skills/application-validation/scripts/application_validation_policy.py"
+    spec = importlib.util.spec_from_file_location("app_validation_policy_probe", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def application_input(result: str = "PASS") -> dict:
     return {
         "application": {
@@ -174,14 +186,58 @@ def main() -> int:
         blocked_empty = gate(empty_artifact)
         assert blocked_empty.returncode != 0 and "must be PASS to enter APPLIED (got GAP)" in blocked_empty.stdout, blocked_empty.stdout
 
+        # 6b. Synthetic evidence never authorizes a transition, on this gate too.
+        #     The router refuses SYNTHETIC advancement, gate-review permits only a
+        #     HOLD recording, and knowledge-archive caps the record at
+        #     DRAFT_KNOWLEDGE. This gate used to admit a SYNTHETIC application
+        #     record, so the same chain was refused at step 17 and allowed at step
+        #     18. The rule is gated on the grease route: an oil record carries no
+        #     project_type and keeps its exact previous verdict.
+        #
+        #     Tested at the policy level because the preflight's grease branch
+        #     additionally requires the campaign / bench_test / machine-indicator
+        #     chain, and building that chain here would test three other skills at
+        #     once. applied_entry_blockers IS the function the preflight calls
+        #     (preflight_application_validation.errors_for -> applied_entry_blockers).
+        policy = load_policy()
+        # The fixture records built above are SYNTHETIC themselves (this test file's
+        # application_input declares that scope), so the PHYSICAL leg has to flip it.
+        physical_application = {**read_json(pass_artifact), "evidence_scope": "PHYSICAL"}
+        grease_record = {
+            "project_reference": "WGO-001",
+            "current_stage": "VERIFIED",
+            "project_type": "PRECISION_GREASE_DEV",
+            "application": physical_application,
+        }
+        physical_reasons = [r for r in policy.applied_entry_blockers(grease_record) if "SYNTHETIC" in r]
+        assert physical_reasons == [], physical_reasons
+
+        synthetic_grease_record = {**grease_record, "application": read_json(pass_artifact)}
+        blocked_synthetic = [r for r in policy.applied_entry_blockers(synthetic_grease_record) if "SYNTHETIC" in r]
+        assert blocked_synthetic == [
+            "SYNTHETIC application evidence cannot enter APPLIED: synthetic evidence "
+            "validates the workflow only and never authorizes a state transition"
+        ], blocked_synthetic
+
+        # The same SYNTHETIC record on an OIL gate is unchanged: no project_type,
+        # no scope rule, so it still gates exactly as it did before this fix.
+        oil_record = {
+            "project_reference": "WGO-001",
+            "current_stage": "VERIFIED",
+            "application": {**read_json(pass_artifact), "evidence_scope": "SYNTHETIC"},
+        }
+        assert [r for r in policy.applied_entry_blockers(oil_record) if "SYNTHETIC" in r] == []
+        synthetic_oil = gate(pass_artifact)
+        assert synthetic_oil.returncode == 0 and synthetic_oil.stdout.startswith("READY:"), synthetic_oil.stdout + synthetic_oil.stderr
+
         # 7. Installation: 18 keys, real schema set, deployed preflight standalone,
         #    and the single-source PASS rule is deployed beside the scripts.
         sys.path.insert(0, str(ROOT))
         from integrations.open_science import install_skill
         from scripts.install_domain_skill import SKILLS, contracts_for, shared_modules_for
 
-        assert len(SKILLS) == 19, sorted(SKILLS)
-        assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
+        assert len(SKILLS) == 24, sorted(SKILLS)
+        assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json", "bench.schema.json", "bench_test.schema.json"), SKILLS["application-validation"]
 
         deploy_ws = workspace / "deploy"
         deploy_target = deploy_ws / ".opencode" / "skills"

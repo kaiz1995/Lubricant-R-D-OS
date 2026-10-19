@@ -6,10 +6,13 @@
   "type": "object",
   "properties": {
     "artifact_type": { "const": "optimization" },
-    "stage": { "const": "OPTIMIZED" },
+    "stage": {
+      "enum": ["OPTIMIZED", "NON_INFERIORITY_PASSED"],
+      "description": "Widened from the original const OPTIMIZED to an enum so the precision-grease route's step 14 (stage NON_INFERIORITY_PASSED, added in batch 0 and deliberately chosen over reusing OPTIMIZED) can carry the same contract. The name marks WHERE the optimization REQUEST is registered on that route; it is NOT a claim that a non-inferiority conclusion has been reached (E4=B: this step registers the request and its non-inferiority method contract, and no candidate, optimum, or non-inferiority verdict is produced by this Phase 3 artifact). Purely additive: OPTIMIZED stays legal and the six oil routes keep validating against it byte for byte."
+    },
     "optimization_id": { "type": "string", "minLength": 1 },
     "model_reference": { "type": "string", "minLength": 1 },
-    "objective_type": { "enum": ["CONSTRAINT_SATISFACTION", "MULTI_OBJECTIVE"] },
+    "objective_type": { "enum": ["CONSTRAINT_SATISFACTION", "MULTI_OBJECTIVE"], "description": "Both values stay legal. The precision-grease route DEFAULTS to CONSTRAINT_SATISFACTION (satisfy performance first, then stay under the cost ceiling) rather than MULTI_OBJECTIVE, because putting cost and performance side by side as equal objectives is the wrong trade for a performance-first product. JSON Schema has no force behind a default, so that default is implemented in the skill policy layer (optimization_policy.py), not here." },
     "objectives": {
       "type": "array",
       "minItems": 1,
@@ -21,7 +24,7 @@
           "criterion": { "type": "string", "minLength": 1 },
           "ni_limits": {
             "type": "object",
-            "description": "Optional non-inferiority contract for a critical CTQ. All fields optional; once present each must be numeric and the margin must exceed zero.",
+            "description": "Reserved / no consumer in this pack: no skill, builder, validator or engine reads ni_limits, so a value written here is never a non-inferiority verdict. The authoritative field for a non-inferiority judgement is the engine input contract domains/lubricant/schemas/optimization_input.schema.json, non_inferiority[].minimum_margin; the artifact-level field must never be used as the basis of a decision. Kept (rather than deleted) so artifacts already carrying it stay valid; all fields optional, and once present each must be numeric with a margin above zero.",
             "properties": {
               "baseline": { "type": "number" },
               "minimum_acceptable": { "type": "number" },
@@ -36,7 +39,37 @@
       }
     },
     "methods": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["PARETO", "DESIRABILITY", "NON_INFERIORITY"] } },
-    "engine_handoff": { "const": "PHASE4_DETERMINISTIC_ENGINE" }
+    "engine_handoff": { "const": "PHASE4_DETERMINISTIC_ENGINE" },
+    "variance_reference": {
+      "description": "Optional, precision-grease route only. The variance assessment (variance.schema.json variance_id) whose verdict admits this round to the optimization: a round that is UNDERPOWERED or REPLICATE_INCONSISTENT must not be optimized. Optional so every existing oil artifact stays valid.",
+      "type": "string",
+      "minLength": 1
+    },
+    "trust_region": {
+      "description": "Optional, precision-grease route only. The model's applicability boundary (trust region) the recommendation must stay inside, in the deterministic engine's box form. A recommended point outside this region is an extrapolation and must be removed or explicitly degraded by the engine, never recommended silently. Optional so every existing oil artifact stays valid.",
+      "type": "object",
+      "properties": {
+        "region_statement": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["EXCLUDE", "DEGRADE"] },
+        "basis": { "type": "string", "minLength": 1 },
+        "variable_bounds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "component_id": { "type": "string", "minLength": 1 },
+              "lower": { "type": "number" },
+              "upper": { "type": "number" }
+            },
+            "required": ["component_id", "lower", "upper"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["region_statement", "variable_bounds"],
+      "additionalProperties": false
+    }
   },
   "required": ["artifact_type", "stage", "evidence_scope", "optimization_id", "model_reference", "objective_type", "objectives", "methods", "engine_handoff"],
   "unevaluatedProperties": false

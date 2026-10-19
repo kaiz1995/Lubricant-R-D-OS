@@ -6,6 +6,28 @@ pre-existing record keeps its contract). Only DOE_POINT imports consume a DOE
 output and its points; APPLICATION_FIELD and CONFIRMATORY_NON_DOE records are
 held to their own declared minimal input sets (module docstring constants
 below) and are still provenance-bound (test method + execution provenance).
+
+ADDITIVE (step 11, PRECISION_GREASE_DEV): the same skill also produces the
+``bench_test`` record of the precision-grease inner loop, so this gate serves
+both artifact kinds. The bench path is a SECOND ENTRY POINT, selected only when
+the request carries a ``bench_test`` record; every constant, function and message
+of the experiment path is untouched, and an experiment request never reaches the
+bench code. The bench entry is itself gated on the supplied charter routing as
+``PRECISION_GREASE_DEV``, because ``BENCH_TESTED`` is on no oil route.
+
+The censoring discipline of the bench path lives in ``bench_test_policy`` and is
+enforced here, in the builder and in the validator through the one shared module:
+a right-censored observation is never recorded as an end-point value, and a
+censored or event-free run must declare why it stopped.
+
+E-3/L5 (bench slot gate): the bench request also names the round's
+``screening_artifacts``, and this gate resolves them instead of trusting the paths.
+Each is schema-checked at stage ``SCREENING_PASSED``, and the run's
+``sample_reference`` must fall on one whose ``overall_verdict`` is PASS with
+``gate_to_bench`` RELEASED -- a sample the screen FAILed must not be documented as
+having spent a bench slot. E-2: the record also carries ``ctq_reference``, the CTQ
+the run observed, which is what the step-14 modeling entry links its response
+references against on the grease route.
 """
 
 from __future__ import annotations
@@ -19,9 +41,30 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from bench_test_policy import (
+    BENCH_INPUT_FIELDS,
+    EVIDENCE_FIELDS,
+    EVIDENCE_SCOPES,
+    EVIDENCE_STATUSES,
+    REROUTE_HOLD,
+    ROUTED_PROJECT_TYPE,
+    bench_test_artifact,
+    censoring_notes,
+    gate_lines,
+    input_record_errors,
+    is_bench_request,
+    release_line,
+    released_screening,
+    screening_release_errors,
+)
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json")
+# E-3 / L5: the bench path also carries the screening records that released the run's
+# sample, so its own schema set gains ``screening.schema.json``. The experiment path's
+# own list (SCHEMA_NAMES above) is untouched: it has no use for a screening record.
+BENCH_SCHEMA_NAMES = ("common.schema.json", "project.schema.json", "bench_test.schema.json", "screening.schema.json")
 UPSTREAM = (("project_artifact", "project.schema.json", "PROJECT_DEFINED"), ("challenge_artifact", "challenge.schema.json", "CHALLENGES_DEFINED"), ("failure_ctq_artifact", "failure_ctq.schema.json", "FAILURE_CTQ_DEFINED"), ("test_method_artifact", "test_method.schema.json", "TEST_METHODS_QUALIFIED"), ("design_space_artifact", "design_space.schema.json", "DESIGN_SPACE_DEFINED"), ("experiment_design_artifact", "experiment_design.schema.json", "EXPERIMENT_DESIGNED"))
 DOE_INPUT_FIELDS = {"doe_output_artifact", "doe_output_digest"}
 INPUT_FIELDS = {key for key, _, _ in UPSTREAM} | {"experiment"} | DOE_INPUT_FIELDS
@@ -209,11 +252,201 @@ def errors_for(data: object, input_path: Path) -> list[str]:
     return errors
 
 
+def bench_schema_dir() -> Path:
+    """Resolve the bench entry's schema directory with the house-style layout probe.
+
+    Repository layout: the canonical schemas live in the pack-level ``schemas/`` tree.
+    Deployed layout: the installer copies them beside this skill as ``references/``
+    (install_domain_skill.py maps the skill to its schema list). This probe is
+    deliberately SEPARATE from :func:`schema_dir`, which the experiment path keeps
+    using unchanged: the probe only ever selects a directory that actually holds the
+    bench schema set, so it cannot alter what the experiment path resolves.
+    """
+    canonical = SKILL_ROOT.parents[1] / "schemas"
+    if all((canonical / name).is_file() for name in BENCH_SCHEMA_NAMES):
+        return canonical
+    return SKILL_ROOT / "references"
+
+
+def bench_schemas() -> tuple[dict[str, dict], Registry]:
+    """Load the bench entry's own schema set (common + project + bench_test).
+
+    Kept separate from :func:`schemas` on purpose: the experiment path must keep loading
+    exactly the eight schemas it always loaded, and this list is a superset only by
+    sharing common/project.
+    """
+    directory = bench_schema_dir()
+    loaded = {name: json.loads((directory / name).read_text(encoding="utf-8")) for name in BENCH_SCHEMA_NAMES}
+    registry = Registry()
+    for schema in loaded.values():
+        registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
+    return loaded, registry
+
+
+def bench_screenings(data: object, input_path: Path) -> tuple[list[str], list[dict]]:
+    """The request's screening artifacts: loaded, schema-checked and release-judged (E-3/L5).
+
+    The bench path resolves the screening reference instead of trusting it. Every named
+    artifact is read from the request's directory and validated against
+    ``screening.schema.json`` (whose stage is the const SCREENING_PASSED, re-read
+    explicitly); the run's ``sample_reference`` must then be released by one of them --
+    ``overall_verdict`` PASS with ``gate_to_bench`` RELEASED. A sample the screen FAILed
+    (which the screening contract forces to BLOCKED) must not be documented as having
+    spent a bench slot: the slot is the scarcest resource of the inner loop.
+
+    Returns ``(errors, screenings)``; every screening that passed loading is returned even
+    when the release judgement fails, so the caller can still report what was examined.
+    """
+    screening_paths = data.get("screening_artifacts") if isinstance(data, dict) else None
+    if not isinstance(screening_paths, list) or not screening_paths:
+        return ["screening_artifacts must be a non-empty array of screening artifact paths"], []
+    try:
+        loaded, registry = bench_schemas()
+    except (OSError, json.JSONDecodeError) as error:
+        return [f"bench-test schemas cannot be read: {error}"], []
+    errors: list[str] = []
+    screenings: list[dict] = []
+    for index, value in enumerate(screening_paths):
+        path = resolve(value, input_path)
+        if path is None:
+            errors.append(f"screening_artifacts[{index}] must be a non-empty path")
+            continue
+        try:
+            screening = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            errors.append(f"screening_artifacts[{index}] cannot be read: {error}")
+            continue
+        item_errors = [
+            f"screening_artifacts[{index}]: {error.message}"
+            for error in Draft202012Validator(loaded["screening.schema.json"], registry=registry).iter_errors(screening)
+        ]
+        if item_errors:
+            errors.extend(item_errors)
+            continue
+        # The schema fixes stage to the const SCREENING_PASSED; re-read it explicitly so
+        # the gate's own requirement is visible in one place.
+        if screening.get("stage") != "SCREENING_PASSED":
+            errors.append(f"screening_artifacts[{index}] must be stage SCREENING_PASSED")
+            continue
+        screenings.append(screening)
+    if not errors:
+        errors.extend(screening_release_errors(data.get("bench_test"), screenings))
+    return errors, screenings
+
+
+def bench_evidence_errors(value: object) -> list[str]:
+    """Artifact-level evidence, same shape rule the grease route's other skills use."""
+    if not isinstance(value, list) or not value:
+        return ["evidence"]
+    errors: list[str] = []
+    for index, item in enumerate(value):
+        label = f"evidence[{index}]"
+        if not isinstance(item, dict) or set(item) != EVIDENCE_FIELDS:
+            errors.append(label)
+            continue
+        for field in ("evidence_id", "statement", "source"):
+            if not has_text(item.get(field)):
+                errors.append(f"{label}.{field}")
+        if item.get("status") not in EVIDENCE_STATUSES:
+            errors.append(f"{label}.status")
+    return errors
+
+
+def bench_errors_for(data: object, input_path: Path) -> list[str]:
+    """Every reason a bench-run request is not recordable. Empty list = it is.
+
+    Fail-closed: the charter and the record are both validated against their own schemas,
+    the charter must route as ``PRECISION_GREASE_DEV`` (BENCH_TESTED is on no oil route),
+    and the censoring discipline is applied by the shared ``bench_test_policy``. The
+    record's own reasons are always collected, so a censored observation carrying an
+    end-point is reported even when the charter is also wrong.
+    """
+    if not isinstance(data, dict):
+        return ["input must be a JSON object"]
+    if set(data) != BENCH_INPUT_FIELDS:
+        extra = sorted(set(data) - BENCH_INPUT_FIELDS)
+        missing = sorted(BENCH_INPUT_FIELDS - set(data))
+        return [
+            "input must contain only the bench-test import fields; "
+            f"unexpected={extra or 'none'} missing={missing or 'none'}"
+        ]
+    try:
+        loaded, registry = bench_schemas()
+    except (OSError, json.JSONDecodeError) as error:
+        return [f"bench-test schemas cannot be read: {error}"]
+    errors: list[str] = []
+    project = None
+    project_path = resolve(data.get("project_artifact"), input_path)
+    if project_path is None:
+        errors.append("project_artifact")
+    else:
+        try:
+            project = json.loads(project_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            errors.append(f"project_artifact cannot be read: {error}")
+        else:
+            errors.extend(
+                f"project_artifact: {error.message}"
+                for error in Draft202012Validator(loaded["project.schema.json"], registry=registry).iter_errors(project)
+            )
+    if isinstance(project, dict):
+        if project.get("status") != "ACTIVE":
+            errors.append("project_artifact must have status ACTIVE")
+        if project.get("stage") != "PROJECT_DEFINED":
+            errors.append("project_artifact must be stage PROJECT_DEFINED")
+        if project.get("decision") != "GO":
+            errors.append("project_artifact must have decision GO")
+        if project.get("project_type") != ROUTED_PROJECT_TYPE:
+            errors.append(
+                f"project_artifact.project_type is {project.get('project_type')!r}: {REROUTE_HOLD}"
+            )
+    if data.get("evidence_scope") not in EVIDENCE_SCOPES:
+        errors.append("evidence_scope must be SYNTHETIC or PHYSICAL")
+    errors.extend(bench_evidence_errors(data.get("evidence")))
+    errors.extend(input_record_errors(data.get("bench_test")))
+    # E-3/L5: the bench slot is spent only on a sample a PASS/RELEASED screen released.
+    # Collected beside the record's own reasons so a censoring violation and an unreleased
+    # sample are both reported in one refusal.
+    screening_errors, _screenings = bench_screenings(data, input_path)
+    errors.extend(screening_errors)
+    if errors:
+        return errors
+    artifact = bench_test_artifact(data["bench_test"], project, data["evidence_scope"], data["evidence"])
+    errors.extend(
+        f"bench_test: {error.message}"
+        for error in Draft202012Validator(loaded["bench_test.schema.json"], registry=registry).iter_errors(artifact)
+    )
+    return errors
+
+
+def bench_main(data: dict, input_path: Path) -> int:
+    """The bench-test entry point: NOTE lines, then the GATE line, then the verdict."""
+    errors = bench_errors_for(data, input_path)
+    record = data.get("bench_test") if isinstance(data, dict) else None
+    for note in censoring_notes(record):
+        print(note)
+    for line in gate_lines(data):
+        print(line)
+    if errors:
+        print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated")
+        return 1
+    # The release conclusion is printed only when it holds: the run may spend a bench slot
+    # because a supplied screening released its sample (E-3/L5).
+    _, screenings = bench_screenings(data, input_path)
+    released = released_screening(data.get("bench_test"), screenings)
+    if released is not None:
+        print(release_line(data["bench_test"], released))
+    print("READY: bench run can be recorded as one BENCH_TESTED observation, censoring included")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) != 2: print("Usage: python preflight_experiment_import.py <input.json>"); return 1
     path = Path(sys.argv[1]).resolve()
     try: data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error: print(f"HOLD: cannot read input: {error}; no artifact generated"); return 1
+    if is_bench_request(data):
+        return bench_main(data, path)
     errors = errors_for(data, path)
     if errors: print(f"HOLD: missing or invalid: {', '.join(errors)}; no artifact generated"); return 1
     print("READY: execution record can be imported without approval or performance inference"); return 0

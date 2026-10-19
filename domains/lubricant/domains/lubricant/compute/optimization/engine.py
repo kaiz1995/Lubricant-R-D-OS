@@ -7,6 +7,17 @@ from domains.lubricant.compute.cost.engine import calculate_cost
 ENGINE_NAME, ENGINE_VERSION, METHOD = "optimization", "0.1.0", "GRID_SEARCH_V1"
 TOL, DOMAIN_TOL, MAX_POINTS = 1e-12, 1e-9, 10000
 
+# --- Trust-region boundary (PRECISION_GREASE_DEV step 14, plan section 7.3 O-3) ---------
+# The model carries the applicability boundary it was fitted on. A recommended point that
+# falls outside that boundary is an EXTRAPOLATION: the model was never validated there, so
+# it must be removed from the recommendation (or, when the caller explicitly permits it,
+# degraded and labelled) rather than silently recommended. Purely additive: when the input
+# supplies no ``trust_region`` the whole path is skipped and the engine behaves exactly as
+# it did before, byte for byte (the frozen gold output depends on that).
+TRUST_REGION_KEY = "trust_region"
+TRUST_REGION_MODES = ("EXCLUDE", "DEGRADE")
+TRUST_REGION_DEGRADED_ROLE = "EXTRAPOLATION_WARNING"
+
 def _digest(raw): return hashlib.sha256(raw).hexdigest()
 def _canonical(data): return json.dumps(data, ensure_ascii=False, sort_keys=True).encode("utf-8")
 
@@ -23,6 +34,33 @@ def _schema_errors(data):
 
 def _rejected(data, raw, reasons):
     return {"schema_version":"0.1.0","engine_name":ENGINE_NAME,"engine_version":ENGINE_VERSION,"method":METHOD,"parameters":{"comparison_tolerance":TOL,"domain_check_method":"BOUNDING_BOX_APPROX_V1"},"input_digest":_digest(raw if raw is not None else _canonical(data)),"status":"REJECTED","rejection_reasons":reasons,"result":{},"evidence":[]}
+
+def _trust_region(data):
+    """Normalized trust region, or None when the caller supplied none.
+
+    ``None`` is the pre-existing path: every trust-region behaviour below is gated on
+    this function returning a region, so an input without one behaves exactly as before.
+    """
+    region = data.get(TRUST_REGION_KEY)
+    if not isinstance(region, dict):
+        return None
+    bounds = region.get("variable_bounds")
+    if not isinstance(bounds, list) or not bounds:
+        return None
+    mode = region.get("mode") if region.get("mode") in TRUST_REGION_MODES else "EXCLUDE"
+    return {"mode": mode, "region_statement": region.get("region_statement"),
+            "bounds": {item["component_id"]: (item["lower"], item["upper"]) for item in bounds if isinstance(item, dict) and "component_id" in item}}
+
+def _inside_trust_region(props, region):
+    if region is None:
+        return True
+    for component_id, (lower, upper) in region["bounds"].items():
+        if component_id not in props:
+            continue
+        value = props[component_id]
+        if value < lower - DOMAIN_TOL or value > upper + DOMAIN_TOL:
+            return False
+    return True
 
 def _compositions(total, n, prefix=()):
     if n == 1:
@@ -53,6 +91,22 @@ def _business_errors(data):
     for g in data["guardrails"]+data["non_inferiority"]:
         if g.get("tolerance_mode","RELATIVE_PERCENT")=="RELATIVE_PERCENT" and data["baseline"]["ctq_values"].get(g["ctq_reference"])==0: reasons.append("relative guardrail baseline_ref must not be zero")
     if any(c["reference_id"] not in ctqs|{"COST"} for c in data["hard_constraints"]): reasons.append("hard constraint reference_id not found")
+    region=data.get(TRUST_REGION_KEY)
+    if region is not None:
+        # Trust-region input validation. Only reached when the caller supplied a region,
+        # so every pre-existing request is untouched.
+        if not isinstance(region,dict): reasons.append("trust_region must be an object")
+        else:
+            bounds=region.get("variable_bounds")
+            if not isinstance(bounds,list) or not bounds: reasons.append("trust_region.variable_bounds must be a non-empty array")
+            else:
+                if any(not isinstance(b,dict) or set(b)!= {"component_id","lower","upper"} for b in bounds): reasons.append("trust_region.variable_bounds entries must contain exactly component_id, lower, upper")
+                else:
+                    if any(b["component_id"] not in ids for b in bounds): reasons.append("trust_region.variable_bounds component_id must belong to candidate_space.component_ids")
+                    if any(not (isinstance(b["lower"],(int,float)) and isinstance(b["upper"],(int,float)) and not isinstance(b["lower"],bool) and not isinstance(b["upper"],bool)) for b in bounds): reasons.append("trust_region.variable_bounds lower and upper must be numbers")
+                    elif any(b["lower"] > b["upper"] for b in bounds): reasons.append("trust_region.variable_bounds lower must not exceed upper")
+                    if len({b["component_id"] for b in bounds}) != len(bounds): reasons.append("trust_region.variable_bounds component_id must be unique")
+            if region.get("mode") is not None and region.get("mode") not in TRUST_REGION_MODES: reasons.append("trust_region.mode must be EXCLUDE or DEGRADE")
     if data["ranking_method"]=="WEIGHTED_OBJECTIVE":
         weights=data.get("weights",[])
         if abs(math.fsum(w["weight"] for w in weights)-1)>DOMAIN_TOL: reasons.append("weighted objective weights must sum to 1.0")
@@ -126,6 +180,12 @@ def optimize(data, input_bytes=None):
             av,bv=a["predicted_ctq"][ref],b["predicted_ctq"][ref]
             vals.append((av>=bv-TOL,av>bv+TOL) if direction=="HIGHER_IS_BETTER" else (av<=bv+TOL,av<bv-TOL))
         return bool(vals) and all(v[0] for v in vals) and any(v[1] for v in vals)
+    # --- Trust-region boundary (additive; skipped entirely when no region was supplied) ---
+    # The existing result fields keep their exact meaning: guardrail_passed and
+    # pareto_front_size still describe the full pre-region sets. The trust region only
+    # constrains what may be RECOMMENDED, because a recommendation is a claim about the
+    # product and the model cannot speak outside the region it was validated on.
+    region=_trust_region(data); region_outside=0; region_applied=region is not None
     front=sorted([a for a in feasible if not any(dominates(b,a) for b in feasible if b is not a)],key=key)
     if data["ranking_method"]=="PARETO": ranked=front; role="PARETO_FRONT"
     else:
@@ -140,12 +200,33 @@ def optimize(data, input_bytes=None):
                 score += w["weight"]*norm
             row["weighted_score"]=score
         ranked=sorted(feasible,key=lambda r:(-r["weighted_score"],key(r))); role="WEIGHTED_RANK_TOP"
+    if region is not None:
+        in_region=[row for row in ranked if _inside_trust_region(row["proportions"],region)]
+        outside=[row for row in ranked if not _inside_trust_region(row["proportions"],region)]
+        region_outside=len(outside)
+        # EXCLUDE removes an extrapolated point from the recommendation; DEGRADE keeps it
+        # but forces it below every in-region point and relabels its role, so it can never
+        # be presented as a normal recommendation. Neither mode ever recommends silently.
+        ranked=in_region if region["mode"]=="EXCLUDE" else in_region+outside
     selected=ranked[:data.get("max_recommendations",10)]
-    for i,row in enumerate(selected,1): row.update(rank=i,candidate_role=role,in_pareto_front=row in front,weighted_score=row.get("weighted_score"))
+    for i,row in enumerate(selected,1):
+        row_role=role
+        if region is not None and not _inside_trust_region(row["proportions"],region):
+            row_role=TRUST_REGION_DEGRADED_ROLE
+        row.update(rank=i,candidate_role=row_role,in_pareto_front=row in front,weighted_score=row.get("weighted_score"))
     bounds_note="BOUNDING_BOX_APPROX_V1: "+", ".join(f"{i}=[{dm[i][0]}, {dm[i][1]}]" for i in ids)+"; DOMAIN_SCREENED_APPROX"
+    if region is not None:
+        bounds_note+="; TRUST_REGION_APPLIED("+region["mode"]+")"
     result={"total_candidates_evaluated":len(candidates),"hard_constraint_passed":len(hard),"guardrail_passed":len(feasible),"pareto_front_size":len(front) if data["ranking_method"]=="PARETO" else 0,"recommended_candidates":selected,"method_summary":{"ranking_method":data["ranking_method"],"grid_resolution":res,"effective_domain_note":bounds_note,"normalization_method":"FEASIBLE_SET_MINMAX_V1" if data["ranking_method"]=="WEIGHTED_OBJECTIVE" else None}}
     raw=input_bytes if input_bytes is not None else _canonical(data)
-    return {"schema_version":"0.1.0","engine_name":ENGINE_NAME,"engine_version":ENGINE_VERSION,"method":METHOD,"parameters":{"comparison_tolerance":TOL,"domain_tolerance":DOMAIN_TOL,"domain_check_method":"BOUNDING_BOX_APPROX_V1"},"input_digest":_digest(raw),"status":"OK","rejection_reasons":[],"result":result,"evidence":[{"evidence_id":"optimization-grid-search","statement":"deterministic grid search; candidates are DOMAIN_SCREENED_APPROX before hard constraints, guardrails, and non-inferiority filtering","source":"engine internal deterministic algorithm","status":"OBSERVED"},{"evidence_id":"pareto-comparison-tolerance","statement":"Pareto dominance uses comparison_tolerance=1e-12","source":"engine constant COMPARISON_TOLERANCE_V1","status":"OBSERVED"}]}
+    parameters={"comparison_tolerance":TOL,"domain_tolerance":DOMAIN_TOL,"domain_check_method":"BOUNDING_BOX_APPROX_V1"}
+    evidence=[{"evidence_id":"optimization-grid-search","statement":"deterministic grid search; candidates are DOMAIN_SCREENED_APPROX before hard constraints, guardrails, and non-inferiority filtering","source":"engine internal deterministic algorithm","status":"OBSERVED"},{"evidence_id":"pareto-comparison-tolerance","statement":"Pareto dominance uses comparison_tolerance=1e-12","source":"engine constant COMPARISON_TOLERANCE_V1","status":"OBSERVED"}]
+    if region_applied:
+        parameters["trust_region_mode"]=region["mode"]
+        parameters["trust_region_region_statement"]=region["region_statement"]
+        parameters["trust_region_outside_count"]=region_outside
+        evidence.append({"evidence_id":"optimization-trust-region","statement":f"trust region applied in {region['mode']} mode ({region['region_statement']}): {region_outside} feasible point(s) fall outside the model's validated region and are "+("removed from the recommendation" if region["mode"]=="EXCLUDE" else "retained but labelled "+TRUST_REGION_DEGRADED_ROLE+" and ranked below every in-region point"),"source":"optimization_input.trust_region","status":"OBSERVED"})
+    return {"schema_version":"0.1.0","engine_name":ENGINE_NAME,"engine_version":ENGINE_VERSION,"method":METHOD,"parameters":parameters,"input_digest":_digest(raw),"status":"OK","rejection_reasons":[],"result":result,"evidence":evidence}
 
 def _write(path, env):
     p=Path(path); p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes((json.dumps(env,ensure_ascii=False,indent=2)+"\n").encode("utf-8"))

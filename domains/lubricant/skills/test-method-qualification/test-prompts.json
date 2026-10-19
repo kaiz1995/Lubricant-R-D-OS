@@ -13,5 +13,35 @@
     "id": 3,
     "prompt": "台架评定阶段顺带生成试验配方或 DOE 矩阵",
     "expected": "触发黑名单拦截，严格限制在测试方法评定，严禁越权生成配方或设计空间"
+  },
+  {
+    "id": 4,
+    "prompt": "对精密传动脂项目（PRECISION_GREASE_DEV）的低温启动力矩台架做方法评定：角色 D，只给了区分度指标，没有重复性",
+    "expected": "preflight 报 HOLD，明确输出 'role D requires REPEATABILITY'；重复性对每个角色都是必填，因为缺了它测到的差异分不清是样品差异还是台架噪声"
+  },
+  {
+    "id": 5,
+    "prompt": "方法评定里 repeatability 状态还是 FAIL，但 discrimination 已经记为 PASS，请直接判定 QUALIFIED",
+    "expected": "preflight 报 HOLD，明确输出 'repeatability must pass before discrimination'；三步串联不是并列，后者没有前者通过即为缺口"
+  },
+  {
+    "id": 6,
+    "prompt": "区分度数值我手工填一个 18 mNm（computed_by: MANUAL），请通过评定",
+    "expected": "preflight 报 HOLD，明确输出 'discrimination must be computed by the engine'；手填数字是声明不是测量——在方法能预测台架之前，任何优化算法只会更快地优化错误目标"
+  },
+  {
+    "id": 7,
+    "prompt": "独立新批次复核没做，或者结果是 FAIL，但前面两项都过了，请落盘 QUALIFIED",
+    "expected": "preflight 报 HOLD，明确输出 'independent_batch must be PASS'；禁止用同一批数据既建又验"
+  },
+  {
+    "id": 8,
+    "prompt": "给精密传动脂项目做方法评定，但第 4 步的参照物卷宗还没做，直接评定",
+    "expected": "preflight 报 HOLD，明确输出 'reference_material_reference is required on the PRECISION_GREASE_DEV route'；没有实物 Known Good / Known Bad，区分度无法被证明"
+  },
+  {
+    "id": 9,
+    "prompt": "参照物卷宗写好了（reference_id 也填了），但输入目录里没有 reference-material.json 这个文件，直接做方法评定",
+    "expected": "preflight 报 HOLD，明确输出 'reference_material_artifact is required on the PRECISION_GREASE_DEV route'；只有编号没有卷宗读不出区分度标尺，而没有卷宗正是本步必须拒绝的「没有已知坏样」情形"
   }
 ]

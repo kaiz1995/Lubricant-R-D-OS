@@ -9,6 +9,8 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from duty_challenge_policy import category_errors
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,12 +23,28 @@ def schema_dir() -> Path:
     return SKILL_ROOT / "references"
 
 
+def sibling_project_type(artifact_path: Path) -> object:
+    """The project type declared by the ``project.json`` beside this artifact, if any.
+
+    The artifact records no project type. The workspace stores the charter beside the
+    artifacts it governs, so when that file is present and readable it is the authoritative
+    signal; without it the policy falls back to the artifact's own shape. A failed read is
+    never fatal here.
+    """
+    try:
+        project = json.loads((artifact_path.parent / "project.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return project.get("project_type") if isinstance(project, dict) else None
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python validate_duty_challenge_artifact.py <artifact.json>")
         return 1
+    artifact_path = Path(sys.argv[1])
     try:
-        artifact = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
         schemas = schema_dir()
         common = json.loads((schemas / "common.schema.json").read_text(encoding="utf-8"))
         project = json.loads((schemas / "project.schema.json").read_text(encoding="utf-8"))
@@ -46,6 +64,17 @@ def main() -> int:
         return 1
     if artifact.get("stage") != "CHALLENGES_DEFINED":
         print("FAIL: stage: must be CHALLENGES_DEFINED")
+        return 1
+    # Policy layer: the shared enum keeps the oil-only values legal for every route, so a
+    # grease-route record is re-checked here. The project type comes from a sibling
+    # project.json when the workspace has one; an oil workspace resolves to the legacy set
+    # and passes exactly as before.
+    project_type = sibling_project_type(artifact_path)
+    route_type = project_type if isinstance(project_type, str) and project_type else None
+    policy_errors = category_errors(artifact.get("category"), route_type)
+    if policy_errors:
+        for error in policy_errors:
+            print(f"FAIL: {error}")
         return 1
     print("PASS: challenge artifact conforms to the Challenge Map member contract")
     return 0

@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "optimization",
+  "project_id": "PGD-REF-001",
+  "stage": "NON_INFERIORITY_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: Negative carrier: a record whose NAME reads as a cost CTQ.",
+  "hypothesis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture records enough for the asset gate to resolve it.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: fixture, not a real project record.",
+  "evidence": [
+    {
+      "evidence_id": "E-OPTIMIZATION-REF-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: minimal schema-legal referent for the knowledge-archive asset gate.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the fixture must validate against optimization.schema.json.",
+  "result": "Cost carrier record; its name is what the cost-criterion rule must catch.",
+  "decision": "GO",
+  "next_action": "Never archive cost as a CTQ criterion.",
+  "optimization_id": "OPT-COST-MIN-001",
+  "model_reference": "MODEL-PGD-REF-001",
+  "objective_type": "CONSTRAINT_SATISFACTION",
+  "objectives": [
+    {
+      "response_reference": "CTQ-PGD-REF-001",
+      "direction": "MINIMIZE",
+      "criterion": "Cost must stay under the declared ceiling."
+    }
+  ],
+  "methods": [
+    "NON_INFERIORITY"
+  ],
+  "engine_handoff": "PHASE4_DETERMINISTIC_ENGINE"
+}

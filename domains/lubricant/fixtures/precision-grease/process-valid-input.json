@@ -1,0 +1,110 @@
+{
+  "design_space_artifact": "design-space-artifact.json",
+  "process": {
+    "process_id": "PROC-PG-B1-001",
+    "project_reference": "PGD-B1-001",
+    "process_step": [
+      {
+        "step_id": "ST-001",
+        "step_type": "SAPONIFICATION",
+        "parameters": [
+          { "parameter_id": "P-PG-SAP-TEMP", "parameter_name": "saponification temperature", "lower_bound": 90, "upper_bound": 110, "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-001", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-002",
+        "step_type": "SOAP_HOLD",
+        "parameters": [
+          { "parameter_id": "P-PG-SOAP-HOLD", "parameter_name": "soap hold time", "lower_bound": 20, "upper_bound": 60, "unit": "min", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-002", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-003",
+        "step_type": "DEHYDRATION",
+        "parameters": [
+          { "parameter_id": "P-PG-DEH-TEMP", "parameter_name": "dehydration temperature", "lower_bound": 100, "upper_bound": 130, "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-003", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-004",
+        "step_type": "PHASE_INVERSION",
+        "parameters": [
+          { "parameter_id": "P-PG-PHI-TEMP", "parameter_name": "phase inversion temperature", "lower_bound": 150, "upper_bound": 180, "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-004", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-005",
+        "step_type": "DILUTION_CURVE",
+        "parameters": [
+          { "parameter_id": "P-PG-DIL-RATE", "parameter_name": "dilution rate along the curve", "lower_bound": 1, "upper_bound": 4, "unit": "kg/min", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-005", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-006",
+        "step_type": "DILUTION_COOLING",
+        "parameters": [
+          { "parameter_id": "P-PG-COOL-RATE", "parameter_name": "cooling rate", "lower_bound": 1, "upper_bound": 5, "unit": "degC/min", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-006", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-007",
+        "step_type": "RIPENING",
+        "parameters": [
+          { "parameter_id": "P-PG-RIPEN-TIME", "parameter_name": "ripening time", "lower_bound": 4, "upper_bound": 24, "unit": "h", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-007", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-008",
+        "step_type": "MILLING",
+        "parameters": [
+          { "parameter_id": "P-PG-MIL-GAP", "parameter_name": "mill gap", "lower_bound": 0.05, "upper_bound": 0.3, "unit": "mm", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-008", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-009",
+        "step_type": "HOMOGENIZATION",
+        "parameters": [
+          { "parameter_id": "P-PG-HOM-PRES", "parameter_name": "homogenization pressure", "lower_bound": 5, "upper_bound": 20, "unit": "MPa", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-009", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-010",
+        "step_type": "VACUUM_DEAERATION",
+        "parameters": [
+          { "parameter_id": "P-PG-VAC-PRES", "parameter_name": "vacuum pressure", "lower_bound": 1, "upper_bound": 10, "unit": "kPa", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-010", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-011",
+        "step_type": "FILLING_TEMPERATURE",
+        "parameters": [
+          { "parameter_id": "P-PG-FILL-TEMP", "parameter_name": "filling temperature", "lower_bound": 70, "upper_bound": 90, "unit": "degC", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-011", "status": "ASSUMED" }
+        ]
+      },
+      {
+        "step_id": "ST-012",
+        "step_type": "FILLING",
+        "parameters": [
+          { "parameter_id": "P-PG-FILL-RATE", "parameter_name": "filling rate", "lower_bound": 0.5, "upper_bound": 2.0, "unit": "kg/min", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-012", "status": "ASSUMED" }
+        ]
+      }
+    ],
+    "batch_scale": {
+      "scale_class": "PILOT",
+      "batch_size": { "value": 50, "unit": "kg", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "method_version": "scale-v1", "material_batch": "LOT-SYN-PG-B1-001", "formula_version": "baseline-v1" }
+    },
+    "amplification_factor": 20.0,
+    "process_window": { "window_id": "PW-PG-B1-001", "basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: pilot window supplied for contract validation only", "validated": false },
+    "control_points": [
+      { "control_point_id": "CP-PG-B1-001", "parameter_id": "P-PG-PHI-TEMP", "control_type": "IN_PROCESS", "criterion": "Hold phase inversion within the supplied window", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-004" },
+      { "control_point_id": "CP-PG-B1-002", "parameter_id": "P-PG-SOAP-HOLD", "control_type": "IN_PROCESS", "criterion": "Complete the soap hold before dehydration starts", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "evidence_id": "EV-PG-PROC-002" }
+    ],
+    "cpk": { "value": 1.33, "ctq_reference": "CTQ-PG-B1-001", "sample_size": 30 },
+    "material_batch_reference": "LOT-SYN-PG-B1-001",
+    "factor_role": "SUB_PLOT",
+    "evidence_scope": "SYNTHETIC",
+    "evidence": [
+      { "evidence_id": "EV-PG-PROC-001", "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: process bounds supplied for contract validation only; not a qualified process window.", "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION", "status": "ASSUMED" }
+    ]
+  }
+}

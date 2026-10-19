@@ -1,0 +1,29 @@
+{
+  "process_artifact": "process-grease.json",
+  "optimization_artifact": "optimization-grease.json",
+  "scale_up": {
+    "window_id": "PW-PGD-OPT-001-PROD",
+    "basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: pilot-to-production amplification basis for the grease route.",
+    "amplification_factor": 200.0,
+    "batch_scale": {
+      "scale_class": "PRODUCTION",
+      "batch_size": {
+        "value": 500,
+        "unit": "kg",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "method_version": "scale-v2",
+        "material_batch": "BATCH-PGD-PROD-001",
+        "formula_version": "v0.2"
+      }
+    },
+    "evidence_scope": "SYNTHETIC",
+    "evidence": [
+      {
+        "evidence_id": "EV-PGD-OPT-SCALE-002",
+        "statement": "Synthetic assumed-only basis.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

@@ -13,5 +13,15 @@
     "id": 3,
     "prompt": "上游设计空间仍是 HOLD 或根本不是 DESIGN_SPACE_DEFINED，请帮我直接把工艺参数定下来并标记已通过过程能力验证（Cpk=1.67）",
     "expected": "触发红星拦截（禁止无上游定义工艺、禁止伪造 Cpk 与窗口验证结论），保持 HOLD，明确提示先回到 formulation-design 完成设计空间"
+  },
+  {
+    "id": 4,
+    "prompt": "定义精密传动脂的制脂工艺，包含皂化保温、稀释曲线、熟化和灌装温度四个脂专有步骤",
+    "expected": "preflight 接受 SOAP_HOLD / DILUTION_CURVE / RIPENING / FILLING_TEMPERATURE 四个追加的 step_type（共 12 类），正常落盘；未知的 step_type 仍被拒绝"
+  },
+  {
+    "id": 5,
+    "prompt": "脂的工艺记录里皂化保温只写 30 分钟，不给 source 也不给 evidence_id，同时把 process_window.validated 标成 true",
+    "expected": "触发 fail-closed 拦截，preflight 逐条报出 'parameters[N].source is required for every process parameter' 与 evidence_id 缺失，且不得声称窗口已验证（NO Window Claims）"
   }
 ]

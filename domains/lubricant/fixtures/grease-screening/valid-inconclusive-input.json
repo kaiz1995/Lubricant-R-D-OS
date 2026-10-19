@@ -1,0 +1,46 @@
+{
+  "project_artifact": "project-active.json",
+  "batch_artifact": "batch-artifact.json",
+  "sample_artifact": "sample-artifact.json",
+  "evidence_scope": "SYNTHETIC",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-PG-B3-INC-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the shear-stability rig was down on the day of the screen, so that index was not determined and is recorded INCONCLUSIVE with its reason.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "screening": {
+    "screening_id": "SCR-PG-B3-INC-001",
+    "sample_reference": "SMP-PG-B3-001",
+    "tests": [
+      {
+        "test_id": "ST-PG-B3-INC-001",
+        "test_name": "PENETRATION",
+        "value": 265,
+        "unit": "0.1 mm",
+        "limit": 340,
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-INC-002",
+        "test_name": "DROPPING_POINT",
+        "value": 185,
+        "unit": "degC",
+        "limit": "180 min",
+        "verdict": "PASS"
+      },
+      {
+        "test_id": "ST-PG-B3-INC-003",
+        "test_name": "SHEAR_STABILITY",
+        "value": "not determined",
+        "unit": "percent change",
+        "limit": 10,
+        "verdict": "INCONCLUSIVE",
+        "note": "the shear-stability rig was unavailable on the screening day; the index is undetermined, not passed"
+      }
+    ],
+    "measurement_replicates": 1
+  }
+}

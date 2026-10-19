@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from gate_review_policy import DISSENT_FIELD, SIGNOFF_FIELDS, expected_decision_fields, final_status
-from preflight_gate_review import errors_for
+from preflight_gate_review import errors_for, grease_without_challenge, unrouted_evidence
 
 
 def main() -> int:
@@ -21,7 +21,14 @@ def main() -> int:
     # WP-08: optional signoff fields are carried through as records only — no
     # authority check happens here (the disposition below stays deterministic).
     signoff = {key: request[key] for key in SIGNOFF_FIELDS + (DISSENT_FIELD,) if key in request}
-    artifact = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project["project_id"], "stage": "VERIFIED", "evidence_scope": optimization["evidence_scope"], **expected_decision_fields(request), "evidence": request["evidence"], "experiment_reference": experiment["experiment_id"], **{key: request[key] for key in ("gate_id", "scope", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks")}, "gate_status": final_status(request, optimization["evidence_scope"]), **signoff}
+    # The grease route carries no CHALLENGES_DEFINED step, so when no challenge artifact
+    # travels with the request the recorded Challenge Map link is written as the ASSUMED
+    # route-property evidence item. Every other shape - every oil route, and a grease
+    # request that supplied a challenge - writes exactly the evidence it wrote before.
+    evidence = list(request["evidence"])
+    if grease_without_challenge(data, project):
+        evidence.append(unrouted_evidence(project["project_id"]))
+    artifact = {"schema_version": "0.1.0", "artifact_type": "gate", "project_id": project["project_id"], "stage": "VERIFIED", "evidence_scope": optimization["evidence_scope"], **expected_decision_fields(request), "evidence": evidence, "experiment_reference": experiment["experiment_id"], **{key: request[key] for key in ("gate_id", "scope", "satisfied_conditions", "unsatisfied_conditions", "evidence_gaps", "risks")}, "gate_status": final_status(request, optimization["evidence_scope"]), **signoff}
     output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"BUILT: {output_path}"); return 0
 

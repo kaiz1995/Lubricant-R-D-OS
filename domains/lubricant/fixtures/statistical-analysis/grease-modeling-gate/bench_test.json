@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench_test",
+  "project_id": "PGD-B1-001",
+  "stage": "BENCH_TESTED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Did bench run RUN-PG-B1-001 produce the defined event inside the observation window under protocol BENCH_PROTOCOL_V2?",
+  "hypothesis": "The run either produces the defined event inside the window or ends without it, in which case the observation is recorded as censored rather than as an end-point value.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record cannot authorize stage advancement. A single bench run records what the bench actually did; it does not by itself separate bench-to-bench drift from a formulation effect, and it is not a product performance conclusion. censoring_type=NONE.",
+  "decision_rule": "Record the observation exactly as it happened: a right-censored run is never recorded or used as an end-point value, and every censored or event-free run declares why it stopped (schemas/bench_test.schema.json if/then rule (i): censoring_type RIGHT forces event_occurred false and event_time null; a censoring time is never an end-point value; schemas/bench_test.schema.json if/then rule (ii): any censoring_type other than NONE requires a non-empty stop_reason).",
+  "result": "run RUN-PG-B1-001: the defined event occurred at 2.55 h inside the observation window under protocol BENCH_PROTOCOL_V2; recorded as an end-point observation.",
+  "decision": "UNDECIDED",
+  "next_action": "Hand run RUN-PG-B1-001 to the variance assessment of campaign iteration 1 (Step 12) exactly as recorded; do not use the observation window length as an event time.",
+  "evidence": [
+    {
+      "evidence_id": "E-BT-PG-B1-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: the bench log supplied for this run records the protocol version, the fixed setpoints, the ambient conditions and the end of the observation window.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "run_id": "RUN-PG-B1-001",
+  "bench_reference": "BENCH-SZ-PG-01",
+  "batch_reference": "BAT-PG-B1-001",
+  "sample_reference": "SMP-PG-B1-001",
+  "protocol_version": "BENCH_PROTOCOL_V2",
+  "setpoints": [
+    "load 1.5 kN",
+    "speed 1200 rpm",
+    "temperature 80 degC"
+  ],
+  "environment": {
+    "temperature_c": 23.5,
+    "humidity_percent": 45.0
+  },
+  "raw_record_reference": "RAW-PG-B1-001",
+  "event_occurred": true,
+  "event_time": 2.55,
+  "censoring_type": "NONE",
+  "stop_reason": null,
+  "anomalies": [],
+  "campaign_iteration": 1,
+  "ctq_reference": "CTQ-PG-B1-001"
+}

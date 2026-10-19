@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/material.schema.json",
+  "title": "Lubricant R&D material registration",
+  "description": "Design-space material object (break-point B4). Before this schema, materials appeared only as name strings inside formulas and experiment records, so a base oil could not carry its supplier, lot, chemistry family, measured properties, or price. One material record fixes one physical material: identity (supplier / trade name / lot), chemistry family, a non-empty property list, and a dated price. Every property is bound to a source, an evidence_id, and a status, so a property the supplier has not supplied is recorded as a GAP instead of being invented.",
+  "$comment": "Domain reason for the property list: grease soap-fibre formation depends on base-oil solvency and polarity (aniline point class), NOT on viscosity - two PAOs with the same KV100 can give different grease consistency, so a viscosity-only material record cannot predict thickener behaviour. Recommended base-oil property ids, documented only and deliberately NOT in required: kv40, kv100, vi, density, pour_point, flash_point, aniline_point, polarity. A supplier may not have them yet; the pack rule is to record a GAP, never invent a value.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "material" },
+    "stage": { "const": "DESIGN_SPACE_DEFINED" },
+    "material_id": { "type": "string", "minLength": 1 },
+    "category": { "enum": ["BASE_OIL", "THICKENER_RAW", "ADDITIVE", "SOLID_FILLER", "SEAL", "COATING"] },
+    "identity": { "$ref": "#/$defs/identity" },
+    "chemistry": { "$ref": "#/$defs/chemistry" },
+    "properties": {
+      "description": "Measured or supplied properties of this material. minItems 1: a material with no recorded property at all is not a design-space input. A property the supplier has not supplied is recorded with status GAP rather than omitted or guessed.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/property_entry" }
+    },
+    "cost": { "$ref": "#/$defs/cost" }
+  },
+  "required": [
+    "artifact_type",
+    "material_id",
+    "category",
+    "identity",
+    "chemistry",
+    "properties",
+    "cost"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "identity": {
+      "description": "Who the material physically is. The lot is required because a property measured on one lot does not transfer to another lot without evidence.",
+      "type": "object",
+      "properties": {
+        "supplier": { "type": "string", "minLength": 1 },
+        "trade_name": { "type": "string", "minLength": 1 },
+        "lot": { "type": "string", "minLength": 1 }
+      },
+      "required": ["supplier", "trade_name", "lot"],
+      "additionalProperties": false
+    },
+    "chemistry": {
+      "description": "Chemistry family of the material. base_oil_family is the solvency / polarity class that drives soap-fibre formation in a grease; notes is free text for anything else the supplier states, including a NOT_APPLICABLE note for a SEAL or SOLID_FILLER entry.",
+      "type": "object",
+      "properties": {
+        "base_oil_family": { "enum": ["PAO", "ESTER", "MINERAL", "ETHER", "SILICONE", "OTHER"] },
+        "notes": { "type": "string" }
+      },
+      "required": ["base_oil_family"],
+      "additionalProperties": false
+    },
+    "property_entry": {
+      "description": "One material property. value accepts a number or a string so a qualitative supplier statement stays recordable; status must state whether it was OBSERVED, ASSUMED, or is a GAP.",
+      "type": "object",
+      "properties": {
+        "property_id": {
+          "description": "Free id of the property. Recommended base-oil ids (documentation only, not required): kv40, kv100, vi, density, pour_point, flash_point, aniline_point, polarity.",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": { "type": ["number", "string"], "minLength": 1 },
+        "unit": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["OBSERVED", "ASSUMED", "GAP"] }
+      },
+      "required": ["property_id", "value", "unit", "source", "evidence_id", "status"],
+      "additionalProperties": false
+    },
+    "cost": {
+      "description": "Price snapshot for this material at a stated date. price_timestamp is required: without it a cost cannot be compared across quotes or periods.",
+      "type": "object",
+      "properties": {
+        "value": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "minLength": 1 },
+        "price_timestamp": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      },
+      "required": ["value", "unit", "price_timestamp"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/sample.schema.json",
+  "title": "Lubricant R&D sample and label record",
+  "description": "Batch-produced sample object. A sample is a physical portion of a batch that travels to a bench or lab, so it carries what the label printer needs (label.printed_text and label.printed_at), when it was prepared, how it is stored, and a chain of custody from preparation onward. The chain_of_custody list is non-empty and every handover names from, to, time, and purpose, because an untraceable sample cannot support a downstream measurement. status tracks the sample through PREPARED, IN_TRANSIT, CONSUMED, ARCHIVED, or VOID.",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/artifact" }],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "sample" },
+    "stage": { "const": "BATCH_PRODUCED" },
+    "sample_id": { "type": "string", "minLength": 1 },
+    "batch_reference": { "type": "string", "minLength": 1 },
+    "formula_reference": {
+      "description": "Formula and version this sample represents; recorded on the sample so a measurement stays bound to the formulation even if the batch record is revised.",
+      "type": "string",
+      "minLength": 1
+    },
+    "label": {
+      "description": "What the label printer actually produced: the printed text and the printing time. printed_at accepts an ISO date or an ISO date-time.",
+      "type": "object",
+      "properties": {
+        "printed_text": { "type": "string", "minLength": 1 },
+        "printed_at": {
+          "description": "ISO date (YYYY-MM-DD) or ISO date-time (YYYY-MM-DDTHH:MM:SS, optional fraction and zone).",
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+        }
+      },
+      "required": ["printed_text", "printed_at"],
+      "additionalProperties": false
+    },
+    "prepared_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "storage": {
+      "description": "Storage condition and location for this sample (container, temperature, atmosphere).",
+      "type": "string",
+      "minLength": 1
+    },
+    "chain_of_custody": {
+      "description": "Ordered handovers from preparation to the current holder. minItems 1: a sample with no recorded custody cannot be used as measurement evidence.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/custody_entry" }
+    },
+    "status": { "enum": ["PREPARED", "IN_TRANSIT", "CONSUMED", "ARCHIVED", "VOID"] }
+  },
+  "required": [
+    "artifact_type",
+    "sample_id",
+    "batch_reference",
+    "formula_reference",
+    "label",
+    "prepared_at",
+    "storage",
+    "chain_of_custody",
+    "status"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "custody_entry": {
+      "description": "One handover of the sample. purpose states why the sample moved, so custody records why a measurement was possible at the receiving end.",
+      "type": "object",
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "purpose": { "type": "string", "minLength": 1 }
+      },
+      "required": ["from", "to", "at", "purpose"],
+      "additionalProperties": false
+    }
+  }
+}

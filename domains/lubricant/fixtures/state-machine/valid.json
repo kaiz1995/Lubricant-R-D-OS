@@ -202,5 +202,45 @@
       "accepted_stages": ["DRAFT", "PROJECT_DEFINED", "DUTY_DEFINED", "CHALLENGES_DEFINED", "FAILURE_CTQ_DEFINED", "TEST_METHODS_QUALIFIED", "DESIGN_SPACE_DEFINED", "EXPERIMENT_DESIGNED", "EXPERIMENT_RUNNING", "MODEL_BUILT", "OPTIMIZED", "PROCESS_WINDOW_DEFINED"],
       "revision": { "reason": "Fourth kettle reproduction; same formulation, process-only change.", "operator": "R&D owner", "impact": "PROCESS_ONLY", "reuses_review_of": "GATE-PW-007", "revision_index": 1 }
     }
+  },
+  {
+    "name": "go-precision-grease-advances-one-stage", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV",
+      "before": { "project_id": "PGD-001", "stage": "DUTY_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-301"] },
+      "after": { "project_id": "PGD-001", "stage": "FAILURE_MECHANISM_DEFINED", "status": "ACTIVE", "version": 1, "decision_question": "Can the grease project define the failure mechanism?", "evidence_scope": "PHYSICAL", "evidence": ["E-301"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-mid-chain-advances", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV",
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 1, "decision_question": "Can the campaign variance be modelled?", "evidence_scope": "PHYSICAL", "evidence": ["E-311"] },
+      "after": { "project_id": "PGD-001", "stage": "MODEL_BUILT", "status": "ACTIVE", "version": 1, "decision_question": "Can the campaign variance be modelled?", "evidence_scope": "PHYSICAL", "evidence": ["E-311"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-ring-rework-remakes-the-batch", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Plan 4.5.2 item 4-9 case 1: the inner-loop REWORK back edge SCREENING_PASSED -> BATCH_PRODUCED. The round's screening failed, so the batch is remade; the stage pointer returns to the loop head, the version is preserved (as for every GO) and the round's new record is appended. iteration stays 1 because a rework consumes no bench round.",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 1,
+      "before": { "project_id": "PGD-001", "stage": "SCREENING_PASSED", "status": "ACTIVE", "version": 6, "decision_question": "Can round 1 clear physical screening?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-fail.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 6, "decision_question": "Can round 1 clear physical screening?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-fail.json", "ITER-1:batch-rework.json"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-ring-continues-into-the-next-round", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Plan 4.5.2 item 4-9 case 2: the inner-loop LOOP_BACK back edge VARIANCE_ASSESSED -> BATCH_PRODUCED with an iteration counter. No decision was reached in round 2, so round 3 starts: version preserved, iteration 3 carried by the event, the round's evidence appended (never replaced).",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 3,
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 7, "decision_question": "Does the round 2 formulation beat the known-good reference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-2:batch.json", "ITER-2:bench_test.json", "ITER-2:variance.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 7, "decision_question": "Does the round 2 formulation beat the known-good reference?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-2:batch.json", "ITER-2:bench_test.json", "ITER-2:variance.json", "ITER-3:batch.json"] }
+    }
+  },
+  {
+    "name": "go-precision-grease-third-iteration-keeps-earlier-round-records", "description": "SIMULATED_PHYSICAL_CONTRACT_TEST_NOT_EVIDENCE. Plan 4.5.2 item 4-9 case 3: a 3rd-iteration ring advance must NOT void (roll back) what rounds 1-2 recorded. The evidence list is strictly appended to — every earlier round record survives verbatim, which is the whole reason the ring is an edge and not a ROLLBACK; the negative counterpart is go-precision-grease-ring-edge-cannot-void-an-earlier-round.",
+    "event": {
+      "kind": "GO", "gate_status": "GO", "project_type": "PRECISION_GREASE_DEV", "iteration": 3,
+      "before": { "project_id": "PGD-001", "stage": "VARIANCE_ASSESSED", "status": "ACTIVE", "version": 8, "decision_question": "Is there a resolvable difference after three bench rounds?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-pass.json", "ITER-1:bench_test.json", "ITER-1:variance.json", "ITER-2:batch.json", "ITER-2:screening-pass.json", "ITER-2:bench_test.json", "ITER-2:variance.json"] },
+      "after": { "project_id": "PGD-001", "stage": "BATCH_PRODUCED", "status": "ACTIVE", "version": 8, "decision_question": "Is there a resolvable difference after three bench rounds?", "evidence_scope": "PHYSICAL", "evidence": ["ITER-1:batch.json", "ITER-1:screening-pass.json", "ITER-1:bench_test.json", "ITER-1:variance.json", "ITER-2:batch.json", "ITER-2:screening-pass.json", "ITER-2:bench_test.json", "ITER-2:variance.json", "ITER-3:batch.json"] }
+    }
   }
 ]

@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "bench",
+  "project_id": "PGD-IL-001",
+  "stage": "BENCH_RESOURCE_REGISTERED",
+  "evidence_scope": "PHYSICAL",
+  "decision_question": "Does the inner bench loop continue past iteration 2?",
+  "hypothesis": "The swapped pair in round 2 separates a formulation effect from bench-to-bench drift.",
+  "uncertainty": "Inner-loop acceptance fixture / NOT_FOR_PHYSICAL_EXECUTION: iteration 1 is carried over verbatim (append-only round history); this historical merged bench record is a contract record, not product evidence.",
+  "evidence": [
+    {
+      "evidence_id": "E-CMP-IL-001",
+      "statement": "Inner-loop acceptance fixture: bench record BENCH-PGD-IL-01 is registered with campaign CMP-PGD-IL-001 and a two-sample paired round.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    },
+    {
+      "evidence_id": "E-CMP-IL-002",
+      "statement": "Inner-loop acceptance fixture: the inner-loop ring edge VARIANCE_ASSESSED -> BATCH_PRODUCED (iteration 2) opened round 2 without voiding round 1.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Continue only while stop_state is CONTINUE and current_iteration stays within max_iterations.",
+  "result": "Iteration 2 opened from the round-1 variance assessment and next-batch decision; iteration 1 stays recorded.",
+  "decision": "GO",
+  "next_action": "Produce the round-2 batch and run the swapped pair.",
+  "campaign_id": "CMP-PGD-IL-001",
+  "max_iterations": 12,
+  "current_iteration": 3,
+  "iterations": [
+    {
+      "iteration": 1,
+      "samples": [
+        "SMP-PGD-IL-R1A",
+        "SMP-PGD-IL-R1B"
+      ],
+      "stop_state": "CONTINUE",
+      "screening_reference": "SCR-PGD-IL-001",
+      "variance_reference": "VAR-PGD-IL-001",
+      "model_reference": null,
+      "next_batch_reference": null,
+      "bench_test_references": [
+        "RUN-PGD-IL-R1A-1",
+        "RUN-PGD-IL-R1A-2",
+        "RUN-PGD-IL-R1B-1",
+        "RUN-PGD-IL-R1B-2"
+      ]
+    },
+    {
+      "iteration": 2,
+      "samples": [
+        "SMP-PGD-IL-R2A"
+      ],
+      "stop_state": "CONTINUE",
+      "screening_reference": null,
+      "variance_reference": null,
+      "model_reference": null,
+      "next_batch_reference": null,
+      "bench_test_references": []
+    }
+  ],
+  "pairing_design": {
+    "paired": true,
+    "description": "Inner-loop acceptance fixture: the A/B pair runs in the same round and is swapped in the next round, so bench-to-bench drift cancels."
+  }
+}

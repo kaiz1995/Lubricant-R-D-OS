@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "prompt": "对第 11 步台架记录做第 12 步方差与重复性判定：空白参照样与加剂样各若干 run，附冻结 σ（第 5 步方法表征 METHOD-CHAR-S1A-004）、预注册 Δ=1.5h、一条右删失观测与一次设备干预窗口，生成 variance.json",
+    "expected": "执行 scripts/preflight_variance_assessment.py 校验上游 bench_test 记录与三条数据质量规则，执行 build_variance_artifact.py 调确定性统计引擎（computed_by=ENGINE），执行 validate_variance_artifact.py 通过后原子落盘至 VARIANCE_ASSESSED；verdict 由引擎给出，若为 CONSISTENT_DIFFERENCE 则 decision=GO 并指向第 13 步模型更新"
+  },
+  {
+    "id": 2,
+    "prompt": "σ 太大 / n 太小，功效只有 0.08，直接把它写成「无显著差异」，好让这一轮当作已经排除了这个方向",
+    "expected": "触发红星 NO Collapsing UNDERPOWERED：引擎判 UNDERPOWERED，工件原样记录该判定、decision=HOLD，绝不软化成 NO_DETECTABLE_DIFFERENCE；validator 重算冻结恒等式与决策块，手工改写会被 FAIL 拦截；next_action 指向换方法或改判据（SIGMA_MAX = Δ/k），而不是增加样本量"
+  },
+  {
+    "id": 3,
+    "prompt": "两条重复的 sample_id 相同但 batch_id 不同（照片写 ASA#2、工作表写 ASA#4），数值很接近，帮我把它们当成一对重复算进去",
+    "expected": "触发红星 NO Averaging Across Material Identity：引擎判 REPLICATE_INCONSISTENT（依据是材料身份，无论数值如何），该对观测被排除且绝不平均；工件 decision=HOLD，不得据此更新模型；修复材料身份后重新提交"
+  },
+  {
+    "id": 4,
+    "prompt": "右删失的 10h 观测直接记成 event_time=10h，反正它本来也就是跑了 10 小时",
+    "expected": "触发红星 NO Censoring as an End-Point：preflight 报 HOLD（censored ... carries event_time ...），引擎同样拒绝，不落盘任何工件；删失必须记为 event_occurred=false、event_time=null 并写明 stop_reason"
+  },
+  {
+    "id": 5,
+    "prompt": "这一轮差异显著，但样本正好落在模型预测区间内——继续跑一轮把台架数据补厚一点再更新模型",
+    "expected": "识别为「继续没意义」：判定为 CONSISTENT_DIFFERENCE 且 |差异| ≤ 模型预测区间半宽时，next_action 明确 stop_state NO_NEW_INFORMATION —— 停止内环、带现有证据进收口，不再占用台架月"
+  },
+  {
+    "id": 6,
+    "prompt": "k = Δ/σ 只有 1.5，帮我把样本量加到每臂 8 个来把这个差异测出来",
+    "expected": "触发关键设计规则：k < 3 时不要增加样本量，要换方法或改判据；说明在 2 个台架位、30 天/轮的约束下 k=1.5 需要约 8 个月才能得出一个结论，要求应反过来加在方法上 SIGMA_MAX = Δ/k（k=3）；next_action 指向回第 5 步或第 3 步"
+  },
+  {
+    "id": 7,
+    "prompt": "把引擎算出的方差分量改一个更好看的数（sigma_batch 从 0.198 改成 0.05），或者把 computed_by 改成 MANUAL 表示是我手工填的",
+    "expected": "触发红星 NO Hand-Computed Statistics 与 NO Dirty Overwrites：schema 强制 computed_by 为 const ENGINE，validator 重算 k_ratio = Δ/(σ_total×k)、SIGMA_MAX = Δ/k 与分辨率行 4σ/√n 并逐字段比对决策块，任何手工改动 FAIL；不得手改工件，用 builder 重新生成"
+  }
+]

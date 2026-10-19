@@ -1,10 +1,12 @@
-"""End-to-end checks for the WP-05 application and bench objects.
+"""End-to-end checks for the WP-05 application and merged bench objects.
 
 Covers:
-1. The schema inventory grows 17 -> 19 and validate_schemas stays green.
+1. The schema inventory (17 -> 30 after the precision-grease additions; the
+   campaign schema is gone with the v1.0.0 merge) and validate_schemas stays green.
 2. The bench availability -> usable-slot conversion is implemented with a single
    rule (multi-window, floor, reserved_days) and a hand-supplied slot count is
-   rejected; a built bench artifact recomputes the same value.
+   rejected; a built bench artifact recomputes the same value and carries the
+   merged round plan (stage BENCH_RESOURCE_REGISTERED, W0 empty ledger).
 3. An application PASS verdict is only admissible with determined OBSERVED
    criteria, a non-empty OBSERVED life-claim boundary, and no counterexamples.
 4. Missing criteria are rejected: an empty criteria list forces result = GAP, and
@@ -40,10 +42,27 @@ APP_BUILDER = ROOT / "skills/application-definition/scripts/build_application_ar
 APP_VALIDATOR = ROOT / "skills/application-definition/scripts/validate_application_artifact.py"
 
 # Recorded inventory just before WP-05 (17). WP-05 adds application + bench,
-# WP-09 adds interface; the arithmetic assertion below still holds.
+# WP-09 adds interface, and PRECISION_GREASE_DEV adds the nine precision-gear
+# grease objects; the arithmetic assertion below still holds. Contract v1.0.0
+# then merged the bench and campaign records into one artifact and deleted
+# campaign.schema.json (31 -> 30), which is why it is absent from NEW_SCHEMAS.
 SCHEMA_COUNT_BEFORE = 17
-SCHEMA_COUNT_AFTER = 21
-NEW_SCHEMAS = ("application.schema.json", "bench.schema.json", "interface.schema.json", "external_record.schema.json")
+SCHEMA_COUNT_AFTER = 30
+NEW_SCHEMAS = (
+    "application.schema.json",
+    "bench.schema.json",
+    "interface.schema.json",
+    "external_record.schema.json",
+    "material.schema.json",
+    "formula.schema.json",
+    "batch.schema.json",
+    "sample.schema.json",
+    "reference.schema.json",
+    "screening.schema.json",
+    "variance.schema.json",
+    "bench_test.schema.json",
+    "next_batch.schema.json",
+)
 
 
 def read_json(path: Path) -> dict:
@@ -82,6 +101,12 @@ def validate_against(kind: str, instance: dict) -> list[str]:
 
 
 def bench_input(bench_id: str = "BENCH-SZ-01") -> dict:
+    """The two-key merged request: one bench block + one W0 round-plan block.
+
+    `max_iterations` is deliberately omitted so the contract's published default is
+    exercised on the default path, and the campaign block omits `project_reference`
+    (it shares the bench block's) while declaring the same `evidence_scope`.
+    """
     return {
         "bench": {
             "bench_id": bench_id,
@@ -103,7 +128,25 @@ def bench_input(bench_id: str = "BENCH-SZ-01") -> dict:
                 "source": "Synthetic bench fixture",
                 "status": "ASSUMED",
             }],
-        }
+        },
+        "campaign": {
+            "campaign_id": f"CMP-{bench_id}",
+            "current_iteration": 1,
+            "iterations": [],
+            "pairing_design": {
+                "paired": True,
+                "description": "Synthetic fixture: the A/B pair runs in the same round and is swapped in the next round.",
+            },
+            "evidence_scope": "SYNTHETIC",
+            "source": "Synthetic round-plan spec",
+            "evidence_id": "EV-CMP-001",
+            "evidence": [{
+                "evidence_id": "EV-CMP-001",
+                "statement": "Synthetic round plan supplied for contract validation only; the ledger is opened before round 1 runs (W0).",
+                "source": "Synthetic round-plan fixture",
+                "status": "ASSUMED",
+            }],
+        },
     }
 
 
@@ -177,7 +220,7 @@ def main() -> int:
         inputs.mkdir()
         artifacts.mkdir()
 
-        # 2. Bench: the availability -> slot conversion, single rule.
+        # 2. Bench: the availability -> slot conversion, single rule, merged record.
         bench_path = inputs / "bench-input.json"
         write_json(bench_path, bench_input())
         readied = run_ok(BENCH_PREFLIGHT, bench_path)
@@ -190,7 +233,15 @@ def main() -> int:
         assert bench["artifact_type"] == "bench"
         assert bench["project_id"] == "WGO-001"
         assert bench["available_bench_slots"] == 7, bench["available_bench_slots"]
-        assert bench["stage"] == "DRAFT"
+        # Contract v1.0.0: the registration and the round plan are one record at
+        # one stage, its ledger opened empty (W0) before round 1's boundary.
+        assert bench["stage"] == "BENCH_RESOURCE_REGISTERED", bench["stage"]
+        assert bench["campaign_id"] == "CMP-BENCH-SZ-01", bench["campaign_id"]
+        assert bench["iterations"] == [] and bench["current_iteration"] == 1, bench
+        # The cap was omitted in the request, so it is the contract's published
+        # default with its provenance item appended.
+        assert bench["max_iterations"] == 12, bench["max_iterations"]
+        assert any(item.get("evidence_id") == "E-CONTRACT-CAMPAIGN-MAX-ITERATIONS" for item in bench["evidence"]), bench["evidence"]
         assert validate_against("bench", bench) == [], validate_against("bench", bench)
 
         # 2b. A hand-supplied derived slot count is rejected, never trusted.
@@ -236,6 +287,20 @@ def main() -> int:
             "availability_window": [{"window_id": "W", "start": "2026-01-01", "end": "2026-01-05"}],
             "cycle_days": 1.5,
         }) == 3  # floor(5 / 1.5) = 3
+
+        # 2e. E2=B: a round that looped back (CONTINUE) may not carry the
+        #     exit-round-only references; the merged preflight refuses it.
+        e2b = bench_input()
+        e2b["campaign"]["current_iteration"] = 2
+        e2b["campaign"]["iterations"] = [{
+            "iteration": 1, "samples": ["SMP-R1A"], "stop_state": "CONTINUE",
+            "model_reference": "MODEL-R1",
+        }]
+        e2b_path = inputs / "bench-e2b.json"
+        write_json(e2b_path, e2b)
+        e2b_result = run(BENCH_PREFLIGHT, e2b_path)
+        assert e2b_result.returncode != 0, e2b_result.stdout
+        assert "must be null while this round ended CONTINUE" in e2b_result.stdout, e2b_result.stdout
 
         # 3. Application: a fully determined record yields a PASS verdict.
         app_path = inputs / "application-pass.json"
@@ -330,9 +395,16 @@ def main() -> int:
                 workspace_root=deploy_ws, shared_modules=shared_modules_for(skill),
                 contract_files=contracts_for(skill),
             )
+        # The deployed bundle now carries contracts/state-machine.json (CONTRACTS maps
+        # it for this skill), so the omitted cap defaults from the deployed contract
+        # exactly as it does in the pack; an explicitly capped request stays usable.
+        deployed_bench = bench_input()
+        deployed_bench["campaign"]["max_iterations"] = 12
+        deployed_bench_path = inputs / "bench-deployed.json"
+        write_json(deployed_bench_path, deployed_bench)
         deployed_cases = [
             (deploy_target / "application-definition" / "scripts" / "preflight_application_definition.py", app_path),
-            (deploy_target / "bench-registration" / "scripts" / "preflight_bench_registration.py", bench_path),
+            (deploy_target / "bench-registration" / "scripts" / "preflight_bench_registration.py", deployed_bench_path),
         ]
         probe = workspace / "probe-input.json"
         probe.write_text("{}", encoding="utf-8")
@@ -343,6 +415,9 @@ def main() -> int:
             probe_result = run(deployed_preflight, probe)
             assert probe_result.returncode != 0 and probe_result.stdout.startswith("HOLD:"), probe_result.stdout
             assert "ModuleNotFoundError" not in probe_result.stderr, probe_result.stderr
+        deployed_default_cap = run(deployed_cases[1][0], bench_path)
+        assert deployed_default_cap.returncode == 0, deployed_default_cap.stdout
+        assert "max_iterations=12 defaulted" in deployed_default_cap.stdout, deployed_default_cap.stdout
 
         # 6. Merge cross-check (WP-04b x WP-05, formalised by WP-06):
         #    bench availability -> available_bench_slots -> doe_input
@@ -443,10 +518,14 @@ def main() -> int:
     sys.path.insert(0, str(ROOT))
     from scripts.install_domain_skill import SKILLS
 
-    assert len(SKILLS) == 19, sorted(SKILLS)
+    assert len(SKILLS) == 24, sorted(SKILLS)
     assert SKILLS["application-definition"] == ("common.schema.json", "application.schema.json"), SKILLS["application-definition"]
-    assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json"), SKILLS["application-validation"]
-    assert SKILLS["bench-registration"] == ("common.schema.json", "bench.schema.json"), SKILLS["bench-registration"]
+    # Contract v1.0.0: application-validation's upstream contract is the merged
+    # bench record (stage BENCH_RESOURCE_REGISTERED), so it deploys bench.schema.json.
+    assert SKILLS["application-validation"] == ("common.schema.json", "application.schema.json", "bench.schema.json", "bench_test.schema.json"), SKILLS["application-validation"]
+    # The skill carries one merged record (the former campaign-opening half folded
+    # into bench.json), so its deployed set is what its one script family loads.
+    assert SKILLS["bench-registration"] == ("common.schema.json", "project.schema.json", "bench.schema.json"), SKILLS["bench-registration"]
 
     print("PASS: WP-05 application + bench objects, fail-closed verdict, and bench slot conversion")
     return 0

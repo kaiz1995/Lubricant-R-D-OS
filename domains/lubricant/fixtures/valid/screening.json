@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "screening",
+  "project_id": "PGD-001",
+  "stage": "SCREENING_PASSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Does sample SAM-SYN-001 clear the cheap physical/chemical screen before it may occupy a bench slot?",
+  "hypothesis": "No screened index is out of limit, so the sample is not obviously unqualified for the bench.",
+  "uncertainty": "Physical/chemical indices have LOW discrimination power between close candidate formulas; a PASS is a gate result, never a selection criterion.",
+  "evidence": [
+    {
+      "evidence_id": "E-SC-001",
+      "statement": "Synthetic screen values recorded for schema validation only; this is not product evidence.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Release the sample to the bench only when no screened index fails; a FAIL forces gate_to_bench BLOCKED (the bench is the scarcest resource).",
+  "result": "All seven screened indices are within their supplied limits on the synthetic record.",
+  "decision": "GO",
+  "next_action": "Release the sample into the next bench round of the campaign.",
+  "screening_id": "SCR-001",
+  "sample_reference": "SAM-SYN-001",
+  "tests": [
+    { "test_id": "ST-001", "test_name": "PENETRATION", "value": 265, "unit": "0.1 mm", "limit": 340, "verdict": "PASS" },
+    { "test_id": "ST-002", "test_name": "WORKED_PENETRATION_CHANGE", "value": 12, "unit": "0.1 mm", "limit": 30, "verdict": "PASS" },
+    { "test_id": "ST-003", "test_name": "DROPPING_POINT", "value": 185, "unit": "degC", "limit": "180 min", "verdict": "PASS" },
+    { "test_id": "ST-004", "test_name": "OIL_SEPARATION", "value": 1.2, "unit": "percent mass", "limit": 5, "verdict": "PASS" },
+    { "test_id": "ST-005", "test_name": "EVAPORATION_LOSS", "value": 2.5, "unit": "percent mass", "limit": 3, "verdict": "PASS" },
+    { "test_id": "ST-006", "test_name": "SHEAR_STABILITY", "value": 8, "unit": "percent change", "limit": 10, "verdict": "PASS" },
+    { "test_id": "ST-007", "test_name": "APPEARANCE_UNIFORMITY", "value": "uniform", "unit": "visual grade", "limit": "uniform", "verdict": "PASS" }
+  ],
+  "overall_verdict": "PASS",
+  "measurement_replicates": 3,
+  "gate_to_bench": "RELEASED"
+}

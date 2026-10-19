@@ -15,13 +15,47 @@
       "type": "array", "minItems": 1,
       "items": {
         "type": "object",
-        "properties": { "metric": { "enum": ["REPEATABILITY", "DISCRIMINATION", "SENSITIVITY", "MECHANISM_RELEVANCE", "BENCHMARK_RANKING", "FIELD_RELEVANCE", "COST", "DURATION"] }, "measurement": { "$ref": "common.schema.json#/$defs/measurement" } },
+        "properties": {
+          "metric": { "enum": ["REPEATABILITY", "DISCRIMINATION", "SENSITIVITY", "MECHANISM_RELEVANCE", "BENCHMARK_RANKING", "FIELD_RELEVANCE", "COST", "DURATION"] },
+          "measurement": { "$ref": "common.schema.json#/$defs/measurement" },
+          "computed_by": {
+            "description": "Who produced the metric VALUE. Values for the two computable metrics (REPEATABILITY, DISCRIMINATION) must be ENGINE-produced: a hand-entered number is a declaration, not a measurement, and optimisation on a hand-entered discrimination figure only optimises the wrong target faster. Optional in the shared contract so the six oil routes keep validating; the PRECISION_GREASE_DEV skill policy layer requires the ENGINE value on those two metrics.",
+            "enum": ["ENGINE", "MANUAL"]
+          }
+        },
         "required": ["metric", "measurement"], "additionalProperties": false
       }
+    },
+    "qualification_pipeline": {
+      "description": "The three qualification sub-steps in their required SERIAL order. They are not three parallel declarations: repeatability answers 'is this metric computable at all from the same sample measured many times', discrimination answers 'does a qualified stand separate a Known Good from a Known Bad', and the independent new batch check re-verifies both on a FRESH batch, because building and verifying on the same data is not verification. A later sub-step without its predecessor passing is a pipeline gap, not a stronger submission. Optional in the shared contract so the six oil routes keep validating; the PRECISION_GREASE_DEV skill policy layer requires the whole pipeline, the serial order, and an ENGINE-computed repeatability/discrimination pair.",
+      "type": "object",
+      "properties": {
+        "repeatability": { "$ref": "#/$defs/pipeline_substep" },
+        "discrimination": { "$ref": "#/$defs/pipeline_substep" },
+        "independent_batch": { "$ref": "#/$defs/pipeline_substep" }
+      },
+      "additionalProperties": false
+    },
+    "reference_material_reference": {
+      "description": "Reference to the Stage 4 reference-material dossier this qualification used as its discrimination ruler. Discrimination cannot be proved without physical Known Good / Known Bad objects, so a grease-route qualification names the dossier it consumed. Optional in the shared contract so the six oil routes keep validating.",
+      "type": "string",
+      "minLength": 1
     },
     "qualification_basis": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "qualification_status": { "enum": ["PENDING", "QUALIFIED", "NOT_QUALIFIED"] }
   },
   "required": ["artifact_type", "evidence_scope", "method_id", "name", "standard", "target_failure_reference", "role", "qualification_metrics", "qualification_basis", "qualification_status"],
-  "unevaluatedProperties": false
+  "unevaluatedProperties": false,
+  "$defs": {
+    "pipeline_substep": {
+      "description": "One qualification sub-step status. status records the outcome; evidence_reference names the record that supports it; computed_by records who produced it, so a hand-entered figure can never pass as engine-computed. All three fields are optional in the shared contract because the serial order and the ENGINE requirement are enforced by the skill policy layer for the grease route only.",
+      "type": "object",
+      "properties": {
+        "status": { "enum": ["PASS", "FAIL", "NOT_RUN"] },
+        "evidence_reference": { "type": "string", "minLength": 1 },
+        "computed_by": { "enum": ["ENGINE", "MANUAL"] }
+      },
+      "additionalProperties": false
+    }
+  }
 }

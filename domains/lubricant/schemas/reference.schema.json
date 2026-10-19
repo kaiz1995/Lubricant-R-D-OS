@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lubricant-rd.local/schemas/reference.schema.json",
+  "title": "Lubricant R&D reference material dossier",
+  "description": "Reference-material object (break-point B5). A reference set is the discrimination ruler for a grease campaign: a Known Good that must pass and a Known Bad that must fail. Each entry is a dossier - resolved or not - and every history_evidence item must bind the recorded failure to the mechanism it demonstrates, because an unbound bad sample proves nothing and cannot discriminate a candidate. tier states how the reference set was established (direct history, long run without event, unresolved) and downstream_flag states whether the discrimination evidence it supports is complete.",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/artifact" },
+    {
+      "$comment": "A reference set that owns at least one RESOLVED Known Bad carries the discrimination evidence and must say so; a reference set whose tier is UNRESOLVED cannot yet carry it. Both lists may be empty: an empty list is an open recording, not a violation.",
+      "if": {
+        "properties": {
+          "known_bad": {
+            "contains": {
+              "properties": { "resolution": { "const": "RESOLVED" } },
+              "required": ["resolution"]
+            }
+          }
+        },
+        "required": ["known_bad"]
+      },
+      "then": {
+        "properties": {
+          "downstream_flag": { "const": "DISCRIMINATION_EVIDENCE_COMPLETE" }
+        }
+      }
+    },
+    {
+      "$comment": "An unresolved tier has no resolved reference set behind it, so the discrimination evidence stays incomplete.",
+      "if": {
+        "properties": { "tier": { "const": "UNRESOLVED" } },
+        "required": ["tier"]
+      },
+      "then": {
+        "properties": {
+          "downstream_flag": { "const": "DISCRIMINATION_EVIDENCE_INCOMPLETE" }
+        }
+      }
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "artifact_type": { "const": "reference" },
+    "stage": { "const": "REFERENCE_MATERIAL_RESOLVED" },
+    "reference_id": {
+      "description": "Optional identifier for the reference set as a whole; individual dossiers carry their own reference_id.",
+      "type": "string",
+      "minLength": 1
+    },
+    "known_good": {
+      "description": "Known Good dossiers. May be empty while a reference set is still being assembled.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/dossier" }
+    },
+    "known_bad": {
+      "description": "Known Bad dossiers. May be empty while a reference set is still being assembled.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/dossier" }
+    },
+    "tier": { "enum": ["DIRECT_HISTORY", "LONG_RUN_NO_EVENT", "UNRESOLVED"] },
+    "downstream_flag": { "enum": ["DISCRIMINATION_EVIDENCE_COMPLETE", "DISCRIMINATION_EVIDENCE_INCOMPLETE"] }
+  },
+  "required": ["artifact_type", "known_good", "known_bad", "tier", "downstream_flag"],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "dossier": {
+      "description": "One reference material dossier: what the material is, which formula it represents, the history that establishes it, how it is stored, and its safety reference. history_evidence may be empty for an UNRESOLVED entry only.",
+      "type": "object",
+      "properties": {
+        "reference_id": { "type": "string", "minLength": 1 },
+        "resolution": { "enum": ["RESOLVED", "UNRESOLVED"] },
+        "material_identity": { "type": "string", "minLength": 1 },
+        "formula_identity": { "type": "string", "minLength": 1 },
+        "history_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/history_evidence_item" }
+        },
+        "storage_sop": { "type": "string", "minLength": 1 },
+        "safety_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": [
+        "reference_id",
+        "resolution",
+        "material_identity",
+        "formula_identity",
+        "history_evidence",
+        "storage_sop",
+        "safety_reference"
+      ],
+      "additionalProperties": false
+    },
+    "history_evidence_item": {
+      "description": "One recorded history event. mechanism_reference is required on every item: a known bad is only usable as a reference when the recorded failure is bound to the mechanism it demonstrates.",
+      "type": "object",
+      "properties": {
+        "evidence_reference": { "type": "string", "minLength": 1 },
+        "mechanism_reference": { "type": "string", "minLength": 1 }
+      },
+      "required": ["evidence_reference", "mechanism_reference"],
+      "additionalProperties": false
+    }
+  }
+}

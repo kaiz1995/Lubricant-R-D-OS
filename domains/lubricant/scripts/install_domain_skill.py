@@ -19,18 +19,46 @@ SKILLS = {
     "duty-challenge-analysis": ("common.schema.json", "project.schema.json", "duty.schema.json", "challenge.schema.json"),
     "failure-ctq-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json"),
     "test-method-qualification": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json"),
-    "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json"),
+    # 2026-10-14 (I-3): the skill also produces the material records the design
+    # space resolves its material_reference against (preflight_material.py /
+    # build_material_artifact.py / validate_material_artifact.py), and the
+    # validator loads material.schema.json -- so it must be deployed here or the
+    # double-list guard (check_double_list.py) turns red with
+    # "loaded but NOT deployed".
+    "formulation-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "material.schema.json"),
     "process-definition": ("common.schema.json", "design_space.schema.json", "process.schema.json"),
-    "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json"),
-    "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json"),
-    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json"),
-    "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json"),
+    # 2026-10-13: doe-design also owns the sequential next-batch decision
+    # (preflight_next_batch.py / validate_next_batch_artifact.py), so the
+    # deploy list carries next_batch.schema.json like every other loaded schema.
+    "doe-design": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "next_batch.schema.json"),
+    # 2026-10-14: the bench path now resolves the screening release it spends a slot
+    # on (BENCH_SCHEMA_NAMES loads screening.schema.json), so the deploy list carries
+    # it -- the double-list guard requires every script-loaded schema here.
+    "experiment-import": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "bench_test.schema.json", "screening.schema.json"),
+    # 2026-10-14: the grease modeling entry (step 14) reads the round plan it must
+    # trace to (campaign_artifact) -- after the v1.0.0 merge that record is the
+    # merged bench.json, so bench.schema.json is loaded here; the double-list
+    # guard requires it in the deploy list.
+    "statistical-analysis": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "batch.schema.json", "screening.schema.json", "bench_test.schema.json", "variance.schema.json", "bench.schema.json"),
+    "optimization": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "variance.schema.json"),
     "process-scale-up": ("common.schema.json", "process.schema.json", "optimization.schema.json"),
     "application-definition": ("common.schema.json", "application.schema.json"),
-    "application-validation": ("common.schema.json", "application.schema.json"),
-    "bench-registration": ("common.schema.json", "bench.schema.json"),
+    # 2026-10-14: application-validation's upstream contract is the merged bench
+    # record (stage BENCH_RESOURCE_REGISTERED) since the v1.0.0 merge; the
+    # deployment list follows the schema its preflight loads.
+    "application-validation": ("common.schema.json", "application.schema.json", "bench.schema.json", "bench_test.schema.json"),
+    # 2026-10-13: bench-registration also opens the inner-loop round plan; since
+    # the v1.0.0 merge that plan lives in the same bench.json record, so the skill
+    # loads bench.schema.json (the former campaign.schema.json is gone) and keeps
+    # project.schema.json for the project_reference the merged record carries.
+    "bench-registration": ("common.schema.json", "project.schema.json", "bench.schema.json"),
     "interface-definition": ("common.schema.json", "interface.schema.json"),
     "external-record-import": ("common.schema.json", "external_record.schema.json"),
+    "reference-material": ("common.schema.json", "project.schema.json", "reference.schema.json"),
+    "grease-batch": ("common.schema.json", "project.schema.json", "design_space.schema.json", "experiment_design.schema.json", "batch.schema.json", "sample.schema.json"),
+    "grease-screening": ("common.schema.json", "project.schema.json", "batch.schema.json", "sample.schema.json", "screening.schema.json"),
+    "variance-assessment": ("common.schema.json", "bench_test.schema.json", "variance.schema.json"),
+    "knowledge-archive": ("common.schema.json", "project.schema.json", "knowledge_asset.schema.json"),
     "gate-review": ("common.schema.json", "project.schema.json", "challenge.schema.json", "failure_ctq.schema.json", "test_method.schema.json", "design_space.schema.json", "experiment_design.schema.json", "experiment.schema.json", "model.schema.json", "optimization.schema.json", "gate.schema.json", "process.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json"),
     "lubricant-rd-agent": ("common.schema.json", "project.schema.json", "gate.schema.json", "benchmark.schema.json", "evidence_qualification.schema.json", "design_freeze.schema.json", "knowledge_asset.schema.json"),
 }
@@ -67,6 +95,11 @@ SHARED_MODULES = {
     "formulation-design": ("constraint_role.py", "check_artifact_naming.py"),
     "doe-design": ("constraint_role.py", "check_artifact_naming.py"),
     "gate-review": ("check_artifact_naming.py",),
+    "reference-material": ("check_artifact_naming.py",),
+    "grease-batch": ("check_artifact_naming.py",),
+    "grease-screening": ("check_artifact_naming.py",),
+    "variance-assessment": ("check_artifact_naming.py",),
+    "knowledge-archive": ("check_artifact_naming.py",),
 }
 
 # Pack-level language-agnostic contracts deployed into a skill's references/ so a
@@ -76,6 +109,9 @@ SHARED_MODULES = {
 CONTRACT_ROOT = PACK_ROOT / "contracts"
 CONTRACTS = {
     "lubricant-rd-agent": ("state-machine.json",),
+    # 2026-10-14: the merged bench record defaults max_iterations from the contract
+    # (12); carrying it keeps the deployed preflight identical to the pack behavior.
+    "bench-registration": ("state-machine.json",),
 }
 
 

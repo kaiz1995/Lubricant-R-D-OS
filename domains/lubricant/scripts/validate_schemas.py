@@ -37,6 +37,27 @@ EXPECTED_ERRORS = {
     "design_freeze--synthetic.json": "'PHYSICAL' was expected",
     "knowledge_asset--missing-model.json": "True was expected",
     "knowledge_asset--synthetic-closed.json": "'DRAFT_KNOWLEDGE' was expected",
+    # PRECISION_GREASE_DEV objects (contract v0.8.0).
+    "material--missing-source.json": "'source' is a required property",
+    "formula--missing-baseline-process.json": "'baseline_process_reference' is a required property",
+    "batch--bad-deviation-verdict.json": "'OK' is not one of",
+    "sample--missing-custody.json": "'chain_of_custody' is a required property",
+    "reference--unbound-history-evidence.json": "'mechanism_reference' is a required property",
+    "screening--failed-but-released.json": "'BLOCKED' was expected",
+    "bench_test--censored-as-endpoint.json": "False was expected",
+    "variance--manual-computation.json": "'ENGINE' was expected",
+    "bench--missing-pairing-design.json": "'pairing_design' is a required property",
+    # Outer-loop steps 5-6 extensions (batch 1). The constraint-kind fixture
+    # fails through an anyOf, so its message embeds the whole offending object;
+    # the registered substring is kept short and stable on purpose.
+    "test_method--illegal-computed-by.json": "'HAND_ENTERED' is not one of",
+    "design_space--illegal-constraint-kind.json": "is not valid under any of the given schemas",
+    "design_space--illegal-material-role.json": "'THICKENER' is not one of",
+    "design_space--illegal-convexity.json": "'MOSTLY_CONVEX' is not one of",
+    "process--illegal-step-type.json": "'HOMOGENISATION' is not one of",
+    # Step 13b sequential decision (batch 2). The violation is the schema's own
+    # conditional rule: stopping the loop needs its reason recorded.
+    "next_batch--stop-without-rationale.json": "'stop_rationale' is a required property",
 }
 
 

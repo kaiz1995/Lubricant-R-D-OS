@@ -54,7 +54,11 @@
       "required": ["value", "ctq_reference", "sample_size"],
       "additionalProperties": false
     },
-    "material_batch_reference": { "type": "string", "minLength": 1 },
+    "material_batch_reference": {
+      "description": "The batch identity this record is bound to. On a fixed-window record (PROCESS_WINDOW_DEFINED / PROCESS_SCALE_VALIDATED) it names the amplified batch the window was fixed at, and the grease route requires it to equal batch_scale.batch_size.material_batch: one fixed-window record must not carry two batch identities. On the DESIGN_SPACE_DEFINED baseline record it names the batch the baseline was established on.",
+      "type": "string",
+      "minLength": 1
+    },
     "factor_role": { "enum": ["WHOLE_PLOT", "SUB_PLOT"] }
   },
   "required": [
@@ -85,7 +89,11 @@
             "MILLING",
             "HOMOGENIZATION",
             "VACUUM_DEAERATION",
-            "FILLING"
+            "FILLING",
+            "SOAP_HOLD",
+            "DILUTION_CURVE",
+            "RIPENING",
+            "FILLING_TEMPERATURE"
           ]
         },
         "parameters": {

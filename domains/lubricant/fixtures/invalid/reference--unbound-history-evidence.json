@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "reference",
+  "project_id": "PGD-001",
+  "stage": "REFERENCE_MATERIAL_RESOLVED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Can a Known Bad be recorded without binding its failure to a mechanism?",
+  "hypothesis": "A Known Bad is only usable as a discrimination reference when every history event is bound to the mechanism it demonstrates.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record attempts to omit mechanism_reference on one history event.",
+  "evidence": [
+    {
+      "evidence_id": "E-REF-BAD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: one history evidence item cites a failure event with no mechanism reference.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Every history_evidence item must carry both evidence_reference and mechanism_reference; a failure that is not bound to a mechanism cannot discriminate.",
+  "result": "The reference record is rejected because a history evidence item is not bound to its mechanism.",
+  "decision": "HOLD",
+  "next_action": "Bind the recorded failure to the mechanism it demonstrates, or mark the dossier UNRESOLVED.",
+  "reference_id": "REF-SET-BAD-001",
+  "known_good": [
+    {
+      "reference_id": "REF-GOOD-BAD-001",
+      "resolution": "RESOLVED",
+      "material_identity": "Synthetic lithium grease, trade name SYN-GREASE-G, lot LOT-SYN-2025-777",
+      "formula_identity": "FORM-GREASE-000@v3",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic service history SH-G-001: 24 months in the reference gearbox with no bearing event recorded.",
+          "mechanism_reference": "MECHANISM-NONE: no failure mechanism is demonstrated by this no-event history."
+        }
+      ],
+      "storage_sop": "SOP-SYN-STORE-001",
+      "safety_reference": "SDS-SYN-GREASE-G-2025"
+    }
+  ],
+  "known_bad": [
+    {
+      "reference_id": "REF-BAD-BAD-001",
+      "resolution": "RESOLVED",
+      "material_identity": "Synthetic lithium grease, trade name SYN-GREASE-B, lot LOT-SYN-2025-778",
+      "formula_identity": "FORM-GREASE-000@v2",
+      "history_evidence": [
+        {
+          "evidence_reference": "Synthetic bench failure event FE-B-001: oil bleed and hardened soap structure after the accelerated bench run."
+        }
+      ],
+      "storage_sop": "SOP-SYN-STORE-002",
+      "safety_reference": "SDS-SYN-GREASE-B-2025"
+    }
+  ],
+  "tier": "DIRECT_HISTORY",
+  "downstream_flag": "DISCRIMINATION_EVIDENCE_COMPLETE"
+}

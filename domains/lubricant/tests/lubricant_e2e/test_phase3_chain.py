@@ -206,7 +206,11 @@ def main() -> int:
         run(ROOT / "skills/process-definition/scripts/validate_process_artifact.py", process_path)
         assert_artifact(process_path, "process", "DESIGN_SPACE_DEFINED")
 
-        analysis_input = read_json(FIXTURES / "statistical-analysis" / "valid-input.synthetic.json")
+        # hold-input.synthetic.json: the three HOLD upstreams it names (test-method,
+        # experiment-design, experiment) are what makes its own preflight result HOLD.
+        # Used only as a request template; the copies staged just above rewrite exactly
+        # those three to GO, so this chain's request is READY.
+        analysis_input = read_json(FIXTURES / "statistical-analysis" / "hold-input.synthetic.json")
         rewrite_upstream(analysis_input, upstream_paths)
         analysis_input_path, model_path = inputs / "analysis-input.json", artifacts / "model.json"
         write_json(analysis_input_path, analysis_input)

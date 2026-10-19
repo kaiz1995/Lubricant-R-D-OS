@@ -1,0 +1,374 @@
+{
+  "schema_version": "0.1.0",
+  "engine_name": "statistics",
+  "engine_version": "0.1.0",
+  "method": "NESTED_VARIANCE_V1",
+  "parameters": {
+    "analysis_type": "VARIANCE_ANALYSIS",
+    "variance_method": "EXPECTED_MEAN_SQUARE_NESTED_RANDOM_EFFECTS_V1",
+    "ci_method": "SATTERSWAITE_ON_MEAN_SQUARE_CONTRAST",
+    "power_method": "TWO_SAMPLE_TWO_SIDED_Z_V1",
+    "levels": [
+      "MEASUREMENT",
+      "BENCH",
+      "BATCH"
+    ],
+    "alpha": 0.05,
+    "target_power": 0.8,
+    "k_required": 3,
+    "planning_numerator": 16.0,
+    "bench_round_days": 30,
+    "bench_positions_per_round": 2,
+    "resolution_constant": 4.0,
+    "requested_analyses": [
+      "CONSISTENCY_CHECK",
+      "POWER_ANALYSIS",
+      "VARIANCE_COMPONENTS"
+    ]
+  },
+  "input_digest": "29eb7e7e26ddf9561094d8ed6501c5fab8a5a90380c36b185cb8e9830675ba29",
+  "status": "OK",
+  "rejection_reasons": [],
+  "result": {
+    "verdict": "CONSISTENT_DIFFERENCE",
+    "verdict_basis": "observed difference -1.9833333333333334 exceeds k_required*sigma = 3*0.21213203435596437 (k_observed 9.34952299568879 > 3)",
+    "verdict_values_available": [
+      "CONSISTENT_DIFFERENCE",
+      "NO_DETECTABLE_DIFFERENCE",
+      "UNDERPOWERED",
+      "REPLICATE_INCONSISTENT"
+    ],
+    "variance_components": {
+      "sigma_meas": 0.07071067811865471,
+      "sigma_meas_ci_low": 0.04556549485008892,
+      "sigma_meas_ci_high": 0.1557095880997224,
+      "sigma_bench": 0.04999999999999967,
+      "sigma_bench_ci_low": 0.0,
+      "sigma_bench_ci_high": 0.26364810627124174,
+      "sigma_batch": 0.19364916731037107,
+      "sigma_batch_ci_low": 0.09798733801259052,
+      "sigma_batch_ci_high": 1.2569469392970778,
+      "sigma_total": 0.21213203435596437,
+      "sigma_total_ci_low": 0.1159854316036828,
+      "sigma_total_ci_high": 0.9635701528112708,
+      "confidence_level": 0.95,
+      "ci_method": "SATTERSWAITE_ON_MEAN_SQUARE_CONTRAST",
+      "df_meas": 6.0,
+      "df_bench": 0.6666666666666577,
+      "df_batch": 1.7532467532467553,
+      "small_sample_warning": true
+    },
+    "variance_balance": {
+      "variance_meas": 0.004999999999999994,
+      "variance_bench": 0.0024999999999999667,
+      "variance_batch": 0.03750000000000009,
+      "variance_total": 0.04500000000000005,
+      "mean_squares": {
+        "measurement_within_bench": 0.004999999999999994,
+        "bench_within_batch": 0.009999999999999927,
+        "batch": 0.16000000000000028
+      },
+      "ems_coefficients": {
+        "k_meas": 2.0,
+        "k_batch": 4.0,
+        "k_bench": 2.0
+      },
+      "structure": {
+        "batch_count": 3,
+        "run_count": 6,
+        "observation_count_used": 12,
+        "balanced": true,
+        "runs_with_one_observation": 0,
+        "batches_with_one_run": 0
+      }
+    },
+    "replicate_structure": {
+      "declared": [
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-101",
+          "sample_reference": "S-101A",
+          "batch_reference": "BATCH-101"
+        },
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-102",
+          "sample_reference": "S-102A",
+          "batch_reference": "BATCH-102"
+        },
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-103",
+          "sample_reference": "S-103A",
+          "batch_reference": "BATCH-103"
+        },
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-201",
+          "sample_reference": "S-201A",
+          "batch_reference": "BATCH-201"
+        },
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-202",
+          "sample_reference": "S-202A",
+          "batch_reference": "BATCH-202"
+        },
+        {
+          "level": "BATCH",
+          "n": 2,
+          "group_reference": "BATCH-203",
+          "sample_reference": "S-203A",
+          "batch_reference": "BATCH-203"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-A01",
+          "sample_reference": "S-101A",
+          "batch_reference": "BATCH-101"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-A03",
+          "sample_reference": "S-102A",
+          "batch_reference": "BATCH-102"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-A05",
+          "sample_reference": "S-103A",
+          "batch_reference": "BATCH-103"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-B01",
+          "sample_reference": "S-201A",
+          "batch_reference": "BATCH-201"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-B03",
+          "sample_reference": "S-202A",
+          "batch_reference": "BATCH-202"
+        },
+        {
+          "level": "BENCH",
+          "n": 2,
+          "group_reference": "RUN-B05",
+          "sample_reference": "S-203A",
+          "batch_reference": "BATCH-203"
+        },
+        {
+          "level": "MEASUREMENT",
+          "n": 2,
+          "group_reference": "RUN-A01",
+          "sample_reference": "S-101A",
+          "batch_reference": "BATCH-101"
+        },
+        {
+          "level": "MEASUREMENT",
+          "n": 2,
+          "group_reference": "RUN-B01",
+          "sample_reference": "S-201A",
+          "batch_reference": "BATCH-201"
+        }
+      ],
+      "declared_groups_by_level": {
+        "BATCH": 6,
+        "BENCH": 6,
+        "MEASUREMENT": 2
+      },
+      "observed_groups_by_level": {
+        "BATCH": 6,
+        "BENCH": 12,
+        "MEASUREMENT": 18
+      },
+      "shortfalls": [],
+      "usable_observations": 18,
+      "excluded_observations": 2
+    },
+    "data_quality": {
+      "observations_total": 20,
+      "observations_used": 12,
+      "observations_excluded": 2,
+      "censored_excluded": 1,
+      "confounded_excluded": 1,
+      "identity_conflicts_excluded": 0,
+      "excluded_observations": [
+        {
+          "observation_reference": "OBS-19",
+          "reason": "CENSORED_NOT_AN_END_POINT",
+          "detail": "censoring_type=RIGHT stop_reason=RIGHT-censored at the 10 h protocol limit; no event observed, so the 10 h value is not an endpoint"
+        },
+        {
+          "observation_reference": "OBS-20",
+          "reason": "CONFOUNDED_OBSERVATION",
+          "detail": "falls inside an intervention window declared confounds=true"
+        }
+      ],
+      "rule_censoring": "a censored observation is never an endpoint: right-censored values are excluded from every estimate, and a censored observation without a stop_reason is rejected fail-closed",
+      "rule_material_identity": "every observation traces to sample_id + batch_id; replicates sharing a sample_id across batch_ids are different things with the same name and are never averaged",
+      "rule_confounding": "observations inside an intervention window declared confounds=true are flagged and excluded from the variance estimate"
+    },
+    "consistency": {
+      "verdict": "CONSISTENT",
+      "arms_checked": 2,
+      "observations_checked": 20,
+      "inconsistent_arms": [],
+      "material_identity_conflicts": [],
+      "basis": "OUTCOME_ONLY_NO_NUMBERS_USED",
+      "note": "same-arm replicates agree on outcome"
+    },
+    "comparison": {
+      "arm_a": {
+        "group_reference": "ARM-ADDITIVE",
+        "n": 6,
+        "values": [
+          2.45,
+          2.55,
+          2.5,
+          2.6,
+          2.45,
+          2.55
+        ],
+        "mean": 2.5166666666666666,
+        "run_count": 6,
+        "batch_count": 3
+      },
+      "arm_b": {
+        "group_reference": "ARM-BLANK",
+        "n": 12,
+        "values": [
+          4.2,
+          4.3,
+          4.3,
+          4.4,
+          4.4,
+          4.5,
+          4.5,
+          4.6,
+          4.6,
+          4.7,
+          4.7,
+          4.8
+        ],
+        "mean": 4.5,
+        "run_count": 6,
+        "batch_count": 3
+      },
+      "difference": -1.9833333333333334,
+      "effect_size": {
+        "n_a": 6,
+        "n_b": 12,
+        "df": 16,
+        "mean_a": 2.5166666666666666,
+        "mean_b": 4.5,
+        "mean_difference": -1.9833333333333334,
+        "pooled_sigma": 0.15778413523967902,
+        "cohens_d": -12.569916045872345,
+        "magnitude": "LARGE",
+        "note": "Cohen's d thresholds: <0.2 negligible, <0.5 small, <0.8 medium, otherwise large"
+      },
+      "k_required": 3,
+      "k_observed": 9.34952299568879,
+      "k_ratio": 2.357022603955157,
+      "sigma_max_requirement": 0.5
+    },
+    "power": {
+      "status": "COMPUTED",
+      "power": 1.0,
+      "per_arm_n": 6,
+      "alpha": 0.05,
+      "target_power": 0.8,
+      "sigma_used": 0.2,
+      "k_ratio": 7.5,
+      "required_n": {
+        "k": 7.5,
+        "alpha": 0.05,
+        "target_power": 0.8,
+        "per_arm_n": 2,
+        "total_runs": 4,
+        "bench_rounds_occupied": 2,
+        "calendar_days": 60,
+        "calendar_months": 2.0,
+        "achieved_power": 0.9999999848795277,
+        "planning_numerator": 16.0,
+        "bench_positions_per_round": 2,
+        "bench_round_days": 30,
+        "k_min_viable": 3.0,
+        "feasible": true,
+        "design_rule": "k >= K_MIN_VIABLE: the pack planning rule n ~ 16/k^2 applies"
+      },
+      "note": "k >= K_MIN_VIABLE: the pack planning rule n ~ 16/k^2 applies"
+    },
+    "sigma_estimate_used": {
+      "n": 4,
+      "df": 3,
+      "sample_sigma": 0.2,
+      "confidence_level": 0.95,
+      "sigma_low": 0.11329790932044925,
+      "sigma_high": 0.745709455165549,
+      "relative_standard_error": 0.4082482904638631,
+      "small_sample": true,
+      "limitation": "df=3: a sample standard deviation at this df carries roughly +/-41% relative error; report the interval, never the point estimate alone"
+    },
+    "frozen_inputs": {
+      "frozen_sigma_reference": "METHOD-CHAR-S1A-004",
+      "frozen_sigma": 0.2,
+      "control_band": 0.6,
+      "preregistered_delta": 1.5,
+      "sigma_source": "FROZEN_METHOD_CHARACTERIZATION"
+    },
+    "resolution_table": [
+      {
+        "replicates_per_group": 2,
+        "detectable_difference": 4.242640687119285,
+        "detectable": false,
+        "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+      },
+      {
+        "replicates_per_group": 3,
+        "detectable_difference": 3.464101615137755,
+        "detectable": false,
+        "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+      },
+      {
+        "replicates_per_group": 6,
+        "detectable_difference": 2.4494897427831783,
+        "detectable": false,
+        "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+      },
+      {
+        "replicates_per_group": 12,
+        "detectable_difference": 1.7320508075688774,
+        "detectable": false,
+        "note": "scales as 1/sqrt(n): quadrupling replicates only halves this value"
+      }
+    ],
+    "limitations": [
+      "sigma_bench has effective df=1: a sample standard deviation at this df carries roughly +/-87% relative error, so the confidence interval is the honest answer, not the point estimate (n=3 is roughly +/-50%)",
+      "sigma_batch has effective df=2: a sample standard deviation at this df carries roughly +/-53% relative error, so the confidence interval is the honest answer, not the point estimate (n=3 is roughly +/-50%)",
+      "1 censored observation(s) excluded from every estimate (a censoring time is never an end-point)",
+      "1 confounded observation(s) excluded from every estimate (inside an intervention window)",
+      "sigma components estimated within group_reference ARM-BLANK only: pooling formulations would fold the between-formulation difference into sigma_batch"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "variance-computation",
+      "statement": "deterministic nested variance decomposition (expected-mean-square, unequal-n), Satterthwaite confidence intervals, two-sided power and a resolution table computed by the engine; the four-value verdict is decided by decide_variance_verdict with UNDERPOWERED kept separate from NO_DETECTABLE_DIFFERENCE",
+      "source": "engine internal deterministic algorithm",
+      "status": "OBSERVED"
+    }
+  ]
+}

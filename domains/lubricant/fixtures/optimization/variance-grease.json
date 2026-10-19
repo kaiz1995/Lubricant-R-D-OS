@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "variance",
+  "project_id": "PGD-OPT-001",
+  "stage": "VARIANCE_ASSESSED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Is the difference between the A and B arm of campaign iteration 3 real?",
+  "hypothesis": "The observed arm difference exceeds what the recorded bench sigma can explain.",
+  "uncertainty": "Synthetic fixture: the estimate rests on a small number of bench rounds.",
+  "evidence": [
+    {
+      "evidence_id": "E-VAR-OPT-001",
+      "statement": "Synthetic variance fixture for the optimization leg only; not product evidence.",
+      "source": "synthetic fixture only",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Report the engine verdict as computed; UNDERPOWERED is never collapsed into NO_DETECTABLE_DIFFERENCE.",
+  "result": "The engine reports a consistent arm difference within the recorded variance structure.",
+  "decision": "GO",
+  "next_action": "Update the model from this round and carry the applicability boundary into optimization.",
+  "variance_id": "VAR-OPT-001",
+  "campaign_reference": "CMP-OPT-001",
+  "iteration": 3,
+  "replicate_structure": [
+    {
+      "level": "MEASUREMENT",
+      "n": 3,
+      "group_reference": "RUN-OPT-001"
+    },
+    {
+      "level": "BENCH",
+      "n": 2,
+      "group_reference": "BENCH-SZ-01"
+    },
+    {
+      "level": "BATCH",
+      "n": 2,
+      "group_reference": "BATCH-OPT-001"
+    }
+  ],
+  "censoring": [],
+  "intervention_events": [],
+  "components": {
+    "sigma_meas": 0.4,
+    "sigma_meas_ci_low": 0.25,
+    "sigma_meas_ci_high": 0.7,
+    "sigma_bench": 1.1,
+    "sigma_bench_ci_low": 0.7,
+    "sigma_bench_ci_high": 1.8,
+    "sigma_batch": 0.6,
+    "sigma_batch_ci_low": 0.3,
+    "sigma_batch_ci_high": 1.2,
+    "sigma_total": 1.34,
+    "sigma_total_ci_low": 0.9,
+    "sigma_total_ci_high": 2.0
+  },
+  "effect_size": 1.6,
+  "power": 0.82,
+  "k_ratio": 1.12,
+  "sigma_max_requirement": 0.5,
+  "resolution_table": [
+    {
+      "replicates_per_group": 3,
+      "detectable_difference": 1.5,
+      "detectable": true,
+      "note": "Synthetic resolution row."
+    }
+  ],
+  "verdict": "CONSISTENT_DIFFERENCE",
+  "computed_by": "ENGINE",
+  "frozen_sigma_reference": "SIGMA-FREEZE-OPT-001",
+  "preregistered_delta": 1.5
+}

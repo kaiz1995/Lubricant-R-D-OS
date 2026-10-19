@@ -1,0 +1,41 @@
+{
+  "campaign_artifact": "next-batch-bench-stopped.json",
+  "experiment_design_artifact": "next-batch-round-design.json",
+  "variance_artifact": "next-batch-variance.json",
+  "next_batch": {
+    "next_batch_id": "NEXT-PGD-NB-002",
+    "stop_state": "NO_NEW_INFORMATION",
+    "bench_slots_required": 2,
+    "information_gain_basis": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: these are the samples the round would have run if it ran; the negative fixture exists to show that a stop without its recorded reason is refused, not to propose a round.",
+    "competing_explanations": [
+      {
+        "explanation_id": "EXPL-FORMULATION-EFFECT",
+        "statement": "the round-1 candidate/reference difference follows the formulation and travels with the formula into round 2"
+      },
+      {
+        "explanation_id": "EXPL-BENCH-DRIFT",
+        "statement": "the round-1 difference is bench-to-bench drift that follows the run order instead of the formula"
+      }
+    ],
+    "proposed_samples": [
+      {
+        "formula_reference": "FORM-PG-NB@v1",
+        "hypothesis": "EXPL-FORMULATION-EFFECT",
+        "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"]
+      },
+      {
+        "formula_reference": "FORM-PG-NB-REF@v1",
+        "hypothesis": "EXPL-BENCH-DRIFT",
+        "separates": ["EXPL-FORMULATION-EFFECT", "EXPL-BENCH-DRIFT"]
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-NB-SYN-BAD-001",
+        "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this negative fixture records a stop with no stop_rationale, which the step-13b contract refuses.",
+        "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+        "status": "ASSUMED"
+      }
+    ]
+  }
+}

@@ -84,7 +84,7 @@ python skills/external-record-import/scripts/validate_external_record_artifact.p
 ### Step 4: Atomic Commit & Checkpoint
 Atomically copy/move `<temporary-file.json>` to the target artifact path only when Step 3 returns `PASS`.
 ```bash
-# 🔴 CHECKPOINT · STOP: the external record stops here. It is imported data.
+# 🔴 CHECKPOINT · STOP: the external record stops here at DRAFT. It is imported data, not a chain stage.
 # Do NOT advance the state machine, claim the data is qualified or release-ready,
 # or treat third-party/vendor claims as verified — cross-check before relying on them.
 ```

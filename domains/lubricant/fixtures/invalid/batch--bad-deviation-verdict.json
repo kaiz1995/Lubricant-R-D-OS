@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.1.0",
+  "artifact_type": "batch",
+  "project_id": "PGD-001",
+  "stage": "BATCH_PRODUCED",
+  "evidence_scope": "SYNTHETIC",
+  "decision_question": "Was the lithium grease batch produced inside its process window?",
+  "hypothesis": "Each trajectory step must carry an explicit WITHIN or DEVIATED verdict.",
+  "uncertainty": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: this record attempts to record a non-enum deviation verdict.",
+  "evidence": [
+    {
+      "evidence_id": "E-BAT-BAD-001",
+      "statement": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION: one trajectory step uses the verdict OK instead of WITHIN or DEVIATED.",
+      "source": "Synthetic test fixture / NOT_FOR_PHYSICAL_EXECUTION",
+      "status": "ASSUMED"
+    }
+  ],
+  "decision_rule": "Accept a batch record only with a non-empty trajectory, a batch verdict, and a WITHIN or DEVIATED judgement on every step.",
+  "result": "The batch record is rejected because a step reports the non-enum verdict OK.",
+  "decision": "HOLD",
+  "next_action": "Re-state the step verdict as WITHIN or DEVIATED with the deviation value that supports it.",
+  "batch_id": "BAT-2026-BAD-001",
+  "formula_reference": "FORM-GREASE-001@v1",
+  "scale_class": "LAB",
+  "trajectory": [
+    {
+      "step_type": "SAPONIFICATION",
+      "setpoint": 195,
+      "actual": 199,
+      "unit": "degC",
+      "duration_s": 5400,
+      "deviation": 4,
+      "deviation_verdict": "OK"
+    }
+  ],
+  "raw_material_lots": ["LOT-SYN-2026-001", "LOT-SYN-2026-014"],
+  "operator": "Synthetic operator OP-01",
+  "equipment": "Synthetic 5 L pilot kettle K-01",
+  "anomalies": [],
+  "batch_verdict": "DEVIATED"
+}
