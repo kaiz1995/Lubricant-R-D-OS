@@ -47,6 +47,38 @@ def wp11_retrieval_smoke() -> None:
         assert all(hit["artifact_type"] in ("knowledge_asset", "design_freeze") for hit in hits)
         assert knowledge_retrieval.describe_backend() == "local_bm25"
 
+        # A knowledge asset carries references, not content. Indexing only the
+        # asset made the corpus unsearchable for the mechanism it archives: the
+        # query below scored zero while "with and the" scored positive, because the
+        # only matching tokens were English function words in the decision block.
+        # This leg pins the fix -- the referenced record's text is indexed too.
+        with tempfile.TemporaryDirectory() as temporary:
+            history = Path(temporary)
+            cited = {
+                "schema_version": "0.1.0",
+                "artifact_type": "failure_ctq",
+                "project_id": "WGO-001",
+                "failure_mode": "flexspline tooth-flank fretting wear with micro-pitting",
+                "mechanism": "asperity contact accumulates fretting damage; the grease hardens",
+            }
+            (history / "failure_ctq.json").write_text(json.dumps(cited, ensure_ascii=False), encoding="utf-8")
+            asset = json.loads((ROOT / "fixtures" / "valid" / "knowledge_asset.json").read_text(encoding="utf-8"))
+            asset["knowledge_assets"]["critical_failure_boundaries"]["artifact_reference"] = "failure_ctq.json"
+            (history / "knowledge_asset.json").write_text(json.dumps(asset, ensure_ascii=False), encoding="utf-8")
+            mechanism_hits = knowledge_retrieval.search_history("fretting wear flexspline", history)
+            assert mechanism_hits, "the referenced mechanism text must be searchable through the asset"
+            assert mechanism_hits[0]["artifact_type"] == "knowledge_asset", mechanism_hits[0]
+            # The indexed document is still the asset, never the cited record: a
+            # caller must not receive a second, duplicate hit for the same closure.
+            assert len(mechanism_hits) == 1, mechanism_hits
+
+            # A dangling reference contributes nothing and must not raise: a
+            # knowledge asset may cite an external document number that is not a
+            # local file, and retrieval stays fail-open.
+            asset["knowledge_assets"]["critical_failure_boundaries"]["artifact_reference"] = "MISSING-EXTERNAL-001"
+            (history / "knowledge_asset.json").write_text(json.dumps(asset, ensure_ascii=False), encoding="utf-8")
+            assert knowledge_retrieval.search_history("fretting wear flexspline", history) == []
+
 IDS = ("ANTIWEAR_ADDITIVE", "ESTER", "PAO_BASE")
 BASELINE = {"PAO_BASE": 0.70, "ESTER": 0.25, "ANTIWEAR_ADDITIVE": 0.05}
 BOUNDS = {

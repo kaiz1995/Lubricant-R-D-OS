@@ -2503,6 +2503,17 @@ def main() -> int:
         assert hits, "the archived knowledge_asset is not retrievable from the workspace that produced it"
         assert all(hit["artifact_type"] == "knowledge_asset" for hit in hits), hits
         assert any(Path(hit["source"]).resolve() == knowledge_path.resolve() for hit in hits), hits
+        # A positive score is not proof of retrieval. This query used to match only
+        # the English function words "with" and "and" inside the asset's decision
+        # block, because a knowledge asset carries references rather than the
+        # mechanism text it archives. Assert the mechanism words themselves are in
+        # the index, so a function-word-only match can never pass this check again.
+        indexed = set(retrieval_module.collect_documents(ws)[0]["tokens"])
+        for term in ("fretting", "flexspline", "micro"):
+            assert term in indexed, (
+                f"the archived asset's index carries no mechanism term {term!r}: the cited record's text is not "
+                "indexed, so the positive score below would be a function-word match"
+            )
         print(f"E2E-10 ok: knowledge_retrieval.py backend={retrieval_module.describe_backend()} "
               f"returns the archived asset as hit[0] (score={hits[0]['score']})")
 

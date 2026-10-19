@@ -74,6 +74,50 @@ def artifact_text(artifact: dict) -> str:
     return json.dumps(artifact, ensure_ascii=False, sort_keys=True, default=str)
 
 
+def _referenced_text(artifact: dict, base_dir: Path) -> str:
+    """The text of the workspace records a knowledge asset points at.
+
+    A ``knowledge_asset`` carries references, not content: its own JSON holds
+    ``"artifact_reference": "failure_ctq.json"`` and nothing about fretting wear.
+    Indexing only the asset therefore made the whole corpus unsearchable for the
+    very mechanism it archives -- a query for the failure mode scored zero while
+    the query ``with and the`` scored positive, because the only matching tokens
+    were English function words in the decision block.
+
+    Each reference is resolved against the asset's own directory (the same rule
+    the artifact consumers use) and its text is folded into the parent document.
+    An unresolvable or unreadable reference contributes nothing: a knowledge
+    asset is allowed to cite an external document number that is not a local
+    file, and retrieval stays fail-open. Only the parent is indexed, so the
+    artifact_type / source a caller sees is unchanged.
+    """
+    entries = artifact.get("knowledge_assets")
+    if not isinstance(entries, dict):
+        return ""
+    parts: list[str] = []
+    for entry in entries.values():
+        if not isinstance(entry, dict):
+            continue
+        reference = entry.get("artifact_reference")
+        if not isinstance(reference, str) or not reference.strip():
+            continue
+        candidate = Path(reference)
+        if not candidate.is_absolute():
+            candidate = base_dir / candidate
+        try:
+            if not candidate.is_file():
+                continue
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        # One level only: a referenced knowledge asset's own references are not
+        # re-expanded, so the corpus cannot grow without bound.
+        parts.append(artifact_text(payload))
+    return "\n".join(parts)
+
+
 def _closed_document(path: Path) -> dict | None:
     """Load one candidate file; keep it only if it proves closure."""
     try:
@@ -86,6 +130,10 @@ def _closed_document(path: Path) -> dict | None:
     if kind not in _CLOSURE_FILTER or not _CLOSURE_FILTER[kind](artifact):
         return None
     text = artifact_text(artifact)
+    if kind == "knowledge_asset":
+        referenced = _referenced_text(artifact, path.resolve().parent)
+        if referenced:
+            text = f"{text}\n{referenced}"
     return {
         "source": str(path),
         "artifact_type": kind,

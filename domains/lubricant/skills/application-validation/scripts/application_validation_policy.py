@@ -50,6 +50,7 @@ from application_policy import boundary_is_empty, pass_blockers  # noqa: E402
 RECORD_FIELDS = {"project_reference", "current_stage", "application"}
 STAGES_ALLOWED_BEFORE_APPLIED = {"VERIFIED"}
 RESULTS = ("PASS", "FAIL", "INCONCLUSIVE", "GAP")
+EVIDENCE_SCOPES = ("SYNTHETIC", "PHYSICAL")
 
 # --- Precision-grease route: acceptance criteria must reach the whole machine --------
 # ADDITIVE (step 16b, plan section 4.4.3 item 3-6). On the oil routes the application
@@ -159,6 +160,35 @@ def machine_indicator_blockers(record: dict, application: dict) -> list[str]:
     return reasons
 
 
+def evidence_scope_blockers(record: dict, application: dict) -> list[str]:
+    """Refuse a SYNTHETIC application record on the precision-grease route.
+
+    The pack has one rule for synthetic evidence: it validates the workflow, it
+    never authorizes a state transition. The router enforces it on every
+    advancement, the gate review refuses anything but HOLD, and knowledge-archive
+    caps a synthetic project at DRAFT_KNOWLEDGE. This gate used to be the one
+    admission that let a SYNTHETIC application record through to APPLIED, so the
+    same chain could be refused at step 17 and admitted at step 18.
+
+    Gated on the grease route deliberately: the oil records carry no
+    ``project_type`` and are validated exactly as before (pure-increment rule).
+    """
+    if not grease_route(record):
+        return []
+    scope = application.get("evidence_scope")
+    if scope not in EVIDENCE_SCOPES:
+        return [
+            "application.evidence_scope must be SYNTHETIC or PHYSICAL on the "
+            f"{GREASE_PROJECT_TYPE} route"
+        ]
+    if scope == "SYNTHETIC":
+        return [
+            "SYNTHETIC application evidence cannot enter APPLIED: synthetic evidence "
+            "validates the workflow only and never authorizes a state transition"
+        ]
+    return []
+
+
 def applied_entry_blockers(record: dict) -> list[str]:
     """Every reason the record cannot gate entry into APPLIED. Empty = allowed."""
     reasons: list[str] = []
@@ -198,4 +228,5 @@ def applied_entry_blockers(record: dict) -> list[str]:
     # ADDITIVE: the whole-machine criteria chain, required only on the grease route.
     if grease_route(record):
         reasons.extend(machine_indicator_blockers(record, application))
+        reasons.extend(evidence_scope_blockers(record, application))
     return reasons
