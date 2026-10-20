@@ -39,6 +39,7 @@
 
 ## 最新动态
 
+- **2026-10-04** — 🖱️ **Computer Use、终端与编辑器。** 智能体现在能操作 ImageJ、Origin、仪器软件等桌面应用；窗格里可以放终端、文件和代码编辑器，Claude Code / Codex 重启后自动续上；另有全文查找（⌘F）、一键跳转任意会话或项目（⌘J），以及面向 DGX Spark 的 Linux ARM64 安装包。*(v0.6.0)*
 - **2026-08-18** — 🖥️ **无屏也能跑，终端命令随包附带。** `osd server` 在没有显示器的机器上启动整套工作台——工作区、智能体运行时，以及*同一套* Web UI；`osd session send … --wait` 让脚本或另一个智能体来驱动它。`osd` 现在装在桌面安装包里，首次启动自动进入 PATH；服务器上用压缩包，什么都不用装。模型、密钥、审批都能在终端配置（`osd model`、`osd auth`、`osd approval`）。
 - **2026-08-13** — 🔌 **双向支持 Agent Client Protocol。** 在本应用里直接驱动 Codex、Gemini CLI、Claude Code 等任意 ACP 智能体——沿用它自己的模型、历史，以及你在本应用配置的 MCP 连接器；反过来，也可以从 Zed、JetBrains、Neovim 里驱动 Lubricant Science。 *(v0.4.0)*
 - **2026-08-01** — 🗂️ **项目、记忆与完整历史。** 会话可以归入命名项目（**就地**导入已有仓库，不做复制），智能体获得持久的全局记忆与项目记忆，全部历史对话都能在可搜索的历史视图中找到，并支持归档、恢复与导出。 *(v0.3.1)*
@@ -202,6 +203,13 @@ sudo apt install ./Open.Science_*.deb
 sudo rpm -i Open.Science-*.rpm
 ```
 
+没有 root 权限？下面的命令把所有东西装在你的用户目录下——默认装 `osd`，加 `--desktop` 装桌面版（要求系统里已有 WebKitGTK 4.1）。`--uninstall` 可以再卸掉。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ai4s-research/open-science/master/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ai4s-research/open-science/master/scripts/install.sh | sh -s -- --desktop
+```
+
 ## 无头与命令行(`osd`)
 
 科研机器通常没有屏幕。`osd` 就是没有屏幕的同一套工作台：同样的工作区布局、同样的智能体运行时、同样的项目、同样的 Web UI——只是通过 HTTP 提供，而不是画在窗口里。
@@ -239,6 +247,22 @@ osd session send $id "Fit the 2015-2024 bleaching trend and write report.md" --w
 
 `--wait` 在这一轮真正跑完时才返回，而不是在被接受时；如果这一轮什么都没答，它会明确报错。`--json` 输出接口原样的响应，供脚本解析。
 
+### 并发与按项目配置
+
+并行工作不需要第二台服务器，也不需要第二个工作区：一个 `osd server` 本来就可以同时运行多个会话。网关是每连接一线程，会话处理路径上没有任何全局锁——把不同会话的工作隔开的，是它们各自钉住的那个目录。`osd session new --project NAME` 在工作区的项目目录里运行会话（目录用 `osd project new NAME` 创建），`osd session new --directory DIR` 则把会话钉到任意其他目录。
+
+按项目配置的 MCP 同样跟着目录走：声明在 `<目录>/.opencode/opencode.json` 里的 MCP 服务器只对在该目录里工作的会话生效，而所有会话共享同一个 sidecar。这里有一条缓存规则决定了先后顺序：一个目录的 opencode 配置只在 sidecar 第一次使用该目录时读取一次，之后一直缓存。所以这份配置必须在**把任何会话指向该目录之前**写好：`osd session new --project NAME`（或 `--directory DIR`）本身就已经把它读进来并缓存了，此时一轮都还没跑——也就是说，「第一轮开始前」已经太晚。之后再改，要等服务器重启才会生效；在那之前，会话照常运行、报告成功，用的却是旧配置。
+
+这一切都不需要再装第二份工作台。
+
+### 隔离的状态目录(--state-dir)
+
+`osd server --state-dir DIR`（或 `OSD_STATE_DIR=DIR`）把该实例写出的所有内容——session 数据库、sidecar 配置、workspace 记录、日志——放在 DIR 下，而不是平台数据目录。除此之外一概不变：默认 workspace 仍然解析到真实的 Documents 目录，桌面应用也不受影响，因为它从不走 headless 覆盖。
+
+这**不是**获得更高并发的方法——一个 server 本来就能同时跑多个 session（见上一小节）。它只服务于"同一台机器上真正独立的安装"：桌面应用旁边无人值守的分片、基准测试集群。
+
+凭据按实例隔离、绝不复制：全新的 DIR 里没有任何凭据，所以第一个在那里启动的 server 会打印一条提示和一行指路命令——`OSD_STATE_DIR=DIR osd auth set <provider> --key …`——或者启动前 export 提供商自己的环境变量（如 `ANTHROPIC_API_KEY=…`），sidecar 会继承它。
+
 ### 用哪个模型，谁来批准
 
 `osd model` 显示当前默认模型，`osd model ls` 列出运行时**真正能服务**的模型（也就是这台机器有凭据的那些提供商，当前那个带星号），`osd model set <provider/model>` 修改它——走网关，所以对远程服务器同样有效。任何单轮都可以用 `osd session send --model … --agent … --effort …` 覆盖。
@@ -252,7 +276,7 @@ osd approval            # 现在哪些动作需要询问
 osd approval set full   # 一律不问：命令、删除、装依赖、访问网络
 ```
 
-`full` 是一个明确的选择，不是默认值：智能体仍被限制在工作区内，但不会再为你暂停。`osd approval set approve` 把所有规则放回去。
+`full` 是一个明确的选择，不是默认值：智能体仍被限制在工作区内，但不会再为你暂停。`osd approval set approve` 把所有规则放回去。`osd approval set full` 改写的是这台机器上运行时自己的配置，所以必须在机器本身上执行——通过 SSH，而不是经 `--gateway`：网关会刻意拒绝配置写入，并直接说明，而不是悄悄什么都不做。
 
 ### 作为系统服务运行
 
@@ -362,8 +386,8 @@ pnpm lint
   author  = {{The Lubricant Science Desktop Contributors}},
   title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
-  version = {0.5.2},
-  doi     = {10.5281/zenodo.22004919},
+  version = {0.6.0},
+  doi     = {10.5281/zenodo.23138229},
   url     = {https://github.com/ai4s-research/open-science},
   license = {MIT}
 }

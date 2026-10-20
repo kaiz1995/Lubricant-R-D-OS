@@ -9,6 +9,7 @@
     "compute": "Compute",
     "privacy": "Privacy",
     "browser": "Browser",
+    "computer": "Computer Use",
     "remote": "Remote Access",
     "memory": "Memory",
     "desktopOnly": "This section is available in the desktop app."
@@ -19,7 +20,8 @@
     "theme": {
       "light": "Light",
       "warm": "Warm",
-      "dark": "Dark"
+      "dark": "Dark",
+      "system": "System"
     },
     "zoom": {
       "label": "Zoom",
@@ -27,6 +29,13 @@
       "in": "Zoom in",
       "out": "Zoom out",
       "reset": "Reset"
+    },
+    "fontSize": {
+      "title": "Font size",
+      "description": "Only affects conversation content",
+      "unit": "px",
+      "increase": "Increase font size",
+      "decrease": "Decrease font size"
     }
   },
   "language": {
@@ -47,9 +56,12 @@
     "proxySystem": "Follow system",
     "proxyCustom": "Custom…",
     "proxyNone": "Direct (no proxy)",
-    "proxyPlaceholder": "http://127.0.0.1:7890 / socks5://host:port",
+    "proxyPlaceholder": "http://127.0.0.1:7890",
     "proxyDirectHint": "All agent-runtime connections go direct.",
     "proxyEffective": "Routing through {{url}}",
+    "proxySocksUnsupported": "{{url}} is a SOCKS proxy, which the agent runtime cannot use — every connection would fail. Use your proxy's HTTP port instead (Clash: the mixed port, e.g. http://127.0.0.1:7890).",
+    "proxyRestartNeeded": "The system proxy has changed since the runtime started, which still uses the old route. Apply to restart the runtime — running tasks will stop.",
+    "proxyApply": "Apply",
     "proxyNoneDetected": "No system proxy detected — connections go direct.",
     "mirrorTitle": "Package mirrors",
     "mirrorPypi": "PyPI index",
@@ -99,7 +111,7 @@
   },
   "model": {
     "title": "Model",
-    "hint": "Providers below supply the models you can pick here",
+    "hint": "The model every new conversation starts on. Providers below supply what you can pick.",
     "connectPrompt": "Connect the runtime to configure models.",
     "notSet": "Not set — pick a default model",
     "providersDivider": "Providers",
@@ -117,13 +129,14 @@
     "catalogUnavailable": "The model catalog is currently unavailable.",
     "catalogLoading": "Loading the model catalog…",
     "noModels": "No models available.",
-    "manageProviders": "Manage providers",
     "emptyFavorites": "Favorite models appear here.",
     "emptyRecent": "Successfully selected models appear here.",
     "noResults": "No models match “{{query}}”.",
     "clearSearch": "Clear search",
     "addFavorite": "Add {{model}} to favorites",
-    "removeFavorite": "Remove {{model}} from favorites"
+    "removeFavorite": "Remove {{model}} from favorites",
+    "change": "Change",
+    "noProvidersHint": "Connect a provider below."
   },
   "providers": {
     "title": "Providers",
@@ -149,18 +162,25 @@
     "pasteCode": "Paste the code from the browser",
     "customEndpoint": "Custom endpoint",
     "customEndpointHint": "self-hosted · local Ollama · OpenAI/Anthropic-compatible",
-    "customNamePlaceholder": "Name — e.g. Ollama, My DeepSeek gateway",
+    "customNamePlaceholder": "e.g. Ollama, My DeepSeek gateway",
     "openaiCompatible": "OpenAI-compatible",
     "anthropicCompatible": "Anthropic-compatible",
-    "customUrlPlaceholder": "Base URL — Ollama: http://127.0.0.1:11434/v1",
-    "customKeyPlaceholder": "API key — optional, Ollama needs none",
-    "customModelsPlaceholder": "Model ids, comma-separated",
-    "customContextPlaceholder": "Context window — optional, default 128k",
+    "customUrlPlaceholder": "http://127.0.0.1:11434/v1",
+    "customKeyPlaceholder": "Optional — Ollama needs none",
+    "customModelsPlaceholder": "Comma-separated model ids",
+    "customContextPlaceholder": "Optional — defaults to 128k",
     "fetchModels": "Fetch models",
     "fetchingModels": "Fetching…",
     "noModelsFound": "No models reported by the endpoint.",
     "addEndpoint": "Add endpoint",
-    "importLogin": "Already use the OpenCode CLI? Import its login"
+    "importLogin": "Already use the OpenCode CLI? Import its login",
+    "addTitle": "Add a provider",
+    "fieldName": "Name",
+    "fieldApiStyle": "API style",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API key",
+    "fieldModels": "Models",
+    "fieldContext": "Context window"
   },
   "mcp": {
     "title": "MCP servers",
@@ -302,6 +322,7 @@
     "providerRemoved": "{{providerID}} removed",
     "couldNotAddEndpoint": "Could not add the endpoint",
     "couldNotFetchModels": "Could not fetch models from the endpoint",
+    "baseUrlCorrected": "Base URL corrected to {{url}}",
     "endpointFieldsRequired": "Name, base URL and at least one model id are required.",
     "endpointAdded": "{{name}} added — its models are now selectable above.",
     "couldNotAddMcp": "Could not add the MCP server",
@@ -468,13 +489,22 @@
     "title": "Model and effort per agent",
     "hint": "Run a reviewer or explorer on a fast model while the main agent reasons on a strong one, and pin how hard each one thinks.",
     "noModels": "Connect a provider to choose models.",
-    "followDefault": "Default model",
-    "followDefaultNamed": "Default ({{model}})",
+    "followDefault": "Follow default",
     "modelFor": "Model for {{agent}}",
     "defaultEffort": "Default effort",
     "effortFor": "Reasoning effort for {{agent}}",
     "retiredOption": "{{model}} — no longer served",
-    "primaryHint": "build and plan run the messages you send. A model set here applies unless you pick one inside a conversation, which wins for that conversation only."
+    "primaryHint": "build and plan run the messages you send. A model set here applies unless you pick one inside a conversation, which wins for that conversation only.",
+    "group": {
+      "conversation": "Agents you talk to",
+      "utility": "Run by the workbench"
+    },
+    "utilityHint": "Short mechanical work the runtime does on its own — a fast model here is a pure win.",
+    "about": {
+      "title": "Names a session from its first message.",
+      "summary": "Writes the short recap of a conversation.",
+      "compaction": "Rewrites a long conversation to fit the context window."
+    }
   },
   "ssh": {
     "title": "Sign in to {{host}}",
@@ -486,5 +516,31 @@
     "reveal": "Show what you typed",
     "hide": "Hide what you typed",
     "privacy": "Sent only to ssh on this machine. Never stored, logged, or written to provenance."
+  },
+  "computer": {
+    "title": "Computer Use",
+    "hint": "Let the agent read and drive apps on this computer, through the platform's accessibility API. It acts on named interface elements rather than guessing at pixels, and reports whether each action could actually be verified. You are asked to approve the first use in every conversation.",
+    "checking": "Checking…",
+    "state": "Availability",
+    "ready": "Ready. The agent can use apps on this computer when you ask it to.",
+    "unavailable": "Not available on this machine.",
+    "setup": "Open setup",
+    "recheck": "Re-check",
+    "grant": "Grant…",
+    "granted": "Granted",
+    "opened": "Opened the permission setup window.",
+    "error": "Computer Use",
+    "accessibility": "Accessibility",
+    "accessibilityHint": "Required. Lets the helper read an app's interface and act on it. Granted to Open Science Computer Use — a separate helper — not to the whole workbench.",
+    "screenshots": "Screen Recording",
+    "screenshotsHint": "Optional, and granted to Open Science itself rather than to the helper — macOS attributes screen capture to the app that started the request. Only needed when the agent has to look at a window it cannot read as text, such as a plot or a canvas."
+  },
+  "userBrowser": {
+    "title": "A browser you installed",
+    "hint": "Open Science found a browser on this Mac that its agent can drive from the shell. Nothing to configure — this is here so you know it can be reached.",
+    "name": "ego lite",
+    "reachable": "Installed and reachable. The agent will ask before the first use in a conversation.",
+    "notReachable": "Installed, but its command-line tool is not on this machine, so the agent cannot reach it. Run ego lite's own setup to add it.",
+    "tradeoff": "This is not the browser connector above. That one drives a separate browser this app owns, with an isolated profile. This one is your everyday browser and carries your real logged-in sessions — which is what makes it useful, and why it asks first. macOS only."
   }
 }

@@ -6,7 +6,7 @@ import { useScrollMemory } from "@/lib/scrollMemory";
 import { useWheelChain } from "@/lib/wheelChain";
 import { cn } from "@/lib/cn";
 import { CodeViewer } from "@/components/code-viewer/CodeViewer";
-import { PaneTitlebarInset } from "./RightPane";
+import { PANE_HEADER, PaneTitlebarInset, PANE_ICON_BUTTON } from "./RightPane";
 import { resolveArtifactContent } from "@/lib/artifacts";
 import { saveTextWithFeedback } from "@/lib/download";
 
@@ -44,39 +44,39 @@ export function ArtifactInspector({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 select-none items-center gap-2 border-b border-border px-4">
+      <header className={PANE_HEADER}>
         <PaneTitlebarInset />
         <span className="truncate text-sm font-medium text-text">{data.title}</span>
         <div className="ml-2 flex items-center gap-1 text-text">
           <button
-            className="disabled:opacity-30 hover:opacity-60"
+            className={PANE_ICON_BUTTON}
             aria-label={t("artifact.previousVersionAria")}
             onClick={() => step(-1)}
             disabled={versionIdx === 0}
           >
-            <ChevronLeft size={14} strokeWidth={1.5} />
+            <ChevronLeft size={13} strokeWidth={1.5} />
           </button>
           <span className="rounded bg-surface-2 px-1.5 text-xs text-muted">{activeLabel}</span>
           <button
-            className="disabled:opacity-30 hover:opacity-60"
+            className={PANE_ICON_BUTTON}
             aria-label={t("artifact.nextVersionAria")}
             onClick={() => step(1)}
             disabled={versionIdx >= data.versions.length - 1}
           >
-            <ChevronRight size={14} strokeWidth={1.5} />
+            <ChevronRight size={13} strokeWidth={1.5} />
           </button>
         </div>
         <div className="flex-1" />
         <button
-          className="text-text hover:opacity-60"
+          className={PANE_ICON_BUTTON}
           aria-label={t("artifact.downloadAria")}
           onClick={() => void saveTextWithFeedback(scriptName, content.code)}
         >
-          <Download size={14} strokeWidth={1.5} />
+          <Download size={13} strokeWidth={1.5} />
         </button>
         {controls}
-        <button className="text-text hover:opacity-60" aria-label={t("shell.closeInspector")} onClick={onClose}>
-          <X size={14} strokeWidth={1.5} />
+        <button className={PANE_ICON_BUTTON} aria-label={t("shell.closeInspector")} onClick={onClose}>
+          <X size={13} strokeWidth={1.5} />
         </button>
       </header>
 
@@ -152,7 +152,7 @@ export function ArtifactInspector({
 
 function Pre({ text }: { text: string }) {
   return (
-    <pre className="whitespace-pre-wrap rounded-input border border-border bg-surface-2 p-3 font-mono text-[12.5px] text-text">
+    <pre className="whitespace-pre-wrap rounded-input bg-surface-2 p-3 font-mono text-[12.5px] text-text">
       {text}
     </pre>
   );

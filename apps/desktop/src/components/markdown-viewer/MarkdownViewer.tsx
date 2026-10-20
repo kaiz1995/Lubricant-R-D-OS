@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown, { type Options as ReactMarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -7,6 +7,7 @@ import "katex/dist/katex.min.css";
 import { cn } from "@/lib/cn";
 import { HSCROLL_ATTR } from "@/lib/wheelChain";
 import { openExternal } from "@/lib/tauri";
+import { activateLink, cleanPath, looksLikePath, resolveLink, type LinkTarget } from "@/lib/links";
 
 /** Two contexts render markdown: chat bubbles (theme colors, compact) and the
  *  file-preview "paper" (document-neutral black-on-white, editorial scale —
@@ -105,10 +106,15 @@ export function MarkdownViewer({
   children,
   className,
   variant = "chat",
+  links = false,
 }: {
   children: string;
   className?: string;
   variant?: Variant;
+  /** URLs and existing local paths (in inline code, or as a link target) open
+   *  the link menu on click — see lib/links. Answers only: a document preview
+   *  keeps plain links. */
+  links?: boolean;
 }) {
   const s = STYLES[variant];
   const normalized = useMemo(() => normalizeMathDelimiters(children), [children]);
@@ -135,13 +141,26 @@ export function MarkdownViewer({
                 // are handed to the system browser by openExternal.
                 event.preventDefault();
                 event.stopPropagation();
-                if (href && /^https?:\/\//i.test(href)) void openExternal(href);
+                if (!href) return;
+                if (links) {
+                  // Read now: React may reuse the event once this returns.
+                  const { clientX, clientY, metaKey, ctrlKey, shiftKey } = event;
+                  void resolveLink(href).then(
+                    (target) =>
+                      target && activateLink(target, { clientX, clientY, metaKey, ctrlKey, shiftKey }),
+                  );
+                } else if (/^https?:\/\//i.test(href)) void openExternal(href);
               }}
             >
               {children}
             </a>
           ),
-          code: ({ children }) => <code className={s.code}>{children}</code>,
+          code: ({ children }) =>
+            links && typeof children === "string" ? (
+              <LinkCode className={s.code}>{children}</LinkCode>
+            ) : (
+              <code className={s.code}>{children}</code>
+            ),
           // Block code: the plain wrapper — its inner <code> is restyled via [&_code].
           // Marked as a horizontal scroll box so a vertical swipe over it is
           // handed back to the conversation (see lib/wheelChain).
@@ -179,5 +198,38 @@ export function MarkdownViewer({
         {normalized}
       </ReactMarkdown>
     </div>
+  );
+}
+
+/** Inline code that names something openable — a URL, or a path that exists —
+ *  becomes a link: underlined on hover, the link menu on click. Anything else
+ *  stays plain code; the lookup is cached, so a re-render asks nothing. */
+function LinkCode({ children, className }: { children: string; className: string }) {
+  const [target, setTarget] = useState<LinkTarget | null>(null);
+  useEffect(() => {
+    let live = true;
+    const text = children.trim();
+    if (/^https?:\/\//.test(text) || looksLikePath(cleanPath(text)))
+      void resolveLink(text).then((t) => live && setTarget(t));
+    return () => {
+      live = false;
+    };
+  }, [children]);
+  if (!target) return <code className={className}>{children}</code>;
+  return (
+    <code
+      role="link"
+      tabIndex={0}
+      className={cn(className, "cursor-pointer decoration-1 underline-offset-[3px] hover:underline")}
+      onClick={(event) => activateLink(target, event)}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter") return;
+        const r = event.currentTarget.getBoundingClientRect();
+        const at = { clientX: r.left, clientY: r.bottom };
+        activateLink(target, { ...at, metaKey: false, ctrlKey: false, shiftKey: false });
+      }}
+    >
+      {children}
+    </code>
   );
 }

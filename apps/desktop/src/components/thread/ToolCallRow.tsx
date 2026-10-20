@@ -1,5 +1,11 @@
 import { memo } from "react";
-import { AlertTriangle, Check, Clock, ShieldQuestion, X } from "lucide-react";
+import {
+  IconCheckOutlineRegular,
+  IconClockOutlineRegular,
+  IconCloseOutlineRegular,
+  IconShieldOutlineRegular,
+  IconWarningTriangleOutlineRegular,
+} from "@/components/icons/dsh";
 import { useTranslation } from "react-i18next";
 import type { ToolCallBlock, ToolCallStatus } from "@ai4s/shared";
 import { cn } from "@/lib/cn";
@@ -11,12 +17,12 @@ import { RunningDot } from "./RunningDot";
 // reacts to locale changes — never cache the translated label in this
 // module-scope map.
 export const STATUS: Record<ToolCallStatus, { icon: React.ReactNode; className: string }> = {
-  pending: { icon: <Clock size={13} />, className: "text-muted" },
+  pending: { icon: <IconClockOutlineRegular size={14} />, className: "text-muted" },
   running: { icon: <RunningDot />, className: "text-accent" },
-  "waiting-approval": { icon: <ShieldQuestion size={14} />, className: "text-warn" },
-  success: { icon: <Check size={13} />, className: "text-ok" },
-  warning: { icon: <AlertTriangle size={14} />, className: "text-warn" },
-  failed: { icon: <X size={14} />, className: "text-error" },
+  "waiting-approval": { icon: <IconShieldOutlineRegular size={14} />, className: "text-warn" },
+  success: { icon: <IconCheckOutlineRegular size={14} />, className: "text-ok" },
+  warning: { icon: <IconWarningTriangleOutlineRegular size={14} />, className: "text-warn" },
+  failed: { icon: <IconCloseOutlineRegular size={14} />, className: "text-error" },
 };
 
 // Mechanical steps that succeeded (or are pending/running) are recorded quietly,
@@ -40,7 +46,7 @@ export const ToolCallRow = memo(function ToolCallRow({ block }: { block: ToolCal
         className={cn(
           "flex items-center gap-2",
           prominent
-            ? "rounded-input border border-border bg-surface px-3 py-2 text-sm"
+            ? "rounded-input bg-surface-2 px-3 py-2 text-sm"
             : "px-2 py-1 text-[12.5px]",
         )}
       >

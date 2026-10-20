@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import hljs from "highlight.js/lib/common";
 import { HSCROLL_ATTR } from "@/lib/wheelChain";
+import { cn } from "@/lib/cn";
 // Token colors are theme-scoped in index.css (.hljs-* on --hl-* variables) —
 // a stylesheet import here would hardcode one theme for all three.
 
@@ -8,10 +9,11 @@ interface Props {
   code: string;
   language?: string;
   startLine?: number;
+  className?: string;
 }
 
 /** Read-only code with a line-number gutter. Scrolls horizontally; no wrapping. */
-export function CodeViewer({ code, language, startLine = 1 }: Props) {
+export function CodeViewer({ code, language, startLine = 1, className }: Props) {
   const html = useMemo(() => {
     try {
       if (language && hljs.getLanguage(language)) {
@@ -28,7 +30,10 @@ export function CodeViewer({ code, language, startLine = 1 }: Props) {
   return (
     <div
       {...{ [HSCROLL_ATTR]: "" }}
-      className="flex overflow-x-auto overflow-y-hidden rounded-input border border-border bg-surface font-mono text-[12.5px] leading-[1.55]"
+      className={cn(
+        "flex overflow-x-auto overflow-y-hidden rounded-input bg-surface font-mono text-[12.5px] leading-[1.55]",
+        className,
+      )}
     >
       <div
         aria-hidden

@@ -169,6 +169,38 @@ fn redeem_ticket(ctx: &Ctx, id: &str) -> Option<PathBuf> {
     (Instant::now().duration_since(*issued) < TICKET_TTL).then(|| path.clone())
 }
 
+/// Re-verify a ticket's path at REDEMPTION time, not just at issuance.
+///
+/// A ticket names a path that was canonicalized inside the workspace when it
+/// was issued, but the file on disk is not immutable between the two moments:
+/// an agent run in the workspace can replace it with a symlink that points
+/// outside (`.ssh/id_ed25519`, `auth.json`, …). Redemption runs BEFORE the
+/// token gate, so `send_file` must not open whatever now sits at that name.
+/// Three checks, all cheap:
+///
+///   * the path must not be a symlink (`symlink_metadata` — `File::open` would
+///     follow one), and must still be a regular file;
+///   * its canonical target must still sit under the base workspace, or inside
+///     a registered project's own folder (the same rule every other
+///     caller-supplied session directory in this codebase follows).
+fn redeem_verify(ctx: &Ctx, full: &Path) -> Result<PathBuf, String> {
+    // `symlink_metadata` does not follow the final component, so a swapped-in
+    // symlink is caught here rather than resolved.
+    let meta = std::fs::symlink_metadata(full).map_err(|e| e.to_string())?;
+    if meta.file_type().is_symlink() || !meta.is_file() {
+        return Err("not a plain file".into());
+    }
+    let canon = full.canonicalize().map_err(|e| e.to_string())?;
+    let base = crate::runtime::base_workspace_dir(&ctx.env)
+        .map_err(|e| e.to_string())?
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    if !canon.starts_with(&base) && !crate::project::is_inside_registered_project(&ctx.env, &canon) {
+        return Err("outside the workspace".into());
+    }
+    Ok(canon)
+}
+
 struct Running {
     port: u16,
     lan: bool,
@@ -477,7 +509,20 @@ fn route(stream: &mut TcpStream, req: &Request, ctx: &Ctx) {
     if req.method == "GET" && path == "/v1/fs/read" {
         if let Some(id) = req.query_get("ticket") {
             match redeem_ticket(ctx, &id) {
-                Some(full) => send_file(stream, &full),
+                Some(full) => {
+                    // The ticket names a path that was canonicalized INSIDE the
+                    // workspace when it was issued. Serve time is a different
+                    // moment: an agent run (or anything else) can replace the
+                    // file with a symlink pointing outside the workspace, and
+                    // File::open follows it — the ticket check runs before the
+                    // token gate, so that would hand an unauthenticated client
+                    // an arbitrary file (the SSH key, auth.json, …). Re-verify
+                    // containment and reject symlinks here, at redemption.
+                    match redeem_verify(ctx, &full) {
+                        Ok(verified) => send_file(stream, &verified),
+                        Err(_) => respond_json(stream, 403, "{\"error\":\"file changed\"}"),
+                    }
+                }
                 None => respond_json(stream, 403, "{\"error\":\"ticket expired\"}"),
             }
             return;
@@ -962,7 +1007,13 @@ fn fs_base(ctx: &Ctx, req: &Request) -> Result<PathBuf, String> {
         }
         return Err("dir is outside the workspace".into());
     }
-    scope_root(&ctx.env, req.query_get("root").as_deref())
+    let root = req.query_get("root");
+    // "home" is the desktop's scope for links the user clicks; a web client
+    // stays inside the workspaces.
+    if root.as_deref() == Some("home") {
+        return Err("unknown root scope: home".into());
+    }
+    scope_root(&ctx.env, root.as_deref())
 }
 
 fn fs_list(stream: &mut TcpStream, req: &Request, ctx: &Ctx) {
@@ -1801,5 +1852,89 @@ mod tests {
         assert_eq!(normalize_mode("read-only"), "read-only");
         assert_eq!(normalize_mode("full"), "full");
         assert_eq!(normalize_mode("garbage"), "full");
+    }
+
+    /// A gateway context whose base workspace is a throwaway temp dir.
+    #[cfg(unix)]
+    fn ctx_with_base(name: &str) -> (Ctx, PathBuf) {
+        let root = std::env::temp_dir().join(format!("gw-verify-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let env = Env::new(root.clone(), root.join("res"), None, "0.0.0".into());
+        // `set_workspace_base` persists its choice under the runtime root; the
+        // dir must exist first (Env::new creates nothing).
+        std::fs::create_dir_all(root.join("runtime")).unwrap();
+        std::fs::create_dir_all(root.join("base")).unwrap();
+        crate::runtime::set_workspace_base(&env, root.join("base").to_string_lossy().to_string())
+            .unwrap();
+        let ctx = Ctx {
+            env,
+            shared: Arc::new(Shared {
+                token: Mutex::new("t".into()),
+                read_only: AtomicBool::new(false),
+                tickets: Mutex::new(HashMap::new()),
+            }),
+            assets: Arc::new(NoAssets),
+            on_sessions_changed: None,
+        };
+        (ctx, root)
+    }
+
+    /// A file ticket must not become a way to read a file OUTSIDE the workspace.
+    /// Between issuance and redemption the file can be replaced with a symlink
+    /// pointing anywhere — the redemption runs before the token gate, so
+    /// `send_file` must refuse to follow it (TOCTOU).
+    #[test]
+    #[cfg(unix)] // symlink semantics; Windows symlinks need privileges
+    fn a_ticket_does_not_serve_a_swapped_symlink_outside_the_workspace() {
+        use std::os::unix::fs::symlink;
+        let (ctx, root) = ctx_with_base("ticket");
+        let base = root.join("base");
+        let inside = base.join("report.pdf");
+        std::fs::write(&inside, b"innocent").unwrap();
+        let outside = root.join("secret.txt");
+        std::fs::write(&outside, b"top secret").unwrap();
+
+        // A regular in-workspace file redeems fine.
+        assert!(redeem_verify(&ctx, &inside).is_ok());
+
+        // Swap the file for a symlink to something outside the workspace.
+        std::fs::remove_file(&inside).unwrap();
+        symlink(&outside, &inside).unwrap();
+        assert!(
+            redeem_verify(&ctx, &inside).is_err(),
+            "a swapped symlink must be refused at redemption"
+        );
+
+        // And a file that legitimately lives outside the workspace is refused
+        // outright (containment, independent of symlinks).
+        assert!(redeem_verify(&ctx, &outside).is_err());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    /// An in-place project lives OUTSIDE the base workspace, and `fs_base`
+    /// issues tickets for files in it — so redemption must accept any file under
+    /// that project's root, not only the root itself.
+    #[test]
+    #[cfg(unix)]
+    fn a_ticket_for_a_file_in_an_in_place_project_redeems() {
+        let (ctx, root) = ctx_with_base("inplace");
+        let ext = root.join("external-project");
+        std::fs::create_dir_all(ext.join("figures")).unwrap();
+        let file = ext.join("figures").join("fig1.png");
+        std::fs::write(&file, b"png").unwrap();
+        crate::project::import_project(
+            &ctx.env,
+            ext.to_string_lossy().to_string(),
+            Some("in-place".into()),
+        )
+        .unwrap();
+
+        assert!(redeem_verify(&ctx, &file).is_ok());
+        // A sibling of the project that is not part of it stays refused.
+        let sibling = root.join("external-project-other.txt");
+        std::fs::write(&sibling, b"no").unwrap();
+        assert!(redeem_verify(&ctx, &sibling).is_err());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }

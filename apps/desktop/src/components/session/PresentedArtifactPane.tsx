@@ -9,6 +9,7 @@ import { useRuntimeStore } from "@/lib/runtime";
 import { FilePreviewInspector } from "@/components/inspector/FilePreviewInspector";
 import { InspectorShell } from "@/components/inspector/InspectorShell";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PANE_ICON_BUTTON } from "@/components/inspector/RightPane";
 
 export function PresentedArtifactPane({
   artifact,
@@ -33,12 +34,12 @@ export function PresentedArtifactPane({
   const inspector = fileInspectorFromBlock(artifact);
   const controls = (
     <button
-      className="text-text hover:opacity-60"
+      className={PANE_ICON_BUTTON}
       onClick={() => toggleZoom(leafId)}
       aria-label={zoomed ? t("shell.restorePanel") : t("shell.maximizePanel")}
       title={zoomed ? t("shell.restorePanel") : t("shell.maximizePanel")}
     >
-      {zoomed ? <Minimize2 size={14} strokeWidth={1.5} /> : <Maximize2 size={14} strokeWidth={1.5} />}
+      {zoomed ? <Minimize2 size={13} strokeWidth={1.5} /> : <Maximize2 size={13} strokeWidth={1.5} />}
     </button>
   );
 

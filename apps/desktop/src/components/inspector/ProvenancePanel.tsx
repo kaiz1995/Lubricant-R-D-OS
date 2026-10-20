@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, MessageSquare, Package, RotateCcw, Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useOpenSession } from "@/lib/useOpenSession";
 import { useTranslation } from "react-i18next";
 import type { ProvenanceRecord, RunRecord } from "@ai4s/shared";
 import { listProvenance, readEnvLockfile } from "@/lib/provenance";
@@ -58,6 +59,7 @@ export function ProvenancePanel({ path, language }: { path: string; language?: s
   // The package lockfile currently shown, keyed by its content hash.
   const [lockfile, setLockfile] = useState<{ hash: string; text: string | null } | null>(null);
   const navigate = useNavigate();
+  const openSession = useOpenSession();
   const setComposerDraft = useUiStore((s) => s.setComposerDraft);
 
   // Toggle the pip-freeze lockfile for a snapshot hash; loads it lazily on open.
@@ -121,11 +123,11 @@ export function ProvenancePanel({ path, language }: { path: string; language?: s
   }
 
   return (
-    <ul className="space-y-2 p-3">
+    <ul className="divide-y divide-border px-3">
       {records.map((r) => {
         const open = expanded === r.version;
         return (
-          <li key={r.version} className="rounded-input border border-border bg-surface">
+          <li key={r.version}>
             <button
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
               onClick={() => setExpanded(open ? null : r.version)}
@@ -191,7 +193,7 @@ export function ProvenancePanel({ path, language }: { path: string; language?: s
                   {r.sessionId && (
                     <button
                       className="flex items-center gap-1 text-link hover:underline"
-                      onClick={() => navigate(`/live/${r.sessionId}`)}
+                      onClick={() => openSession(r.sessionId!)}
                       title={t("provenance.openConversationTitle")}
                     >
                       <MessageSquare size={12} /> {t("provenance.openConversation")}
@@ -199,8 +201,8 @@ export function ProvenancePanel({ path, language }: { path: string; language?: s
                   )}
                 </div>
                 {r.env?.packages && lockfile?.hash === r.env.packages.hash && (
-                  <div className="rounded-input border border-border bg-surface-2">
-                    <div className="border-b border-border px-2.5 py-1 text-[11px] text-muted">
+                  <div className="rounded-input bg-surface-2">
+                    <div className="px-2.5 pt-1.5 text-[11px] text-muted">
                       {t("provenance.pipFreezePrefix")}{t("provenance.packageCount", { count: r.env.packages.count })}
                     </div>
                     {lockfile.text === null ? (
@@ -219,7 +221,7 @@ export function ProvenancePanel({ path, language }: { path: string; language?: s
                 ) : r.diff ? (
                   <DiffView diff={r.diff} className="max-h-80 overflow-y-auto" />
                 ) : r.runId ? (
-                  <div className="flex items-start gap-2 rounded-input border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted">
+                  <div className="flex items-start gap-2 rounded-input bg-surface-2 px-2.5 py-2 text-xs text-muted">
                     <Terminal size={13} className="mt-0.5 shrink-0" />
                     <span>
                       {t("provenance.producedByRunPrefix")}{" "}

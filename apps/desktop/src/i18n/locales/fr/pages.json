@@ -33,7 +33,15 @@
       "stopCellTitle": "Arrêter — redémarre le noyau de ce notebook (les variables sont réinitialisées)",
       "stopLabel": "Arrêter",
       "runLabel": "Exécuter",
-      "addCellLabel": "Ajouter une cellule"
+      "addCellLabel": "Ajouter une cellule",
+      "askAgent": "Interroger l'agent sur cette cellule",
+      "askAgentAria": "Interroger l'agent sur la cellule {{n}}",
+      "askAgentIntro": "À propos de la cellule [{{n}}] de `{{file}}` :",
+      "askAgentOutput": "Sortie :",
+      "askAgentSent": "Cellule ajoutée à la zone de saisie",
+      "countTitle": "Numéro d'exécution — [*] pendant l'exécution, [n] ensuite",
+      "interrupted": "Interrompu — le noyau a redémarré ; les variables ont été réinitialisées.",
+      "desktopOnlyKernel": "Le noyau local nécessite l'app de bureau."
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "Compétences et agents",
-    "description": {
-      "prefix": "Chargé en direct depuis le runtime OpenCode — les packs de compétences intégrés, tout ce qui se trouve sous ",
-      "suffix": " dans votre espace de travail, et vos propres compétences dans ~/.claude/skills ou ~/.agents/skills."
-    },
+    "subtitle": "Tout ce que l’agent peut utiliser, chargé en direct depuis OpenCode.",
     "install": {
       "sectionTitle": "Installer une compétence",
       "placeholder": "Collez un SKILL.md, ou une URL / description que l'agent transformera en compétence",
@@ -79,7 +84,7 @@
       "note": "OpenCode exécute le code avec ce qui est installé ici (p. ex. Python via son outil shell). uv est fourni avec l'application, et Jupyter peut être géré par l'application dans Réglages → Connecteurs. Python et R ne sont pas intégrés : installez-les, ou un Science Pack, pour activer l'analyse."
     },
     "agentsSection": {
-      "sectionTitle": "Agents ({{count}})",
+      "heading": "Agents",
       "empty": "Aucun agent signalé.",
       "agentMode": {
         "primary": "principal",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "Compétences ({{count}})",
+      "heading": "Compétences",
       "empty": "Aucune compétence chargée pour le moment.",
       "source": {
         "builtin": "intégré",
@@ -96,7 +101,9 @@
         "user": "utilisateur"
       }
     },
-    "disconnected": "Connectez le runtime pour lister les compétences et agents qu'il a chargés."
+    "disconnected": "Connectez le runtime pour lister les compétences et agents qu'il a chargés.",
+    "search": "Rechercher skills et agents",
+    "noMatch": "Rien ne correspond à « {{query}} »."
   },
   "notFound": {
     "title": "404 — Introuvable",

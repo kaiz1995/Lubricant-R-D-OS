@@ -35,6 +35,7 @@ Formerly Lubricant Science. Claude Science 및 유사한 AI-for-science 워크�
 
 ## 소식
 
+- **2026-10-04** — 🖱️ **Computer Use, 터미널과 에디터.** 에이전트가 이제 ImageJ, Origin, 장비 제어 소프트웨어 같은 데스크톱 앱을 조작합니다. 패널에 터미널·파일·코드 에디터를 둘 수 있고, Claude Code / Codex는 재실행 후 이어서 재개됩니다. 찾기(⌘F), 세션·프로젝트로 바로 이동(⌘J), DGX Spark용 Linux ARM64도 추가. *(v0.6.0)*
 - **2026-08-18** — 🖥️ **화면 없이도 동작합니다.** `osd server`는 디스플레이가 없는 머신에서 워크벤치 전체 — 워크스페이스, 에이전트 런타임, 그리고 *동일한* 웹 UI — 를 실행하고, `osd session send … --wait`로 스크립트나 다른 에이전트가 이를 구동합니다. 압축 파일 하나면 되고 설치 프로그램은 필요 없습니다. `osd`는 데스크톱 설치 파일에 함께 들어가며 첫 실행 때 PATH에 올라갑니다. 서버에서는 아카이브만으로 충분합니다. 모델·키·승인 모두 터미널에서 설정합니다(`osd model`, `osd auth`, `osd approval`).
 - **2026-08-13** — 🔌 **Agent Client Protocol을 양방향으로 지원.** Codex, Gemini CLI, Claude Code 등 어떤 ACP 에이전트든 이 앱 안에서 — 그 에이전트 자신의 모델과 히스토리, 그리고 이 앱의 MCP 커넥터를 그대로 쓰면서 — 구동할 수 있고, 반대로 Zed, JetBrains, Neovim에서 Lubricant Science를 구동할 수도 있습니다. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **프로젝트, 메모리, 전체 히스토리.** 세션을 이름이 있는 프로젝트로 묶고(기존 저장소는 복사하지 않고 **그 자리에서** 가져옵니다), 에이전트에 전역·프로젝트 영속 메모리를 부여하며, 모든 과거 대화를 검색 가능한 히스토리에서 보관·복원·내보내기와 함께 찾을 수 있습니다. *(v0.3.1)*
@@ -201,6 +202,46 @@ osd session send $id "Fit the 2015-2024 bleaching trend and write report.md" --w
 
 `--wait`는 턴이 접수된 시점이 아니라 실제로 끝난 시점에 반환하며, 답이 하나도 나오지 않았다면 분명하게 실패합니다. `--json`은 API의 응답 그대로를 출력하므로 스크립트에 적합합니다. 승인은 그대로 적용됩니다 — 에이전트는 명령 실행 전에 묻고, 창이 없을 때는 `osd permission ls` / `osd permission allow <id>`로 답합니다.
 
+### 동시 실행과 프로젝트별 설정
+
+병렬 작업에 두 번째 서버나 두 번째 워크스페이스는 필요하지 않습니다. 하나의
+`osd server`가 이미 여러 세션을 동시에 실행합니다. 게이트웨이는 연결당
+스레드 하나를 사용하고, 세션 경로 어디에도 전역 잠금이 없습니다 — 세션
+끼리의 작업을 갈라놓는 것은 각 세션이 고정된 폴더입니다.
+`osd session new --project NAME`은 워크스페이스 안의 프로젝트 폴더
+(`osd project new NAME`으로 생성)에서 세션을 실행하고,
+`osd session new --directory DIR`은 임의의 다른 폴더에 고정합니다.
+
+프로젝트별 MCP도 폴더를 따릅니다. `<폴더>/.opencode/opencode.json`에 선언한
+MCP 서버는 그 폴더에서 작업하는 세션에만 적용되며, 모든 세션이 같은
+사이드카를 공유합니다. 여기서 순서가 중요한 이유는 캐시 규칙 때문입니다.
+폴더의 opencode 설정은 사이드카가 그 폴더를 처음 사용할 때 한 번만 읽히고
+그 뒤로 캐시됩니다. 이 설정은 그 폴더로 세션을 향하게 하기 전에 작성하세요.
+`osd session new --project NAME`(또는 `--directory DIR`)이 이미 한 턴도 돌기
+전에 설정을 읽고 캐시합니다 — 즉 "첫 턴 전"은 이미 늦습니다. 나중에 바꾸면
+서버를 재시작해야만 반영되며, 그때까지 세션은 실행되고, 성공을 보고하며,
+이전 설정을 사용합니다.
+
+이 중 어느 것도 워크벤치를 두 번 설치할 필요가 없습니다.
+
+### 격리된 상태 디렉터리(--state-dir)
+
+`osd server --state-dir DIR`(또는 `OSD_STATE_DIR=DIR`)은 그 인스턴스가 쓰는
+모든 것 — 세션 데이터베이스, 사이드카 설정, 워크스페이스 기록, 로그 — 을
+플랫폼 데이터 디렉터리 대신 DIR 아래에 둡니다. 다른 것은 전혀 바뀌지
+않습니다. 기본 워크스페이스는 여전히 실제 Documents 폴더로 해석되고,
+데스크톱 앱은 headless 재정의를 거치지 않으므로 영향을 받지 않습니다.
+
+이것은 동시성을 늘리는 방법이 **아닙니다** — 서버 하나가 이미 여러 세션을
+동시에 실행합니다(위 참고). 이것은 한 머신에 정말로 독립된 설치를 위한
+것입니다. 데스크톱 앱 옆의 무인 샤드, 벤치마크 클러스터 등입니다.
+
+자격 증명은 인스턴스별로 남고 절대 복사되지 않습니다. 새 DIR에는 아무것도
+없으므로, 거기서 처음 시작한 서버가 안내 문구와 한 줄 명령을 출력합니다 —
+`OSD_STATE_DIR=DIR osd auth set <provider> --key …`. 또는 시작 전에
+제공자 자체의 환경 변수(`ANTHROPIC_API_KEY=…`)를 export하면 사이드카가 그
+변수를 물려받습니다.
+
 ### 어떤 모델, 누가 승인
 
 `osd model`은 기본 모델을 보여 주고, `osd model ls`는 런타임이 **실제로 제공할 수 있는** 모델(이 머신에 자격 증명이 있는 제공자, 현재 것은 표시됨)을 나열하며, `osd model set <provider/model>`로 바꿉니다 — 게이트웨이를 거치므로 원격 서버에도 통합니다. 개별 턴은 `osd session send --model … --agent … --effort …`로 덮어쓸 수 있습니다.
@@ -214,7 +255,7 @@ osd approval            # 지금 무엇을 물어보는지
 osd approval set full   # 아무것도 묻지 않음: 명령, 삭제, 설치, 네트워크
 ```
 
-`full`은 기본값이 아니라 의도한 선택입니다: 에이전트는 여전히 워크스페이스 안에 머물지만, 더 이상 멈춰서 묻지 않습니다. `osd approval set approve`로 모든 규칙이 돌아옵니다.
+`full`은 기본값이 아니라 의도한 선택입니다: 에이전트는 여전히 워크스페이스 안에 머물지만, 더 이상 멈춰서 묻지 않습니다. `osd approval set approve`로 모든 규칙이 돌아옵니다. `osd approval set full`은 런타임 자체의 설정을 다시 쓰므로 머신 본체에서 실행해야 합니다 — `--gateway`를 통하지 않고 SSH로요. 게이트웨이는 설정 쓰기를 의도적으로 거부하며, 조용히 아무것도 하지 않는 대신 그 사실을 알려 줍니다.
 
 ### 서비스로 실행
 
@@ -303,8 +344,8 @@ pnpm lint
   author  = {{The Lubricant Science Desktop Contributors}},
   title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
-  version = {0.5.2},
-  doi     = {10.5281/zenodo.22004919},
+  version = {0.6.0},
+  doi     = {10.5281/zenodo.23138229},
   url     = {https://github.com/ai4s-research/open-science},
   license = {MIT}
 }

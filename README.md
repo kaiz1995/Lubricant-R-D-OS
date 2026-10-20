@@ -6,7 +6,7 @@
 
 **Local-first, model-agnostic AI research workbench for macOS, Windows & Linux.**
 
-Formerly Lubricant Science. An open-source desktop alternative to Claude Science and
+Formerly Open Science. An open-source desktop alternative to Claude Science and
 similar AI-for-science workbenches — built with Tauri, MCP, agent skills, and
 reproducible artifacts. It connects agents, notebooks, files, figures, reports,
 runs, and review into one auditable desktop workflow.
@@ -45,7 +45,7 @@ runs, and review into one auditable desktop workflow.
 >
 > - **领域层** → [`domains/lubricant/`](./domains/lubricant/)：19 个可部署研发技能（20 个技能目录）、21 个工件 JSON Schema、阶段状态机（contract 0.6.0：16 段 / 6 条研发路线 / REVISE 段内迭代）、Phase 4 计算引擎（成本 / DOE（混料 + 因子双通道）/ 统计 / 多目标优化 / 结果互证）、37 个自动化测试文件（含 16 个端到端）。详见[领域包文档](./domains/lubricant/README.md)。
 > - **三栏工作台** → 左侧边栏与中间会话流沿用原生 Lubricant Science；右侧新增「**研发阶段与门禁**」面板，由工作区磁盘上的真实工件驱动，展示 13 步工件链（6 条路线 7–13 步）、整体进度与门禁决议。进入方式：侧边栏「润滑研发 Copilot」，或 `/lubricant` 路由。
-> - **上游基线** → `0.5.2`（`cea3c3a`）；同步状态与核心改动清单见 [`UPSTREAM.md`](./UPSTREAM.md)。
+> - **上游基线** → `0.6.0`（`0c88be0`）；同步状态与核心改动清单见 [`UPSTREAM.md`](./UPSTREAM.md)。
 >
 > 下文「[润滑研发领域层](#润滑研发领域层lubricant-rd-os)」为本分支新增内容；其后的 News 与各功能章节是上游 Lubricant Science 的原始说明。桌面端的全部能力（会话、笔记本、文件、图表、报告、运行、评审）在本分支中**保留且未改动**。
 
@@ -179,6 +179,7 @@ Lubricant-R-D-OS/                    # 主仓库（open-science 下游 fork）
 
 ## News
 
+- **2026-10-04** — 🖱️ **Computer Use, terminals and editors.** The agent can now operate desktop apps like ImageJ, Origin and instrument software; panes hold terminals, files and a code editor, where Claude Code / Codex resume after a relaunch; plus find (⌘F), jump to any session or project (⌘J), and Linux ARM64 for DGX Spark. *(v0.6.0)*
 - **2026-08-18** — 🖥️ **Runs without a screen, and the terminal command comes with it.** `osd server` starts the whole workbench — workspace, agent runtime, and the *same* web UI — on a machine with no display, and `osd session send … --wait` drives it from a script or another agent. `osd` ships inside the desktop installer and puts itself on your PATH on first launch; on a server the archive needs nothing installed. Models, keys and approvals are all configurable from the terminal (`osd model`, `osd auth`, `osd approval`).
 - **2026-08-13** — 🔌 **Speaks the Agent Client Protocol, both directions.** Drive Codex, Gemini CLI, Claude Code, or any other ACP agent from inside this app — with its own models, history, and your MCP connectors — or drive Lubricant Science itself from Zed, JetBrains, or Neovim. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **Projects, memory, and full history.** Group sessions into named projects (import an existing repo *in place*, no copying), give the agent persistent global and project memory, and reach every past conversation through a searchable history with archive, restore, and export. *(v0.3.1)*
@@ -322,6 +323,7 @@ office/document skills below.
 | Remote access | Token-authenticated gateway that serves the real UI to a CLI, a LAN web browser, or your phone (loopback by default, LAN opt-in); read-only vs full access modes; copy a link with the token embedded to connect in one tap. API keys never cross the wire. |
 | Editor interop (ACP) | Speaks the Agent Client Protocol in both directions: run any ACP agent (Codex, Gemini CLI, Claude Code, …) as the runtime behind the ordinary UI, with its own model and reasoning selectors, history replay, and this app's MCP connectors; or let an external editor (Zed, JetBrains, Neovim, …) drive Lubricant Science, reusing the gateway token. |
 | Browser control | The agent drives your own Chrome — profile and login state preserved — reading pages through the accessibility tree, or an isolated/private browser on demand. |
+| Computer use | The agent reads and drives apps on your own screen through the platform's accessibility API — native research software included — acting on named elements rather than guessing at pixels, and reporting whether each action could actually be verified. On macOS the Accessibility permission is held by a separate helper, not by the whole app; Screen Recording, which only optional screenshots need, is granted to Lubricant Science itself because macOS attributes screen capture to the app that started the request. |
 | Notebooks | Real `.ipynb` files, Python and R notebook creation, local kernel execution, managed Jupyter environment via bundled `uv`, and an Open JupyterLab action. |
 | Runs | Append-only run logs, global SQLite run index, search/facets/pagination, local/remote surfaces, output links, logs, and reproduce prompts. |
 | Provenance | `.openscience/provenance.jsonl` tracks file versions and links produced artifacts back to the run or edit that created them. |
@@ -378,6 +380,15 @@ normally — no `xattr` workaround needed. Windows and Linux builds are not sign
 sudo apt install ./Open.Science_*.deb
 # or
 sudo rpm -i Open.Science-*.rpm
+```
+
+No root? This installs everything under your home directory — `osd` by
+default, the desktop app with `--desktop` (which needs WebKitGTK 4.1 already on
+the system). `--uninstall` removes it again.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ai4s-research/open-science/master/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ai4s-research/open-science/master/scripts/install.sh | sh -s -- --desktop
 ```
 
 ## Headless & CLI (`osd`)
@@ -437,6 +448,47 @@ Remote Access says which file it touched. Nothing else on your shell is changed.
 loudly if it produced no reply. `--json` prints the API's own response for
 scripts.
 
+### Concurrency and per-project setup
+
+Parallel work does not need a second server, or a second workspace: one
+`osd server` already runs many sessions at once. The gateway is
+thread-per-connection and nothing on the session path holds a global lock —
+what keeps one session's work out of another's is the folder each one is pinned
+to. `osd session new --project NAME` runs a session in a per-project folder of
+the workspace (created with `osd project new NAME`), and
+`osd session new --directory DIR` pins one to any other folder.
+
+Per-project MCP follows the folder too: an MCP server declared in
+`<folder>/.opencode/opencode.json` applies only to sessions working in that
+folder, and every session shares the same sidecar. One caching rule makes the
+ordering matter: a folder's opencode configuration is read once, the first time
+the sidecar uses that folder, and cached from then on. Write that configuration
+before any session is pointed at the folder: `osd session new --project NAME`
+(or `--directory DIR`) already reads and caches it, before a single turn has
+run, so "before the first turn" is already too late. Changing it afterwards
+takes effect only after a server restart, and until then the session runs,
+reports success, and used the previous configuration.
+
+None of this needs a second installation of the workbench.
+
+### Isolated state directories (--state-dir)
+
+`osd server --state-dir DIR` — or `OSD_STATE_DIR=DIR` — keeps everything one
+instance writes (session database, sidecar config, workspace record, logs)
+under DIR instead of the platform data directory. Nothing else changes: the
+default workspace still resolves to your real Documents folder, and the desktop
+app is unaffected, because it never goes through the headless override.
+
+This is NOT a way to get more concurrency — one server already runs many
+sessions at once (above). It is for genuinely separate installations on one
+machine: an unattended shard next to the desktop app, a benchmark cluster.
+
+Credentials stay per instance and are never copied: a fresh DIR has none, so
+the first server started there prints a note and the one-liner that adds
+one — `OSD_STATE_DIR=DIR osd auth set <provider> --key …` — or you export the
+provider's own variable (`ANTHROPIC_API_KEY=…`) before starting and the sidecar
+inherits it.
+
 ### Which model, and who approves what
 
 `osd model` shows the default, `osd model ls` lists what the runtime can
@@ -460,7 +512,10 @@ osd approval set full   # never ask — commands, deletions, installs, network
 
 `full` is a deliberate choice, not a default: the agent stays confined to the
 workspace, but nothing pauses for you. `osd approval set approve` puts every
-rule back.
+rule back. `osd approval set full` rewrites the runtime's own config on this
+machine, so it has to run on the machine itself — over SSH, not through
+`--gateway`: the gateway deliberately refuses config writes, and says so rather
+than silently doing nothing.
 
 ### As a service
 
@@ -593,8 +648,8 @@ If you use Lubricant Science Desktop in your research, please cite it:
   author  = {{The Lubricant Science Desktop Contributors}},
   title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
-  version = {0.5.2},
-  doi     = {10.5281/zenodo.22136307},
+  version = {0.6.0},
+  doi     = {10.5281/zenodo.23138229},
   url     = {https://github.com/ai4s-research/open-science},
   license = {MIT}
 }
@@ -606,6 +661,8 @@ GitHub's **"Cite this repository"** button (top of the repo page, generated from
 ## License
 
 [MIT](./LICENSE). Bundled third-party skills and connectors keep their own licenses.
+
+Computer use is a port of the design and native providers from [Orca](https://github.com/stablyai/orca) (MIT) — an accessibility-tree-first approach, with an explicit verified/unverified result on every action, that is simply the right way to build this. Our thanks to that team for doing it well and giving it away.
 
 > Lubricant Science Desktop is beta research tooling. Treat outputs as drafts: verify numbers,
 > citations, code, and conclusions before publication or decision-making.

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, FileSearch, FlaskConical, Globe2, LineChart } from "lucide-react";
 import { installExample, isTauri } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/cn";
 
 export interface WorkflowStarter {
   id: string;
@@ -63,7 +64,15 @@ export const WORKFLOW_STARTERS: WorkflowStarter[] = [
  * aesthetic. The conversation is the point, so the copy invites a message
  * first; the starters below are an optional on-ramp, not a dashboard.
  */
-export function WorkflowStarters({ onPick }: { onPick: (prompt: string) => void }) {
+export function WorkflowStarters({
+  onPick,
+  showCards = true,
+}: {
+  onPick: (prompt: string) => void;
+  /** False when the pane is too short for the cards (a stacked split): only
+   *  the invitation stays, and nothing makes the welcome scroll. */
+  showCards?: boolean;
+}) {
   const { t } = useTranslation(["session", "common"]);
   // Display copy per starter id — t()'s generated key type rejects a dynamic
   // `starters.${id}.title` template, so each card's copy is looked up by id
@@ -78,7 +87,7 @@ export function WorkflowStarters({ onPick }: { onPick: (prompt: string) => void 
     },
   };
   return (
-    <div className="flex min-h-[62vh] flex-col items-center justify-center">
+    <div className={cn("flex flex-col items-center justify-center", showCards ? "min-h-[62vh]" : "py-6")}>
       <div className="w-full max-w-[500px]">
         <div className="text-center">
           <div className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-muted">
@@ -87,8 +96,12 @@ export function WorkflowStarters({ onPick }: { onPick: (prompt: string) => void 
           <h2 className="mt-2.5 font-serif text-[26px] leading-tight text-text">
             {t("starters.heading")}
           </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{t("starters.subheading")}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            {showCards ? t("starters.subheading") : t("starters.subheadingNoCards")}
+          </p>
         </div>
+
+        {showCards && (
 
         <div className="mt-7 overflow-hidden rounded-card border border-border bg-surface shadow-card">
           {WORKFLOW_STARTERS.map((s) => (
@@ -129,6 +142,7 @@ export function WorkflowStarters({ onPick }: { onPick: (prompt: string) => void 
             </button>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

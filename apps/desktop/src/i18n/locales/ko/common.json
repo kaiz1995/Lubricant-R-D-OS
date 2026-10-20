@@ -10,5 +10,14 @@
       "error": "컨텍스트를 압축하지 못했습니다.",
       "done": "컨텍스트가 압축되었습니다. 다음 답변은 압축된 대화를 사용합니다."
     }
+  },
+  "linkMenu": {
+    "openFile": "파일 열기",
+    "openDefault": "기본 앱으로 열기",
+    "openLink": "링크 열기",
+    "copyLink": "링크 복사",
+    "copyPath": "경로 복사",
+    "copied": "복사됨",
+    "click": "클릭"
   }
 }

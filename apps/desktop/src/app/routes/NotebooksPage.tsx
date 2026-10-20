@@ -160,9 +160,9 @@ export function NotebooksPage() {
           </p>
         )}
 
-        <div className="mt-5 space-y-1.5">
+        <div className={`mt-5 divide-y divide-border ${entries.length > 0 ? "border-y border-border" : ""}`}>
           {entries.length === 0 && (
-            <div className="rounded-card border border-border bg-surface p-5 text-sm text-muted">
+            <div className="py-4 text-sm text-muted">
               {isTauri ? t("notebooks.empty.tauri") : t("notebooks.empty.web")}
             </div>
           )}
@@ -174,7 +174,7 @@ export function NotebooksPage() {
               <button
                 key={e.path}
                 onClick={() => setOpen({ path: e.path, root: "base" })}
-                className="flex w-full items-center gap-2.5 rounded-card border border-border bg-surface px-4 py-2.5 text-left hover:bg-surface-2"
+                className="flex w-full items-center gap-2.5 px-2 py-2.5 text-left hover:bg-surface-2"
               >
                 <NotebookPen size={15} className="shrink-0 text-muted" />
                 <span className="truncate text-sm text-text">{name}</span>

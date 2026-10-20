@@ -47,6 +47,12 @@ const DANGEROUS_BASH: &[&str] = &[
     // remote / outward
     "ssh", "scp", "sftp", "rsync", "curl", "wget", "nc", "git push", "modal",
     "sbatch",
+    // A browser the user installed themselves, driven from the shell. It is
+    // gated for the same reason the bundled one is, and more so: the bundled
+    // browser runs an isolated profile this app owns, while this one carries the
+    // user's real logged-in sessions. Leaving it out meant the sandboxed browser
+    // asked and the one with the user's mail and bank open did not.
+    "ego-browser",
 ];
 
 /// Add `path` and the other spellings it can legitimately arrive as. macOS
@@ -99,11 +105,43 @@ fn browser_tools_key() -> String {
     format!("{BROWSER_MCP_ID}_agent_browser_*")
 }
 
+/// Permission key for the `computer` tool — reading and driving the apps on the
+/// user's own screen. Named after the tool file (`runtime/tools/computer.ts`),
+/// which is how OpenCode names a custom tool.
+///
+/// Gated whole rather than per-verb: even the read-only verbs capture what is on
+/// screen, which is the user's mail, messages and documents, and a rule here has
+/// to beat OpenCode's builtin `"*": "allow"` or nothing prompts at all. As with
+/// the browser, OpenCode's "allow always" saves the rule for the project, so this
+/// is one prompt and not one per step.
+const COMPUTER_TOOL_KEY: &str = "computer";
+
+/// Every spelling of one dangerous token that has to prompt.
+///
+/// The third is not decoration. The first two anchor on the token starting the
+/// command or following a space, so `/Users/me/.local/bin/ego-browser open …`
+/// matched NEITHER — the path has no space before the program name — and the
+/// gate was walked around by the most natural way to invoke something that is
+/// not on PATH. It applies to every token, not just that one: `/bin/rm -rf` had
+/// the same free pass.
+///
+/// One generator rather than two lists, because the seeding path and the
+/// back-fill migration below must produce the same globs or a back-filled
+/// install is gated differently from a fresh one.
+fn bash_ask_globs(token: &str) -> [String; 3] {
+    [
+        format!("{token} *"),
+        format!("* {token} *"),
+        format!("*/{token} *"),
+    ]
+}
+
 fn approve_permission() -> Value {
     let mut bash = serde_json::Map::new();
     for t in DANGEROUS_BASH {
-        bash.insert(format!("{t} *"), json!("ask"));
-        bash.insert(format!("* {t} *"), json!("ask"));
+        for glob in bash_ask_globs(t) {
+            bash.insert(glob, json!("ask"));
+        }
     }
     let mut permission = json!({
         "bash": Value::Object(bash),
@@ -119,10 +157,9 @@ fn approve_permission() -> Value {
     // one that interrupts and the expensive one the one that does not — exactly
     // backwards. `always: ["*"]` on OpenCode's side means "allow always" saves a
     // rule for the project, so this is one prompt, not one per browser step.
-    permission
-        .as_object_mut()
-        .unwrap()
-        .insert(browser_tools_key(), json!("ask"));
+    let permission_map = permission.as_object_mut().unwrap();
+    permission_map.insert(browser_tools_key(), json!("ask"));
+    permission_map.insert(COMPUTER_TOOL_KEY.to_string(), json!("ask"));
     permission
 }
 
@@ -190,6 +227,44 @@ pub fn migrate_browser_permission(existing: &str) -> Option<String> {
         return None;
     }
     permission.insert(key, json!("ask"));
+    serde_json::to_string_pretty(&root).ok()
+}
+
+/// Back-fill bash ask rules added after an install chose "approve" — a chosen
+/// mode is never re-seeded, so a token added to `DANGEROUS_BASH` later would
+/// never reach the people already running that mode. Additive and idempotent:
+/// only missing globs are inserted, and a rule the user relaxed is left alone.
+pub fn migrate_dangerous_bash(existing: &str) -> Option<String> {
+    if permission_mode_of(existing)? != MODE_APPROVE {
+        return None;
+    }
+    let mut root: Value = read_config(existing)?;
+    let bash = root.get_mut("permission")?.get_mut("bash")?.as_object_mut()?;
+    let mut changed = false;
+    for token in DANGEROUS_BASH {
+        for glob in bash_ask_globs(token) {
+            if !bash.contains_key(&glob) {
+                bash.insert(glob, json!("ask"));
+                changed = true;
+            }
+        }
+    }
+    changed.then(|| serde_json::to_string_pretty(&root).ok())?
+}
+
+/// Back-fill the computer-use ask rule for installs that chose "approve" before
+/// the tool existed. Same shape as the browser back-fill: approve mode only, and
+/// never touched once the key is present, whatever it holds.
+pub fn migrate_computer_permission(existing: &str) -> Option<String> {
+    if permission_mode_of(existing)? != MODE_APPROVE {
+        return None;
+    }
+    let mut root: Value = read_config(existing)?;
+    let permission = root.get_mut("permission")?.as_object_mut()?;
+    if permission.contains_key(COMPUTER_TOOL_KEY) {
+        return None;
+    }
+    permission.insert(COMPUTER_TOOL_KEY.to_string(), json!("ask"));
     serde_json::to_string_pretty(&root).ok()
 }
 
@@ -1247,6 +1322,12 @@ mod tests {
         // ("cd x && rm -rf y").
         assert_eq!(bash["* rm *"], "ask");
         assert_eq!(bash["* ssh *"], "ask");
+        // …and the path form catches it invoked by an absolute or relative
+        // path, which neither of the other two match: there is no space before
+        // the program name in "/usr/local/bin/ego-browser open …", so the gate
+        // was walked around by the ordinary way to run something off PATH.
+        assert_eq!(bash["*/rm *"], "ask");
+        assert_eq!(bash["*/ego-browser *"], "ask");
         // No blanket rule of our own: everything else falls through to the
         // builtin "*": "allow" (rules are last-match-wins, ours come last).
         assert!(!bash.contains_key("*"));
@@ -1274,6 +1355,84 @@ mod tests {
         assert!(migrate_browser_permission(&full).is_none());
         // First run has no mode yet; seeding owns that path.
         assert!(migrate_browser_permission("{}").is_none());
+    }
+
+    #[test]
+    fn a_user_installed_browser_is_gated_like_the_bundled_one() {
+        // The bundled browser drives an isolated profile this app owns; a browser
+        // the user installed carries their real sessions. Gating the first and not
+        // the second put the prompt on the cheaper one.
+        let approved = set_permission_mode("", MODE_APPROVE).unwrap();
+        let v: Value = serde_json::from_str(&approved).unwrap();
+        assert_eq!(v["permission"]["bash"]["ego-browser *"], "ask");
+        assert_eq!(v["permission"]["bash"]["* ego-browser *"], "ask");
+        // The CLI lives in ~/.local/bin, which is exactly the case the first two
+        // globs miss — the agent is told the absolute path by the settings card.
+        assert_eq!(v["permission"]["bash"]["*/ego-browser *"], "ask");
+    }
+
+    #[test]
+    fn the_seeded_and_the_back_filled_globs_are_the_same_set() {
+        // Two lists drifting apart is what left a back-filled install gated
+        // differently from a fresh one; one generator is what keeps them equal.
+        let fresh = set_permission_mode("", MODE_APPROVE).unwrap();
+        let fresh: Value = serde_json::from_str(&fresh).unwrap();
+        let stale = r#"{"permission":{"bash":{},"webfetch":"ask"}}"#;
+        let filled = migrate_dangerous_bash(stale).expect("approve config is back-filled");
+        let filled: Value = serde_json::from_str(&filled).unwrap();
+        let mut fresh_globs: Vec<&String> =
+            fresh["permission"]["bash"].as_object().unwrap().keys().collect();
+        let mut filled_globs: Vec<&String> =
+            filled["permission"]["bash"].as_object().unwrap().keys().collect();
+        fresh_globs.sort();
+        filled_globs.sort();
+        assert_eq!(fresh_globs, filled_globs);
+    }
+
+    #[test]
+    fn bash_tokens_added_later_reach_installs_that_already_chose_approve() {
+        // A chosen mode is never re-seeded, so without this a token added to the
+        // list would only ever apply to fresh installs.
+        let stale = r#"{"permission":{"bash":{"rm *":"ask"},"webfetch":"ask"}}"#;
+        let out = migrate_dangerous_bash(stale).expect("approve config is back-filled");
+        let v: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(v["permission"]["bash"]["ego-browser *"], "ask");
+        assert_eq!(v["permission"]["bash"]["rm *"], "ask");
+        // Idempotent, and a rule the user relaxed keeps their choice.
+        assert!(migrate_dangerous_bash(&out).is_none());
+        let relaxed: Value = serde_json::from_str(&out).unwrap();
+        let mut relaxed = relaxed;
+        relaxed["permission"]["bash"]["ego-browser *"] = json!("allow");
+        let relaxed = serde_json::to_string(&relaxed).unwrap();
+        assert!(migrate_dangerous_bash(&relaxed).is_none());
+        // Full mode means no approvals at all, and first run belongs to seeding.
+        let full = set_permission_mode("", MODE_FULL).unwrap();
+        assert!(migrate_dangerous_bash(&full).is_none());
+        assert!(migrate_dangerous_bash("{}").is_none());
+    }
+
+    #[test]
+    fn computer_use_asks_in_approve_mode_and_is_backfilled_once() {
+        // Driving the user's own apps is gated the same way the browser is, and
+        // for the same reason: without a rule here, a custom tool matches the
+        // builtin "*": "allow" and reads the user's screen with no prompt.
+        let approved = set_permission_mode("", MODE_APPROVE).unwrap();
+        let v: Value = serde_json::from_str(&approved).unwrap();
+        assert_eq!(v["permission"]["computer"], "ask");
+
+        // Approve-mode config written before computer use existed.
+        let stale = r#"{"permission":{"bash":{"rm *":"ask"},"webfetch":"ask"}}"#;
+        let out = migrate_computer_permission(stale).expect("approve config is back-filled");
+        let v: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(v["permission"]["computer"], "ask");
+        // Idempotent, and a user who relaxed the rule keeps their choice.
+        assert!(migrate_computer_permission(&out).is_none());
+        let relaxed = r#"{"permission":{"bash":{"rm *":"ask"},"computer":"allow"}}"#;
+        assert!(migrate_computer_permission(relaxed).is_none());
+        // Full mode means no approvals at all, and first run belongs to seeding.
+        let full = set_permission_mode("", MODE_FULL).unwrap();
+        assert!(migrate_computer_permission(&full).is_none());
+        assert!(migrate_computer_permission("{}").is_none());
     }
 
     #[test]

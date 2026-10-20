@@ -3,7 +3,7 @@ import { ChevronDown, CornerDownLeft, NotebookPen, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NotebookCell, NotebookInspector as NotebookInspectorT } from "@ai4s/shared";
 import { CodeViewer } from "@/components/code-viewer/CodeViewer";
-import { PaneTitlebarInset } from "./RightPane";
+import { PANE_HEADER, PaneTitlebarInset, PANE_ICON_BUTTON } from "./RightPane";
 import { formatExecResult, kernelExecute } from "@/lib/kernel";
 import { useScrollMemory } from "@/lib/scrollMemory";
 import { useWheelChain } from "@/lib/wheelChain";
@@ -68,14 +68,14 @@ export function NotebookInspector({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 select-none items-center gap-2 border-b border-border px-4">
+      <header className={PANE_HEADER}>
         <PaneTitlebarInset />
-        <NotebookPen size={14} strokeWidth={1.5} className="text-text" />
+        <NotebookPen size={13} strokeWidth={1.5} className="text-muted" />
         <span className="text-sm font-medium text-text">{t("notebook.title")}</span>
         <div className="flex-1" />
         {controls}
-        <button className="text-text hover:opacity-60" aria-label={t("shell.closeInspector")} onClick={onClose}>
-          <X size={14} strokeWidth={1.5} />
+        <button className={PANE_ICON_BUTTON} aria-label={t("shell.closeInspector")} onClick={onClose}>
+          <X size={13} strokeWidth={1.5} />
         </button>
       </header>
 
@@ -104,7 +104,7 @@ export function NotebookInspector({
             {cell.output && (
               <div className="mt-2">
                 <div className="mb-1 text-xs text-muted">{t("notebook.outputLabel")}</div>
-                <pre className="whitespace-pre-wrap rounded-input border border-border bg-surface-2 p-3 font-mono text-[12.5px] text-text">
+                <pre className="whitespace-pre-wrap rounded-input bg-surface-2 p-3 font-mono text-[12.5px] text-text">
                   {cell.output}
                 </pre>
               </div>

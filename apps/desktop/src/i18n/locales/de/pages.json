@@ -33,7 +33,15 @@
       "stopCellTitle": "Stopp — startet den Kernel dieses Notebooks neu (Variablen werden zurückgesetzt)",
       "stopLabel": "Stopp",
       "runLabel": "Ausführen",
-      "addCellLabel": "Zelle hinzufügen"
+      "addCellLabel": "Zelle hinzufügen",
+      "askAgent": "Den Agenten zu dieser Zelle fragen",
+      "askAgentAria": "Den Agenten zu Zelle {{n}} fragen",
+      "askAgentIntro": "Zu Zelle [{{n}}] von `{{file}}`:",
+      "askAgentOutput": "Ausgabe:",
+      "askAgentSent": "Zelle in die Eingabe übernommen",
+      "countTitle": "Ausführungsnummer — [*] während der Ausführung, [n] danach",
+      "interrupted": "Unterbrochen — der Kernel wurde neu gestartet; Variablen sind zurückgesetzt.",
+      "desktopOnlyKernel": "Der lokale Kernel braucht die Desktop-App."
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "Skills & Agenten",
-    "description": {
-      "prefix": "Live aus der OpenCode-Runtime geladen — die gebündelten Skill-Pakete, alles unter ",
-      "suffix": " in Ihrem Arbeitsbereich sowie Ihre eigenen Skills in ~/.claude/skills oder ~/.agents/skills."
-    },
+    "subtitle": "Alles, was der Agent nutzen kann – live aus OpenCode geladen.",
     "install": {
       "sectionTitle": "Einen Skill installieren",
       "placeholder": "Eine SKILL.md einfügen oder eine URL / Beschreibung, aus der der Agent eine macht",
@@ -79,7 +84,7 @@
       "note": "OpenCode führt Code mit dem aus, was hier installiert ist (z. B. Python über sein Shell-Tool). uv ist in der App enthalten, und Jupyter kann unter Einstellungen → Konnektoren von der App verwaltet werden. Python und R sind nicht gebündelt – installieren Sie sie oder ein Science Pack, um Analysen zu ermöglichen."
     },
     "agentsSection": {
-      "sectionTitle": "Agenten ({{count}})",
+      "heading": "Agenten",
       "empty": "Keine Agenten gemeldet.",
       "agentMode": {
         "primary": "primär",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "Skills ({{count}})",
+      "heading": "Skills",
       "empty": "Noch keine Skills geladen.",
       "source": {
         "builtin": "integriert",
@@ -96,7 +101,9 @@
         "user": "Benutzer"
       }
     },
-    "disconnected": "Verbinden Sie die Runtime, um die geladenen Skills und Agenten aufzulisten."
+    "disconnected": "Verbinden Sie die Runtime, um die geladenen Skills und Agenten aufzulisten.",
+    "search": "Skills und Agents durchsuchen",
+    "noMatch": "Nichts passt zu „{{query}}“."
   },
   "notFound": {
     "title": "404 — Nicht gefunden",

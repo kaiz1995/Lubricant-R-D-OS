@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useUiStore } from "@/lib/store";
 import { resetParkedDrafts } from "@/lib/composerStash";
 import { Composer } from "./Composer";
@@ -356,24 +357,32 @@ describe("agent mode switch (Build / Plan)", () => {
 // A narrow pane could not fit "Approve for me · Build · GPT-5.6 sol · High" as
 // words, so the toolbar wrapped and ate the composer's height.
 describe("Composer toolbar in a narrow pane", () => {
-  /** Drive the ResizeObserver the composer measures itself with. */
+  /** jsdom has no layout: give the action row `width` of room, and every item
+   *  a width that grows with its text (so a label costs what it says). */
+  const patched = [
+    [HTMLElement.prototype, "offsetWidth"],
+    [Element.prototype, "clientWidth"],
+    [Element.prototype, "getClientRects"],
+  ] as const;
+  const saved = patched.map(([proto, key]) => Object.getOwnPropertyDescriptor(proto, key));
   function withWidth(width: number) {
-    const observers: ((w: number) => void)[] = [];
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(private cb: (e: { contentRect: { width: number } }[]) => void) {
-          observers.push((w) => this.cb([{ contentRect: { width: w } }]));
-        }
-        observe() {
-          observers[observers.length - 1]!(width);
-        }
-        disconnect() {}
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return 28 + (this.textContent?.length ?? 0) * 7;
       },
-    );
+    });
+    Object.defineProperty(Element.prototype, "clientWidth", { configurable: true, get: () => width });
+    Object.defineProperty(Element.prototype, "getClientRects", { configurable: true, value: () => [{}] });
   }
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    patched.forEach(([proto, key], i) => {
+      const d = saved[i];
+      if (d) Object.defineProperty(proto, key, d);
+      else delete (proto as unknown as Record<string, unknown>)[key];
+    });
+  });
 
   it("keeps the labels when there is room", () => {
     withWidth(900);
@@ -382,7 +391,7 @@ describe("Composer toolbar in a narrow pane", () => {
   });
 
   it("drops the labels but keeps the control reachable when narrow", () => {
-    withWidth(320);
+    withWidth(200);
     render(
       <Composer
         onSend={vi.fn()}
@@ -436,5 +445,71 @@ describe("Composer per-pane draft (#91)", () => {
 
     pane("draft:pane-1");
     expect(input().value).toBe("");
+  });
+
+  describe("compacting the context", () => {
+    it("asks before compacting — the click alone does nothing", async () => {
+      const onCompactContext = vi.fn();
+      render(<Composer onSend={vi.fn()} onCompactContext={onCompactContext} />);
+
+      await userEvent.click(screen.getByRole("button", { name: "Compress context" }));
+
+      // The whole point: one click next to Send used to rewrite what the agent
+      // can see for the rest of the conversation.
+      expect(onCompactContext).not.toHaveBeenCalled();
+      expect(screen.getByRole("alertdialog", { name: "Compact the context?" })).toBeInTheDocument();
+    });
+
+    it("says what compaction does, including what it does NOT lose", async () => {
+      render(<Composer onSend={vi.fn()} onCompactContext={vi.fn()} />);
+      await userEvent.click(screen.getByRole("button", { name: "Compress context" }));
+
+      expect(
+        screen.getByText(/The full original conversation is still stored locally/),
+      ).toBeInTheDocument();
+    });
+
+    it("compacts once the reader confirms, and closes", async () => {
+      const onCompactContext = vi.fn();
+      render(<Composer onSend={vi.fn()} onCompactContext={onCompactContext} />);
+      await userEvent.click(screen.getByRole("button", { name: "Compress context" }));
+
+      await userEvent.click(screen.getByRole("button", { name: "Compact" }));
+
+      expect(onCompactContext).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+
+    it("cancels without compacting", async () => {
+      const onCompactContext = vi.fn();
+      render(<Composer onSend={vi.fn()} onCompactContext={onCompactContext} />);
+      await userEvent.click(screen.getByRole("button", { name: "Compress context" }));
+
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onCompactContext).not.toHaveBeenCalled();
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe("Composer · the action row stays one line", () => {
+  /** The row holding the send button — the composer's bottom controls. */
+  function actionRow(): HTMLElement {
+    const send = screen.getByRole("button", { name: /send/i });
+    // The row is the send button's grandparent: button → right group → row.
+    return send.parentElement!.parentElement!;
+  }
+
+  it("never wraps the controls onto a second line", () => {
+    render(<Composer onSend={vi.fn()} />);
+
+    // The reported bug: the send button sat on its own line under the other
+    // controls, with a gap between them. Flexbox wraps on an item's natural
+    // width rather than shrinking it, so ONE long model name was enough — the
+    // row must not be allowed to wrap at all.
+    expect(actionRow().className).not.toContain("flex-wrap");
+    // …which only works if the row can be narrower than its contents.
+    expect(actionRow().className).toContain("min-w-0");
   });
 });

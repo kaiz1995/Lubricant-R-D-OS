@@ -45,11 +45,17 @@ describe("sidebar right-click menus", () => {
     expect(menu.getByText("Delete")).toBeInTheDocument();
   });
 
-  it("archiving from the session menu goes straight through", async () => {
+  it("archiving from the session menu asks first and says where it goes", async () => {
     renderAt("/skills");
     const menu = await menuOn("spike sorting");
     await userEvent.click(menu.getByText("Archive"));
 
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Archive this session?");
+    expect(dialog).toHaveTextContent("Show archived");
+    expect(setSessionArchived).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Archive" }));
     expect(setSessionArchived).toHaveBeenCalledWith("s1", true);
   });
 

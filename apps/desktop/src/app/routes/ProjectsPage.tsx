@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronRight,
@@ -17,6 +16,7 @@ import { useRuntimeStore } from "@/lib/runtime";
 import { timeAgo } from "@/lib/relativeTime";
 import { openProjectFolder, renameProject, type ProjectInfo } from "@/lib/tauri";
 import { isGatewayWeb } from "@/lib/webMode";
+import { useOpenSession } from "@/lib/useOpenSession";
 import { pathKey } from "@/lib/workspacePath";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
@@ -33,7 +33,7 @@ interface Row extends ProjectInfo {
 
 export function ProjectsPage() {
   const { t } = useTranslation(["nav", "common"]);
-  const navigate = useNavigate();
+  const openSession = useOpenSession();
   const projects = useRuntimeStore((s) => s.projects);
   const sessions = useRuntimeStore((s) => s.sessions);
   const setProjectPinned = useRuntimeStore((s) => s.setProjectPinned);
@@ -246,7 +246,7 @@ export function ProjectsPage() {
                         p.sessions.map((s) => (
                           <button
                             key={s.id}
-                            onClick={() => navigate(`/live/${s.id}`)}
+                            onClick={() => openSession(s.id)}
                             className="grid w-full grid-cols-[minmax(0,1fr)_5rem_1.5rem] items-center gap-3 rounded-input py-1.5 pl-8 pr-2 text-left hover:bg-surface-2"
                           >
                             <span className="truncate text-sm text-text">{s.title}</span>

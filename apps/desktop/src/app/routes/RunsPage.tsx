@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useOpenSession } from "@/lib/useOpenSession";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -23,7 +24,7 @@ import type { RunArtifact, RunRecord } from "@ai4s/shared";
 import { queryRuns, readRunLog, reproduceRunPrompt, type RunFacet, type RunPage } from "@/lib/runs";
 import { openArtifactExternally } from "@/lib/artifactFile";
 import { copyText } from "@/lib/clipboard";
-import { PaneTitlebarInset } from "@/components/inspector/RightPane";
+import { PANE_HEADER, PaneTitlebarInset, PANE_ICON_BUTTON } from "@/components/inspector/RightPane";
 import { useUiStore } from "@/lib/store";
 import { cn } from "@/lib/cn";
 import i18n from "@/i18n";
@@ -57,6 +58,7 @@ function RunsView({ sessionId }: { sessionId?: string }) {
   const [log, setLog] = useState<{ hash: string; text: string | null } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const navigate = useNavigate();
+  const openSession = useOpenSession();
   const [searchParams] = useSearchParams();
   const setComposerDraft = useUiStore((s) => s.setComposerDraft);
 
@@ -206,7 +208,7 @@ function RunsView({ sessionId }: { sessionId?: string }) {
         )}
 
         {state !== "loading" && rows.length === 0 && !anyFilter && (
-          <div className="mt-8 rounded-input border border-dashed border-border bg-surface px-4 py-8 text-center">
+          <div className="mt-8 px-4 py-8 text-center">
             <FlaskConical size={22} className="mx-auto text-muted" strokeWidth={1.5} />
             <p className="mt-2 text-sm font-medium text-text">{t("empty.title")}</p>
             <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
@@ -236,7 +238,7 @@ function RunsView({ sessionId }: { sessionId?: string }) {
                     open={expanded === r.runId}
                     onToggle={() => setExpanded((e) => (e === r.runId ? null : r.runId))}
                     onReproduce={() => reproduce(r)}
-                    onOpenConversation={r.sessionId ? () => navigate(`/live/${r.sessionId}`) : undefined}
+                    onOpenConversation={r.sessionId ? () => openSession(r.sessionId!) : undefined}
                     onCopy={() => copyCommand(r)}
                     copied={copied === r.runId}
                     log={log}
@@ -297,15 +299,18 @@ export function RunsPane({
   const { t } = useTranslation(["runs", "common"]);
   return (
     <div className="flex h-full flex-col border-l border-border bg-surface">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+      {/* The one pane header every pane beside a conversation uses. It was a
+          48px row of its own here, under a 32px session header — see the
+          `compactHeader` note in SessionView: two misaligned windows. */}
+      <div className={PANE_HEADER}>
         <PaneTitlebarInset />
-        <FlaskConical size={14} strokeWidth={1.5} className="shrink-0 text-text" />
+        <FlaskConical size={13} strokeWidth={1.5} className="shrink-0 text-muted" />
         <span className="text-sm font-medium text-text">{t("title")}</span>
         <span className="text-xs text-muted">{t("pane.subtitle")}</span>
         <div className="flex-1" />
         {controls}
-        <button className="text-text hover:opacity-60" aria-label={t("pane.closeAria")} onClick={onClose}>
-          <X size={14} strokeWidth={1.5} />
+        <button className={PANE_ICON_BUTTON} aria-label={t("pane.closeAria")} onClick={onClose}>
+          <X size={13} strokeWidth={1.5} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
@@ -428,8 +433,8 @@ function RunRow({
           )}
 
           {r.logHash && log?.hash === r.logHash && (
-            <div className="overflow-hidden rounded-input border border-border bg-surface-2">
-              <div className="border-b border-border px-2.5 py-1 text-[11px] text-muted">{t("log.header")}</div>
+            <div className="overflow-hidden rounded-input bg-surface-2">
+              <div className="px-2.5 pt-1.5 text-[11px] text-muted">{t("log.header")}</div>
               {log.text === null ? (
                 <div className="flex items-center gap-2 px-2.5 py-2 text-muted">
                   <Loader2 size={12} className="animate-spin" /> {t("log.loading")}

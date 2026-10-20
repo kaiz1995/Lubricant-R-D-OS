@@ -2,6 +2,7 @@
 // bundled OpenCode sidecar (isolated config/data + dedicated port; killed on exit).
 mod artifact_file;
 mod browser;
+mod computer;
 mod cli_shim;
 mod debug_log;
 mod examples;
@@ -24,7 +25,13 @@ mod runtime;
 mod session_sync;
 mod science_mcp;
 mod ssh_session;
+mod plan_usage;
+mod status_bar;
+mod terminal;
+mod terminal_env;
+mod terminal_probe;
 mod tools;
+mod usage;
 #[cfg(target_os = "macos")]
 mod macos;
 mod updates;
@@ -65,6 +72,16 @@ fn build_env(app: &AppHandle) -> Result<Env, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKitGTK's DMA-BUF renderer fails to hand out a GL context on a good
+    // number of Linux setups (proprietary NVIDIA, VMs, some Wayland sessions).
+    // The page still paints, so nothing looks broken until something asks for
+    // WebGL — `canvas.getContext("webgl")` returns null and the molecule viewer
+    // dies. The plain GL renderer costs nothing where dma-buf does work, so
+    // prefer it by default; an explicit setting still wins.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
     tauri::Builder::default()
         // Single instance MUST be the first plugin. A second launch (or a reinstall
         // while the app is still running) focuses the existing window instead of
@@ -85,6 +102,8 @@ pub fn run() {
         .manage(ProvenanceState::default())
         .manage(RunState::default())
         .manage(ssh_session::SshState::default())
+        .manage(status_bar::AwakeState::default())
+        .manage(terminal::TerminalState::default())
         .manage(acp::AcpState::default())
         .setup(|app| {
             // Every core call needs this, so nothing else may run before it.
@@ -188,7 +207,10 @@ pub fn run() {
             browser::agent_browser_profiles,
             browser::close_agent_browser,
             browser::detect_chrome,
+            browser::detect_user_browser,
             browser::setup_browser_chrome,
+            computer::computer_use_status,
+            computer::open_computer_use_permissions,
             kernel::kernel_execute,
             kernel::kernel_reset,
             kernel::python_interpreter,
@@ -198,18 +220,29 @@ pub fn run() {
             artifact_file::reveal_path,
             artifact_file::absolute_path,
             artifact_file::resolve_artifact,
+            artifact_file::locate_local_path,
             artifact_file::save_text_file,
             artifact_file::open_url,
             artifact_file::add_files_to_workspace,
             artifact_file::add_text_to_workspace,
             artifact_file::add_binary_to_workspace,
             artifact_file::add_paths_to_workspace,
+            artifact_file::discard_workspace_file,
             artifact_file::list_notebooks,
             artifact_file::list_dir,
             artifact_file::write_workspace_file,
             provenance::record_provenance,
             provenance::list_provenance,
             provenance::read_env_lockfile,
+            usage::agent_usage,
+            usage::detect_commands,
+            terminal::terminal_open,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close,
+            terminal::terminal_event_names,
+            terminal::terminal_probe,
+            terminal_env::terminal_env_prune,
             runs::record_run,
             runs::list_runs,
             runs::read_run_log,
@@ -230,6 +263,11 @@ pub fn run() {
             ssh_session::ssh_disconnect,
             ssh_session::ssh_sessions,
             ssh_session::ssh_sharing_supported,
+            plan_usage::plan_usage,
+            status_bar::system_resources,
+            status_bar::listening_ports,
+            status_bar::awake_hold,
+            status_bar::awake_active,
             acp::acp_start,
             acp::acp_send,
             acp::acp_stop,
@@ -259,6 +297,12 @@ pub fn run() {
                 ssh_session::shutdown(app);
                 // An ACP agent child must not outlive the window that started it.
                 acp::shutdown(app);
+                // A PTY child outlives its parent unless it is killed: quitting
+                // with an open terminal would leave a detached shell running.
+                terminal::close_all(&app.state::<terminal::TerminalState>());
+                status_bar::shutdown(&app.state::<status_bar::AwakeState>());
+                // A child webview is a native view over the window; it does not
+                // go away with the React tree that asked for it.
             }
         });
 }

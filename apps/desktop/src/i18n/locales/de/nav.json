@@ -5,7 +5,11 @@
     "expand": "Seitenleiste ausklappen",
     "expandTitle": "Seitenleiste ausklappen ({{shortcut}})",
     "settings": "Einstellungen",
-    "home": "Startseite"
+    "searchAria": "Sitzungen durchsuchen",
+    "searchPlaceholder": "Sitzungsnamen suchen",
+    "searchClear": "Suche löschen",
+    "searchResultsAria": "Suchergebnisse",
+    "searchNoMatches": "Keine passenden Sitzungen"
   },
   "items": {
     "new": "Neu",
@@ -77,6 +81,8 @@
     "showArchived": "Archivierte anzeigen",
     "archivedBadge": "archiviert",
     "archive": "Archivieren",
+    "archiveTitle": "Diese Sitzung archivieren?",
+    "archiveBody": "„{{title}}“ verschwindet aus der Seitenleiste. Nichts wird gelöscht – unter Alle Sitzungen → Archivierte anzeigen findest du sie, und Wiederherstellen holt sie zurück.",
     "restore": "Wiederherstellen",
     "loadMore": "Mehr laden",
     "loading": "Wird geladen…",
@@ -100,14 +106,72 @@
     "hideAction": "Ausblenden"
   },
   "status": {
-    "runtime": "Runtime",
-    "model": "Modell",
-    "modelNotSet": "nicht festgelegt",
-    "values": {
-      "ready": "bereit",
-      "connecting": "verbindet …",
-      "error": "Fehler",
-      "offline": "offline"
+    "usage": {
+      "title": "Verbrauch",
+      "refresh": "Aktualisieren",
+      "tokens": "Tokens",
+      "today": "heute",
+      "days7": "7 T",
+      "workbench": "OSD",
+      "cliNote": "Läuft in deinem eigenen Terminal — hier wird nur der Verbrauch erfasst.",
+      "allAgents": "alle Agents",
+      "detailed": "Ausführlich",
+      "compact": "Kompakt",
+      "detailedHint": "Alle Zeitfenster mit Balken und Prozentwerten",
+      "compactHint": "Nur das Fenster, das dem Limit am nächsten ist",
+      "detailAria": "Detailgrad der Nutzung",
+      "resetsIn": "Zurücksetzung in {{duration}}",
+      "asOf": "Stand: vor {{age}}"
+    },
+    "awake": {
+      "title": "Wachhalten",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "mode": {
+        "on": "An",
+        "auto": "Auto",
+        "off": "Aus"
+      },
+      "hint": {
+        "on": "Diesen Computer dauerhaft wachhalten",
+        "auto": "Wachbleiben, solange ein Agent arbeitet",
+        "off": "Normalen Ruhezustand zulassen"
+      }
+    },
+    "resources": {
+      "title": "Ressourcen",
+      "memory": "Arbeitsspeicher",
+      "processes": "Prozesse",
+      "note": "Diese App und alles, was sie gestartet hat.",
+      "cpu": "{{n}} % CPU",
+      "terminal": "Terminal",
+      "app": "Workbench selbst",
+      "kernel": "Kernel"
+    },
+    "ports": {
+      "title": "Ports",
+      "empty": "Nichts aus dieser App lauscht auf einem Port.",
+      "public": "öffentlich",
+      "openTitle": "{{url}} öffnen"
+    },
+    "hosts": {
+      "title": "Hosts",
+      "empty": "Keine Maschinen in ~/.ssh/config.",
+      "count": "{{count}} Host",
+      "count_other": "{{count}} Hosts",
+      "status": {
+        "connected": "verbunden",
+        "connecting": "verbindet",
+        "prompt": "wartet auf dich",
+        "failed": "fehlgeschlagen",
+        "disconnected": "nicht verbunden"
+      },
+      "connect": "Verbinden",
+      "hint": "klicken für eine Shell",
+      "openShell": "Shell auf {{host}} öffnen",
+      "unreachable": "nicht erreichbar",
+      "cores": "{{n}} Kerne",
+      "disk": "{{free}} frei von {{total}}"
     }
   },
   "commandPalette": {
@@ -128,5 +192,22 @@
     "sessionLabel": "Sitzungsaktionen",
     "projectLabel": "Projektaktionen",
     "exampleLabel": "Beispielaktionen"
+  },
+  "jump": {
+    "ariaLabel": "Springen zu",
+    "placeholder": "Zu Projekt, Screen, Sitzung oder Terminal springen…",
+    "noResults": "Keine Treffer",
+    "sections": {
+      "actions": "Aktionen",
+      "projects": "Projekte",
+      "screens": "Screens",
+      "panes": "Offene Bereiche",
+      "sessions": "Sitzungen"
+    },
+    "actions": {
+      "newSession": "Neue Sitzung in {{project}}",
+      "newTerminal": "Neues Terminal in {{project}}",
+      "newScreen": "Neuer Screen in {{project}}"
+    }
   }
 }

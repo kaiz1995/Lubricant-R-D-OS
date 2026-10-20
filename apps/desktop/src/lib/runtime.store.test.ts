@@ -79,6 +79,8 @@ const mocks = vi.hoisted(() => ({
   failShell: false,
   /** Next runCommand call throws before any event (HTTP-level failure). */
   failCommand: false,
+  /** Next sendPrompt call throws (HTTP-level failure). */
+  failSend: false,
   /** Next runCommand call streams an event, then throws — the WKWebView
    *  ~60 s fetch kill on a long sync turn ("Load failed"). */
   dropCommandPost: false,
@@ -234,6 +236,7 @@ vi.mock("@ai4s/sdk", () => {
     ) {
       mocks.sendPromptSpy(sid, text, agent);
       mocks.sendPromptFullSpy(sid, text, agent, model, variant);
+      if (mocks.failSend) throw new Error("provider exploded");
     }
     async listCommands() {
       return [{ name: "init", description: "guided AGENTS.md setup", source: "command" }];
@@ -312,7 +315,7 @@ vi.mock("@ai4s/sdk", () => {
 });
 
 import type { ArtifactBlock, ThreadBlock } from "@ai4s/shared";
-import { DRAFT_KEY, adoptSourceFolder, rootSessionOf, useRuntimeStore } from "./runtime";
+import { DRAFT_KEY, __resetStreamCoalesceForTests, adoptSourceFolder, rootSessionOf, useRuntimeStore } from "./runtime";
 import { useSshStore } from "./ssh";
 import { useToastStore } from "./toast";
 import { leaves, makeLeaf, useLayoutStore } from "./layout";
@@ -324,6 +327,7 @@ beforeEach(async () => {
   mocks.failCreates = 0;
   mocks.failShell = false;
   mocks.failCommand = false;
+  mocks.failSend = false;
   mocks.dropCommandPost = false;
   mocks.abortTrailing = [];
   mocks.messages = [];
@@ -700,6 +704,29 @@ describe("per-session workspace folders", () => {
     await useRuntimeStore.getState().sendPrompt("hello", undefined, "draft:leaf-new");
     expect(mocks.newDatedWorkspace).toHaveBeenCalledTimes(1);
     expect(mocks.setWorkspace).not.toHaveBeenCalledWith("/ws/毕设");
+  });
+
+  it("a draft's first send that fails reports into the real session, not the orphaned draft slot", async () => {
+    // A draft pane's first message lazy-creates its session, then grafts the
+    // draft slot (`draft:leaf-9`) onto the real id and DELETES the draft slot.
+    // If the POST then fails, the error must land in the session the pane now
+    // shows — re-deriving `draftKey` at catch time re-reads a slot that was just
+    // deleted, and in a split layout the "Send failed" line was invisible.
+    mocks.failSend = true;
+    const id = await useRuntimeStore.getState().sendPrompt("hello", undefined, "draft:leaf-9");
+    expect(id).toBe("ses_new");
+
+    const state = useRuntimeStore.getState();
+    // The pane now displays threads["ses_new"] — that's where the failure lives.
+    const blocks = state.threads["ses_new"]?.blocks ?? [];
+    const last = blocks[blocks.length - 1];
+    expect(last).toMatchObject({
+      kind: "status-line",
+      tone: "error",
+      text: expect.stringContaining("Send failed"),
+    });
+    // The orphaned draft slot must not hold the failure (or exist at all).
+    expect(state.threads["draft:leaf-9"]).toBeUndefined();
   });
 
   // "+ new session in project X" opens its own pane, and that pane's composer
@@ -1110,9 +1137,65 @@ describe("per-session workspace folders", () => {
 
     const thread = useRuntimeStore.getState().threads.ses_bad;
     expect(thread.loaded).toBe(true);
+    // `loaded` stops the skeleton, but `historyError` keeps the failure from
+    // satisfying the "already loaded" gate — see the retry tests below (#139).
+    expect(thread.historyError).toBe("history hung");
     expect(thread.blocks).toEqual([
-      { kind: "status-line", text: "Failed to load messages: history hung", tone: "error" },
+      {
+        kind: "status-line",
+        text: "Failed to load messages: history hung",
+        tone: "error",
+        retry: true,
+      },
     ]);
+  });
+
+  it("openSession refetches a session whose history failed to load when reopened", async () => {
+    mocks.failMessages = true;
+    useRuntimeStore.setState({
+      sessions: [{ id: "ses_bad", title: "Bad session", directory: "/ws/base" }],
+      currentId: null,
+      threads: {},
+    });
+    await useRuntimeStore.getState().openSession("ses_bad");
+    expect(useRuntimeStore.getState().threads.ses_bad.historyError).toBe("history hung");
+
+    // The runtime is serving again — the next open must refetch instead of
+    // treating the cached failure as a loaded thread (the session used to show
+    // "Failed to load messages" for the rest of the app run; #139).
+    mocks.failMessages = false;
+    mocks.messages = [{ role: "user", agent: "build", parts: [{ type: "text", text: "hi" }] }];
+    await useRuntimeStore.getState().openSession("ses_bad");
+
+    const thread = useRuntimeStore.getState().threads.ses_bad;
+    expect(thread.loaded).toBe(true);
+    expect(thread.historyError).toBeUndefined();
+    expect(thread.blocks.some((b) => b.kind === "user" && b.text === "hi")).toBe(true);
+    expect(mocks.getMessages).toHaveBeenCalledTimes(2);
+  });
+
+  it("loadHistory refetches a failed history load without switching focus (Retry path)", async () => {
+    mocks.failMessages = true;
+    useRuntimeStore.setState({
+      sessions: [{ id: "ses_bad", title: "Bad session", directory: "/ws/base" }],
+      currentId: null,
+      threads: {},
+    });
+    await useRuntimeStore.getState().openSession("ses_bad");
+    expect(useRuntimeStore.getState().threads.ses_bad.historyError).toBe("history hung");
+
+    // The error line's Retry action calls loadHistory — the session stays where
+    // it is while the history is reloaded in place.
+    mocks.failMessages = false;
+    mocks.messages = [{ role: "user", agent: "build", parts: [{ type: "text", text: "hi" }] }];
+    useRuntimeStore.setState({ currentId: "ses_other" });
+    await useRuntimeStore.getState().loadHistory("ses_bad");
+
+    const thread = useRuntimeStore.getState().threads.ses_bad;
+    expect(thread.loaded).toBe(true);
+    expect(thread.historyError).toBeUndefined();
+    expect(thread.blocks.some((b) => b.kind === "user" && b.text === "hi")).toBe(true);
+    expect(useRuntimeStore.getState().currentId).toBe("ses_other");
   });
 
   it("switchWorkspace pins the chosen folder; startDraft un-pins it", async () => {
@@ -1701,6 +1784,28 @@ describe("per-session right pane", () => {
     expect(useRuntimeStore.getState().panes["ses_2"]?.artifact?.path).toBe("analysis.ipynb");
   });
 
+  it("a second click on the same file card puts the inspector away", () => {
+    // The card is the only handle on that pane from the thread, so without a
+    // toggle the preview could be opened there and closed only by aiming at the
+    // inspector's own close button.
+    useRuntimeStore.setState({ currentId: "ses_1" });
+    useRuntimeStore.getState().toggleArtifact(artifact("report.pdf"));
+    expect(useRuntimeStore.getState().panes["ses_1"]?.artifact?.path).toBe("report.pdf");
+    useRuntimeStore.getState().toggleArtifact(artifact("report.pdf"));
+    expect(useRuntimeStore.getState().panes["ses_1"]?.artifact).toBe(null);
+    // Identity is the path, not the object: the thread rebuilds the block on
+    // every render, so a reference comparison would never close anything.
+    useRuntimeStore.getState().toggleArtifact(artifact("report.pdf"));
+    expect(useRuntimeStore.getState().panes["ses_1"]?.artifact?.path).toBe("report.pdf");
+  });
+
+  it("clicking a DIFFERENT file swaps the inspector rather than closing it", () => {
+    useRuntimeStore.setState({ currentId: "ses_1" });
+    useRuntimeStore.getState().toggleArtifact(artifact("report.pdf"));
+    useRuntimeStore.getState().toggleArtifact(artifact("notes.md"));
+    expect(useRuntimeStore.getState().panes["ses_1"]?.artifact?.path).toBe("notes.md");
+  });
+
   it("a closed pane stays closed after switching away and back", () => {
     useRuntimeStore.setState({ currentId: "ses_1" });
     useRuntimeStore.getState().openArtifact(artifact("report.pdf"));
@@ -1710,21 +1815,25 @@ describe("per-session right pane", () => {
     expect(useRuntimeStore.getState().panes["ses_1"]?.artifact).toBe(null);
   });
 
-  it("the artifact inspector, Files browser, Runs pane, and Lubricant pane are mutually exclusive", () => {
+  it("the artifact inspector, Files browser, Runs pane, Lubricant pane, and trajectory are mutually exclusive", () => {
     useRuntimeStore.setState({ currentId: "ses_1" });
     useRuntimeStore.getState().openArtifact(artifact("report.pdf"));
     useRuntimeStore.getState().setShowFiles(true);
-    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: true, showRuns: false, showAgents: false, showLubricant: false });
+    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: true, showRuns: false, showAgents: false, showTrajectory: false, showLubricant: false });
     // Opening Runs closes Files; opening an artifact closes Runs.
     useRuntimeStore.getState().setShowRuns(true);
-    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: false, showRuns: true, showAgents: false, showLubricant: false });
+    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: false, showRuns: true, showAgents: false, showTrajectory: false, showLubricant: false });
     // Opening the Lubricant stage pane closes Runs.
     useRuntimeStore.getState().setShowLubricant(true);
-    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: false, showRuns: false, showAgents: false, showLubricant: true });
+    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: false, showRuns: false, showAgents: false, showTrajectory: false, showLubricant: true });
+    // And the trajectory is one more view in the same single slot.
+    useRuntimeStore.getState().setShowTrajectory(true);
+    expect(useRuntimeStore.getState().panes["ses_1"]).toEqual({ artifact: null, showFiles: false, showRuns: false, showAgents: false, showTrajectory: true, showLubricant: false });
     useRuntimeStore.getState().openArtifact(artifact("report.pdf"));
     const p = useRuntimeStore.getState().panes["ses_1"];
     expect(p?.showFiles).toBe(false);
     expect(p?.showRuns).toBe(false);
+    expect(p?.showTrajectory).toBe(false);
     expect(p?.showLubricant).toBe(false);
   });
 
@@ -3494,6 +3603,197 @@ describe("stall guard integration", () => {
           (b) => b.kind === "status-line" && "stall" in b,
         ),
       ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// #157: one streamed token used to fold the whole thread, and with a long
+// history that per-fold cost outran the token interval until the backlog
+// wedged the main thread (scroll froze). text/reasoning deltas now coalesce
+// per session: the first of a burst folds instantly (first-token paint stays
+// immediate), the rest fold once per 120 ms window, and any other event
+// flushes the pending deltas ahead of itself so block order is unchanged.
+describe("stream coalescing (#157)", () => {
+  // The coalescing maps are module-level: a window left by another test would
+  // swallow this one's leading edge (and this one's would swallow the next).
+  beforeEach(() => __resetStreamCoalesceForTests());
+  afterEach(() => __resetStreamCoalesceForTests());
+
+  const text = (t: string, messageID?: string) => ({
+    type: "text.updated",
+    sessionId: "ses_new",
+    partId: "t1",
+    text: t,
+    ...(messageID ? { messageID } : {}),
+  });
+
+  it("folds the first delta instantly, then at most once per window", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      let threadChanges = 0;
+      const un = useRuntimeStore.subscribe((s, prev) => {
+        if (s.threads["ses_new"] !== prev.threads["ses_new"]) threadChanges++;
+      });
+      try {
+        mocks.fireEvent(text("a"));
+        // Leading edge: the first token paints without any wait.
+        expect(useRuntimeStore.getState().threads["ses_new"].blocks).toEqual([
+          { kind: "user", text: "hi" },
+          { kind: "agent", markdown: "a" },
+        ]);
+        // A burst inside the window buffers — the thread is NOT touched.
+        mocks.fireEvent(text("ab"));
+        mocks.fireEvent(text("abc"));
+        mocks.fireEvent(text("abcd"));
+        expect(useRuntimeStore.getState().threads["ses_new"].blocks).toHaveLength(2);
+        expect(threadChanges).toBe(1); // 5 events, ONE fold
+        // The trailing flush folds the latest snapshot, exactly once.
+        vi.advanceTimersByTime(120);
+        expect(useRuntimeStore.getState().threads["ses_new"].blocks).toEqual([
+          { kind: "user", text: "hi" },
+          { kind: "agent", markdown: "abcd" },
+        ]);
+        expect(threadChanges).toBe(2); // not 5
+        // The window re-arms from the flush: the next token buffers again.
+        mocks.fireEvent(text("abcde"));
+        expect(threadChanges).toBe(2);
+        vi.advanceTimersByTime(120);
+        const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+        expect(blocks[1]).toMatchObject({ markdown: "abcde" });
+        expect(threadChanges).toBe(3);
+      } finally {
+        un();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("session.idle flushes the pending deltas first — final text, then the done line", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      mocks.fireEvent(text("a"));
+      mocks.fireEvent(text("ab"));
+      mocks.fireEvent(text("the final answer"));
+      // No timer advance: the terminal event must see the full text.
+      mocks.fireEvent({ type: "session.idle", sessionId: "ses_new" });
+      const s = useRuntimeStore.getState();
+      expect(s.runningSessions["ses_new"]).toBeUndefined();
+      const blocks = s.threads["ses_new"].blocks;
+      expect(blocks.map((b) => b.kind)).toEqual(["user", "agent", "status-line"]);
+      expect(blocks[1]).toMatchObject({ markdown: "the final answer" });
+      expect(blocks[2]).toMatchObject({ tone: "done" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a non-coalescible event flushes the pending deltas ahead of itself", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      mocks.fireEvent(text("a"));
+      mocks.fireEvent(text("ab"));
+      mocks.fireEvent(text("abc"));
+      // A tool call starts mid-stream: the buffered text must land BEFORE the
+      // tool's block, without waiting for the window.
+      mocks.fireEvent({
+        type: "tool.updated",
+        sessionId: "ses_new",
+        callId: "call_1",
+        tool: "bash",
+        status: "running",
+      });
+      const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+      expect(blocks).toHaveLength(3); // user, agent, tool — synchronously
+      expect(blocks[1]).toMatchObject({ markdown: "abc" });
+      expect(blocks[2].kind).not.toBe("agent"); // the tool's block came last
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("message.usage stamps the flushed block, not a stale one", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      mocks.fireEvent(text("partial", "msg_1"));
+      mocks.fireEvent(text("full answer", "msg_1"));
+      // Usage republishes interleaved with the text on a real stream; the
+      // preemptive flush must leave the block in place for the stamp.
+      mocks.fireEvent({
+        type: "message.usage",
+        sessionId: "ses_new",
+        messageID: "msg_1",
+        usage: { input: 10, output: 20 },
+        created: 1,
+        completed: 2,
+      });
+      const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+      expect(blocks[1]).toMatchObject({ markdown: "full answer" });
+      expect((blocks[1] as { usage?: unknown }).usage).toEqual({ input: 10, output: 20 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("buffers independently per session", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      const other = (t: string) => ({ type: "text.updated", sessionId: "ses_other", partId: "t1", text: t });
+      mocks.fireEvent(text("a1"));
+      mocks.fireEvent(other("b1"));
+      mocks.fireEvent(text("a2"));
+      mocks.fireEvent(other("b2"));
+      // Each session folded its own leading token only.
+      expect(useRuntimeStore.getState().threads["ses_new"].blocks[1]).toMatchObject({ markdown: "a1" });
+      expect(useRuntimeStore.getState().threads["ses_other"].blocks[0]).toMatchObject({ markdown: "b1" });
+      vi.advanceTimersByTime(120);
+      expect(useRuntimeStore.getState().threads["ses_new"].blocks[1]).toMatchObject({ markdown: "a2" });
+      expect(useRuntimeStore.getState().threads["ses_other"].blocks[0]).toMatchObject({ markdown: "b2" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("an error flushes first, lands after the text, and no late timer refolds", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      mocks.fireEvent(text("a"));
+      mocks.fireEvent(text("ab"));
+      mocks.fireEvent({ type: "error", sessionId: "ses_new", message: "boom" });
+      const s = useRuntimeStore.getState();
+      expect(s.runningSessions["ses_new"]).toBeUndefined();
+      const blocks = s.threads["ses_new"].blocks;
+      expect(blocks.map((b) => b.kind)).toEqual(["user", "agent", "status-line"]);
+      expect(blocks[1]).toMatchObject({ markdown: "ab" });
+      // The turn ended: the pending window is dead, nothing refolds later.
+      vi.advanceTimersByTime(1000);
+      expect(useRuntimeStore.getState().threads["ses_new"].blocks).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("coalesces reasoning deltas the same way", async () => {
+    await useRuntimeStore.getState().sendPrompt("hi");
+    vi.useFakeTimers();
+    try {
+      const think = (t: string) => ({ type: "reasoning.updated", sessionId: "ses_new", partId: "r1", text: t });
+      mocks.fireEvent(think("thinking"));
+      expect(useRuntimeStore.getState().threads["ses_new"].blocks[1]).toMatchObject({ text: "thinking" });
+      mocks.fireEvent(think("thinking harder"));
+      expect(useRuntimeStore.getState().threads["ses_new"].blocks[1]).toMatchObject({ text: "thinking" });
+      vi.advanceTimersByTime(120);
+      const blocks = useRuntimeStore.getState().threads["ses_new"].blocks;
+      expect(blocks.map((b) => b.kind)).toEqual(["user", "reasoning"]);
+      expect(blocks[1]).toMatchObject({ text: "thinking harder" });
     } finally {
       vi.useRealTimers();
     }

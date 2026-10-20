@@ -66,7 +66,7 @@ import { samePath } from "./workspacePath";
 import { kernelReset } from "./kernel";
 import { moveScrollMemory } from "./scrollMemory";
 import { deriveArtifact, deriveArtifactPresentation } from "./artifacts";
-import { useLayoutStore } from "./layout";
+import { DEFAULT_PROJECT, useLayoutStore } from "./layout";
 import { provenanceInputsFromEvent, recordProvenance } from "./provenance";
 import { clearResolvedPaths } from "./artifactFile";
 import { imageAttachmentParts } from "./promptAttachments";
@@ -98,6 +98,12 @@ import {
   type StallSessionState,
   type StallVerdict,
 } from "./stallGuard";
+import {
+  STREAM_COALESCE_MS,
+  coalesceKey,
+  upsertCoalesced,
+  type CoalescedEntry,
+} from "./streamCoalesce";
 import { fallbackDefaultModel } from "@/components/settings/modelCatalog";
 import { listProvidersWithAvailability, ZEN_PROVIDER_ID } from "./zenModels";
 import { toast } from "@/lib/toast";
@@ -218,6 +224,14 @@ export interface Thread {
   blocks: ThreadBlock[];
   index: Record<string, number>;
   loaded: boolean;
+  /** Set when loading this session's history failed (openSession's catch).
+   *  `loaded` alone cannot carry that: a failure must still stop the loading
+   *  skeleton (the thread renders an error line instead), but it must NOT
+   *  satisfy the "already loaded" gate — before this flag every later open hit
+   *  that gate's early return and the session showed "Failed to load messages"
+   *  for the rest of the app run (#139). A successful reload replaces the
+   *  thread, which drops the flag. */
+  historyError?: string;
 }
 
 /** Outcome of installSkill: the skill is already installed, or an agent session
@@ -234,7 +248,11 @@ export interface PaneState {
   showRuns: boolean;
   /** The subagent panel: what this conversation's subagents are doing (#63). */
   showAgents: boolean;
-  showLubricant?: boolean;
+  /** The trajectory: every step of the conversation as one table. */
+  showTrajectory: boolean;
+  /** The lubricant R&D stage pane: this conversation's 润滑 workbench. A pane
+   *  like its siblings — one of them shows at a time. */
+  showLubricant: boolean;
 }
 
 /** Which runtime the current connection drives: the bundled OpenCode sidecar, or
@@ -359,10 +377,16 @@ interface RuntimeState {
   // focused session (`currentId ?? DRAFT_KEY`) — the single-pane behavior.
   setAgentMode: (mode: AgentMode, sessionId?: string) => void;
   openArtifact: (a: ArtifactBlock, sessionId?: string) => void;
+  /** Open this artifact, or close the inspector when it is the one already
+   *  showing — what a second click on the same file card means. Separate from
+   *  `openArtifact` because not every caller is a toggle: opening a notebook
+   *  the agent just created must show it, never hide it. */
+  toggleArtifact: (a: ArtifactBlock, sessionId?: string) => void;
   closeArtifact: (sessionId?: string) => void;
   setShowFiles: (show: boolean, sessionId?: string) => void;
   setShowRuns: (show: boolean, sessionId?: string) => void;
   setShowAgents: (show: boolean, sessionId?: string) => void;
+  setShowTrajectory: (show: boolean, sessionId?: string) => void;
   setShowLubricant: (show: boolean, sessionId?: string) => void;
   answerQuestion: (requestId: string, answers: string[][]) => Promise<void>;
   rejectQuestion: (requestId: string) => Promise<void>;
@@ -388,6 +412,9 @@ interface RuntimeState {
   /** Projects: named shared workspaces under `<base>/projects`. Sessions group
    *  under a project by `directory`; multiple sessions share the folder. */
   projects: ProjectInfo[];
+  /** The project list has been read at least once (it runs after the session
+   *  list), so "no project matches" can be trusted to mean Default. */
+  projectsLoaded: boolean;
   refreshProjects: () => Promise<void>;
   /** Create a project folder and move into it with a fresh pinned draft. */
   createProject: (name: string) => Promise<ProjectInfo | null>;
@@ -484,7 +511,9 @@ interface RuntimeState {
   openSession: (id: string) => Promise<void>;
   /** Load a session's history into its thread WITHOUT switching the foreground
    *  folder/stream — for background split panes so they show their conversation
-   *  on launch instead of a skeleton until focused. No-op if already loaded. */
+   *  on launch instead of a skeleton until focused. No-op once loaded fine; a
+   *  failed load (historyError) is retried, so this also backs the error line's
+   *  Retry action (#139). */
   loadHistory: (id: string) => Promise<void>;
   /** `draftKey` (a `draft:<leafId>` slot) is the per-pane draft this send may
    *  lazily create a session from — passed by tiled panes so each unbound pane
@@ -1462,6 +1491,58 @@ function clearLiveFolds(sessionId: string) {
   }
 }
 
+/* #157 stream coalescing: one streamed token used to fold the whole thread
+ * per event; with a long history the per-fold cost outruns the token interval
+ * on slow machines and the backlog wedges the main thread (scroll freezes).
+ * text/reasoning updates carry full snapshots, so per part only the latest
+ * matters — fold the first of a burst immediately (leading edge keeps the
+ * first-token paint instant), buffer the rest, and flush one batch per
+ * STREAM_COALESCE_MS per session. Any other event for the session flushes
+ * first, so block order and terminal events (idle/error) are unchanged. */
+const streamCoalesce = new Map<string, { timer: number | null; queue: CoalescedEntry[] }>();
+const streamCoalesceLast = new Map<string, number>();
+
+/** Fold every buffered delta for a session, in first-arrival order. */
+function flushStreamCoalesce(sessionId: string) {
+  const entry = streamCoalesce.get(sessionId);
+  if (!entry) return;
+  if (entry.timer !== null) window.clearTimeout(entry.timer);
+  streamCoalesce.delete(sessionId);
+  if (entry.queue.length === 0) return;
+  streamCoalesceLast.set(sessionId, Date.now());
+  for (const { event } of entry.queue) {
+    useRuntimeStore.setState((s) => {
+      const cur = s.threads[sessionId] ?? emptyThread();
+      const folded = foldEvent(
+        { blocks: cur.blocks, index: cur.index },
+        event,
+        { shellTurn: !!s.shellTurns[sessionId] },
+      );
+      // Buffered events are only ever text/reasoning deltas — never
+      // session.idle — so the running-lock branch of applyFold cannot apply.
+      return { threads: { ...s.threads, [sessionId]: { ...cur, ...folded, loaded: true } } };
+    });
+  }
+}
+
+/** Turn-end cleanup: no late timer may fold into a reloaded thread. */
+function clearStreamCoalesce(sessionId: string) {
+  const entry = streamCoalesce.get(sessionId);
+  if (entry && entry.timer !== null) window.clearTimeout(entry.timer);
+  streamCoalesce.delete(sessionId);
+  streamCoalesceLast.delete(sessionId);
+}
+
+/** Test-only: drop every coalescing window — the maps are module-level, and a
+ *  window left by one test ("folded just now") would swallow the leading edge
+ *  of the next test's first token. */
+export function __resetStreamCoalesceForTests() {
+  for (const entry of streamCoalesce.values())
+    if (entry.timer !== null) window.clearTimeout(entry.timer);
+  streamCoalesce.clear();
+  streamCoalesceLast.clear();
+}
+
 /** Resolve a (possibly nested) subagent session to its top-level session —
  *  a subagent's question/permission belongs to the conversation the user sees. */
 /** Turn exactly one right-pane view on (and every other one off) for a pane.
@@ -1470,7 +1551,7 @@ function clearLiveFolds(sessionId: string) {
 function showOnly(
   s: { panes: Record<string, PaneState>; currentId: string | null },
   sessionId: string | undefined,
-  view: "showFiles" | "showRuns" | "showAgents" | "showLubricant",
+  view: "showFiles" | "showRuns" | "showAgents" | "showTrajectory" | "showLubricant",
   show: boolean,
 ): { panes: Record<string, PaneState> } {
   const key = sessionId ?? s.currentId ?? DRAFT_KEY;
@@ -1480,6 +1561,7 @@ function showOnly(
     showFiles: false,
     showRuns: false,
     showAgents: false,
+    showTrajectory: false,
     showLubricant: false,
   };
   const next: PaneState = show
@@ -1489,6 +1571,7 @@ function showOnly(
         showFiles: p?.showFiles ?? false,
         showRuns: p?.showRuns ?? false,
         showAgents: p?.showAgents ?? false,
+        showTrajectory: p?.showTrajectory ?? false,
         showLubricant: p?.showLubricant ?? false,
         [view]: false,
       };
@@ -1772,8 +1855,17 @@ async function performTurn(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     void logDebug(`turn FAILED: ${msg}`);
-    // The failure belongs next to the message that caused it.
-    const key = target ?? draftKey ?? get().currentId ?? DRAFT_KEY;
+    // The failure belongs next to the message that caused it. This must be the
+    // slot the turn actually lives in NOW, which is `lockKey`: it starts as the
+    // echo key and is re-pointed to the real session id when a draft's first
+    // send grafts the draft slot onto its new session (see above). Re-deriving
+    // `target ?? draftKey ?? currentId` here re-reads the STALE draft key after
+    // that graft deleted `threads[draftKey]` — so in a split layout, a first
+    // send that fails (bad model, provider error) wrote its "Send failed:" line
+    // into a slot no pane displays, and the user got nothing but a cleared
+    // composer. The lock cleanup in `finally` already tracks the current key for
+    // exactly this reason; the error must follow the same pointer.
+    const key = lockKey;
     set((s) => {
       const cur = s.threads[key] ?? emptyThread();
       return {
@@ -1788,6 +1880,8 @@ async function performTurn(
         },
       };
     });
+    // The return value keeps its original meaning: null when the session was
+    // never created (the caller treats that as "nothing to switch to").
     return target ?? get().currentId;
   } finally {
     // Clear the lock under its CURRENT key (`lockKey` follows the draft→session
@@ -2317,19 +2411,29 @@ function modelForSession(state: RuntimeState, key: string): { model: string | nu
   return { model, variant };
 }
 
-/** Context window of the model a session's next turn will actually use, or 0
- *  when nothing knows it.
+/** Which model string is in force for a pane, resolving a configured agent's
+ *  own model rather than collapsing it to null.
  *
  *  Deliberately NOT `modelForSession` — that returns `model: null` when a
  *  configured agent owns the model, which is the right thing to SEND and the
- *  wrong thing to look a context window up by. Here the question is only which
- *  model string is in force, so the agent's own setting is resolved instead of
- *  collapsed to null. 0 means unknown (see `ProviderModelInfo.contextLimit`);
+ *  wrong thing to ask questions ABOUT the model with. Callers here are naming
+ *  the model to the user or looking its window up, never sending it.
+ *
+ *  `key` is null on a pane with no session yet, where the global default is the
+ *  honest answer: that is what its first turn will use. */
+function modelInForce(state: RuntimeState, key: string | null): string | null {
+  if (!key) return state.defaultModel;
+  const agent = agentForTurn(state, key);
+  return (
+    state.sessionModels[key] ?? (agent ? state.agentModels[agent] : undefined) ?? state.defaultModel
+  );
+}
+
+/** Context window of the model a session's next turn will actually use, or 0
+ *  when nothing knows it. 0 means unknown (see `ProviderModelInfo.contextLimit`);
  *  callers show tokens without a percentage rather than inventing a limit. */
 export function contextLimitFor(state: RuntimeState, key: string): number {
-  const agent = agentForTurn(state, key);
-  const model =
-    state.sessionModels[key] ?? (agent ? state.agentModels[agent] : undefined) ?? state.defaultModel;
+  const model = modelInForce(state, key);
   if (!model) return 0;
   const i = model.indexOf("/");
   if (i <= 0) return 0;
@@ -2501,6 +2605,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   setAgentMode: (mode, sessionId) =>
     set((s) => ({ sessionAgents: { ...s.sessionAgents, [sessionId ?? s.currentId ?? DRAFT_KEY]: mode } })),
   projects: [],
+  projectsLoaded: false,
   workspace: null,
   webWorkspace: null,
   webReadOnly: false,
@@ -2527,10 +2632,24 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           showFiles: false,
           showRuns: false,
           showAgents: false,
+          showTrajectory: false,
           showLubricant: false,
         },
       },
     })),
+  toggleArtifact: (artifact, sessionId) => {
+    const s = get();
+    const key = sessionId ?? s.currentId ?? DRAFT_KEY;
+    // Same file already in the inspector ⇒ the click is asking to put it away.
+    // Keyed on `path`, which is the file's identity here: `filename` repeats
+    // across directories, and the block object itself is rebuilt on every
+    // thread re-render so it can never be compared by reference.
+    if (s.panes[key]?.artifact?.path === artifact.path) {
+      s.closeArtifact(sessionId);
+      return;
+    }
+    s.openArtifact(artifact, sessionId);
+  },
   closeArtifact: (sessionId) =>
     set((s) => {
       const key = sessionId ?? s.currentId ?? DRAFT_KEY;
@@ -2543,6 +2662,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
             showFiles: p?.showFiles ?? false,
             showRuns: p?.showRuns ?? false,
             showAgents: p?.showAgents ?? false,
+            showTrajectory: p?.showTrajectory ?? false,
             showLubricant: p?.showLubricant ?? false,
           },
         },
@@ -2552,8 +2672,8 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   setShowFiles: (show, sessionId) => set((s) => showOnly(s, sessionId, "showFiles", show)),
   setShowRuns: (show, sessionId) => set((s) => showOnly(s, sessionId, "showRuns", show)),
   setShowAgents: (show, sessionId) => set((s) => showOnly(s, sessionId, "showAgents", show)),
+  setShowTrajectory: (show, sessionId) => set((s) => showOnly(s, sessionId, "showTrajectory", show)),
   setShowLubricant: (show, sessionId) => set((s) => showOnly(s, sessionId, "showLubricant", show)),
-
   answerQuestion: async (requestId, answers) => {
     const q = get().questions.find((x) => x.requestId === requestId);
     if (!q) return;
@@ -3018,6 +3138,46 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           set((s) => ({ runningSessions: { ...s.runningSessions, [active]: true } }));
         }
       }
+      // #157: coalesce streamed text/reasoning deltas. Everything above (stall
+      // guard, first-token latency, re-lock) still sees the raw stream; only
+      // the fold below is rate-capped. Leading edge folds immediately; a burst
+      // inside the window buffers (latest per part wins) and flushes trailing.
+      const eventSid = "sessionId" in event ? event.sessionId : undefined;
+      if (eventSid) {
+        const key = coalesceKey(event);
+        if (!key) {
+          // Any other event supersedes the pending deltas: fold them first so
+          // block order and causal order match the raw stream exactly.
+          flushStreamCoalesce(eventSid);
+        } else {
+          const now = Date.now();
+          const last = streamCoalesceLast.get(eventSid) ?? 0;
+          const pending = streamCoalesce.get(eventSid);
+          if (!pending && now - last >= STREAM_COALESCE_MS) {
+            streamCoalesceLast.set(eventSid, now);
+            // Leading edge: fall through to the normal path and fold now.
+          } else {
+            const entry = pending ?? { timer: null, queue: [] };
+            upsertCoalesced(entry.queue, key, event as CoalescedEntry["event"]);
+            if (entry.timer === null)
+              entry.timer = window.setTimeout(
+                () => flushStreamCoalesce(eventSid),
+                Math.max(1, STREAM_COALESCE_MS - (now - last)),
+              );
+            streamCoalesce.set(eventSid, entry);
+            // A retried attempt's first token still lifts the retry banner on
+            // time — the buffered path would otherwise skip the clear below.
+            if (get().retryNotices[eventSid]) {
+              set((s) => {
+                const retryNotices = { ...s.retryNotices };
+                delete retryNotices[eventSid];
+                return { retryNotices };
+              });
+            }
+            return;
+          }
+        }
+      }
       if (event.type === "error") {
         // A session-scoped error belongs IN the conversation (a red status
         // line where the user is looking), and it ends that session's turn so
@@ -3026,6 +3186,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
         // After a user interrupt the abort's own "aborted" error is expected —
         // the thread already says "Interrupted"; don't add a second red line.
         if (sid) clearLiveFolds(sid);
+        if (sid) clearStreamCoalesce(sid);
         if (sid && backgroundReviewParent) {
           finishAutoReview(set, get, sid, false);
           set((s) => {
@@ -3212,6 +3373,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
         });
       }
       if (event.type === "session.idle") clearLiveFolds(sid);
+      if (event.type === "session.idle") clearStreamCoalesce(sid);
       // A manual compaction finished: the "Context compacted" seam just folded
       // in, so subsequent turns already run on the bounded context. Clear the
       // composer spinner and confirm. Idle also clears, as a safety net: a
@@ -3812,7 +3974,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   refreshProjects: async () => {
     if (!isTauri && !isGatewayWeb) return;
     try {
-      set({ projects: await listProjects() });
+      set({ projects: await listProjects(), projectsLoaded: true });
     } catch {
       /* ignore transient scan failures */
     }
@@ -3856,6 +4018,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
   deleteProject: async (id) => {
     try {
       await deleteProjectCmd(id);
+      useLayoutStore.getState().releaseProject(id);
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
     }
@@ -3991,7 +4154,15 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
         if (seq !== openSessionSeq) return;
         await kernelReset().catch(() => {});
         if (seq !== openSessionSeq) return;
-        await get().connectRetry();
+        const reconnected = await get().connectRetry();
+        if (seq !== openSessionSeq) return;
+        // A reconnect window that ran out of patience means the runtime is not
+        // there. Nothing below — pending-request recovery, the history fetch —
+        // can work against a dead sidecar, so stop and leave the session
+        // unloaded: the next successful connect re-runs this open. (Fetching
+        // anyway used to plant a failed "history load" error line that the
+        // loaded-gate then cached for the whole run; #139.)
+        if (!reconnected) return;
       } finally {
         // Only the still-current open clears `switching`; a superseded one must
         // not flip it off while the winner is mid-reconnect.
@@ -4025,7 +4196,34 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
     })();
     // A session reopened while "Working…" may have finished behind our back.
     void get().reconcileRunning();
-    if (get().threads[id]?.loaded) return;
+    // A FAILED load must not count as "already loaded": the session would show
+    // its error line for the rest of the run, because every later open hit this
+    // early return and never refetched (#139). Only a load that succeeded (or
+    // one still pending) closes the door — `historyError` reopens it.
+    if (get().threads[id]?.loaded && !get().threads[id]?.historyError) return;
+    // Never fetch history from a runtime that is not serving yet. A restored
+    // session can reach this point while the sidecar is still booting — the
+    // event stream to the shared instance is up while the session's own folder
+    // instance is still initializing — and a fetch inside that window fails at
+    // the network level (WebKit surfaces it as "Load failed"). Wait for ready:
+    // join an in-flight retry window (launch, a folder or model switch) rather
+    // than starting a dueling loop that tears down its event stream; if the
+    // window runs out, stay out — the offline screen is showing and the next
+    // successful connect re-runs this open.
+    if (get().status !== "ready") {
+      let ready: boolean;
+      if (connectRetryDepth > 0) {
+        while (connectRetryDepth > 0) {
+          await sleep(100);
+          const st = get().status;
+          if (st === "ready" || st === "error") break;
+        }
+        ready = get().status === "ready";
+      } else {
+        ready = await get().connectRetry();
+      }
+      if (!ready || seq !== openSessionSeq || get().currentId !== id) return;
+    }
     try {
       const messages = await client.getMessages(id);
       // The command templates are what turn a stored expansion back into the
@@ -4059,13 +4257,26 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       const msg = err instanceof Error ? err.message : String(err);
       if (seq !== openSessionSeq || get().currentId !== id) return;
       set((s) => ({
-        error: msg,
         threads: {
           ...s.threads,
           [id]: {
             ...emptyThread(),
             loaded: true,
-            blocks: [{ kind: "status-line", text: `Failed to load messages: ${msg}`, tone: "error" }],
+            historyError: msg,
+            // The thread renders a retryable error line: `historyError` keeps
+            // the next open/Retry from being swallowed by the loaded-gate, so
+            // this failure is the end of ONE attempt, not of the session. The
+            // error is deliberately NOT mirrored into the global `error` (no
+            // stale banner): it is a session-level problem with a session-level
+            // way out (#139).
+            blocks: [
+              {
+                kind: "status-line",
+                text: `Failed to load messages: ${msg}`,
+                tone: "error",
+                retry: true,
+              },
+            ],
           },
         },
       }));
@@ -4074,7 +4285,13 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
 
   loadHistory: async (id) => {
     const c = client;
-    if (!c || get().threads[id]?.loaded) return;
+    if (!c) return;
+    const cur = get().threads[id];
+    // Loaded-and-fine threads are done; everything else — never tried, or tried
+    // and failed (historyError) — is fetched. The failure case is what makes a
+    // background pane self-heal on the next pass, and what powers the error
+    // line's Retry action (#139).
+    if (cur?.loaded && !cur?.historyError) return;
     try {
       // getMessages is session-scoped (server routes by the session's folder),
       // so any connected client works — no folder switch, unlike openSession.
@@ -4082,7 +4299,12 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       // Same reason as openSession: without the command templates a stored
       // slash-command expansion renders raw.
       if (catalogInFlight && get().commands.length === 0) await catalogInFlight;
-      if (get().threads[id]?.loaded) return; // a live fold beat us to it
+      // Only skip when a REAL load landed meanwhile. A live fold sets `loaded`
+      // but cannot clear a prior `historyError`, so it must not swallow our
+      // reload — the fold's partial content would leave the stale error line
+      // and marker in place.
+      const latest = get().threads[id];
+      if (latest?.loaded && !latest?.historyError) return;
       set((s) => ({
         threads: { ...s.threads, [id]: { ...historyToThread(messages, s.commands), loaded: true } },
         sessionAgents: { ...s.sessionAgents, [id]: lastAgentMode(messages) },
@@ -4093,7 +4315,10 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           : {}),
       }));
     } catch {
-      /* best-effort; the pane keeps its skeleton and loads on focus */
+      /* best-effort: a never-loaded pane keeps its skeleton; a thread that had
+       * already failed keeps its retryable error line. Either way a later
+       * load — focus via openSession, another pass here, or the Retry button —
+       * tries again. */
     }
   },
 
@@ -4121,8 +4346,16 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       // echo and the spinner must appear on click, not after a multi-MB read.
       (sid) =>
         withRetry(async () => {
-          const files = await imageAttachmentParts(attachments ?? []);
-          await client!.sendPrompt(sid, text, agent, model, variant, files);
+          const { parts, dropped } = await imageAttachmentParts(attachments ?? []);
+          // A picture that could not be read is NOT sent, and the prompt still
+          // names the file — so without this the model answers about a figure
+          // it never saw, and nothing anywhere says so.
+          if (dropped.length > 0) {
+            toast.error(
+              i18n.t("session:composer.error.imageNotSent", { names: dropped.join(", ") }),
+            );
+          }
+          await client!.sendPrompt(sid, text, agent, model, variant, parts);
         }),
       // An ACP turn is a SYNC turn: `session/prompt` is one JSON-RPC request that
       // answers when the turn is over, where OpenCode's `prompt_async` answers as
@@ -4471,7 +4704,9 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
       // Its OWN Screen with its own pane. Binding the install onto whatever pane
       // happened to be focused took over a conversation the user was in the
       // middle of — an install is a new piece of work, not a hijack.
-      useLayoutStore.getState().openInNewGroup(id, title);
+      // Filed under Default, like the session itself: an install belongs to
+      // no project.
+      useLayoutStore.getState().openInNewGroup(id, DEFAULT_PROJECT);
       // The turn goes through the normal send path (echo, running lock, error
       // line, stream folding) — hand-rolling the POST left the pane with no
       // message, no spinner and no way to tell a failure from a slow model.

@@ -18,6 +18,9 @@ import { draftKeyFor } from "@/lib/runtime";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SessionView } from "./SessionView";
 import { PresentedArtifactPane } from "./PresentedArtifactPane";
+import { ContentPane } from "./ContentPane";
+import { PaneScope } from "./PaneScope";
+import { isTerminalUsed } from "@/lib/terminalSessions";
 
 /**
  * Ghostty-style recursive tiling renderer for ONE screen. A split becomes a
@@ -59,6 +62,9 @@ export const PaneTree = memo(function PaneTree({
   const allLeaves = leaves(tree);
   // A lone pane needs no focus ring / dim (nothing to distinguish it from).
   const solo = allLeaves.length === 1;
+  // Tiled panes are narrow, so their text starts smaller unless the user set a
+  // zoom: one split takes a little off, a second split takes more.
+  const defaultZoom = solo ? 1 : allLeaves.length === 2 ? 0.9 : 0.75;
 
   if (zoomedLeafId) {
     const zoomed = allLeaves.find((l) => l.id === zoomedLeafId);
@@ -78,7 +84,14 @@ export const PaneTree = memo(function PaneTree({
   }
 
   return (
-    <Node node={tree} focusedLeafId={focusedLeafId ?? ""} active={active} laidOut={laidOut} solo={solo} />
+    <Node
+      node={tree}
+      focusedLeafId={focusedLeafId ?? ""}
+      active={active}
+      laidOut={laidOut}
+      solo={solo}
+      defaultZoom={defaultZoom}
+    />
   );
 });
 
@@ -88,12 +101,14 @@ function Node({
   active,
   laidOut,
   solo,
+  defaultZoom,
 }: {
   node: PaneNode;
   focusedLeafId: string;
   active: boolean;
   laidOut: boolean;
   solo: boolean;
+  defaultZoom: number;
 }) {
   if (node.kind === "leaf") {
     return (
@@ -104,8 +119,7 @@ function Node({
         // the outgoing one's composer text (#91).
         key={node.id}
         leaf={node}
-        // Tiled panes are narrow → default to 75% unless the user set a zoom.
-        zoom={node.zoom ?? (solo ? 1 : 0.75)}
+        zoom={node.zoom ?? defaultZoom}
         focused={node.id === focusedLeafId}
         active={active}
         laidOut={laidOut}
@@ -113,7 +127,15 @@ function Node({
       />
     );
   }
-  return <Split node={node} focusedLeafId={focusedLeafId} active={active} laidOut={laidOut} />;
+  return (
+    <Split
+      node={node}
+      focusedLeafId={focusedLeafId}
+      active={active}
+      laidOut={laidOut}
+      defaultZoom={defaultZoom}
+    />
+  );
 }
 
 /** Cumulative boundary after child `i` (fraction 0..1). */
@@ -137,11 +159,13 @@ function Split({
   focusedLeafId,
   active,
   laidOut,
+  defaultZoom,
 }: {
   node: PaneSplit;
   focusedLeafId: string;
   active: boolean;
   laidOut: boolean;
+  defaultZoom: number;
 }) {
   const setSplitSizes = useLayoutStore((s) => s.setSplitSizes);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,6 +204,7 @@ function Split({
             active={active}
             laidOut={laidOut}
             solo={false}
+            defaultZoom={defaultZoom}
           />
         </FragmentChild>
       ))}
@@ -258,7 +283,21 @@ function Divider({
  * A fresh split nobody used is an empty slot and closes on the click.
  */
 function paneNeedsConfirm(leaf: PaneLeaf): boolean {
-  return !!leaf.sessionId || !!leaf.artifact || hasParkedDraft(draftKeyFor(leaf.id));
+  return !!leaf.content || !!leaf.sessionId || !!leaf.artifact || hasParkedDraft(draftKeyFor(leaf.id));
+}
+
+/**
+ * The same question for a pane holding a surface rather than a conversation.
+ *
+ * Only a terminal has anything to lose: closing it stops a shell and whatever
+ * it is running, and none of that is recoverable. A file tree holds no state,
+ * and an editor and a notebook have already written themselves to disk — so
+ * those close on the click, as they did.
+ *
+ * A terminal opened a moment ago and never typed into is an empty slot too.
+ */
+function contentNeedsConfirm(leaf: PaneLeaf): boolean {
+  return leaf.content?.kind === "terminal" && isTerminalUsed(leaf.id);
 }
 
 function Leaf({
@@ -286,13 +325,19 @@ function Leaf({
   const live = focused && active;
   const { t } = useTranslation("session");
   const [confirmClose, setConfirmClose] = useState(false);
+  const terminalClosing = leaf.content?.kind === "terminal";
   const focusLeaf = useLayoutStore((s) => s.focusLeaf);
   const closePane = useLayoutStore((s) => s.closePane);
   return (
+    // The pane publishes its own element (`PaneScope`) so a question about this
+    // pane's work can cover exactly this pane — see `ConfirmDialog`'s `scope`.
+    <PaneScope>
+    {(scopeRef) => (
     // `data-leaf-id` lets the drag controller hit-test this pane under the
     // pointer. Focus follows the click, terminal-style: pointer-down capture
     // wins even over a button inside, so tapping anywhere focuses it first.
     <div
+      ref={scopeRef}
       data-leaf-id={leafId}
       onPointerDownCapture={() => {
         if (!focused) focusLeaf(leafId);
@@ -306,7 +351,16 @@ function Leaf({
     >
       {/* GroupTabs owns the window titlebar on desktop, so panes never do.
           The sole pane can't be closed (nothing to promote) → no ✕. */}
-      {leaf.artifact && leaf.sessionId ? (
+      {leaf.content ? (
+        <ContentPane
+          content={leaf.content}
+          leafId={leafId}
+          solo={solo}
+          onClose={() =>
+            contentNeedsConfirm(leaf) ? setConfirmClose(true) : closePane(leafId)
+          }
+        />
+      ) : leaf.artifact && leaf.sessionId ? (
         <PresentedArtifactPane
           artifact={leaf.artifact}
           leafId={leafId}
@@ -336,9 +390,13 @@ function Leaf({
       )}
       {confirmClose && (
         <ConfirmDialog
-          title={t("group.confirmClose.title")}
-          body={t("group.confirmClose.body")}
-          confirmLabel={t("group.confirmClose.action")}
+          // A terminal is not "a panel": what the reader loses is the shell and
+          // whatever it is running, so the question says that instead.
+          title={t(terminalClosing ? "terminal.confirmClose.title" : "group.confirmClose.title")}
+          body={t(terminalClosing ? "terminal.confirmClose.body" : "group.confirmClose.body")}
+          confirmLabel={t(
+            terminalClosing ? "terminal.confirmClose.action" : "group.confirmClose.action",
+          )}
           onConfirm={() => {
             setConfirmClose(false);
             closePane(leafId);
@@ -350,6 +408,8 @@ function Leaf({
           on every pointer move of a drag, which a hidden Screen must not pay. */}
       {active && <DropOverlay leafId={leafId} />}
     </div>
+    )}
+    </PaneScope>
   );
 }
 

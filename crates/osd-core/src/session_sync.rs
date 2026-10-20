@@ -353,9 +353,16 @@ mod tests {
 
         let mirror = root.join("mirror");
         std::fs::create_dir_all(&mirror).unwrap();
+        // The mirror file is a real `opencode export`'s JSON. Building the
+        // fixture by hand with `format!` put a Windows path (backslashes) into
+        // the JSON, where `\U`, `\b`, `\s`… are illegal escapes — so the export
+        // parsed as nothing and every case silently fell back to the base
+        // folder. Build it with serde instead, exactly like the runtime does,
+        // and the escaping is right on every platform.
         let write = |name: &str, dir: &str| {
             let f = mirror.join(name);
-            std::fs::write(&f, format!(r#"{{"info":{{"directory":"{dir}"}},"messages":[]}}"#)).unwrap();
+            let text = serde_json::json!({ "info": { "directory": dir }, "messages": [] }).to_string();
+            std::fs::write(&f, text).unwrap();
             f
         };
 
@@ -415,7 +422,7 @@ mod tests {
         // fail. Asserted without the bundled binary on purpose: gating on
         // `runtime_cli` would make this pass vacuously wherever the sidecar has
         // not been fetched, which is most CI jobs.
-        let Ok(env) = crate::env::Env::headless(None, "test".into()) else {
+        let Ok(env) = crate::env::Env::headless(None, None, "test".into()) else {
             return;
         };
         let root = runtime_root(&env).unwrap();
@@ -438,7 +445,7 @@ mod tests {
         // The id becomes a file name inside the chosen folder, so a traversal
         // here would reach outside it. Refused before the path is built.
         let dir = std::env::temp_dir();
-        let env = crate::env::Env::headless(None, "test".into());
+        let env = crate::env::Env::headless(None, None, "test".into());
         if let Ok(env) = env {
             for bad in ["../../etc/passwd", "ses_a/../../x", "not-an-id"] {
                 assert!(import_session(&env, &dir, bad).is_err(), "should refuse {bad}");

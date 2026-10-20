@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -26,28 +26,46 @@ import {
 } from "@/lib/runtime";
 import { useLayoutStore } from "@/lib/layout";
 import { startPaneDrag } from "@/lib/dragPane";
+import { allowsNativeMenu } from "@/lib/nativeMenu";
+import { FindBar } from "@/components/ui/FindBar";
 import { isGatewayWeb } from "@/lib/webMode";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { queryRuns } from "@/lib/runs";
-import { useOverlayTitlebar, useUiStore } from "@/lib/store";
+import { CONTENT_FONT_DEFAULT, useOverlayTitlebar, useUiStore } from "@/lib/store";
 import { overlayTitlebarStyle } from "@/lib/titlebar";
 import { useCompactWidth } from "@/lib/useCompactWidth";
 import { fileInspectorFromBlock } from "@/lib/artifacts";
 import { useChatScroll } from "@/lib/scrollMemory";
 import { useWheelChain } from "@/lib/wheelChain";
 import { BlockList, type BlockHandlers } from "@/components/thread/BlockList";
+import { TurnNavigator } from "@/components/thread/TurnNavigator";
+import { TrajectoryPane } from "@/components/thread/TrajectoryPane";
+import { IconBranchOutlineRegular } from "@/components/icons/dsh";
 import { SubagentPane } from "@/components/thread/SubagentPane";
 import { SelectionActions } from "@/components/thread/SelectionActions";
 import { Elapsed } from "@/components/thread/ToolGroup";
+import { LiveLine, latestLine } from "@/components/thread/LiveLine";
 import { Composer } from "@/components/thread/Composer";
 import { GoalPill } from "@/components/thread/GoalPill";
 import { GOAL_RESUME_NUDGE } from "@/lib/goalPrompts";
 import { baseName } from "@/components/thread/WorkspaceChip";
 import { WorkflowStarters } from "@/components/thread/WorkflowStarters";
 import { SplitMenu } from "@/components/session/SplitMenu";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+} from "@/components/ui/ContextMenu";
+import { InlineName } from "@/components/ui/InlineName";
 import { InteractionPrompt } from "@/components/thread/InteractionPrompt";
 import { InspectorShell } from "@/components/inspector/InspectorShell";
-import { MaximizePaneButton, RightPane } from "@/components/inspector/RightPane";
+import {
+  HOVER_REVEAL,
+  MaximizePaneButton,
+  PaneHeaderClearsLights,
+  RightPane,
+} from "@/components/inspector/RightPane";
 import { SessionFilesPane } from "@/app/routes/FilesPage";
 import { RunsPane } from "@/app/routes/RunsPage";
 import { LubricantStagePane } from "@/components/lubricant/LubricantStagePane";
@@ -79,6 +97,9 @@ function findLastRunningTool(blocks?: ThreadBlocks): ToolCallBlock | undefined {
  */
 /** Header width below which the tool buttons show icons without their labels. */
 const HEADER_LABEL_MIN_PX = 620;
+/** Room (content px, above the composer) the welcome needs to show its four
+ *  starter cards; a shorter pane — a stacked split — shows only the invitation. */
+const STARTER_CARDS_MIN_PX = 480;
 
 /** Sessions already known to have (or not have) runs. The Runs toggle used to
  *  appear one async query after mount, and every header control that appears
@@ -176,17 +197,12 @@ export function SessionView({
   // Selecting the scalar lets Zustand's identity check bail out instead (#34).
   const sending = useRuntimeStore((s) => !!s.sendingSessions[key]);
   const running = useRuntimeStore((s) => !!(eid && s.runningSessions[eid]));
-  const backgroundReview = useRuntimeStore((s) =>
-    eid ? s.backgroundReviews[eid] : undefined,
-  );
   // A scalar again (see above): the providers array is replaced wholesale on
   // every catalog refresh, so selecting the resolved number keeps this pane out
   // of those repaints.
   const contextLimit = useRuntimeStore((s) => contextLimitFor(s, key));
   const compacting = useRuntimeStore((s) => !!s.compactingSessions[key]);
   const compactContext = useRuntimeStore((s) => s.compactContext);
-  const step = useRuntimeStore((s) => (eid ? (s.stepCounts[eid] ?? 0) : 0));
-  const retryNotice = useRuntimeStore((s) => (eid ? s.retryNotices[eid] : undefined));
   const serverUrl = useRuntimeStore((s) => s.serverUrl);
   const sessions = useRuntimeStore((s) => s.sessions);
   const draftWorkspaces = useRuntimeStore((s) => s.draftWorkspaces);
@@ -201,21 +217,26 @@ export function SessionView({
   const sendPrompt = useRuntimeStore((s) => s.sendPrompt);
   const runShell = useRuntimeStore((s) => s.runShell);
   const runCommand = useRuntimeStore((s) => s.runCommand);
-  const openArtifact = useRuntimeStore((s) => s.openArtifact);
+  const toggleArtifact = useRuntimeStore((s) => s.toggleArtifact);
   const closeArtifact = useRuntimeStore((s) => s.closeArtifact);
   const setShowFiles = useRuntimeStore((s) => s.setShowFiles);
   const setShowRuns = useRuntimeStore((s) => s.setShowRuns);
   const setShowAgents = useRuntimeStore((s) => s.setShowAgents);
   const setShowLubricant = useRuntimeStore((s) => s.setShowLubricant);
+  const setShowTrajectory = useRuntimeStore((s) => s.setShowTrajectory);
   const answerQuestion = useRuntimeStore((s) => s.answerQuestion);
   const rejectQuestion = useRuntimeStore((s) => s.rejectQuestion);
   const replyPermission = useRuntimeStore((s) => s.replyPermission);
   const interrupt = useRuntimeStore((s) => s.interrupt);
-  const cancelAutoReview = useRuntimeStore((s) => s.cancelAutoReview);
   const stallAction = useRuntimeStore((s) => s.stallAction);
+  const loadHistory = useRuntimeStore((s) => s.loadHistory);
   const editMessage = useRuntimeStore((s) => s.editMessage);
   const revertMessage = useRuntimeStore((s) => s.revertMessage);
   const setComposerDraft = useUiStore((s) => s.setComposerDraft);
+  // Settings → Appearance → Font size scales the conversation only (DSH), on
+  // top of this pane's own zoom; the composer keeps the pane zoom alone.
+  const contentFontSize = useUiStore((s) => s.contentFontSize);
+  const contentZoom = zoom * (contentFontSize / CONTENT_FONT_DEFAULT);
   const approvalMode = useRuntimeStore((s) => s.approvalMode);
   const setApprovalMode = useRuntimeStore((s) => s.setApprovalMode);
   const agents = useRuntimeStore((s) => s.agents);
@@ -223,7 +244,11 @@ export function SessionView({
   const setAgentMode = useRuntimeStore((s) => s.setAgentMode);
   const bindSession = useLayoutStore((s) => s.bindSession);
   const aimDraft = useRuntimeStore((s) => s.aimDraft);
+  const renameSession = useRuntimeStore((s) => s.renameSession);
+  const [finding, setFinding] = useState(false);
   const dockSession = useLayoutStore((s) => s.dockSession);
+  const openContentPane = useLayoutStore((s) => s.openContentPane);
+  const [renaming, setRenaming] = useState(false);
   const setLeafZoom = useLayoutStore((s) => s.setLeafZoom);
   // Any real interaction with a tentative (preview) screen pins it (#3).
   const pinEphemeral = useLayoutStore((s) => s.pinEphemeral);
@@ -295,7 +320,11 @@ export function SessionView({
     () => ({
       onArtifactOpen: (a) => {
         pinEphemeral();
-        openArtifact(a, sid ?? undefined);
+        // A toggle, not an open: clicking the card of the file already in the
+        // inspector puts it away. The card is the only handle on that pane, so
+        // without this the side preview could be opened from the thread and
+        // only closed by aiming at the inspector's own ✕.
+        toggleArtifact(a, sid ?? undefined);
       },
       onFigureComment: (a, title) =>
         void sendPrompt(
@@ -320,9 +349,16 @@ export function SessionView({
           stallAction(sid, stallKey, "keep-waiting");
         }
       },
+      // Reload a session whose history failed to load (#139). loadHistory
+      // refetches without moving the foreground folder/stream, so Retry never
+      // yanks the focus out of the pane the user is reading.
+      onRetryHistory: () => {
+        if (!eid) return;
+        void loadHistory(eid);
+      },
     }),
     [
-      openArtifact,
+      toggleArtifact,
       sendPrompt,
       editMessage,
       revertMessage,
@@ -332,28 +368,25 @@ export function SessionView({
       setShowAgents,
       interrupt,
       stallAction,
+      eid,
+      loadHistory,
     ],
   );
   const onEvaluate = (expr: string) =>
     void sendPrompt(`Evaluate in the notebook kernel:\n\`\`\`python\n${expr}\n\`\`\``, sid ?? undefined);
 
-  // This session's thread, selected on its own so only its own folds repaint.
-  const thread = useRuntimeStore((s) => s.threads[key]);
-  const historyLoading = connected && !!eid && !thread?.loaded;
+  // This session's thread is deliberately NOT subscribed here as an object:
+  // streamed deltas give it a new identity many times per second, which would
+  // repaint ALL the chrome (header, composer, menus — and every t() lookup
+  // inside them) per delta (#157). The chrome only needs these rarely-changing
+  // facts, so the selectors return primitives whose identity survives a delta;
+  // ThreadColumn below subscribes to the full thread and owns the per-delta
+  // repaints.
+  const threadLoaded = useRuntimeStore((s) => !!s.threads[key]?.loaded);
+  const blocksCount = useRuntimeStore((s) => s.threads[key]?.blocks.length ?? 0);
+  const historyLoading = connected && !!eid && !threadLoaded;
   const title = sessions.find((s) => s.id === eid)?.title;
-  const isEmpty = !thread || thread.blocks.length === 0;
   const working = sending || running;
-  // Scan backwards in place: copying + reversing the whole block list ran on
-  // every render of a live pane, allocating a fresh array per streamed token.
-  const currentTool = working ? findLastRunningTool(thread?.blocks) : undefined;
-  // The turn's own clock, anchored when this pane first sees the turn running.
-  // A reload mid-turn loses that boundary; counting from here is the honest
-  // answer, and matches what the row is for — "it is still going", not billing.
-  const [turnStart, setTurnStart] = useState<number | null>(null);
-  if (working !== (turnStart !== null)) setTurnStart(working ? Date.now() : null);
-  const lastBlock = thread?.blocks[thread.blocks.length - 1];
-  const liveReasoningIndex =
-    running && thread && lastBlock?.kind === "reasoning" ? thread.blocks.length - 1 : undefined;
 
   // Esc interrupts the running turn — but only in the FOCUSED pane, so a split
   // layout doesn't broadcast one Esc to every running session.
@@ -379,15 +412,6 @@ export function SessionView({
       ? (sessions.find((s) => s.id === activeRequest.sessionId)?.title ?? t("live.subagentFallback"))
       : undefined;
 
-  // Derived from the block list, so recompute only when the blocks change — not
-  // on every unrelated re-render of a live pane.
-  const uniqueNotebooks = useMemo(() => {
-    const byPath = new Map<string, Extract<ThreadBlocks[number], { kind: "artifact" }>>();
-    for (const b of thread?.blocks ?? [])
-      if (b.kind === "artifact" && b.filename.endsWith(".ipynb")) byPath.set(b.path, b);
-    return [...byPath.values()];
-  }, [thread?.blocks]);
-
   // An ACP agent is driving instead of the bundled OpenCode runtime (#14).
   const acp = useRuntimeStore((s) => s.runtimeKind) === "acp";
   const acpConfigOptions = useRuntimeStore((s) => s.acpConfigOptions);
@@ -401,23 +425,22 @@ export function SessionView({
   const showFiles = !activeArtifact && !!pane?.showFiles;
   const showRuns = !activeArtifact && !showFiles && !!pane?.showRuns;
   const showAgents = !activeArtifact && !showFiles && !showRuns && !!pane?.showAgents;
+  const showTrajectory = !activeArtifact && !showFiles && !showRuns && !showAgents && !!pane?.showTrajectory;
   const showLubricant =
     !activeArtifact &&
     !showFiles &&
     !showRuns &&
     !showAgents &&
+    !showTrajectory &&
     (localLubricant || !!pane?.showLubricant);
-  const inspectorActive = !!activeArtifact || showFiles || showRuns || showAgents || showLubricant;
+  const inspectorActive =
+    !!activeArtifact || showFiles || showRuns || showAgents || showTrajectory || showLubricant;
   const compactNotebooks = !solo || isMobile;
   // Header tool labels ("Files", "Runs", "Subagents") need real room. `solo`
   // only says this is the single pane, which a narrow window makes irrelevant.
   const headerRef = useRef<HTMLDivElement>(null);
   const headerCompact = useCompactWidth(headerRef, HEADER_LABEL_MIN_PX, laidOut);
   const showToolLabels = solo && !headerCompact;
-  const openNotebook = (notebook: (typeof uniqueNotebooks)[number]) => {
-    pinEphemeral();
-    openArtifact(notebook, sid ?? undefined);
-  };
   // A tiled (non-solo) pane is narrow: fill it with the inspector rather than a
   // side column that would squeeze the chat or overflow the pane.
   const inspectorFillsPane = inspectorActive && !solo;
@@ -427,13 +450,15 @@ export function SessionView({
 
   // Offer the subagent panel only once this conversation has actually spawned
   // one — a plain chat should not carry a control for something it never does.
-  const hasSubagents = useMemo(
-    () =>
-      (thread?.blocks ?? []).some(
-        (b) => b.kind === "tool-call" && (b.tool === "task" || !!b.childSessionId),
-      ),
-    [thread?.blocks],
-  );
+  // A boolean selector (not the blocks array): the answer flips at most once,
+  // so streamed deltas never repaint the header over it (#157).
+  const hasSubagents = useRuntimeStore((s) => {
+    const blocks = s.threads[key]?.blocks;
+    if (!blocks) return false;
+    for (const b of blocks)
+      if (b.kind === "tool-call" && (b.tool === "task" || !!b.childSessionId)) return true;
+    return false;
+  });
 
   const [hasRuns, setHasRuns] = useState(() => (eid ? (RUNS_KNOWN.get(eid) ?? false) : false));
   // A pane can be pointed at another session without unmounting — adopt that
@@ -493,21 +518,40 @@ export function SessionView({
     return () => ro.disconnect();
   }, [inspectorFillsPane]);
 
-  const autoOpened = useRef(new Set<string>());
+  // The conversation box's height, for what only fits a tall pane (the starter
+  // cards). Zero is "not laid out", kept as the last real height.
+  const [chatH, setChatH] = useState(0);
   useEffect(() => {
-    // Not while hidden: an unbound pane's artifact falls back to the CURRENT
-    // session, so a background Screen would open a notebook in the pane the
-    // user is actually looking at. Deferred to the moment its Screen is shown.
-    if (!visible) return;
-    const agentNb = uniqueNotebooks.find(
-      (b) => b.tool.toLowerCase().includes("jupyter") && !autoOpened.current.has(b.path),
-    );
-    if (agentNb) {
-      autoOpened.current.add(agentNb.path);
-      openArtifact(agentNb, sid ?? undefined);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniqueNotebooks.length, visible]);
+    const el = chatRef.current;
+    if (!el) return;
+    const measure = () => setChatH((h) => el.clientHeight || h);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [inspectorFillsPane]);
+  // Unmeasured (0) counts as roomy: the cards are the default.
+  const roomForStarters = chatH === 0 || chatH - composerH >= STARTER_CARDS_MIN_PX * contentZoom;
+
+  // ⌘F / Ctrl+F searches THIS pane, and only while it is the focused one: a
+  // window can hold four conversations, and a find that picked one of them at
+  // random would be worse than none.
+  useEffect(() => {
+    if (!focused || !visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "f") return;
+      // An editor or a terminal in another pane binds its own ⌘F; this one is
+      // for the conversation, so it only fires when the keystroke was not
+      // already claimed by a field.
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea, [contenteditable='true'], .monaco-editor")) return;
+      e.preventDefault();
+      setFinding(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focused, visible]);
 
   // Per field, for the same reason as the runtime selectors above: a bare
   // `useUiStore()` subscribes this pane to the whole UI store, so anything that
@@ -529,6 +573,9 @@ export function SessionView({
       onClose={() => closeArtifact(sid ?? undefined)}
       onEvaluate={onEvaluate}
       controls={<MaximizePaneButton />}
+      // Same 32px as the session header beside it — a 48px inspector header
+      // next to a 32px one reads as two misaligned windows.
+      compactHeader
     />
   ) : showRuns ? (
     <RunsPane sessionId={eid!} onClose={() => setShowRuns(false, sid ?? undefined)} controls={<MaximizePaneButton />} />
@@ -538,6 +585,12 @@ export function SessionView({
       onClose={() => setShowAgents(false, sid ?? undefined)}
       controls={<MaximizePaneButton />}
       focus={subagentFocus ?? undefined}
+    />
+  ) : showTrajectory ? (
+    <ThreadTrajectoryPane
+      k={key}
+      onClose={() => setShowTrajectory(false, sid ?? undefined)}
+      controls={<MaximizePaneButton />}
     />
   ) : showFiles ? (
     <SessionFilesPane
@@ -560,7 +613,62 @@ export function SessionView({
     />
   ) : null;
 
+  /** Right-click, the same panel the terminal has: what you came to this pane
+   *  to do, then what to do with the pane itself.
+   *
+   *  A conversation's own actions are the name it is filed under and the folder
+   *  it works in — the two things you reach for without opening a menu of the
+   *  whole app — and then the layout actions the header buttons also carry, so
+   *  the gesture works anywhere in the pane rather than only on its 32px strip. */
+  const paneMenu = (
+    <>
+      <ContextMenuItem onSelect={() => setFinding(true)}>{t("find.find")}</ContextMenuItem>
+      <ContextMenuItem disabled={!eid} onSelect={() => setRenaming(true)}>
+        {t("live.header.rename")}
+      </ContextMenuItem>
+      {sessionDir && (
+        <ContextMenuItem onSelect={() => void revealSessionFolder(sessionDir)}>
+          {t("terminal.menu.revealCwd")}
+        </ContextMenuItem>
+      )}
+      {canSplit && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuSub label={t("group.splitRightShort")}>
+            {/* eslint-disable i18next/no-literal-string -- DockEdge and pane kind, not UI copy */}
+            <ContextMenuItem onSelect={() => onSplit("right", splitFolder)}>
+              {t("splitInto.session")}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => openContentPane({ kind: "terminal", cwd: sessionDir ?? undefined }, "row")}
+            >
+              {t("terminal.title")}
+            </ContextMenuItem>
+          </ContextMenuSub>
+          <ContextMenuSub label={t("group.splitDownShort")}>
+            <ContextMenuItem onSelect={() => onSplit("bottom", splitFolder)}>
+              {t("splitInto.session")}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => openContentPane({ kind: "terminal", cwd: sessionDir ?? undefined }, "col")}
+            >
+              {t("terminal.title")}
+            </ContextMenuItem>
+            {/* eslint-enable i18next/no-literal-string */}
+          </ContextMenuSub>
+        </>
+      )}
+      {onClose && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={onClose}>{t("group.closePane")}</ContextMenuItem>
+        </>
+      )}
+    </>
+  );
+
   return (
+    <ContextMenu items={paneMenu} label={t("live.header.paneMenu")}>
     <div className="flex h-full min-w-0">
       {/* `relative` anchors the floating composer (absolute, below). */}
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
@@ -571,12 +679,20 @@ export function SessionView({
           className={cn(
             // `select-none`: this row is chrome (title, zoom, panel toggles) —
             // dragging across it used to leave stray highlight behind.
-            "flex shrink-0 select-none items-center border-faint",
-            // Tiled panes get a compact header — h-12 wastes vertical space in
-            // a small pane. Solo/web keeps the full-height titlebar row.
+            // A panel filling a tiled pane covers this row too: its own header
+            // takes the place, and its × brings the conversation back. Hidden,
+            // not unmounted — the width observer stays on this element.
+            inspectorFillsPane ? "hidden" : "flex",
+            // `group/header`: the controls on the right show on hover (below).
+            "group/header shrink-0 select-none items-center",
+            // Solo keeps the roomier horizontal rhythm; the HEIGHT is the same
+            // 32px either way. A 48px header under the 48px Screen strip spent
+            // 96px of every window on chrome before a single message.
             solo ? "gap-2 px-6" : "gap-1 px-2.5",
-            eid && "border-b",
-            !(sidebarCollapsed && asTitlebar) && (solo ? "h-12" : "h-8"),
+            !(sidebarCollapsed && asTitlebar) && "h-8",
+            // The Screen's only pane: the whole row waits for the pointer —
+            // unless it hosts the sidebar button, or has trouble to report.
+            solo && !chromeAsTitlebar && connected && displayStatus === "ready" && HOVER_REVEAL,
           )}
         >
           {showSidebarExpand && (
@@ -589,22 +705,40 @@ export function SessionView({
               <PanelLeft size={14} strokeWidth={1.5} />
             </button>
           )}
-          {eid && (
-            // The title doubles as a drag handle to re-dock this pane. Opt it
-            // out of the macOS window-drag region so grabbing it moves the pane,
-            // not the window.
-            <h1
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              // eslint-disable-next-line i18next/no-literal-string -- DragSource kind, not UI copy
-              onPointerDown={(e) => startPaneDrag(e, { kind: "pane", leafId, sessionId: eid }, title ?? "")}
-              // `select-none` stops the title text from being selected while
-              // dragging (the reason a header drag looked like a text selection).
-              className="min-w-0 shrink cursor-grab select-none truncate text-[13px] font-medium text-text active:cursor-grabbing"
-            >
-              {title ?? ""}
-            </h1>
-          )}
+          {eid &&
+            (renaming ? (
+              <InlineName
+                initial={title ?? ""}
+                placeholder={t("live.header.untitled")}
+                ariaLabel={t("live.header.rename")}
+                className="w-40"
+                onCommit={(name) => {
+                  setRenaming(false);
+                  const trimmed = name.trim();
+                  if (trimmed && trimmed !== title) void renameSession(eid, trimmed);
+                }}
+                onCancel={() => setRenaming(false)}
+              />
+            ) : (
+              // The title doubles as a drag handle to re-dock this pane. Opt it
+              // out of the macOS window-drag region so grabbing it moves the pane,
+              // not the window.
+              <h1
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                // eslint-disable-next-line i18next/no-literal-string -- DragSource kind, not UI copy
+                onPointerDown={(e) => startPaneDrag(e, { kind: "pane", leafId, sessionId: eid }, title ?? "")}
+                // A name is renamed where it is shown — the same double-click
+                // that renames a Screen tab and a terminal.
+                onDoubleClick={() => setRenaming(true)}
+                title={t("group.renameHint")}
+                // `select-none` stops the title text from being selected while
+                // dragging (the reason a header drag looked like a text selection).
+                className="min-w-0 max-w-[15rem] shrink cursor-grab select-none truncate text-[13px] font-medium text-text active:cursor-grabbing"
+              >
+                {title ?? ""}
+              </h1>
+            ))}
           {/* Only while on display: the pill polls the plugin's state file every
               few seconds, and its popover lives in a body portal — a hidden
               screen would keep polling and could leave that popover floating
@@ -618,6 +752,16 @@ export function SessionView({
             />
           )}
           <div data-tauri-drag-region={asTitlebar || undefined} className="flex-1" />
+          {/* The pane's tools stay out of sight until the header is hovered or
+              focused — or while one of their menus is open, so it does not fade
+              from under the pointer. Touch screens cannot hover: always shown. */}
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-[inherit] opacity-0 transition-opacity duration-150",
+              "focus-within:opacity-100 group-hover/header:opacity-100",
+              "has-[[aria-expanded=true]]:opacity-100 [@media(hover:none)]:opacity-100",
+            )}
+          >
           {eid && (
             <button
               onClick={() => {
@@ -638,6 +782,25 @@ export function SessionView({
                   {sessionDir ? baseName(sessionDir) : t("live.filesToggle.default")}
                 </span>
               )}
+            </button>
+          )}
+          {/* Trajectory: every step of this conversation as one table
+              (DeepSeek Harness's view) — an icon beside the folder. */}
+          {eid && (
+            <button
+              onClick={() => {
+                pinEphemeral();
+                setShowTrajectory(!showTrajectory, sid ?? undefined);
+              }}
+              className={cn(
+                "flex items-center rounded-md p-1 transition-colors hover:bg-surface-2",
+                showTrajectory ? "bg-surface-2 text-text" : "text-muted",
+              )}
+              title={t("trajectory.toggle")}
+              aria-label={t("trajectory.title")}
+              aria-pressed={showTrajectory}
+            >
+              <IconBranchOutlineRegular size={14} />
             </button>
           )}
           {eid && hasRuns && (
@@ -701,20 +864,26 @@ export function SessionView({
               <ZoomMenu zoom={zoom} onPick={(z) => setLeafZoom(leafId, z)} />
               {/* Each split button asks where the new pane's work goes before
                   creating it — see SplitMenu. */}
+              {/* eslint-disable i18next/no-literal-string -- DockEdge, split axis and pane kind, not UI copy */}
               <SplitMenu
                 sourceFolder={splitFolder}
-                // eslint-disable-next-line i18next/no-literal-string -- DockEdge enum, not UI copy
                 onSplit={(folder) => onSplit("right", folder)}
+                onSplitTerminal={() =>
+                  openContentPane({ kind: "terminal", cwd: sessionDir ?? undefined }, "row")
+                }
                 icon={<PanelRight size={13} strokeWidth={1.5} />}
                 label={t("group.splitRight")}
               />
               <SplitMenu
                 sourceFolder={splitFolder}
-                // eslint-disable-next-line i18next/no-literal-string -- DockEdge enum, not UI copy
                 onSplit={(folder) => onSplit("bottom", folder)}
+                onSplitTerminal={() =>
+                  openContentPane({ kind: "terminal", cwd: sessionDir ?? undefined }, "col")
+                }
                 icon={<PanelBottom size={13} strokeWidth={1.5} />}
                 label={t("group.splitDown")}
               />
+              {/* eslint-enable i18next/no-literal-string */}
               {onClose && (
                 <button
                   onClick={onClose}
@@ -727,75 +896,17 @@ export function SessionView({
               )}
             </>
           )}
-          {/* The green "ready" dot is noise per pane — only surface trouble. */}
+          <NotebookChips
+            k={key}
+            sid={sid}
+            compact={compactNotebooks}
+            activePath={activeArtifact?.path ?? null}
+            visible={visible}
+          />
+          </div>
+          {/* Trouble is never hidden: the green "ready" dot is noise per pane,
+              anything else shows whether or not the header is hovered. */}
           {displayStatus !== "ready" && <ConnBadge status={displayStatus} />}
-          {!compactNotebooks && uniqueNotebooks.map((nb) => (
-            <button
-              key={nb.path}
-              onClick={() => openNotebook(nb)}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-1.5 py-1 font-mono text-xs transition-colors hover:bg-surface-2",
-                activeArtifact?.path === nb.path ? "bg-surface-2 text-text" : "text-muted",
-              )}
-              title={t("live.notebook.openTitle", { path: nb.path })}
-            >
-              <NotebookPen size={12} />
-              <span className="max-w-[180px] truncate">{nb.filename}</span>
-            </button>
-          ))}
-          {compactNotebooks && uniqueNotebooks.length === 1 && (
-            <button
-              onClick={() => openNotebook(uniqueNotebooks[0])}
-              className={cn(
-                "rounded-md p-1 text-muted transition-colors hover:bg-surface-2 hover:text-text",
-                activeArtifact?.path === uniqueNotebooks[0].path && "bg-surface-2 text-text",
-              )}
-              title={t("live.notebook.openTitle", { path: uniqueNotebooks[0].path })}
-              aria-label={t("live.notebook.openTitle", { path: uniqueNotebooks[0].path })}
-            >
-              <NotebookPen size={13} />
-            </button>
-          )}
-          {compactNotebooks && uniqueNotebooks.length > 1 && (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  className={cn(
-                    "rounded-md p-1 text-muted outline-none transition-colors hover:bg-surface-2 hover:text-text",
-                    activeArtifact?.path &&
-                      uniqueNotebooks.some((notebook) => notebook.path === activeArtifact.path) &&
-                      "bg-surface-2 text-text",
-                  )}
-                  title={t("live.notebook.chooseTitle")}
-                  aria-label={t("live.notebook.chooseTitle")}
-                >
-                  <NotebookPen size={13} />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  align="end"
-                  sideOffset={4}
-                  className="z-50 min-w-[220px] max-w-[min(320px,calc(100vw-16px))] rounded-card border border-border bg-surface p-1 text-xs text-text shadow-pop"
-                >
-                  {uniqueNotebooks.map((notebook) => (
-                    <DropdownMenu.Item
-                      key={notebook.path}
-                      onSelect={() => openNotebook(notebook)}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 font-mono outline-none data-[highlighted]:bg-surface-2",
-                        activeArtifact?.path === notebook.path && "bg-surface-2",
-                      )}
-                      title={notebook.path}
-                    >
-                      <NotebookPen size={12} className="shrink-0 text-muted" />
-                      <span className="truncate">{notebook.filename}</span>
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-          )}
           {!connected && (
             <button
               onClick={connect}
@@ -809,12 +920,29 @@ export function SessionView({
         </div>
 
         {inspectorFillsPane ? (
-          // Tiled pane: the inspector fills the pane (chat/composer hidden), so a
-          // narrow pane isn't squeezed and nothing overflows. Its own header's
-          // close (and the pressed folder/runs toggle) returns to the chat.
-          <div className="min-h-0 flex-1 overflow-hidden">{inspectorNode}</div>
+          // Tiled pane: the inspector fills the pane (chat, composer AND the
+          // conversation header hidden), so a narrow pane isn't squeezed and
+          // there is one header, not two stacked. Its × returns to the chat.
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <PaneHeaderClearsLights.Provider value={sidebarCollapsed && asTitlebar}>
+              {inspectorNode}
+            </PaneHeaderClearsLights.Provider>
+          </div>
         ) : (
           <>
+        {finding && (
+          <FindBar
+            scope={chatRef}
+            // A streaming answer adds text while the bar is open; matches found
+            // in a paragraph that has since re-rendered point at nodes no
+            // longer in the document.
+            generation={blocksCount}
+            onClose={() => setFinding(false)}
+          />
+        )}
+        {/* The turn rail overlays the scroll box's right edge, so the two share
+            a positioned wrapper. */}
+        <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           ref={chatRef}
           onScroll={onChatScroll}
@@ -834,11 +962,19 @@ export function SessionView({
             // The conversation is document content, so it keeps the WebView's
             // own menu (Copy, Look Up, Translate) — see lib/nativeMenu.
             data-native-menu
-            style={zoom !== 1 ? { zoom } : undefined}
+            // …but only while something is selected. A right-click on a
+            // sentence is for copying that sentence; a right-click on empty
+            // space in the conversation is for the pane, because the WebView's
+            // own menu there is "Back" and "Reload" — the menu of a web page,
+            // in an app that is not one.
+            onContextMenu={(e) => {
+              if (allowsNativeMenu(e.target)) e.stopPropagation();
+            }}
+            style={contentZoom !== 1 ? { zoom: contentZoom } : undefined}
             className="mx-auto flex max-w-[760px] flex-col gap-4 px-8 pt-6"
           >
             {!connected && !connecting && (
-              <div className="rounded-card border border-border bg-surface p-5 shadow-card">
+              <div className="rounded-card bg-surface-2 p-5">
                 <div className="text-sm font-medium text-text">{t("live.runtime.title")}</div>
                 <p className="mt-1 text-sm text-muted">
                   {t("live.runtime.bodyPrefix")}{" "}
@@ -846,7 +982,7 @@ export function SessionView({
                   <span className="font-mono">opencode serve</span>
                   {t("live.runtime.bodySuffix")}
                 </p>
-                <div className="mt-3 rounded-input bg-surface-2 px-3 py-2 font-mono text-xs text-text">
+                <div className="mt-3 rounded-input bg-surface px-3 py-2 font-mono text-xs text-text">
                   {serverUrl}
                 </div>
               </div>
@@ -857,7 +993,7 @@ export function SessionView({
               // and nothing should be said about a wait the user never had.
               <div
                 role="status"
-                className="rounded-card border border-border bg-surface p-5 shadow-card"
+                className="rounded-card bg-surface-2 p-5"
               >
                 <div className="flex items-center gap-2 text-sm font-medium text-text">
                   <Loader2 size={13} className="animate-spin text-muted" />
@@ -876,124 +1012,36 @@ export function SessionView({
                 {error}
               </div>
             )}
-            {connected && isEmpty && !eid && !webReadOnly && (
-              <WorkflowStarters onPick={(p) => void onSend(p)} />
-            )}
-            {historyLoading && <ThreadSkeleton />}
-            {!historyLoading && thread && (
-              <BlockList
-                blocks={thread.blocks}
-                handlers={handlers}
-                liveReasoningIndex={liveReasoningIndex}
-                workspaceDirectory={sessionDir ?? undefined}
-                contextLimit={contextLimit}
-              />
-            )}
-            {backgroundReview && eid && (
-              <div
-                role="status"
-                className="flex w-fit max-w-full items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-muted"
-              >
-                <Loader2 size={12} className="shrink-0 animate-spin text-accent" />
-                <span className="truncate">
-                  {backgroundReview === "queued"
-                    ? t("live.review.queued")
-                    : t("live.review.running")}
-                </span>
-                <button
-                  type="button"
-                  className="-mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full hover:bg-surface"
-                  aria-label={t("live.review.cancelAria")}
-                  title={t("live.review.cancelTitle")}
-                  onClick={() => cancelAutoReview(eid)}
-                >
-                  <X size={11} />
-                </button>
-              </div>
-            )}
-            {/* Acts on a text selection anywhere in this pane's answers. */}
-            {!webReadOnly && <SelectionActions sessionId={eid} />}
-            {working && (
-              <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
-                {/* The agent is producing: the label itself carries the motion
-                    (a light travelling through its letters) and the turn's
-                    clock. The two exceptional states — waiting on the user,
-                    retrying a failed call — keep the spinner, because nothing
-                    is streaming for a shimmer to stand for. */}
-                {(activeRequest || retryNotice) && (
-                  <Loader2 size={14} className="shrink-0 animate-spin" />
-                )}
-                <span className={cn("shrink-0", !activeRequest && !retryNotice && "shimmer-text")}>
-                  {activeRequest
-                    ? t("live.status.paused")
-                    : retryNotice
-                      ? // A spent allowance or a reached plan limit does not
-                        // resolve by waiting, so it must not be labelled as a
-                        // retry the user should sit through (#117). Only these
-                        // two: another cause the runtime may name later could
-                        // well be transient, and "waiting will not help" would
-                        // then be our own invention.
-                        LIMIT_REASONS.has(retryNotice.action?.reason ?? "")
-                        ? t("live.status.limitReached")
-                        : t("live.status.retrying", { attempt: Math.max(1, retryNotice.attempt) })
-                      : sending && !eid
-                        ? t("live.status.startingSession")
-                        : t("live.status.working")}
-                </span>
-                {!activeRequest && !retryNotice && turnStart !== null && (
-                  <Elapsed start={turnStart} />
-                )}
-                {!activeRequest && !retryNotice && step >= 2 && (
-                  <span className="shrink-0 text-xs text-muted/70">
-                    {t("live.status.step", { count: step })}
-                  </span>
-                )}
-                {!activeRequest && retryNotice && (
-                  <span
-                    className="truncate font-mono text-xs text-warn"
-                    // The provider whose call failed, the runtime's own
-                    // actionable sentence and its link all belong to this
-                    // notice, and only the hover text has room for them. The
-                    // line itself stays the bare message: the provider id
-                    // ("opencode" for Zen) would read as the app on one line.
-                    title={[
-                      retryNotice.action?.provider,
-                      retryNotice.message,
-                      retryNotice.action?.message,
-                      retryNotice.action?.link,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  >
-                    {retryNotice.message}
-                  </span>
-                )}
-                {!activeRequest && !retryNotice && currentTool && (
-                  <>
-                    {/* The step's own clock stays on its row in the thread —
-                        a second clock here would time a subject the turn
-                        clock beside it does not. */}
-                    <span
-                      className="truncate font-mono text-xs"
-                      title={currentTool.command ?? currentTool.title}
-                    >
-                      {currentTool.title}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
+            <ThreadColumn
+              k={key}
+              eid={eid}
+              connected={connected}
+              webReadOnly={webReadOnly}
+              working={working}
+              sending={sending}
+              running={running}
+              activeRequest={activeRequest}
+              handlers={handlers}
+              sessionDir={sessionDir ?? undefined}
+              contextLimit={contextLimit}
+              onSend={onSend}
+              roomForStarters={roomForStarters}
+            />
           </div>
         </div>
+        {!historyLoading && blocksCount > 0 && (
+          <ThreadTurnNavigator k={key} scrollRef={chatRef} bottomInset={composerH + 12} />
+        )}
+        </div>
 
-        {!atLatest && (
+        {!atLatest && blocksCount > 0 && (
           <div
             className="pointer-events-none absolute inset-x-0 z-20 flex justify-center"
             style={{ bottom: composerH + 18 }}
           >
             <button
               onClick={jumpToLatest}
-              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-text shadow-card backdrop-blur-sm transition-colors hover:bg-surface-2"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text shadow-card transition-colors hover:bg-surface-2"
               aria-label={t("live.latest")}
               title={t("live.latest")}
             >
@@ -1033,14 +1081,16 @@ export function SessionView({
             }}
           />
           {/* Zoomed with the chat so the input scales down in a small/zoomed
-              pane; width is a proportion of the pane, centered. `relative` keeps
-              it above the frost layer. */}
+              pane. `relative` keeps it above the frost layer.
+
+              Same column as the messages above it (`max-w-[760px] px-8`), which
+              is the point: the composer used to be capped only when solo and a
+              flat 94% of the pane otherwise, so it ran long on a wide screen,
+              sat edge-to-edge on a narrow one, and lined up with the
+              conversation at no width at all. */}
           <div
             style={zoom !== 1 ? { zoom } : undefined}
-            className={cn(
-              "pointer-events-auto relative mx-auto space-y-3",
-              solo ? "max-w-[760px]" : "w-[94%]",
-            )}
+            className="pointer-events-auto relative mx-auto w-full max-w-[760px] space-y-3 px-8"
           >
             {activeRequest && (
               <InteractionPrompt
@@ -1119,26 +1169,29 @@ export function SessionView({
               ? () => closeArtifact(sid ?? undefined)
               : showRuns
                 ? () => setShowRuns(false, sid ?? undefined)
-              : showAgents
-                ? () => setShowAgents(false, sid ?? undefined)
-                : showFiles
-                  ? () => setShowFiles(false, sid ?? undefined)
-                  : () => {
-                      setLocalLubricant(false);
-                      setShowLubricant(false, key);
-                    }
+                : showAgents
+                  ? () => setShowAgents(false, sid ?? undefined)
+                  : showTrajectory
+                    ? () => setShowTrajectory(false, sid ?? undefined)
+                    : showLubricant
+                      ? () => {
+                          setLocalLubricant(false);
+                          setShowLubricant(false, key);
+                        }
+                      : () => setShowFiles(false, sid ?? undefined)
           }
         >
           {inspectorNode}
         </RightPane>
       )}
     </div>
+    </ContextMenu>
   );
 }
 
 /** Per-pane zoom control: a compact "NN%" button opening preset levels. Lets a
  *  narrow tiled pane shrink its content so the text isn't oversized. */
-const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
+const ZOOM_LEVELS = [0.5, 0.75, 0.9, 1, 1.25, 1.5];
 function ZoomMenu({ zoom, onPick }: { zoom: number; onPick: (z: number) => void }) {
   const { t } = useTranslation("session");
   const [open, setOpen] = useState(false);
@@ -1155,6 +1208,7 @@ function ZoomMenu({ zoom, onPick }: { zoom: number; onPick: (z: number) => void 
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="rounded-md px-1 py-1 text-xs tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-text"
         title={t("group.zoom")}
         aria-label={t("group.zoom")}
@@ -1204,6 +1258,14 @@ function ThreadSkeleton() {
   );
 }
 
+/** Show the session's folder in the OS file manager — the same action the
+ *  terminal's menu carries, for the same reason: the folder is what the work
+ *  actually lives in. */
+async function revealSessionFolder(path: string): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("reveal_path", { path, root: null });
+}
+
 function ConnBadge({ status }: { status: RuntimeStatus }) {
   const { t } = useTranslation(["session", "common"]);
   const tone = status === "ready" ? "text-ok" : status === "error" ? "text-error" : "text-muted";
@@ -1223,3 +1285,348 @@ function ConnBadge({ status }: { status: RuntimeStatus }) {
     </span>
   );
 }
+
+/* ------------------------------------------------------------------ *
+ *  Per-session thread subscribers (#157). The thread object gets a     *
+ *  new identity with every streamed delta; anything rendering it must  *
+ *  live in one of these leaves so the pane chrome above (header,       *
+ *  composer, menus — and every t() lookup inside them) stays still.    *
+ * ------------------------------------------------------------------ */
+
+const NO_BLOCKS: ThreadBlocks = [];
+
+type NotebookBlock = Extract<ThreadBlocks[number], { kind: "artifact" }>;
+
+/** The scrolling conversation itself: the one place that subscribes to this
+ *  session's full thread. Streamed deltas repaint only this column. Not
+ *  memoized — it re-renders per delta by design; what matters is that nothing
+ *  outside it does. */
+function ThreadColumn({
+  k,
+  eid,
+  connected,
+  webReadOnly,
+  working,
+  sending,
+  running,
+  activeRequest,
+  handlers,
+  sessionDir,
+  contextLimit,
+  onSend,
+  roomForStarters,
+}: {
+  k: string;
+  eid: string | null;
+  connected: boolean;
+  webReadOnly: boolean;
+  working: boolean;
+  sending: boolean;
+  running: boolean;
+  /** Truthiness only: the banner just needs to know the turn is paused on a
+   *  question or permission; the InteractionPrompt itself stays with the pane. */
+  activeRequest: unknown;
+  handlers: BlockHandlers;
+  sessionDir: string | undefined;
+  contextLimit: number | undefined;
+  onSend: (text: string, attachments?: string[]) => Promise<void>;
+  roomForStarters: boolean;
+}) {
+  const { t } = useTranslation("session");
+  const thread = useRuntimeStore((s) => s.threads[k]);
+  const step = useRuntimeStore((s) => (eid ? (s.stepCounts[eid] ?? 0) : 0));
+  const retryNotice = useRuntimeStore((s) => (eid ? s.retryNotices[eid] : undefined));
+  const backgroundReview = useRuntimeStore((s) =>
+    eid ? s.backgroundReviews[eid] : undefined,
+  );
+  const cancelAutoReview = useRuntimeStore((s) => s.cancelAutoReview);
+  const historyLoading = connected && !!eid && !thread?.loaded;
+  const isEmpty = !thread || thread.blocks.length === 0;
+  // Scan backwards in place: copying + reversing the whole block list ran on
+  // every render of a live pane, allocating a fresh array per streamed token.
+  const currentTool = working ? findLastRunningTool(thread?.blocks) : undefined;
+  // The turn's own clock, anchored when this column first sees the turn
+  // running. A reload mid-turn loses that boundary; counting from here is the
+  // honest answer, and matches what the row is for — "it is still going", not
+  // billing.
+  const [turnStart, setTurnStart] = useState<number | null>(null);
+  if (working !== (turnStart !== null)) setTurnStart(working ? Date.now() : null);
+  const lastBlock = thread?.blocks[thread.blocks.length - 1];
+  // The thought being written right now, as ONE line beside "Working…".
+  //
+  // Thinking is not part of the conversation and is not kept: it went by on the
+  // status row while it happened and is gone afterwards. Rendered into the
+  // thread instead it was indistinguishable from what the model actually SAID
+  // (both plain black paragraphs) and it was the bulk of every fold — a model
+  // that thinks a lot would bury its own answer in its own deliberation.
+  const liveReasoning =
+    running && lastBlock?.kind === "reasoning" ? latestLine(lastBlock.text) : undefined;
+  return (
+    <>
+      {connected && isEmpty && !eid && !webReadOnly && (
+        <WorkflowStarters onPick={(p) => void onSend(p)} showCards={roomForStarters} />
+      )}
+      {historyLoading && <ThreadSkeleton />}
+      {!historyLoading && thread && (
+        <BlockList
+          blocks={thread.blocks}
+          handlers={handlers}
+          workspaceDirectory={sessionDir}
+          contextLimit={contextLimit}
+        />
+      )}
+      {backgroundReview && eid && (
+        <div
+          role="status"
+          className="flex w-fit max-w-full items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-muted"
+        >
+          <Loader2 size={12} className="shrink-0 animate-spin text-accent" />
+          <span className="truncate">
+            {backgroundReview === "queued" ? t("live.review.queued") : t("live.review.running")}
+          </span>
+          <button
+            type="button"
+            className="-mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full hover:bg-surface"
+            aria-label={t("live.review.cancelAria")}
+            title={t("live.review.cancelTitle")}
+            onClick={() => cancelAutoReview(eid)}
+          >
+            <X size={11} />
+          </button>
+        </div>
+      )}
+      {/* Acts on a text selection anywhere in this pane's answers. */}
+      {!webReadOnly && <SelectionActions sessionId={eid} />}
+      {working && (
+        <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
+          {/* The agent is producing: the label itself carries the motion
+              (a light travelling through its letters) and the turn's
+              clock. The two exceptional states — waiting on the user,
+              retrying a failed call — keep the spinner, because nothing
+              is streaming for a shimmer to stand for. */}
+          {(activeRequest || retryNotice) && (
+            <Loader2 size={14} className="shrink-0 animate-spin" />
+          )}
+          <span className={cn("shrink-0", !activeRequest && !retryNotice && "shimmer-text")}>
+            {activeRequest
+              ? t("live.status.paused")
+              : retryNotice
+                ? // A spent allowance or a reached plan limit does not
+                  // resolve by waiting, so it must not be labelled as a
+                  // retry the user should sit through (#117). Only these
+                  // two: another cause the runtime may name later could
+                  // well be transient, and "waiting will not help" would
+                  // then be our own invention.
+                  LIMIT_REASONS.has(retryNotice.action?.reason ?? "")
+                  ? t("live.status.limitReached")
+                  : t("live.status.retrying", { attempt: Math.max(1, retryNotice.attempt) })
+                : sending && !eid
+                  ? t("live.status.startingSession")
+                  : t("live.status.working")}
+          </span>
+          {!activeRequest && !retryNotice && turnStart !== null && (
+            <Elapsed start={turnStart} />
+          )}
+          {!activeRequest && !retryNotice && step >= 2 && (
+            <span className="shrink-0 text-xs text-muted/70">
+              {t("live.status.step", { count: step })}
+            </span>
+          )}
+          {/* What it is thinking, one line, flashing past. It takes the
+              row's remaining width and truncates rather than wrapping:
+              this row is a fixed-height status line, and a thought that
+              reflowed it would shift the whole conversation on every
+              token. */}
+          {!activeRequest && !retryNotice && liveReasoning && (
+            <LiveLine text={liveReasoning} active className="text-muted/70" />
+          )}
+          {!activeRequest && retryNotice && (
+            <span
+              className="truncate font-mono text-xs text-warn"
+              // The provider whose call failed, the runtime's own
+              // actionable sentence and its link all belong to this
+              // notice, and only the hover text has room for them. The
+              // line itself stays the bare message: the provider id
+              // ("opencode" for Zen) would read as the app on one line.
+              title={[
+                retryNotice.action?.provider,
+                retryNotice.message,
+                retryNotice.action?.message,
+                retryNotice.action?.link,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            >
+              {retryNotice.message}
+            </span>
+          )}
+          {!activeRequest && !retryNotice && currentTool && (
+            <>
+              {/* The step's own clock stays on its row in the thread —
+                  a second clock here would time a subject the turn
+                  clock beside it does not. */}
+              <span
+                className="truncate font-mono text-xs"
+                title={currentTool.command ?? currentTool.title}
+              >
+                {currentTool.title}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** TurnNavigator with its own thread subscription — memo alone could not
+ *  help it: the blocks array is rebuilt per delta, so the prop would always
+ *  differ. Confined here, a delta repaints the navigator, not the pane. */
+const ThreadTurnNavigator = memo(function ThreadTurnNavigator({
+  k,
+  scrollRef,
+  bottomInset,
+}: {
+  k: string;
+  scrollRef: ComponentProps<typeof TurnNavigator>["scrollRef"];
+  bottomInset: number;
+}) {
+  const blocks = useRuntimeStore((s) => s.threads[k]?.blocks);
+  if (!blocks) return null;
+  return <TurnNavigator blocks={blocks} scrollRef={scrollRef} bottomInset={bottomInset} />;
+});
+
+/** Same confinement for the trajectory side pane: it reads the block list
+ *  only while open, and the pane chrome should not repaint for that. */
+const ThreadTrajectoryPane = memo(function ThreadTrajectoryPane({
+  k,
+  onClose,
+  controls,
+}: {
+  k: string;
+  onClose: () => void;
+  controls: ComponentProps<typeof TrajectoryPane>["controls"];
+}) {
+  const blocks = useRuntimeStore((s) => s.threads[k]?.blocks ?? NO_BLOCKS);
+  return <TrajectoryPane blocks={blocks} onClose={onClose} controls={controls} />;
+});
+
+/** Notebook chips in the pane header. Subscribes to the block list itself, so
+ *  an artifact landing mid-stream repaints the chips, not the whole header. */
+const NotebookChips = memo(function NotebookChips({
+  k,
+  sid,
+  compact,
+  activePath,
+  visible,
+}: {
+  k: string;
+  sid: string | null;
+  compact: boolean;
+  activePath: string | null;
+  visible: boolean;
+}) {
+  const { t } = useTranslation("session");
+  const blocks = useRuntimeStore((s) => s.threads[k]?.blocks);
+  const openArtifact = useRuntimeStore((s) => s.openArtifact);
+  const pinEphemeral = useLayoutStore((s) => s.pinEphemeral);
+  // Derived from the block list, so recompute only when the blocks change —
+  // not on every unrelated re-render of a live pane.
+  const uniqueNotebooks = useMemo(() => {
+    const byPath = new Map<string, NotebookBlock>();
+    for (const b of blocks ?? NO_BLOCKS)
+      if (b.kind === "artifact" && b.filename.endsWith(".ipynb")) byPath.set(b.path, b);
+    return [...byPath.values()];
+  }, [blocks]);
+  const openNotebook = (notebook: NotebookBlock) => {
+    pinEphemeral();
+    openArtifact(notebook, sid ?? undefined);
+  };
+  const autoOpened = useRef(new Set<string>());
+  useEffect(() => {
+    // Not while hidden: an unbound pane's artifact falls back to the CURRENT
+    // session, so a background Screen would open a notebook in the pane the
+    // user is actually looking at. Deferred to the moment its Screen is shown.
+    if (!visible) return;
+    const agentNb = uniqueNotebooks.find(
+      (b) => b.tool.toLowerCase().includes("jupyter") && !autoOpened.current.has(b.path),
+    );
+    if (agentNb) {
+      autoOpened.current.add(agentNb.path);
+      openArtifact(agentNb, sid ?? undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniqueNotebooks.length, visible]);
+  return (
+    <>
+      {!compact &&
+        uniqueNotebooks.map((nb) => (
+          <button
+            key={nb.path}
+            onClick={() => openNotebook(nb)}
+            className={cn(
+              "flex items-center gap-1 rounded-md px-1.5 py-1 font-mono text-xs transition-colors hover:bg-surface-2",
+              activePath === nb.path ? "bg-surface-2 text-text" : "text-muted",
+            )}
+            title={t("live.notebook.openTitle", { path: nb.path })}
+          >
+            <NotebookPen size={12} />
+            <span className="max-w-[180px] truncate">{nb.filename}</span>
+          </button>
+        ))}
+      {compact && uniqueNotebooks.length === 1 && (
+        <button
+          onClick={() => openNotebook(uniqueNotebooks[0])}
+          className={cn(
+            "rounded-md p-1 text-muted transition-colors hover:bg-surface-2 hover:text-text",
+            activePath === uniqueNotebooks[0].path && "bg-surface-2 text-text",
+          )}
+          title={t("live.notebook.openTitle", { path: uniqueNotebooks[0].path })}
+          aria-label={t("live.notebook.openTitle", { path: uniqueNotebooks[0].path })}
+        >
+          <NotebookPen size={13} />
+        </button>
+      )}
+      {compact && uniqueNotebooks.length > 1 && (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              className={cn(
+                "rounded-md p-1 text-muted outline-none transition-colors hover:bg-surface-2 hover:text-text",
+                activePath &&
+                  uniqueNotebooks.some((notebook) => notebook.path === activePath) &&
+                  "bg-surface-2 text-text",
+              )}
+              title={t("live.notebook.chooseTitle")}
+              aria-label={t("live.notebook.chooseTitle")}
+            >
+              <NotebookPen size={13} />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={4}
+              className="z-50 min-w-[220px] max-w-[min(320px,calc(100vw-16px))] rounded-card border border-border bg-surface p-1 text-xs text-text shadow-pop"
+            >
+              {uniqueNotebooks.map((notebook) => (
+                <DropdownMenu.Item
+                  key={notebook.path}
+                  onSelect={() => openNotebook(notebook)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 font-mono outline-none data-[highlighted]:bg-surface-2",
+                    activePath === notebook.path && "bg-surface-2",
+                  )}
+                  title={notebook.path}
+                >
+                  <NotebookPen size={12} className="shrink-0 text-muted" />
+                  <span className="truncate">{notebook.filename}</span>
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      )}
+    </>
+  );
+});

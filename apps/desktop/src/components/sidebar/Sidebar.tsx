@@ -1,26 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState, type HTMLAttributes, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Archive,
-  ArrowLeft,
-  ChevronRight,
-  Files,
   FlaskConical,
-  Folder,
   FolderInput,
   FolderOpen,
-  FolderTree,
-  Loader2,
-  NotebookPen,
   Pencil,
   Pin,
-  PanelLeft,
   Plus,
-  Settings,
   Trash2,
 } from "lucide-react";
+import {
+  IconArchiveOutlineRegular,
+  IconChevronLeftOutlineRegular,
+  IconCloseFillRegular,
+  IconEllipsisOutlineRegular,
+  IconFlatListOutlineRegular,
+  IconFolderCloseRegular,
+  IconFolderOpenOutlineRegular,
+  IconFolderOpenRegular,
+  IconListPenOutlineRegular,
+  IconNewChatOutlineMedium,
+  IconNewChatOutlineRegular,
+  IconPanelLeftOutlineRegular,
+  IconPlayOutlineRegular,
+  IconProjectAddOutlineRegular,
+  IconSearchOutlineRegular,
+  IconSettingsOutlineMedium,
+  IconSkillOutlineRegular,
+  IconTrashOutlineRegular,
+  IconTriangleRightFillRegular,
+} from "@/components/icons/dsh";
+import { StateDot } from "@/components/icons/dsh/StateDot";
+import css from "./Sidebar.module.css";
+import { useTitleMarquee } from "./useTitleMarquee";
+import { timeAgo } from "@/lib/relativeTime";
 import type { Project } from "@ai4s/shared";
 import { cn } from "@/lib/cn";
 import { draftKeyFor, rootSessionOf, useRuntimeStore } from "@/lib/runtime";
@@ -43,11 +59,10 @@ import { overlayTitlebarStyle } from "@/lib/titlebar";
 import { visibleSections, resolveSection } from "@/components/settings/sections";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { useDragDivider } from "@/lib/useDragDivider";
-import { useLayoutStore } from "@/lib/layout";
+import { DEFAULT_PROJECT, selectActiveProjectId, useLayoutStore } from "@/lib/layout";
 import { startPaneDrag } from "@/lib/dragPane";
 import { isGatewayWeb } from "@/lib/webMode";
 import { pathKey, samePath } from "@/lib/workspacePath";
-import { StatusPills } from "./StatusPills";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   ContextMenu,
@@ -63,9 +78,13 @@ interface Row {
   title: string;
   to: string;
   kind: "session" | "example";
-  /** The project this session belongs to, if any. Names the Screen a click
-   *  opens — "Screen 3" says nothing about what is in it. */
+  /** The project this session belongs to, if any — shown on the row and
+   *  matched by the search. */
   project?: string;
+  /** That project's id — the project whose Screens a click opens it among. */
+  projectId?: string;
+  /** Last activity (ms), shown as the row's compact time. */
+  updated?: number;
 }
 
 /** Dragging the divider below this pointer x collapses the sidebar; dragging
@@ -147,11 +166,26 @@ export function Sidebar({ project }: { project: Project }) {
   // The sidebar starts at the window's left edge, so clientX is the width;
   // dragging left of COLLAPSE_BELOW snaps it collapsed but keeps the drag alive
   // (unless in Settings, which never collapses) so dragging back out re-opens it.
+  // The rail's own elements, so a resize writes the width straight to them.
+  // BOTH are needed: the outer column is what the layout reads, and the <aside>
+  // inside it carries the sidebar's own surface. Widening only the outer one
+  // left a bare strip of window showing beside the sidebar for the length of
+  // the drag — the ugly gap that followed the pointer.
+  const railRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = useRef<HTMLElement>(null);
   const { dragging, dragValue: dragWidth, handleProps } = useDragDivider({
     value: sidebarWidth,
     compute: ({ x }) => {
       if (x < COLLAPSE_BELOW && !inSettings) return null;
       return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, x));
+    },
+    // Nothing inside the sidebar depends on its width, so a drag has no reason
+    // to re-render the session list — it only has to move one edge. React is
+    // told once, on release.
+    onDrag: (next) => {
+      const px = `${next}px`;
+      if (railRef.current) railRef.current.style.width = px;
+      if (surfaceRef.current) surfaceRef.current.style.width = px;
     },
     onCommit: setSidebarWidth,
     onCollapse: () => {
@@ -195,6 +229,19 @@ export function Sidebar({ project }: { project: Project }) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renamingSession, setRenamingSession] = useState<string | null>(null);
 
+  // Clicking a project shows its Screens. Clicking the project already shown
+  // folds it open or shut, as the row always did.
+  const activeProjectId = useLayoutStore(selectActiveProjectId);
+  const clickProject = (id: string) => {
+    if (isMobile || isGatewayWeb || activeProjectId === id) {
+      toggleProject(id);
+      return;
+    }
+    useLayoutStore.getState().setActiveProject(id);
+    if (collapsedProjects.includes(id)) toggleProject(id);
+    if (!location.pathname.startsWith("/live")) navigate("/live");
+  };
+
   const toggleProject = (id: string) =>
     setCollapsedProjects((prev) => {
       const next = prev.includes(id)
@@ -226,7 +273,7 @@ export function Sidebar({ project }: { project: Project }) {
   const openProjectScreen = async (p: ProjectInfo) => {
     const leafId =
       !isMobile && !isGatewayWeb
-        ? useLayoutStore.getState().openInNewGroup(null, p.name)
+        ? useLayoutStore.getState().openInNewGroup(null, p.id)
         : null;
     await startDraftInWorkspace(p.path, leafId ? draftKeyFor(leafId) : undefined);
     navigate("/live");
@@ -292,10 +339,12 @@ export function Sidebar({ project }: { project: Project }) {
       title: s.title,
       to: `/live/${s.id}`,
       kind: "session",
+      updated: s.updated ?? s.created,
     };
     const owner = s.directory ? projectByPath.get(pathKey(s.directory)) : undefined;
     if (owner) {
       row.project = owner.name;
+      row.projectId = owner.id;
       sessionsByProject.get(owner.id)!.push(row);
     } else looseRows.push(row);
   }
@@ -326,7 +375,35 @@ export function Sidebar({ project }: { project: Project }) {
       kind: "example" as const,
     }));
 
+  // ---- Inline session search (DSH WorkspaceBrowser): the header's search
+  // control expands over the section title; a query swaps the tree for a
+  // flat list of matching sessions. Clicking away with no query folds it.
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchRoot = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!searchExpanded) return;
+    const onClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target)) return;
+      searchInput.current?.blur();
+      if (query.trim() !== "") return;
+      setSearchExpanded(false);
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [searchExpanded, query]);
+  const needle = query.trim().toLowerCase();
+  const searching = searchExpanded && needle !== "";
+  const allRows = [...Array.from(sessionsByProject.values()).flat(), ...looseRows, ...exampleRows];
+  const searchResults = searching
+    ? allRows.filter(
+        (r) => r.title.toLowerCase().includes(needle) || (r.project ?? "").toLowerCase().includes(needle),
+      )
+    : [];
+
   const [pendingDelete, setPendingDelete] = useState<Row | null>(null);
+  const [pendingArchive, setPendingArchive] = useState<Row | null>(null);
   const [pendingRemoveProject, setPendingRemoveProject] = useState<ProjectInfo | null>(null);
 
   const confirmDelete = () => {
@@ -354,6 +431,39 @@ export function Sidebar({ project }: { project: Project }) {
 
   /** The folder a session row already lives in, for the "add to project" list. */
   const sessionDirOf = (id: string) => sessions.find((x) => x.id === id)?.directory;
+
+  const now = Date.now();
+
+  const collapseToggle = (
+    <button
+      onClick={toggleSidebar}
+      aria-label={t("sidebar.collapse")}
+      title={t("sidebar.collapseTitle", { shortcut: isMac ? "⌘B" : "Ctrl+B" })}
+      className={css.iconButton}
+    >
+      <IconPanelLeftOutlineRegular size={16} />
+    </button>
+  );
+
+  /** Open a session row. Desktop tiling: a plain click opens it full-screen in
+   *  the tentative "preview" screen (#3); a modifier-click opens it in a NEW
+   *  split pane — it never clobbers the focused pane. Web/phone (single-pane)
+   *  fall through to the NavLink. A trailing click right after a drag is
+   *  swallowed by the drag controller's one-shot capture listener. */
+  const openRow = (row: Row, e: React.MouseEvent) => {
+    if (row.kind !== "session" || isMobile || isGatewayWeb) return;
+    e.preventDefault();
+    const layout = useLayoutStore.getState();
+    if (e.metaKey || e.ctrlKey || e.altKey) {
+      // eslint-disable-next-line i18next/no-literal-string -- SplitDir enum, not UI copy
+      layout.split("row", row.id);
+    } else {
+      layout.openSessionEphemeral(row.id, row.projectId ?? DEFAULT_PROJECT);
+    }
+    // The layout change alone is invisible from Skills/Runs/Files/…: those
+    // routes render instead of the panes, so navigate to show the session.
+    navigate(row.to);
+  };
 
   const sessionRow = (row: Row) => {
     const running = row.kind === "session" && activeRoots.has(row.id);
@@ -409,7 +519,7 @@ export function Sidebar({ project }: { project: Project }) {
             <ContextMenuItem
               icon={<Archive size={14} />}
               disabled={webReadOnly}
-              onSelect={() => void setSessionArchived(row.id, true)}
+              onSelect={() => setPendingArchive(row)}
             >
               {t("history.archive")}
             </ContextMenuItem>
@@ -426,7 +536,9 @@ export function Sidebar({ project }: { project: Project }) {
         )
       }
     >
-    <div className="group relative">
+    <MarqueeRow className={css.item}>
+      {(titleRef) => (
+      <>
       <NavLink
         to={row.to}
         // An <a> is natively draggable; that native drag hijacks the pointer
@@ -441,54 +553,19 @@ export function Sidebar({ project }: { project: Project }) {
             startPaneDrag(e, { kind: "session", sessionId: row.id }, row.title);
           }
         }}
-        onClick={(e) => {
-          // A trailing click right after a drag is swallowed by the drag
-          // controller's one-shot capture listener, so it never reaches here.
-          // Desktop tiling: a session click never clobbers the focused pane —
-          // a modifier-click opens the session in a NEW split pane; a plain
-          // click opens it full-screen in the tentative "preview" screen (#3).
-          // Web/phone (single-pane) fall through to the NavLink as before.
-          if (row.kind === "session" && !isMobile && !isGatewayWeb) {
-            e.preventDefault();
-            const layout = useLayoutStore.getState();
-            if (e.metaKey || e.ctrlKey || e.altKey) {
-              // eslint-disable-next-line i18next/no-literal-string -- SplitDir enum, not UI copy
-              layout.split("row", row.id);
-            } else {
-              layout.openSessionEphemeral(row.id, row.project);
-            }
-            // The layout change alone is invisible from Skills/Runs/Files/…:
-            // those routes render instead of the panes, so the click looked
-            // dead. Navigate so the session is actually shown.
-            navigate(row.to);
-          }
-        }}
-        className={cn(
-          // The selected row was only a shade of the hover background, which
-          // several themes made near-invisible (#63): give it the accent tint,
-          // an inset accent ring and medium weight so it reads at a glance.
-          "flex items-center gap-2 rounded-input py-1 pl-2 pr-8 text-[13px] hover:bg-surface-2",
-          location.pathname === row.to
-            ? "bg-accent/15 font-medium text-text ring-1 ring-inset ring-accent/40"
-            : "text-text/90",
-        )}
+        onClick={(e) => openRow(row, e)}
+        className={cn(css.sessionRow, location.pathname === row.to && css.selected)}
       >
-        {running ? (
-          <Loader2
-            size={12}
-            className="shrink-0 animate-spin text-accent"
-            aria-label={t("history.running")}
-          />
-        ) : (
-          <span
-            className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              row.kind === "example" ? "bg-muted" : "bg-ok",
-            )}
-          />
-        )}
+        {/* DSH session cell: pad 8, a 16px status slot (empty while idle),
+            the title, then the time — which hover swaps for the buttons. */}
+        <span className={css.slot}>
+          {/* eslint-disable-next-line i18next/no-literal-string -- StateDot state, not UI copy */}
+          {running && <StateDot state="ongoing" />}
+          {running && <span className="sr-only">{t("history.running")}</span>}
+        </span>
         <span
-          className="flex-1 truncate"
+          ref={titleRef}
+          className={css.title}
           title={row.kind === "session" ? t("history.renameHint") : undefined}
           onDoubleClick={(e) => {
             if (row.kind !== "session" || webReadOnly) return;
@@ -499,30 +576,65 @@ export function Sidebar({ project }: { project: Project }) {
         >
           {row.title}
         </span>
-        {row.kind === "example" && (
-          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-[10px] uppercase tracking-wide text-muted ring-1 ring-border">
-            {t("history.exampleTag")}
-          </span>
-        )}
+        <span className={css.time}>
+          {row.kind === "example" ? t("history.exampleTag") : timeAgo(row.updated, now)}
+        </span>
+        <span
+          className={css.actionsSpacer}
+          style={{ width: row.kind === "example" ? 16 : 68 }}
+        />
       </NavLink>
-      <button
-        onClick={() => setPendingDelete(row)}
-        aria-label={t("history.deleteAria", { title: row.title })}
-        className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 rounded p-1 text-muted hover:bg-border hover:text-error group-hover:block"
-      >
-        <Trash2 size={13} />
-      </button>
-    </div>
+      <span className={css.rowActions}>
+        {row.kind === "session" && (
+          <>
+            <RowButton
+              label={t("history.rowActions", { title: row.title })}
+              // The "…" opens the row's own right-click menu at the button,
+              // so both routes show one list of actions.
+              onClick={(e) => openRowMenu(e.currentTarget)}
+            >
+              <IconEllipsisOutlineRegular />
+            </RowButton>
+            {!webReadOnly && (
+              <RowButton
+                label={t("history.archive")}
+                onClick={() => setPendingArchive(row)}
+              >
+                <IconArchiveOutlineRegular size={16} />
+              </RowButton>
+            )}
+          </>
+        )}
+        {!(row.kind === "session" && webReadOnly) && (
+          <RowButton
+            label={t("history.deleteAria", { title: row.title })}
+            danger
+            onClick={() => setPendingDelete(row)}
+          >
+            <IconTrashOutlineRegular />
+          </RowButton>
+        )}
+      </span>
+      </>
+      )}
+    </MarqueeRow>
     </ContextMenu>
     );
   };
 
   return (
     <div
+      ref={railRef}
       className={cn(
         "relative h-full overflow-hidden",
         isMobile ? "fixed inset-y-0 left-0 z-40 shadow-2xl" : "shrink-0",
-        !dragging && "transition-[width,transform] duration-200 ease-out",
+        // The DRAWER slides (a transform, composited, free). The desktop rail's
+        // WIDTH does not animate: it is a layout property, so a 200ms tween
+        // reflowed the whole window twelve times over — every pane, every
+        // terminal, every editor, and every Screen kept warm off-display, which
+        // are laid out even while invisible. Collapsing the sidebar stuttered
+        // for the entire animation; instant is both snappier and honest.
+        !dragging && isMobile && "transition-transform duration-200 ease-out",
       )}
       style={
         isMobile
@@ -531,57 +643,42 @@ export function Sidebar({ project }: { project: Project }) {
       }
     >
       <aside
+        ref={surfaceRef}
         // `select-none`: the rail is chrome, so a right-click (or a sloppy drag)
         // must not leave its labels highlighted. Inline rename inputs opt back
         // in via the global rule in index.css.
         className="sidebar-surface flex h-full select-none flex-col border-r border-border"
         style={{ width: railWidth }}
       >
-        {/* The strip clears the traffic lights and hosts the collapse button just
-          right of them — same spot the expand button lands when collapsed. */}
+        <div className={css.root}>
+        {/* macOS overlay titlebar: the strip shares the row with the traffic
+            lights and keeps the collapse toggle at its right edge (DSH). */}
         {overlayTitlebar && (
-          <div
-            data-tauri-drag-region
-            style={overlayTitlebarStyle(true)}
-            className="flex shrink-0 items-center"
-          >
-            {!inSettings && (
-              <button
-                onClick={toggleSidebar}
-                aria-label={t("sidebar.collapse")}
-                title={t("sidebar.collapseTitle", { shortcut: "⌘B" })}
-                className="rounded p-1 text-text hover:bg-surface-2"
-              >
-                <PanelLeft size={14} strokeWidth={1.5} />
-              </button>
-            )}
+          <div data-tauri-drag-region className={css.topStrip} style={{ minHeight: overlayTitlebarStyle(true).minHeight }}>
+            {!inSettings && collapseToggle}
           </div>
         )}
         {inSettings && (
           <>
-            <div className={cn("px-3 pb-2", overlayTitlebar ? "pt-0" : "pt-3")}>
-              <button
-                onClick={() => navigate("/live")}
-                className="flex w-full items-center gap-2 rounded-input px-2 py-1.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
-              >
-                <ArrowLeft size={15} />
-                {t("settings:nav.back")}
+            <nav className={css.panelList} style={{ marginTop: overlayTitlebar ? 0 : 8 }}>
+              <button onClick={() => navigate("/live")} className={css.panelRow}>
+                <span className={css.panelGlyph}>
+                  <IconChevronLeftOutlineRegular size={16} />
+                </span>
+                <span className={css.panelTitle}>{t("settings:nav.back")}</span>
               </button>
-            </div>
-            <nav className="flex flex-col gap-0.5 px-3">
+            </nav>
+            <nav className={css.panelList}>
               {visibleSections(isGatewayWeb).map(({ key, icon: Icon }) => (
                 <NavLink
                   key={key}
                   to={`/settings/${key}`}
-                  className={cn(
-                    "flex items-center gap-2 rounded-input px-2 py-1.5 text-[13px]",
-                    activeSection === key
-                      ? "bg-surface-2 text-text"
-                      : "text-text/90 hover:bg-surface-2",
-                  )}
+                  className={cn(css.panelRow, activeSection === key && css.panelActive)}
                 >
-                  <Icon size={15} className={activeSection === key ? "text-text" : "text-muted"} />
-                  {t(`settings:nav.${key}`)}
+                  <span className={css.panelGlyph}>
+                    <Icon size={16} />
+                  </span>
+                  <span className={css.panelTitle}>{t(`settings:nav.${key}`)}</span>
                 </NavLink>
               ))}
             </nav>
@@ -589,126 +686,164 @@ export function Sidebar({ project }: { project: Project }) {
         )}
         {!inSettings && (
         <>
-        <div className={cn("px-4 pb-3", overlayTitlebar ? "pt-1" : "pt-4")}>
-          <div className="flex min-w-0 items-baseline gap-1.5">
-            {/* Brand = home: clicking the logo/name returns to the main page. */}
-            <button
-              onClick={() => navigate("/live")}
-              aria-label={t("sidebar.home")}
-              title={t("sidebar.home")}
-              className="flex min-w-0 items-baseline gap-1.5 outline-none"
-            >
-              <img src={logo} alt="" className="h-[18px] w-auto shrink-0 self-center" />
+        <div className={css.logoRow}>
+          {/* The brand only: not a control. As a "home" link it swapped the
+              conversation on screen for a blank new one. */}
+          <div className={css.brand}>
+            <span className={css.brandIdentity}>
+              <span className={css.brandMark}>
+                <img src={logo} alt="" />
+              </span>
               {/* eslint-disable-next-line i18next/no-literal-string -- product brand name, not translated across locales (see AGENTS.md) */}
-              <div className="truncate font-serif text-[17px] font-semibold leading-none tracking-tight text-text">
-                Lubricant Science
-              </div>
-            </button>
-            {!overlayTitlebar && (
-              <button
-                onClick={toggleSidebar}
-                aria-label={t("sidebar.collapse")}
-                title={t("sidebar.collapseTitle", {
-                  shortcut: isMac ? "⌘B" : "Ctrl+B",
-                })}
-                className="ml-auto self-center rounded p-1 text-text hover:bg-surface-2"
-              >
-                <PanelLeft size={14} strokeWidth={1.5} />
-              </button>
-            )}
+              <span className={css.brandName}>Lubricant Science</span>
+            </span>
           </div>
+          {!overlayTitlebar && collapseToggle}
         </div>
 
-        <nav className="flex flex-col px-3">
-          {/* A read-only web token can't create sessions — hide the entry. */}
-          {!webReadOnly && (
-            <NavRow
-              icon={<Plus size={16} />}
-              label={t("items.new")}
-              onClick={startNew}
-            />
-          )}
+        {/* A read-only web token can't create sessions — hide the entry. */}
+        {!webReadOnly && (
+          <button className={css.newSession} onClick={startNew} aria-label={t("items.new")}>
+            <span className={css.newSessionLabelMask}>
+              <span className={css.newSessionContent}>
+                <IconNewChatOutlineMedium size={14} />
+                <span className={css.newSessionLabel}>{t("items.new")}</span>
+              </span>
+            </span>
+          </button>
+        )}
+
+        <nav className={css.panelList}>
           {/* Notebook execution needs a local kernel — hidden in the web client. */}
           {!isGatewayWeb && (
             <NavRow
-              icon={<NotebookPen size={16} />}
+              icon={<IconListPenOutlineRegular size={16} />}
               label={t("items.notebooks")}
+              active={location.pathname.startsWith("/notebooks")}
               onClick={() => navigate("/notebooks")}
             />
           )}
           <NavRow
-            icon={<FolderTree size={16} />}
+            icon={<IconFolderOpenOutlineRegular size={16} />}
             label={t("items.files")}
+            active={location.pathname.startsWith("/files")}
             onClick={() => navigate("/files")}
           />
           <NavRow
-            icon={<FlaskConical size={16} />}
+            icon={<IconPlayOutlineRegular size={16} />}
             label={t("items.runs")}
+            active={location.pathname.startsWith("/runs")}
             onClick={() => navigate("/runs")}
           />
           <NavRow
-            icon={<Files size={16} />}
+            icon={<IconSkillOutlineRegular size={16} />}
             label={t("items.skills")}
+            active={location.pathname.startsWith("/skills")}
             onClick={() => navigate("/skills")}
           />
           <NavRow
             icon={<FlaskConical size={16} className="text-amber-500" />}
             label={t("items.lubricant")}
+            active={location.pathname.startsWith("/lubricant")}
             onClick={() => navigate("/lubricant")}
           />
         </nav>
 
-        <div className="mt-4 flex-1 overflow-y-auto px-3 pb-2">
-          <div className="flex items-center gap-1 px-0.5 py-1">
+        <div className={css.regionArea}>
+          {/* Section header (DSH WorkspaceBrowser): the title, an inline
+              search that expands over the header, and the add action. */}
+          <div className={css.sectionHeader}>
             <button
               onClick={() => navigate("/projects")}
               title={t("projects.seeAll")}
-              className={cn(
-                "group/head flex min-w-0 flex-1 items-center gap-1.5 rounded-input px-1.5 py-1 text-[13px] font-medium outline-none hover:bg-surface-2",
-                location.pathname === "/projects" ? "text-text" : "text-muted hover:text-text",
-              )}
+              className={cn(css.sectionLabel, searchExpanded && css.sectionLabelHidden)}
             >
-              <FolderTree size={14} className="shrink-0" />
-              <span className="flex-1 truncate text-left">{t("projects.heading")}</span>
-              <ChevronRight size={13} className="shrink-0 opacity-60 transition-transform group-hover/head:translate-x-0.5" />
+              {t("projects.heading")}
             </button>
-            {/* Creating/importing a project needs local FS access — hidden in web. */}
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
+            <div className={cn(css.searchSlot, searchExpanded && css.searchSlotExpanded)}>
+              <div
+                ref={searchRoot}
+                className={cn(css.search, searchExpanded && css.searchExpanded)}
+                onClick={() => {
+                  setSearchExpanded(true);
+                  searchInput.current?.focus();
+                }}
+              >
                 <button
-                  aria-label={t("projects.new")}
-                  title={t("projects.new")}
-                  className={cn(
-                    "rounded p-0.5 text-muted outline-none hover:bg-surface-2 hover:text-text",
-                    isGatewayWeb && "hidden",
-                  )}
+                  type="button"
+                  className={css.searchButton}
+                  aria-label={t("sidebar.searchAria")}
+                  title={t("sidebar.searchAria")}
+                  aria-expanded={searchExpanded}
                 >
-                  <Plus size={13} />
+                  <IconSearchOutlineRegular size={searchExpanded ? 11 : 14} />
                 </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  align="end"
-                  sideOffset={6}
-                  className="z-50 min-w-[210px] rounded-card border border-border bg-surface p-1 text-[13px] text-text shadow-pop"
-                >
-                  <DropdownMenu.Item
-                    onSelect={() => setNamingProject(true)}
-                    className="flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 outline-none data-[highlighted]:bg-surface-2"
+                <input
+                  ref={searchInput}
+                  className={css.searchInput}
+                  type="text"
+                  placeholder={t("sidebar.searchPlaceholder")}
+                  value={query}
+                  tabIndex={searchExpanded ? 0 : -1}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Escape") return;
+                    setQuery("");
+                    setSearchExpanded(false);
+                  }}
+                />
+                {searchExpanded && (
+                  <button
+                    type="button"
+                    className={css.clearButton}
+                    aria-label={t("sidebar.searchClear")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQuery("");
+                      setSearchExpanded(false);
+                    }}
                   >
-                    <Plus size={14} className="shrink-0 text-muted" />
-                    <span className="truncate">{t("projects.menuScratch")}</span>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    onSelect={() => void handleImport()}
-                    className="flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 outline-none data-[highlighted]:bg-surface-2"
+                    <IconCloseFillRegular />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className={cn(css.headerActions, searchExpanded && css.headerActionsHidden)}>
+              {/* Creating/importing a project needs local FS access — hidden in web. */}
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    aria-label={t("projects.new")}
+                    title={t("projects.new")}
+                    className={cn(css.iconButton, isGatewayWeb && "hidden")}
                   >
-                    <FolderInput size={14} className="shrink-0 text-muted" />
-                    <span className="truncate">{t("projects.menuExisting")}</span>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+                    <IconProjectAddOutlineRegular size={16} />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={6}
+                    className="z-50 min-w-[210px] rounded-card border border-border bg-surface p-1 text-[13px] text-text shadow-pop"
+                  >
+                    <DropdownMenu.Item
+                      onSelect={() => setNamingProject(true)}
+                      className="flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 outline-none data-[highlighted]:bg-surface-2"
+                    >
+                      <Plus size={14} className="shrink-0 text-muted" />
+                      <span className="truncate">{t("projects.menuScratch")}</span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => void handleImport()}
+                      className="flex cursor-pointer items-center gap-2 rounded-input px-2 py-1.5 outline-none data-[highlighted]:bg-surface-2"
+                    >
+                      <FolderInput size={14} className="shrink-0 text-muted" />
+                      <span className="truncate">{t("projects.menuExisting")}</span>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
           </div>
           {namingProject && (
             <NameProjectDialog
@@ -733,23 +868,56 @@ export function Sidebar({ project }: { project: Project }) {
               }}
             />
           )}
+
+          {searching ? (
+            // DSH search body: a flat list of matching sessions, each with the
+            // project it lives in underneath.
+            <div role="list" aria-label={t("sidebar.searchResultsAria")}>
+              {searchResults.length === 0 && (
+                <div className={css.empty}>{t("sidebar.searchNoMatches")}</div>
+              )}
+              {searchResults.map((row) => (
+                <NavLink
+                  key={row.to}
+                  to={row.to}
+                  role="listitem"
+                  draggable={false}
+                  onClick={(e) => {
+                    setQuery("");
+                    setSearchExpanded(false);
+                    openRow(row, e);
+                  }}
+                  className={cn(css.searchResultRow, location.pathname === row.to && css.selected)}
+                >
+                  <span className={css.searchResultTitle}>{row.title}</span>
+                  <span className={css.searchResultMeta}>
+                    {row.kind === "example" ? t("history.exampleTag") : (row.project ?? t("history.heading"))}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
+          ) : (
+          <>
           {projects.length === 0 && !namingProject && (
-            <button
-              onClick={() => setNamingProject(true)}
-              className="flex w-full items-center gap-2 rounded-input px-2 py-1 text-[13px] text-muted hover:bg-surface-2 hover:text-text"
-            >
-              <Folder size={14} className="shrink-0" />
-              <span className="truncate">{t("projects.new")}</span>
-            </button>
+            <div className={css.item}>
+              <button onClick={() => setNamingProject(true)} className={css.projectRow}>
+                <span className={css.slot}>
+                  <IconFolderCloseRegular />
+                </span>
+                <span className={cn(css.title)} style={{ color: "var(--dsw-alias-label-tertiary)" }}>
+                  {t("projects.new")}
+                </span>
+              </button>
+            </div>
           )}
           {visibleProjects.map((p) => {
             const open = !collapsedProjects.includes(p.id);
-            const active = samePath(p.path, workspace);
+            const active = !isMobile && !isGatewayWeb ? activeProjectId === p.id : samePath(p.path, workspace);
             const rows = sessionsByProject.get(p.id) ?? [];
             return (
               <div key={p.id}>
                 {renamingId === p.id ? (
-                  <div className="py-0.5 pl-5 pr-1">
+                  <div className="py-0.5 pl-[26px] pr-1">
                     <InlineNameInput
                       defaultValue={p.name}
                       placeholder={t("projects.namePlaceholder")}
@@ -799,38 +967,27 @@ export function Sidebar({ project }: { project: Project }) {
                       </>
                     }
                   >
-                  <div className="group/project relative">
+                  <div className={css.item}>
+                    {/* DSH project row: folder + name at rest; hover swaps the
+                        folder for the expand triangle and shows the
+                        new-session button. */}
                     <button
-                      onClick={() => toggleProject(p.id)}
+                      onClick={() => clickProject(p.id)}
                       aria-expanded={open}
-                      className="flex w-full items-center gap-1.5 rounded-input py-1 pl-1 pr-10 text-[13px] text-text hover:bg-surface-2"
+                      className={css.projectRow}
+                      style={{ paddingRight: webReadOnly ? 8 : 34 }}
                     >
-                      <ChevronRight
-                        size={11}
-                        className={cn(
-                          "shrink-0 text-muted transition-transform duration-150",
-                          open && "rotate-90",
-                        )}
-                      />
-                      {open ? (
-                        <FolderOpen
-                          size={14}
-                          className={cn(
-                            "shrink-0",
-                            active ? "text-accent" : "text-muted",
-                          )}
-                        />
-                      ) : (
-                        <Folder
-                          size={14}
-                          className={cn(
-                            "shrink-0",
-                            active ? "text-accent" : "text-muted",
-                          )}
-                        />
-                      )}
                       <span
-                        className="min-w-0 flex-1 truncate text-left font-medium"
+                        className={cn(css.slot, css.folder, active && css.folderActive)}
+                        data-active={active || undefined}
+                      >
+                        {open ? <IconFolderOpenRegular /> : <IconFolderCloseRegular />}
+                      </span>
+                      <span className={cn(css.slot, css.chevron)}>
+                        <IconTriangleRightFillRegular className={cn(css.arrow, open && css.arrowOpen)} />
+                      </span>
+                      <span
+                        className={css.title}
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           setRenamingId(p.id);
@@ -840,33 +997,21 @@ export function Sidebar({ project }: { project: Project }) {
                         {p.name}
                       </span>
                       {p.imported && (
-                        <span
-                          className="shrink-0 rounded bg-surface-2 px-1 text-[9px] uppercase tracking-wide text-muted"
-                          title={p.importedFrom ?? p.path}
-                        >
+                        <span className={css.badge} title={p.importedFrom ?? p.path}>
                           {t("projects.importedBadge")}
                         </span>
                       )}
                     </button>
-                    <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center">
-                      {rows.length > 0 && (
-                        <span className="px-1 text-[10px] tabular-nums text-muted group-hover/project:hidden">
-                          {rows.length}
-                        </span>
-                      )}
-                      {!webReadOnly && (
-                        <button
+                    {!webReadOnly && (
+                      <span className={css.rowActions}>
+                        <RowButton
+                          label={t("projects.newSessionAria", { name: p.name })}
                           onClick={() => void openProjectScreen(p)}
-                          aria-label={t("projects.newSessionAria", {
-                            name: p.name,
-                          })}
-                          title={t("projects.newSessionAria", { name: p.name })}
-                          className="hidden rounded p-1 text-muted hover:bg-border hover:text-text group-hover/project:block"
                         >
-                          <Plus size={13} />
-                        </button>
-                      )}
-                    </div>
+                          <IconNewChatOutlineRegular />
+                        </RowButton>
+                      </span>
+                    )}
                   </div>
                   </ContextMenu>
                 )}
@@ -877,56 +1022,52 @@ export function Sidebar({ project }: { project: Project }) {
                   )}
                 >
                   <div className="overflow-hidden">
-                    <div className="mb-0.5 ml-[15px] border-l border-border-faint pl-1.5">
-                      {rows.length === 0 && (
-                        <div className="px-2 py-1 text-xs text-muted">
-                          {t("projects.noSessions")}
-                        </div>
-                      )}
-                      {rows.slice(0, ROW_LIMIT).map(sessionRow)}
-                      {rows.length > ROW_LIMIT && (
-                        <MoreRow
-                          count={rows.length - ROW_LIMIT}
-                          label={t("history.seeAll")}
-                          onClick={() => navigate("/history")}
-                        />
-                      )}
-                    </div>
+                    {rows.length === 0 && (
+                      <div className={css.empty}>{t("projects.noSessions")}</div>
+                    )}
+                    {rows.slice(0, ROW_LIMIT).map(sessionRow)}
+                    {rows.length > ROW_LIMIT && (
+                      <MoreRow
+                        count={rows.length - ROW_LIMIT}
+                        label={t("history.seeAll")}
+                        onClick={() => navigate("/history")}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
           {hiddenProjectCount > 0 && (
-            <button
+            <MoreRow
+              count={hiddenProjectCount}
+              label={t("projects.seeAll")}
               onClick={() => navigate("/projects")}
-              className="flex w-full items-center gap-2 rounded-input px-2 py-1 pl-6 text-[13px] text-muted hover:bg-surface-2 hover:text-text"
-            >
-              <span className="truncate">{t("projects.seeAll")}</span>
-              <span className="text-[10px] tabular-nums text-muted">+{hiddenProjectCount}</span>
-            </button>
+            />
           )}
-          <div className="mt-3 flex items-center gap-1 px-2 py-1">
-            <span className="flex-1 truncate text-xs font-medium uppercase tracking-wider text-muted">
-              {t("history.heading")}
-            </span>
+          <div className={css.sectionHeader}>
             {/* Every conversation ever, searchable — the rail only shows recent
                 work, so this is how older sessions are found (#65). */}
             <button
               onClick={() => navigate("/history")}
               title={t("history.seeAll")}
-              className={cn(
-                "shrink-0 rounded px-1 text-[11px] outline-none hover:bg-surface-2 hover:text-text",
-                location.pathname === "/history" ? "text-text" : "text-muted",
-              )}
+              className={css.sectionLabel}
             >
-              {t("history.seeAll")}
+              {t("history.heading")}
             </button>
+            <div className={css.headerActions} style={{ marginLeft: "auto" }}>
+              <button
+                onClick={() => navigate("/history")}
+                aria-label={t("history.seeAll")}
+                title={t("history.seeAll")}
+                className={css.iconButton}
+              >
+                <IconFlatListOutlineRegular size={16} />
+              </button>
+            </div>
           </div>
           {looseRows.length === 0 && exampleRows.length === 0 && (
-            <div className="px-2 py-2 text-xs text-muted">
-              {t("history.empty")}
-            </div>
+            <div className={css.empty}>{t("history.empty")}</div>
           )}
           {looseRows.slice(0, ROW_LIMIT).map(sessionRow)}
           {looseRows.length > ROW_LIMIT && (
@@ -937,27 +1078,26 @@ export function Sidebar({ project }: { project: Project }) {
             />
           )}
           {exampleRows.map(sessionRow)}
-        </div>
-
-        <div className="border-t border-border px-3 py-3">
-          <StatusPills />
-          <button
-            className="relative mt-2 flex items-center gap-2 rounded-input px-2 py-1 text-[13px] text-muted hover:bg-surface-2 hover:text-text"
-            onClick={() => navigate("/settings")}
-            aria-label={t("sidebar.settings")}
-          >
-            <Settings size={15} />
-            <span>{t("sidebar.settings")}</span>
-            {showUpdateBadge && (
-              <span
-                aria-hidden="true"
-                className="ml-auto h-2 w-2 rounded-full bg-error shadow-[0_0_0_2px_var(--color-surface)]"
-              />
-            )}
-          </button>
+          </>
+          )}
         </div>
         </>
         )}
+
+        <div className={css.footArea}>
+          {!inSettings && (
+            <button
+              className={css.trigger}
+              onClick={() => navigate("/settings")}
+              aria-label={t("sidebar.settings")}
+            >
+              <IconSettingsOutlineMedium size={16} />
+              <span>{t("sidebar.settings")}</span>
+              {showUpdateBadge && <span aria-hidden="true" className={css.updateDot} />}
+            </button>
+          )}
+        </div>
+        </div>
 
         {pendingRemoveProject && (
           <ConfirmDialog
@@ -973,6 +1113,23 @@ export function Sidebar({ project }: { project: Project }) {
               setPendingRemoveProject(null);
             }}
             onCancel={() => setPendingRemoveProject(null)}
+          />
+        )}
+
+        {pendingArchive && (
+          <ConfirmDialog
+            title={t("history.archiveTitle")}
+            body={t("history.archiveBody", { title: pendingArchive.title })}
+            confirmLabel={t("history.archive")}
+            // eslint-disable-next-line i18next/no-literal-string -- dialog tone, not UI copy
+            tone="default"
+            onConfirm={() => {
+              const row = pendingArchive;
+              setPendingArchive(null);
+              void setSessionArchived(row.id, true);
+              if (location.pathname === row.to) navigate("/live");
+            }}
+            onCancel={() => setPendingArchive(null)}
           />
         )}
 
@@ -1005,16 +1162,22 @@ export function Sidebar({ project }: { project: Project }) {
       <div
         {...handleProps}
         className={cn(
-          "group absolute inset-y-0 right-0 z-10 w-[5px] cursor-col-resize",
+          "group absolute inset-y-0 right-0 z-10 w-[5px] cursor-col-resize transition-colors duration-150",
+          // The whole 5px grab strip tints while it is being dragged, so the
+          // edge reads as a handle under the pointer and not as a hairline that
+          // happened to change colour.
+          dragging && "bg-accent/15",
           sidebarCollapsed && !dragging && "pointer-events-none",
         )}
       >
         <div
           className={cn(
-            "absolute inset-y-0 right-0 w-[2px] transition-colors",
-            dragging
-              ? "bg-accent/60"
-              : "bg-transparent group-hover:bg-accent/40",
+            "absolute inset-y-0 right-0 w-[2px] transition-colors duration-150",
+            // While dragging, the edge is what the eye should follow: a solid
+            // accent line with a soft halo, so it reads as the thing being
+            // moved rather than as a hairline that happens to have changed
+            // colour.
+            dragging ? "bg-accent" : "bg-transparent group-hover:bg-accent/40",
           )}
         />
       </div>
@@ -1102,6 +1265,76 @@ function ImportProjectDialog({
 }
 
 /** "+N · All sessions" tail of a truncated session list. */
+/** A sidebar row that marquees its clipped title while hovered. It is the
+ *  right-click menu's trigger, so it forwards the ref and props Radix passes;
+ *  `data-sidebar-row` lets the row's "…" button open that same menu. */
+const MarqueeRow = forwardRef<
+  HTMLDivElement,
+  Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
+    children: (titleRef: RefObject<HTMLSpanElement>) => ReactNode;
+  }
+>(function MarqueeRow({ children, onPointerEnter, onPointerLeave, ...rest }, ref) {
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const marquee = useTitleMarquee(titleRef);
+  return (
+    <div
+      ref={ref}
+      data-sidebar-row=""
+      {...rest}
+      onPointerEnter={(e) => {
+        marquee.enter();
+        onPointerEnter?.(e);
+      }}
+      onPointerLeave={(e) => {
+        marquee.leave();
+        onPointerLeave?.(e);
+      }}
+    >
+      {children(titleRef)}
+    </div>
+  );
+});
+
+/** Open the enclosing row's right-click menu just below `button`. */
+function openRowMenu(button: HTMLElement): void {
+  const r = button.getBoundingClientRect();
+  // eslint-disable-next-line i18next/no-literal-string -- DOM selector, not UI copy
+  const row = button.closest("[data-sidebar-row]");
+  row?.dispatchEvent(
+    // eslint-disable-next-line i18next/no-literal-string -- DOM event type, not UI copy
+    new MouseEvent("contextmenu", { bubbles: true, clientX: r.left, clientY: r.bottom + 4 }),
+  );
+}
+
+/** A bare 16px glyph button in a row's hover strip (DeepSeek Harness style). */
+function RowButton({
+  label,
+  danger = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  danger?: boolean;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick(e);
+      }}
+      className={cn(css.rowIconButton, danger && css.danger)}
+    >
+      {children}
+    </button>
+  );
+}
+
 function MoreRow({
   count,
   label,
@@ -1112,32 +1345,33 @@ function MoreRow({
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-input py-1 pl-2 pr-2 text-[13px] text-muted hover:bg-surface-2 hover:text-text"
-    >
+    <button onClick={onClick} className={css.moreRow}>
       <span className="truncate">{label}</span>
-      <span className="ml-auto shrink-0 text-[10px] tabular-nums">+{count}</span>
+      <span className="ml-1.5 shrink-0 tabular-nums">+{count}</span>
     </button>
   );
 }
 
+/** A DSH panel row: 16px glyph + title, 36px tall, 12px radius. */
 function NavRow({
   icon,
   label,
+  active = false,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
+  active?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 rounded-input px-2 py-1 text-[13px] text-text hover:bg-surface-2"
+      aria-current={active ? "page" : undefined}
+      className={cn(css.panelRow, active && css.panelActive)}
     >
-      <span className="text-text">{icon}</span>
-      <span>{label}</span>
+      <span className={css.panelGlyph} aria-hidden="true">{icon}</span>
+      <span className={css.panelTitle}>{label}</span>
     </button>
   );
 }

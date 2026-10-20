@@ -28,7 +28,14 @@
       "newSession": "新建会话"
     },
     "rename": "重命名屏幕",
-    "tabMenu": "屏幕操作"
+    "tabMenu": "屏幕操作",
+    "runAgent": "运行一个 Agent",
+    "newNotebook": "新建 Notebook",
+    "newMarkdown": "新建 Markdown",
+    "splitRightShort": "向右分屏",
+    "splitDownShort": "向下分屏",
+    "defaultProject": "默认",
+    "projectMenu": "切换项目"
   },
   "composer": {
     "placeholder": {
@@ -43,7 +50,14 @@
       "mcp": "mcp"
     },
     "file": {
-      "removeAria": "移除 {{name}}"
+      "removeAria": "移除 {{name}}",
+      "previewAria": "预览 {{name}}",
+      "preview": {
+        "empty": "空文件",
+        "none": "不支持内嵌预览",
+        "unreadable": "读不到这个文件",
+        "lines_other": "{{count}} 行"
+      }
     },
     "attach": {
       "addAria": "添加文件",
@@ -94,7 +108,8 @@
     },
     "error": {
       "paste": "无法保存粘贴内容：{{message}}",
-      "addFiles": "无法添加文件：{{message}}"
+      "addFiles": "无法添加文件：{{message}}",
+      "imageNotSent": "读不到 {{names}}，这条消息发出去时没带上这张图。"
     },
     "model": {
       "aria": "切换模型",
@@ -132,7 +147,10 @@
     },
     "compact": {
       "aria": "压缩上下文",
-      "title": "把较早的对话总结掉，让下一条回复在受控的上下文上运行"
+      "title": "把较早的对话总结掉，让下一条回复在受控的上下文上运行",
+      "confirmTitle": "压缩上下文？",
+      "confirmBody": "先前的对话会被替换为一段摘要，让接下来的回复在有限的上下文里运行。完整的原始对话仍然保存在本地。",
+      "confirmAction": "压缩"
     }
   },
   "localCommand": {
@@ -144,6 +162,7 @@
     "newSession": "新建会话",
     "heading": "我们该研究什么？",
     "subheading": "在下方描述您的分析——或从以下选项开始。",
+    "subheadingNoCards": "在下方描述您的分析。",
     "demo": {
       "title": "端到端运行一次演示分析",
       "description": "模拟一份数据集，拟合模型，并生成图表和可追溯的报告。"
@@ -180,7 +199,10 @@
     "subagentFallback": "一个子代理",
     "header": {
       "expandSidebarAria": "展开侧边栏",
-      "expandSidebarTitle": "展开侧边栏（{{shortcut}}）"
+      "expandSidebarTitle": "展开侧边栏（{{shortcut}}）",
+      "rename": "重命名会话…",
+      "untitled": "未命名会话",
+      "paneMenu": "会话操作"
     },
     "filesToggle": {
       "default": "文件",
@@ -258,6 +280,20 @@
         "default_other": "执行了 {{count}} 个步骤"
       },
       "failedCount": "{{count}} 个失败"
+    },
+    "process": {
+      "thinking": "已完成分析",
+      "read": "已读取文件",
+      "write": "已写入文件",
+      "search": "已搜索代码",
+      "edit": "修改了文件",
+      "commands": "执行了命令",
+      "webFetch": "已访问网页",
+      "tools": "已调用工具",
+      "joinTwo": "{{first}}并{{second}}",
+      "comma": "，",
+      "sharedPrefix": "已",
+      "more": "{{title}}等"
     }
   },
   "artifact": {
@@ -271,7 +307,11 @@
       "data": "数据"
     },
     "via": "· 通过 {{tool}}",
-    "open": "打开"
+    "open": "打开",
+    "maximize": "最大化",
+    "close": "关闭",
+    "collapse": "折叠",
+    "expand": "展开"
   },
   "figure": {
     "downloadAria": "下载图表",
@@ -317,9 +357,15 @@
     "alwaysAllow": "始终允许",
     "allowOnce": "仅允许一次"
   },
+  "turn": {
+    "worked": "已完成工作",
+    "workedFor": "用时 {{duration}}"
+  },
   "reasoning": {
     "thinking": "思考中…",
-    "thought": "已思考"
+    "thought": "已思考",
+    "collapse": "收起思考",
+    "expand": "展开完整思考"
   },
   "stepSummary": {
     "steps": "{{count}} 个步骤"
@@ -385,6 +431,7 @@
       "action": "回滚"
     }
   },
+  "historyRetry": "重试",
   "compaction": {
     "label": "上下文已压缩",
     "autoBody": "为了不超出该模型的上下文窗口，运行时已把更早的对话摘要化，对话从这里继续。",
@@ -431,7 +478,8 @@
     "title": "新窗格的会话将建在",
     "continueIn": "沿用 {{name}}",
     "newFolder": "新建文件夹",
-    "chooseOther": "选择其他文件夹…"
+    "chooseOther": "选择其他文件夹…",
+    "terminal": "在此文件夹开终端"
   },
   "stall": {
     "silentTitle": "回合可能已卡住",
@@ -440,5 +488,84 @@
     "repeatLine": "此回合已连续 {{count}} 次执行相同调用且结果相同。仍在工作，还是在循环？",
     "keepWaiting": "继续等待",
     "stopTurn": "停止回合"
+  },
+  "terminal": {
+    "title": "终端",
+    "exited": "[进程已退出]",
+    "desktopOnly": "终端只能在桌面应用中使用。",
+    "new": "终端",
+    "menu": {
+      "label": "终端菜单",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "clear": "清屏",
+      "revealCwd": "在访达中显示工作目录",
+      "resumeAgent": "恢复上次的 {{agent}} 会话"
+    },
+    "rename": "重命名终端…",
+    "confirmClose": {
+      "title": "关闭这个终端？",
+      "body": "Shell 以及里面还在跑的程序都会停止，滚动历史不会保留。",
+      "action": "关闭终端"
+    },
+    "search": {
+      "placeholder": "查找",
+      "matchCase": "区分大小写",
+      "regex": "正则表达式",
+      "previous": "上一个",
+      "next": "下一个",
+      "close": "关闭查找",
+      "none": "无结果",
+      "find": "查找…"
+    }
+  },
+  "splitInto": {
+    "session": "会话"
+  },
+  "find": {
+    "placeholder": "在会话中查找",
+    "matchCase": "区分大小写",
+    "regex": "正则表达式",
+    "previous": "上一个",
+    "next": "下一个",
+    "close": "关闭查找",
+    "none": "无结果",
+    "find": "查找…"
+  },
+  "turnNav": {
+    "label": "轮次导航",
+    "jump": "跳转到第 {{turn}} 轮",
+    "turn": "第 {{turn}} 轮"
+  },
+  "trajectory": {
+    "title": "轨迹",
+    "toggle": "轨迹 — 这次对话的每一步",
+    "duration": "时长",
+    "useActual": "使用实际时长",
+    "useEqual": "使用等宽操作",
+    "turns": "轮次",
+    "expandTurns": "展开所有轮次",
+    "collapseTurns": "收起所有轮次",
+    "calls": "调用",
+    "expandCalls": "展开所有调用",
+    "collapseCalls": "收起所有调用",
+    "search": "搜索",
+    "user": "用户",
+    "assistant": "助手",
+    "tool": "工具",
+    "message": "消息",
+    "system": "系统",
+    "compacted": "已压缩",
+    "input": "输入",
+    "model": "模型",
+    "tools": "工具",
+    "turn": "第 {{n}} 轮",
+    "noOutput": "无输出",
+    "empty": "还没有步骤。",
+    "noMatch": "没有匹配的步骤。",
+    "steps_one": "{{count}} 步",
+    "steps_other": "{{count}} 步",
+    "close": "关闭轨迹"
   }
 }

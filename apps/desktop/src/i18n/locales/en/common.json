@@ -10,5 +10,14 @@
       "error": "Could not compress the context.",
       "done": "Context compressed. The next reply uses the compacted conversation."
     }
+  },
+  "linkMenu": {
+    "openFile": "Open file",
+    "openDefault": "Open with default app",
+    "openLink": "Open link",
+    "copyLink": "Copy link",
+    "copyPath": "Copy path",
+    "copied": "Copied",
+    "click": "Click"
   }
 }

@@ -5,8 +5,8 @@ import { insertLeaf, leaves, makeLeaf, useLayoutStore } from "@/lib/layout";
 import { PaneTree } from "./PaneTree";
 
 vi.mock("./SessionView", () => ({
-  SessionView: ({ onClose }: { onClose?: () => void }) => (
-    <button onClick={onClose} disabled={!onClose}>
+  SessionView: ({ onClose, zoom }: { onClose?: () => void; zoom: number }) => (
+    <button onClick={onClose} disabled={!onClose} data-zoom={zoom}>
       Request close
     </button>
   ),
@@ -74,5 +74,43 @@ describe("PaneTree panel close", () => {
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(leaves(useLayoutStore.getState().tree!)).toHaveLength(1);
+  });
+});
+
+describe("PaneTree default zoom", () => {
+  const show = (tree: ReturnType<typeof makeLeaf> | ReturnType<typeof insertLeaf>) => {
+    const first = leaves(tree)[0];
+    useLayoutStore.setState({
+      groups: [{ id: "screen-a", name: "", tree, focusedLeafId: first.id, zoomedLeafId: null }],
+      activeGroupId: "screen-a",
+      tree,
+      focusedLeafId: first.id,
+      zoomedLeafId: null,
+      ephemeralGroupId: null,
+    });
+    render(<Screens />);
+    return screen.getAllByRole("button", { name: "Request close" }).map((b) => b.dataset.zoom);
+  };
+
+  it("leaves a lone pane at 100%", () => {
+    const one = makeLeaf("session-a");
+    expect(show(one)).toEqual(["1"]);
+  });
+
+  it("gives two tiled panes 90%", () => {
+    expect(show(boundPanes())).toEqual(["0.9", "0.9"]);
+  });
+
+  it("gives three or more tiled panes 75%", () => {
+    const two = boundPanes();
+    const second = leaves(two)[1];
+    expect(show(insertLeaf(two, second.id, "bottom", makeLeaf("session-c")))).toEqual(["0.75", "0.75", "0.75"]);
+  });
+
+  it("keeps a zoom the user set", () => {
+    const two = boundPanes();
+    const [a] = leaves(two);
+    a.zoom = 1.25;
+    expect(show(two)).toEqual(["1.25", "0.9"]);
   });
 });

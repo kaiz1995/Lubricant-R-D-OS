@@ -17,6 +17,7 @@ pub mod examples;
 pub mod gateway;
 pub mod git_snapshot;
 pub mod harness;
+pub mod model_prices;
 pub mod model_probe;
 pub mod opencode_config;
 pub mod project;
@@ -25,5 +26,9 @@ pub mod runs;
 pub mod runs_index;
 pub mod runtime;
 pub mod session_sync;
+pub mod system_proxy;
+pub mod usage;
+pub mod usage_pricing;
+pub mod which;
 
 pub use env::Env;

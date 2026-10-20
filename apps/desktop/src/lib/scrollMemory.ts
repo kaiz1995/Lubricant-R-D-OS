@@ -80,6 +80,8 @@ export function useChatScroll(
 ): {
   contentRef: RefObject<HTMLDivElement>;
   onScroll: (e: UIEvent<HTMLElement>) => void;
+  /** Within a screen of the bottom — no "Latest" control needed. Following
+   *  (auto-scroll on new content) uses the tighter CHAT_BOTTOM_THRESHOLD. */
   atLatest: boolean;
   jumpToLatest: () => void;
 } {
@@ -89,8 +91,11 @@ export function useChatScroll(
   const [atLatest, setAtLatest] = useState(true);
 
   const update = (el: HTMLElement) => {
-    const latest = isNearBottom(el);
-    following.current = latest;
+    following.current = isNearBottom(el);
+    // The jump control is for a reader who is really somewhere else: more than
+    // a screen of conversation below them. A few lines short of the bottom (or
+    // a welcome screen a little taller than a short pane) is not "away".
+    const latest = isNearBottom(el, Math.max(CHAT_BOTTOM_THRESHOLD, el.clientHeight));
     setAtLatest((current) => (current === latest ? current : latest));
   };
 

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Loader2, Paperclip, Pencil, RotateCcw, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "@/lib/clipboard";
@@ -19,9 +19,34 @@ import { MarkdownViewer } from "@/components/markdown-viewer/MarkdownViewer";
 import { extractArtifactRefs, refToArtifactBlock } from "@/lib/artifacts";
 import { resolveArtifactPath } from "@/lib/artifactFile";
 import { useThrottledValue } from "@/lib/useThrottledValue";
+import { splitStreamingMarkdown } from "@/lib/markdownSegments";
 import { HSCROLL_ATTR } from "@/lib/wheelChain";
 import { HOVER_HOST } from "@/lib/hoverTracking";
 import { RunningDot } from "./RunningDot";
+
+/** Streaming markdown throttle interval, ms (#157). The re-parse cost is
+ *  linear in the message length, so the window scales with it: 90ms for short
+ *  answers, reaching the 1200ms cap around 72k chars — long enough that the
+ *  per-render work stays cheaper than the interval on a slow CPU, short
+ *  enough that the text still visibly types out. */
+export function streamThrottleMs(length: number): number {
+  return Math.min(1200, Math.max(90, Math.floor(length / 60)));
+}
+
+/** One sealed markdown segment of a streaming answer (#157). Its text is
+ *  prefix-stable (splitStreamingMarkdown never revises a sealed segment), so
+ *  this memo means the already-finished paragraphs/code blocks of a streaming
+ *  message are parsed and highlighted exactly once — only the live tail below
+ *  re-renders on each throttle tick. The wrapper's bottom margin stands in
+ *  for the blank line that ended the segment (the finished message renders
+ *  as a single MarkdownViewer, so final spacing is unchanged). */
+const SealedSegment = memo(function SealedSegment({ text }: { text: string }) {
+  return (
+    <div className="mb-3.5" data-sealed-segment>
+      <MarkdownViewer links>{text}</MarkdownViewer>
+    </div>
+  );
+});
 
 // All block atoms are memoized on their props: a fold rebuilds only the one
 // block object it changed (the blocks-array copy preserves the rest by
@@ -141,19 +166,19 @@ export const UserMessage = memo(function UserMessage({
   }
 
   return (
-    <div {...{ [HOVER_HOST]: "" }} className="flex flex-col items-end">
+    <div {...{ [HOVER_HOST]: "" }} className="relative flex flex-col items-end">
       <div className="w-fit max-w-[85%] whitespace-pre-wrap break-words rounded-card bg-surface-2 px-4 py-2.5 text-[15px] leading-relaxed text-text">
         {block.text}
       </div>
       <div
         data-hover-row
-        className="flex items-center gap-0.5 pr-0.5 pt-1"
+        className="flex items-center justify-end gap-0.5 pr-0.5 pt-0.5"
       >
         <button
           onClick={copy}
           title={copied ? t("message.copied") : t("message.copy")}
           aria-label={t("message.copy")}
-          className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
+          className="rounded p-0.5 text-muted hover:bg-surface-2 hover:text-text"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
@@ -162,7 +187,7 @@ export const UserMessage = memo(function UserMessage({
             onClick={openEditor}
             title={t("message.edit")}
             aria-label={t("message.edit")}
-            className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
+            className="rounded p-0.5 text-muted hover:bg-surface-2 hover:text-text"
           >
             <Pencil size={14} />
           </button>
@@ -172,7 +197,7 @@ export const UserMessage = memo(function UserMessage({
             onClick={() => setConfirm("revert")}
             title={t("message.revert")}
             aria-label={t("message.revert")}
-            className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
+            className="rounded p-0.5 text-muted hover:bg-surface-2 hover:text-text"
           >
             <RotateCcw size={14} />
           </button>
@@ -180,6 +205,25 @@ export const UserMessage = memo(function UserMessage({
       </div>
       {confirmDialog}
     </div>
+  );
+});
+
+/** Streaming body as one memoized unit (#157): `markdown` changes on every
+ *  coalesced flush (~8/s), but `segments` only changes on a throttle tick —
+ *  keying the memo on the segments OBJECT keeps the sealed-list reconcile
+ *  (dozens of elements late in a long answer) off the per-flush path. */
+const StreamingMarkdown = memo(function StreamingMarkdown({
+  segments,
+}: {
+  segments: { sealed: string[]; tail: string };
+}) {
+  return (
+    <>
+      {segments.sealed.map((text, i) => (
+        <SealedSegment key={i} text={text} />
+      ))}
+      <MarkdownViewer links>{segments.tail}</MarkdownViewer>
+    </>
   );
 });
 
@@ -206,12 +250,27 @@ export const AgentMessage = memo(function AgentMessage({
   // whole message (react-markdown + KaTeX) each time is the main live CPU cost
   // (#50). Throttle to the trailing value so the parse runs a bounded number of
   // times per second; a finished message settles immediately and stays put.
-  const shown = useThrottledValue(markdown, 90);
+  // The interval scales with message length (#157): re-parsing is linear in
+  // markdown length, so a long streaming answer needs a longer window for the
+  // per-render cost to stay below the frame budget on slow machines.
+  const shown = useThrottledValue(markdown, streamThrottleMs(markdown.length));
+  // A streaming message (no `completed` yet) renders as sealed segments + a
+  // live tail (#157): without this the whole document — every finished code
+  // block re-highlighted, every table re-parsed — churns on each throttle
+  // tick, and that O(message) work per update is what saturated the main
+  // thread on long answers. Sealed segments are memoized and never render
+  // twice; only the tail re-parses. A finished message keeps the single
+  // MarkdownViewer, so the final layout is byte-identical to before.
+  const streaming = completed === undefined;
+  const segments = useMemo(() => (streaming ? splitStreamingMarkdown(shown) : null), [streaming, shown]);
   // Files the agent mentions (e.g. a PDF produced by running code) become clickable.
   // Each mention is resolved to a real workspace path first — prose often names a
   // bare filename ("index.html") whose file lives in a subdirectory; mentions of
   // files that don't exist get no chip.
-  const mentioned = onOpenArtifact ? extractArtifactRefs(shown) : [];
+  // Memoized on `shown` (#157): the regex sweeps the whole message, so running
+  // it per coalesced flush (rather than per throttle tick) is a linear cost
+  // that grows exactly as the answer does.
+  const mentioned = useMemo(() => (onOpenArtifact ? extractArtifactRefs(shown) : []), [shown, onOpenArtifact]);
   const [refs, setRefs] = useState<string[]>([]);
   const mentionedKey = mentioned.join("\n");
   useEffect(() => {
@@ -244,8 +303,12 @@ export const AgentMessage = memo(function AgentMessage({
   return (
     // Marked so a text selection inside an ANSWER (never a tool log or the
     // user's own message) can offer follow-up actions — see SelectionActions.
-    <div {...{ [HOVER_HOST]: "" }} data-agent-message>
-      <MarkdownViewer>{shown}</MarkdownViewer>
+    <div {...{ [HOVER_HOST]: "" }} data-agent-message className="relative">
+      {segments ? (
+        <StreamingMarkdown segments={segments} />
+      ) : (
+        <MarkdownViewer links>{shown}</MarkdownViewer>
+      )}
       {refs.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {refs.map((path) => (
@@ -263,13 +326,13 @@ export const AgentMessage = memo(function AgentMessage({
       )}
       <div
         data-hover-row
-        className="flex min-w-0 items-center gap-1.5 pt-1"
+        className="flex min-w-0 items-center gap-1.5 pt-0.5"
       >
         <button
           onClick={copy}
           title={copied ? t("message.copied") : t("message.copy")}
           aria-label={t("message.copy")}
-          className="shrink-0 rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
+          className="shrink-0 rounded p-0.5 text-muted hover:bg-surface-2 hover:text-text"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
@@ -292,16 +355,16 @@ export const DataTable = memo(function DataTable({ block }: { block: DataTableBl
     // latched trackpad gestures back as well (lib/wheelChain).
     <div
       {...{ [HSCROLL_ATTR]: "" }}
-      className="overflow-x-auto overflow-y-hidden rounded-card border border-border bg-surface shadow-card"
+      className="overflow-x-auto overflow-y-hidden"
     >
       {block.caption && (
-        <div className="border-b border-border px-4 py-2 text-xs text-muted">{block.caption}</div>
+        <div className="pb-2 text-xs text-muted">{block.caption}</div>
       )}
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left text-muted">
             {block.columns.map((c) => (
-              <th key={c} className="px-4 py-2 font-medium">
+              <th key={c} className="py-2 pr-4 font-medium">
                 {c}
               </th>
             ))}
@@ -314,7 +377,7 @@ export const DataTable = memo(function DataTable({ block }: { block: DataTableBl
                 <td
                   key={j}
                   className={cn(
-                    "px-4 py-2 text-text",
+                    "py-2 pr-4 text-text",
                     j === row.length - 1 && "font-mono text-[13px] text-link",
                   )}
                 >
@@ -335,8 +398,8 @@ export const RunningJobsOverlay = memo(function RunningJobsOverlay({
   block: RunningJobsBlock;
 }) {
   return (
-    <div className="rounded-card border border-border bg-surface shadow-card">
-      <div className="border-b border-border px-4 py-2 text-xs font-medium uppercase tracking-wider text-muted">
+    <div>
+      <div className="border-b border-border pb-2 text-xs font-medium uppercase tracking-wider text-muted">
         {block.title}
       </div>
       <ul className="divide-y divide-border/60">
@@ -362,10 +425,14 @@ const TONE: Record<NonNullable<StatusLineBlock["tone"]>, string> = {
 export const StatusLine = memo(function StatusLine({
   block,
   onStallAction,
+  onRetry,
 }: {
   block: StatusLineBlock;
   /** Present only in the live session; powers the stall warning's two actions. */
   onStallAction?: (stallKey: string, action: "keep-waiting" | "stop") => void;
+  /** Present only in the live session; powers the failed history-load error
+   *  line's Retry action (#139). */
+  onRetry?: () => void;
 }) {
   const { t } = useTranslation(["session", "common"]);
   return (
@@ -391,6 +458,17 @@ export const StatusLine = memo(function StatusLine({
               onClick={() => onStallAction(block.stall!.key, "stop")}
             >
               {t("stall.stopTurn")}
+            </button>
+          </span>
+        )}
+        {block.retry && onRetry && (
+          <span className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              className="rounded-input border border-border px-2.5 py-1 text-xs font-medium text-text hover:bg-surface-2"
+              onClick={onRetry}
+            >
+              {t("historyRetry")}
             </button>
           </span>
         )}
@@ -420,7 +498,7 @@ export const HistoryRepair = memo(function HistoryRepair({
   const canRepair = !!onRevert && !!target;
 
   return (
-    <div className="rounded-card border border-border bg-surface-2/50 p-3 text-sm">
+    <div className="rounded-card bg-surface-2 p-3 text-sm">
       <div className="flex items-start gap-2">
         <Wrench size={14} className="mt-0.5 shrink-0 text-muted" aria-hidden />
         <div className="min-w-0 flex-1">

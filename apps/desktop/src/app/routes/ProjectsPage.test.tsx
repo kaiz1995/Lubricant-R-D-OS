@@ -1,6 +1,7 @@
 import { screen, fireEvent, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { useRuntimeStore } from "@/lib/runtime";
+import { leaves, useLayoutStore } from "@/lib/layout";
 import { renderAt } from "@/test/render";
 
 const base = {
@@ -67,6 +68,24 @@ describe("ProjectsPage", () => {
     expect(page.getByText("clip summary")).toBeInTheDocument();
     // A sibling folder is not swept in by the normalization.
     expect(page.queryByText("other project")).not.toBeInTheDocument();
+  });
+
+  it("opening a session puts it on screen, not just in the URL", async () => {
+    useRuntimeStore.setState({
+      projects: [{ ...base, id: "p1", name: "Alpha", path: "/base/alpha-dir" }],
+      sessions: [{ id: "s1", title: "first pass", directory: "/base/alpha-dir", updated: 2_000 }],
+    });
+    renderAt("/projects");
+    await screen.findByPlaceholderText("Search projects");
+    const page = within(screen.getByRole("main"));
+    fireEvent.click(page.getAllByRole("button", { name: "Alpha" })[0]);
+    fireEvent.click(page.getByText("first pass"));
+
+    // The active Screen shows that session — the route alone showed whatever
+    // Screen was up before.
+    const layout = useLayoutStore.getState();
+    const active = layout.groups.find((g) => g.id === layout.activeGroupId)!;
+    expect(leaves(active.tree!).map((l) => l.sessionId)).toContain("s1");
   });
 
   it("shows an empty state when the search matches nothing", async () => {

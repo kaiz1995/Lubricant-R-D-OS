@@ -4,8 +4,11 @@ import { Outlet, useLocation } from "react-router-dom";
 import { PanelLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "@/components/sidebar/Sidebar";
+import { LinkMenu } from "@/components/ui/LinkMenu";
+import { JumpPalette } from "@/components/jump-palette/JumpPalette";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { PaneDragGhost } from "@/components/session/PaneDragGhost";
+import { StatusBar } from "@/components/status-bar/StatusBar";
 import { Toaster } from "@/components/ui/Toaster";
 import { SshSignInDialog } from "@/components/ui/SshSignInDialog";
 import { mockProject } from "@/lib/mock";
@@ -20,7 +23,14 @@ import { useUpdateStore } from "@/lib/update";
 import { isGatewayWeb, gatewayToken, setUnauthorizedHandler } from "@/lib/webMode";
 import { WebTokenGate } from "@/components/web/WebTokenGate";
 import { useIsMobile } from "@/lib/useIsMobile";
-import { findLeaf, leaves, useLayoutStore, type SplitDir } from "@/lib/layout";
+import {
+  findLeaf,
+  leaves,
+  projectGroups,
+  selectActiveProjectId,
+  useLayoutStore,
+  type SplitDir,
+} from "@/lib/layout";
 import { useNativeContextMenuGuard } from "@/lib/nativeMenu";
 
 export function AppShell() {
@@ -88,12 +98,14 @@ export function AppShell() {
         e.preventDefault();
         layout.addGroup();
       } else if (e.shiftKey && (key === "]" || key === "[")) {
-        // Cmd+Shift+] / [ cycles groups.
+        // Cmd+Shift+] / [ cycles the active project's Screens — the ones the
+        // bar shows; another project's are a ⌘J away.
         e.preventDefault();
-        const i = layout.groups.findIndex((g) => g.id === layout.activeGroupId);
-        const n = layout.groups.length;
+        const mine = projectGroups(layout.groups, selectActiveProjectId(layout));
+        const i = mine.findIndex((g) => g.id === layout.activeGroupId);
+        const n = mine.length;
         const j = key === "]" ? (i + 1) % n : (i - 1 + n) % n;
-        layout.setActiveGroup(layout.groups[j].id);
+        layout.setActiveGroup(mine[j].id);
       } else if (e.shiftKey && key === "enter") {
         e.preventDefault();
         layout.toggleZoom();
@@ -187,69 +199,81 @@ export function AppShell() {
   const overlayTitlebar = useOverlayTitlebar();
   const pathname = useLocation().pathname;
   const pageOwnsTitlebar = pathname.startsWith("/live") || pathname.startsWith("/example");
+  // Files: its two 32px headers (breadcrumb, preview) are the top row while the
+  // sidebar is open — the strip above them was a blank band. Collapsed, the
+  // strip comes back: it holds the expand button beside the traffic lights.
+  const filesOwnsTitlebar = pathname.startsWith("/files") && !sidebarCollapsed;
 
   if (isGatewayWeb && !webReady) {
     return <WebTokenGate onConnect={() => setWebReady(true)} />;
   }
 
   return (
+    // A column: the sidebar and the content share the first row, and the status
+    // strip is the window's last one, spanning both.
+    //
     // The window background lives on <main>, not the shell: under vibrancy
     // the area behind the (translucent) sidebar must stay transparent.
-    <div className="flex h-screen w-screen overflow-hidden text-text">
-      <Sidebar project={mockProject} />
-      {/* Mobile: dim + close the overlay drawer by tapping outside it. */}
-      {isMobile && !sidebarCollapsed && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40"
-          onClick={() => setSidebarCollapsed(true)}
-          aria-hidden
-        />
-      )}
-      <main className="flex min-w-0 flex-1 flex-col bg-bg">
-        {/* Mobile top bar: a hamburger to open the drawer. Skipped on pages that
-            own their header (live/example sessions already render a toggle) so
-            the two don't stack. */}
-        {isMobile && !pageOwnsTitlebar && (
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
-            <button
-              onClick={() => setSidebarCollapsed(false)}
-              aria-label={t("sidebar.expand")}
-              className="rounded p-2 text-text hover:bg-surface-2"
-            >
-              <PanelLeft size={18} strokeWidth={1.5} />
-            </button>
-          </div>
-        )}
-        {/* Titlebar strip for pages that don't own one: keeps the whole top
-            of the content area draggable under the macOS overlay titlebar,
-            and hosts the expand button while the sidebar is collapsed. */}
-        {!isMobile && !pageOwnsTitlebar && (overlayTitlebar || (sidebarCollapsed && !inSettings)) && (
+    <div className="flex h-screen w-screen flex-col overflow-hidden text-text">
+      <div className="flex min-h-0 flex-1">
+        <Sidebar project={mockProject} />
+        {/* Mobile: dim + close the overlay drawer by tapping outside it. */}
+        {isMobile && !sidebarCollapsed && (
           <div
-            data-tauri-drag-region={overlayTitlebar || undefined}
-            style={
-              overlayTitlebar
-                ? overlayTitlebarStyle(sidebarCollapsed && !inSettings)
-                : undefined
-            }
-            className={cn("flex shrink-0 items-center", !overlayTitlebar && "h-12 pl-2")}
-          >
-            {sidebarCollapsed && !inSettings && (
+            className="fixed inset-0 z-30 bg-black/40"
+            onClick={() => setSidebarCollapsed(true)}
+            aria-hidden
+          />
+        )}
+        <main className="flex min-w-0 flex-1 flex-col bg-bg">
+          {/* Mobile top bar: a hamburger to open the drawer. Skipped on pages that
+              own their header (live/example sessions already render a toggle) so
+              the two don't stack. */}
+          {isMobile && !pageOwnsTitlebar && (
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
               <button
                 onClick={() => setSidebarCollapsed(false)}
                 aria-label={t("sidebar.expand")}
-                title={t("sidebar.expandTitle", { shortcut: isMac ? "⌘B" : "Ctrl+B" })}
-                className="fade-in rounded p-1 text-text hover:bg-surface-2"
+                className="rounded p-2 text-text hover:bg-surface-2"
               >
-                <PanelLeft size={14} strokeWidth={1.5} />
+                <PanelLeft size={18} strokeWidth={1.5} />
               </button>
-            )}
+            </div>
+          )}
+          {/* Titlebar strip for pages that don't own one: keeps the whole top
+              of the content area draggable under the macOS overlay titlebar,
+              and hosts the expand button while the sidebar is collapsed. */}
+          {!isMobile && !pageOwnsTitlebar && !filesOwnsTitlebar && (overlayTitlebar || (sidebarCollapsed && !inSettings)) && (
+            <div
+              data-tauri-drag-region={overlayTitlebar || undefined}
+              style={
+                overlayTitlebar
+                  ? overlayTitlebarStyle(sidebarCollapsed && !inSettings)
+                  : undefined
+              }
+              className={cn("flex shrink-0 items-center", !overlayTitlebar && "h-12 pl-2")}
+            >
+              {sidebarCollapsed && !inSettings && (
+                <button
+                  onClick={() => setSidebarCollapsed(false)}
+                  aria-label={t("sidebar.expand")}
+                  title={t("sidebar.expandTitle", { shortcut: isMac ? "⌘B" : "Ctrl+B" })}
+                  className="fade-in rounded p-1 text-text hover:bg-surface-2"
+                >
+                  <PanelLeft size={14} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          )}
+          <div className="min-h-0 flex-1">
+            <Outlet />
           </div>
-        )}
-        <div className="min-h-0 flex-1">
-          <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
+      <StatusBar />
       <CommandPalette />
+      <LinkMenu />
+      <JumpPalette />
       <Toaster />
       {/* Sign-in for an interactively authenticated compute host (#73): app-wide,
           because the prompt has to reach the user wherever the need arose — the
