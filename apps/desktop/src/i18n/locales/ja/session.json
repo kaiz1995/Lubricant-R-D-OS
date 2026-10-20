@@ -28,7 +28,14 @@
       "newSession": "新しいセッション"
     },
     "rename": "スクリーン名を変更",
-    "tabMenu": "スクリーンの操作"
+    "tabMenu": "スクリーンの操作",
+    "runAgent": "エージェントを起動",
+    "newNotebook": "新規 Notebook",
+    "newMarkdown": "新規 Markdown",
+    "splitRightShort": "右に分割",
+    "splitDownShort": "下に分割",
+    "defaultProject": "デフォルト",
+    "projectMenu": "プロジェクトを切り替え"
   },
   "composer": {
     "placeholder": {
@@ -43,7 +50,14 @@
       "mcp": "mcp"
     },
     "file": {
-      "removeAria": "{{name}} を削除"
+      "removeAria": "{{name}} を削除",
+      "previewAria": "{{name}} をプレビュー",
+      "preview": {
+        "empty": "空のファイル",
+        "none": "プレビュー非対応",
+        "unreadable": "ワークスペースからこのファイルを読み取れません",
+        "lines_other": "{{count}} 行"
+      }
     },
     "attach": {
       "addAria": "ファイルを追加",
@@ -94,7 +108,8 @@
     },
     "error": {
       "paste": "貼り付けを保存できませんでした: {{message}}",
-      "addFiles": "ファイルを追加できませんでした: {{message}}"
+      "addFiles": "ファイルを追加できませんでした: {{message}}",
+      "imageNotSent": "{{names}} を読み取れなかったため、画像なしで送信しました。"
     },
     "model": {
       "aria": "モデルを切り替え",
@@ -132,7 +147,10 @@
     },
     "compact": {
       "aria": "コンテキストを圧縮",
-      "title": "過去のターンを要約し、次の返信を制御されたコンテキストで実行します"
+      "title": "過去のターンを要約し、次の返信を制御されたコンテキストで実行します",
+      "confirmTitle": "コンテキストを圧縮しますか？",
+      "confirmBody": "これまでのやり取りは要約に置き換えられ、次の応答は限られたコンテキストで実行されます。元の会話全体はローカルに保存されたままです。",
+      "confirmAction": "圧縮"
     }
   },
   "localCommand": {
@@ -144,6 +162,7 @@
     "newSession": "新規セッション",
     "heading": "何を調べましょうか？",
     "subheading": "以下に分析内容を記入してください — またはこちらから始められます。",
+    "subheadingNoCards": "以下に分析内容を記入してください。",
     "demo": {
       "title": "デモ分析をエンドツーエンドで実行",
       "description": "データセットをシミュレートし、モデルを適合させ、図とトレース可能なレポートを作成します。"
@@ -180,7 +199,10 @@
     "subagentFallback": "サブエージェント",
     "header": {
       "expandSidebarAria": "サイドバーを展開する",
-      "expandSidebarTitle": "サイドバーを展開する（{{shortcut}}）"
+      "expandSidebarTitle": "サイドバーを展開する（{{shortcut}}）",
+      "rename": "セッション名を変更…",
+      "untitled": "名称未設定のセッション",
+      "paneMenu": "セッションの操作"
     },
     "filesToggle": {
       "default": "ファイル",
@@ -258,6 +280,20 @@
         "default_other": "{{count}} ステップを実行"
       },
       "failedCount": "{{count}} 件失敗"
+    },
+    "process": {
+      "thinking": "分析完了",
+      "read": "ファイルを読み込み",
+      "write": "ファイルを書き込み",
+      "search": "コードを検索",
+      "edit": "ファイルを編集",
+      "commands": "コマンドを実行",
+      "webFetch": "ウェブページを閲覧",
+      "tools": "ツールを呼び出し",
+      "joinTwo": "{{first}}、{{second}}",
+      "comma": "、",
+      "sharedPrefix": "",
+      "more": "{{title}}など"
     }
   },
   "artifact": {
@@ -271,7 +307,11 @@
       "data": "データ"
     },
     "via": "· {{tool}} 経由",
-    "open": "開く"
+    "open": "開く",
+    "maximize": "最大化",
+    "close": "閉じる",
+    "collapse": "折りたたむ",
+    "expand": "展開"
   },
   "figure": {
     "downloadAria": "図をダウンロード",
@@ -317,9 +357,15 @@
     "alwaysAllow": "常に許可",
     "allowOnce": "今回のみ許可"
   },
+  "turn": {
+    "worked": "作業完了",
+    "workedFor": "所要時間 {{duration}}"
+  },
   "reasoning": {
     "thinking": "思考中…",
-    "thought": "思考済み"
+    "thought": "思考済み",
+    "collapse": "思考を折りたたむ",
+    "expand": "思考をすべて表示"
   },
   "stepSummary": {
     "steps": "{{count}} ステップ"
@@ -385,6 +431,7 @@
       "action": "巻き戻す"
     }
   },
+  "historyRetry": "再試行",
   "compaction": {
     "label": "コンテキストを圧縮しました",
     "autoBody": "モデルのコンテキストウィンドウに収めるため、ランタイムが以前のやり取りを要約し、会話はここから続いています。",
@@ -431,7 +478,8 @@
     "title": "新しいペインのセッションの作成先",
     "continueIn": "{{name}} を引き継ぐ",
     "newFolder": "新しいフォルダー",
-    "chooseOther": "別のフォルダーを選択…"
+    "chooseOther": "別のフォルダーを選択…",
+    "terminal": "このフォルダーでターミナル"
   },
   "stall": {
     "silentTitle": "ターンが停止している可能性があります",
@@ -440,5 +488,84 @@
     "repeatLine": "このターンは同じ呼び出しを {{count}} 回、同じ結果で実行しています。処理中ですか、それともループしていますか？",
     "keepWaiting": "待機を続ける",
     "stopTurn": "ターンを停止"
+  },
+  "terminal": {
+    "title": "ターミナル",
+    "exited": "[プロセスは終了しました]",
+    "desktopOnly": "ターミナルはデスクトップアプリでのみ使えます。",
+    "new": "ターミナル",
+    "menu": {
+      "label": "ターミナルメニュー",
+      "copy": "コピー",
+      "paste": "貼り付け",
+      "selectAll": "すべて選択",
+      "clear": "画面をクリア",
+      "revealCwd": "作業フォルダを表示",
+      "resumeAgent": "前回の {{agent}} セッションを再開"
+    },
+    "rename": "ターミナル名を変更…",
+    "confirmClose": {
+      "title": "このターミナルを閉じますか？",
+      "body": "シェルと実行中のプログラムは停止します。スクロールバックは残りません。",
+      "action": "ターミナルを閉じる"
+    },
+    "search": {
+      "placeholder": "検索",
+      "matchCase": "大文字小文字を区別",
+      "regex": "正規表現",
+      "previous": "前の一致",
+      "next": "次の一致",
+      "close": "検索を閉じる",
+      "none": "該当なし",
+      "find": "検索…"
+    }
+  },
+  "splitInto": {
+    "session": "セッション"
+  },
+  "find": {
+    "placeholder": "会話内を検索",
+    "matchCase": "大文字小文字を区別",
+    "regex": "正規表現",
+    "previous": "前の一致",
+    "next": "次の一致",
+    "close": "検索を閉じる",
+    "none": "該当なし",
+    "find": "検索…"
+  },
+  "turnNav": {
+    "label": "ターンナビゲーション",
+    "jump": "ターン {{turn}} へ移動",
+    "turn": "ターン {{turn}}"
+  },
+  "trajectory": {
+    "title": "トラジェクトリ",
+    "toggle": "トラジェクトリ — この会話のすべてのステップ",
+    "duration": "時間",
+    "useActual": "実際の時間を使う",
+    "useEqual": "等幅で表示",
+    "turns": "ターン",
+    "expandTurns": "ターンを展開",
+    "collapseTurns": "ターンを折りたたむ",
+    "calls": "呼び出し",
+    "expandCalls": "呼び出しを展開",
+    "collapseCalls": "呼び出しを折りたたむ",
+    "search": "検索",
+    "user": "ユーザー",
+    "assistant": "アシスタント",
+    "tool": "ツール",
+    "message": "メッセージ",
+    "system": "システム",
+    "compacted": "圧縮済み",
+    "input": "入力",
+    "model": "モデル",
+    "tools": "ツール",
+    "turn": "ターン {{n}}",
+    "noOutput": "出力なし",
+    "empty": "まだステップはありません。",
+    "noMatch": "一致するステップはありません。",
+    "steps_one": "{{count}} ステップ",
+    "steps_other": "{{count}} ステップ",
+    "close": "トラジェクトリを閉じる"
   }
 }

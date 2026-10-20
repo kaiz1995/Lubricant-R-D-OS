@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { PdfInspector as PdfInspectorT } from "@ai4s/shared";
 import { useScrollMemory } from "@/lib/scrollMemory";
-import { PaneTitlebarInset } from "./RightPane";
+import { PANE_HEADER, PaneTitlebarInset, PANE_ICON_BUTTON } from "./RightPane";
 
 export function PdfInspector({
   data,
@@ -22,13 +22,13 @@ export function PdfInspector({
   const onScroll = useScrollMemory(scrollRef, `pdf:${data.title}`);
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 select-none items-center gap-2 border-b border-border px-4">
+      <header className={PANE_HEADER}>
         <PaneTitlebarInset />
         <span className="text-sm font-medium text-text">{data.title}</span>
         <div className="flex-1" />
         {controls}
-        <button className="text-text hover:opacity-60" aria-label={t("shell.closeInspector")} onClick={onClose}>
-          <X size={14} strokeWidth={1.5} />
+        <button className={PANE_ICON_BUTTON} aria-label={t("shell.closeInspector")} onClick={onClose}>
+          <X size={13} strokeWidth={1.5} />
         </button>
       </header>
 

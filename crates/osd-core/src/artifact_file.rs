@@ -102,15 +102,57 @@ pub fn resolve_under(root: &Path, rel: &str) -> Result<PathBuf, String> {
 }
 
 /// The folder tree a file command operates in: the ACTIVE session workspace
-/// (default) or the base folder every session workspace is created under.
-/// Pages declare their scope explicitly — no fallback guessing between the
-/// two, so an identical relative path can never resolve ambiguously.
+/// (default), the base folder every session workspace is created under, or —
+/// on the desktop only — the user's home folder, for a path the user clicked
+/// in a conversation or a terminal. Pages declare their scope explicitly — no
+/// fallback guessing between them, so an identical relative path can never
+/// resolve ambiguously. The gateway refuses "home" (see `fs_base`): a web
+/// client must never reach beyond the workspaces.
 pub fn scope_root(env: &Env, root: Option<&str>) -> Result<PathBuf, String> {
     match root.unwrap_or("workspace") {
         "workspace" => workspace_dir(env),
         "base" => crate::runtime::base_workspace_dir(env),
+        "home" => crate::env::home(),
         other => Err(format!("unknown root scope: {other}")),
     }
+}
+
+/// A local path the user can open from a link: home-relative (`/`-separated,
+/// for the "home" scope) and whether it is a folder.
+#[derive(serde::Serialize, Debug, PartialEq)]
+pub struct LocalPath {
+    pub rel: String,
+    pub is_dir: bool,
+}
+
+/// Resolve a path as printed in a conversation or a terminal — absolute,
+/// `~/…`, or relative to `cwd` — to an existing file or folder under `home`.
+/// None when it does not exist or lies outside home (nothing to open, so no
+/// link is drawn).
+pub fn locate_local(home: &Path, path: &str, cwd: Option<&str>) -> Option<LocalPath> {
+    let raw = Path::new(path);
+    let joined = if let Some(rest) = path.strip_prefix("~/") {
+        home.join(rest)
+    } else if raw.is_absolute() {
+        raw.to_path_buf()
+    } else {
+        let cwd = Path::new(cwd?);
+        if !cwd.is_absolute() {
+            return None;
+        }
+        cwd.join(raw)
+    };
+    let home = home.canonicalize().ok()?;
+    let full = joined.canonicalize().ok()?;
+    let rel = full.strip_prefix(&home).ok()?;
+    let parts: Vec<String> = rel
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .collect();
+    if parts.is_empty() {
+        return None; // home itself: not a useful link
+    }
+    Some(LocalPath { rel: parts.join("/"), is_dir: full.is_dir() })
 }
 
 // Bounds for the basename search so a huge workspace can't stall a resolve call.
@@ -422,6 +464,20 @@ pub fn write_workspace_file(
     Ok(())
 }
 
+/// One attached file, and whether attaching it PUT it in the workspace.
+///
+/// The difference is the whole safety of discarding an attachment: a file the
+/// attach copied in is the composer's own, and removing its chip can delete it;
+/// a file that was already in the workspace was merely referenced, and deleting
+/// it would destroy the user's data. Only the code that did the attaching can
+/// tell the two apart, so it says so here rather than leaving the caller to
+/// guess from a bare name.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Attached {
+    pub name: String,
+    pub copied: bool,
+}
+
 /// Attach local files to the workspace and return their workspace-relative
 /// names. A source already inside the workspace is referenced in place; anything
 /// else is copied to the workspace root under a deduplicated name (name-1.ext,
@@ -432,7 +488,10 @@ pub fn write_workspace_file(
 /// Shared by both attach paths (native picker and drag-and-drop): they differ
 /// only in how they obtain the paths, and the last two bugs here were both this
 /// logic having been fixed in one of them and not the other.
-pub fn attach_paths(ws: &Path, srcs: impl IntoIterator<Item = PathBuf>) -> Result<Vec<String>, String> {
+pub fn attach_paths(
+    ws: &Path,
+    srcs: impl IntoIterator<Item = PathBuf>,
+) -> Result<Vec<Attached>, String> {
     // Canonicalize the workspace root once so we can tell whether a source path
     // already resolves to somewhere inside it (through symlinks / `..` / case).
     let ws_canon = ws.canonicalize().unwrap_or_else(|_| ws.to_path_buf());
@@ -445,13 +504,13 @@ pub fn attach_paths(ws: &Path, srcs: impl IntoIterator<Item = PathBuf>) -> Resul
         // Already inside the workspace → attach its workspace-relative path in
         // place rather than copying it to the root as a duplicate.
         if let Some(rel) = workspace_relative(&ws_canon, &src) {
-            added.push(rel);
+            added.push(Attached { name: rel, copied: false });
             continue;
         }
         let name = src.file_name().ok_or("path has no file name")?.to_string_lossy().to_string();
         let dst = unique_name(ws, &name);
         std::fs::copy(&src, ws.join(&dst)).map_err(|e| format!("copy failed: {e}"))?;
-        added.push(dst);
+        added.push(Attached { name: dst, copied: true });
         copied = true;
     }
     if copied {
@@ -484,7 +543,7 @@ pub fn add_text_to_workspace(
 /// which hands us OS paths — the native-picker path is `add_files_to_workspace`.
 /// See `attach_paths` for the in-place-vs-copy rule; dragging a workspace file
 /// back into the composer references it in place instead of duplicating it.
-pub fn add_paths_to_workspace(env: &Env, paths: Vec<String>) -> Result<Vec<String>, String> {
+pub fn add_paths_to_workspace(env: &Env, paths: Vec<String>) -> Result<Vec<Attached>, String> {
     let ws = workspace_dir(env)?;
     attach_paths(&ws, paths.into_iter().map(PathBuf::from))
 }
@@ -508,6 +567,38 @@ pub fn add_binary_to_workspace(
     std::fs::write(ws.join(&name), bytes).map_err(|e| format!("write failed: {e}"))?;
     crate::git_snapshot::request_snapshot(&ws);
     Ok(name)
+}
+
+/// A name the composer may ask to delete: a bare file name, which is the only
+/// shape `attach_paths` ever COPIES something in under. Anything with a
+/// separator or a `..` is either an in-place reference to a file that was
+/// already in the workspace or an attempt to walk out of it, and neither may
+/// reach `remove_file`.
+fn is_discardable_name(name: &str) -> bool {
+    !name.is_empty() && !name.contains('/') && !name.contains('\\') && !name.contains("..")
+}
+
+/// Delete a file the composer copied into the workspace — a pasted screenshot
+/// whose chip was removed before the message was sent.
+///
+/// Root level only, and no path separators: everything the attach COPIES lands
+/// at the workspace root under a deduplicated name, so nothing legitimate is
+/// refused, while a name from a subdirectory (which can only be an in-place
+/// reference to a file that was already there) can never reach the filesystem.
+/// A missing file is not an error — the chip is going either way, and failing
+/// the removal over an already-gone file would only strand it in the composer.
+pub fn discard_workspace_file(env: &Env, name: String) -> Result<(), String> {
+    if !is_discardable_name(&name) {
+        return Err("not a workspace file name".into());
+    }
+    let full = resolve_under(&workspace_dir(env)?, &name)?;
+    match std::fs::metadata(&full) {
+        Err(_) => return Ok(()),
+        Ok(m) if !m.is_file() => return Err("not a file".into()),
+        Ok(_) => {}
+    }
+    std::fs::remove_file(&full).map_err(|e| format!("delete failed: {e}"))?;
+    Ok(())
 }
 
 /// If `src` resolves to a location inside `ws_canon` (an already-canonicalized
@@ -593,10 +684,41 @@ fn base64_encode(input: &[u8]) -> String {
 mod tests {
     use super::{
         attach_paths, base64_decode, base64_encode, dir_entries, encode_for_preview,
-        exceeds_preview_cap, locate_under, mime_for, strip_windows_verbatim, unique_name,
-        workspace_relative,
+        is_discardable_name, Attached,
+        exceeds_preview_cap, locate_local, locate_under, mime_for, strip_windows_verbatim,
+        unique_name, workspace_relative, LocalPath,
     };
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn local_links_resolve_under_home_only() {
+        let home = std::env::temp_dir().join(format!("osd-local-{}", std::process::id()));
+        let outside = std::env::temp_dir().join(format!("osd-local-out-{}", std::process::id()));
+        std::fs::create_dir_all(home.join("repo/src")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(home.join("repo/src/main.rs"), "fn main() {}").unwrap();
+        let file = |rel: &str| Some(LocalPath { rel: rel.into(), is_dir: false });
+        let abs = home.join("repo/src/main.rs");
+
+        // Absolute, relative to the terminal's directory, and a folder.
+        assert_eq!(locate_local(&home, abs.to_str().unwrap(), None), file("repo/src/main.rs"));
+        let cwd = home.join("repo");
+        assert_eq!(locate_local(&home, "src/main.rs", cwd.to_str()), file("repo/src/main.rs"));
+        assert_eq!(
+            locate_local(&home, "src", cwd.to_str()),
+            Some(LocalPath { rel: "repo/src".into(), is_dir: true })
+        );
+        // A relative path with no directory to resolve it against, a missing
+        // file, a path escaping home, and home itself: no link.
+        assert_eq!(locate_local(&home, "src/main.rs", None), None);
+        assert_eq!(locate_local(&home, "src/nope.rs", cwd.to_str()), None);
+        assert_eq!(locate_local(&home, "../../..", cwd.to_str()), None);
+        assert_eq!(locate_local(&home, outside.to_str().unwrap(), None), None);
+        assert_eq!(locate_local(&home, home.to_str().unwrap(), None), None);
+
+        let _ = std::fs::remove_dir_all(&home);
+        let _ = std::fs::remove_dir_all(&outside);
+    }
 
     #[test]
     fn verbatim_windows_paths_unwrap_to_the_plain_form() {
@@ -758,6 +880,20 @@ mod tests {
     }
 
     #[test]
+    fn only_a_bare_workspace_name_may_be_discarded() {
+        // What the attach copies in: a deduplicated bare name at the root.
+        assert!(is_discardable_name("pasted.png"));
+        assert!(is_discardable_name("taken-1.csv"));
+        // An in-place reference to a file that was already in the workspace —
+        // deleting one of these would destroy the user's own data.
+        assert!(!is_discardable_name("results/foo/deep.csv"));
+        // And nothing that tries to leave the workspace at all.
+        assert!(!is_discardable_name("../outside.csv"));
+        assert!(!is_discardable_name("..\\outside.csv"));
+        assert!(!is_discardable_name(""));
+    }
+
+    #[test]
     fn attach_paths_references_in_place_and_copies_from_outside() {
         // The rule both attach paths (picker and drag-and-drop) now share: a
         // workspace file keeps its relative path, an outside file is copied to
@@ -781,7 +917,14 @@ mod tests {
         ];
         let added = attach_paths(&ws, srcs).unwrap();
 
-        assert_eq!(added, vec!["results/foo/deep.csv", "outside.csv", "taken-1.csv"]);
+        assert_eq!(
+            added,
+            vec![
+                Attached { name: "results/foo/deep.csv".into(), copied: false },
+                Attached { name: "outside.csv".into(), copied: true },
+                Attached { name: "taken-1.csv".into(), copied: true },
+            ]
+        );
         // The in-place file was referenced, not duplicated at the root.
         assert!(!ws.join("deep.csv").exists());
         assert_eq!(std::fs::read_to_string(ws.join("outside.csv")).unwrap(), "out");

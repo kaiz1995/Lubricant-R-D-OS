@@ -293,6 +293,12 @@ export interface StatusLineBlock {
    *  the warning, re-arm the guard) and Stop turn (interrupt). Carries the
    *  guard's verdict key so the UI can tell WHICH trip a click answers. */
   stall?: { key: string };
+  /** Present on the failed history-load error line (runtime.ts openSession).
+   *  When set, the StatusLine renders a Retry action that reloads the
+   *  session's history — the failure was transient (the runtime was still
+   *  booting) or one a later connect can clear, so it must not be the last
+   *  word for the rest of the app run (#139). */
+  retry?: boolean;
 }
 
 // ---- Inspector (right pane) ----
@@ -305,8 +311,10 @@ export type Inspector =
   | NotebookFileInspector;
 
 /** Folder tree a root-relative file path resolves in: the active session
- *  workspace (default) or the base folder all session workspaces live under. */
-export type FileRoot = "workspace" | "base";
+ *  workspace (default), the base folder all session workspaces live under, or
+ *  — desktop only — the user's home folder, for a path clicked in a
+ *  conversation or a terminal (see lib/links). */
+export type FileRoot = "workspace" | "base" | "home";
 
 /** A real .ipynb in the workspace, opened in the runnable notebook editor. */
 export interface NotebookFileInspector {
@@ -382,6 +390,10 @@ export interface NotebookCell {
   output?: string;
   /** Base64 PNG from a display_data/execute_result output (e.g. a matplotlib figure). */
   image?: string;
+  /** Jupyter's `execution_count`: the `[n]` beside the cell, absent until it
+   *  has run. It is what tells a cell that ran and printed nothing apart from
+   *  one that was never executed. */
+  count?: number;
 }
 
 export interface NotebookInspector {

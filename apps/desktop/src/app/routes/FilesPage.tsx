@@ -24,8 +24,9 @@ import { baseName } from "@/components/thread/WorkspaceChip";
 import { NotebookEditor } from "@/components/notebook/NotebookEditor";
 import { FilePreviewInspector } from "@/components/inspector/FilePreviewInspector";
 import { FileContextMenu } from "@/components/files/FileContextMenu";
-import { PaneTitlebarInset } from "@/components/inspector/RightPane";
+import { PaneTitlebarInset, PANE_HEADER, PANE_ICON_BUTTON } from "@/components/inspector/RightPane";
 import { cn } from "@/lib/cn";
+import { useOverlayTitlebar } from "@/lib/store";
 
 const EXT_LANG: Record<string, string> = {
   py: "python", r: "r", jl: "julia", sh: "bash", tex: "latex", md: "markdown",
@@ -95,9 +96,18 @@ function humanSize(n: number): string {
  * used elsewhere (figures, tables, PDF, molecule, genome tracks, notebooks),
  * so all past work is reachable in one place.
  */
-export function FilesPage() {
+export function FilesPage({
+  onOpenFile,
+  onClose,
+}: {
+  onOpenFile?: (entry: DirEntry) => void;
+  /** In a pane: the ✕ goes at the end of the breadcrumb row, since this page
+   *  has no title bar of its own and the pane adds none. */
+  onClose?: () => void;
+} = {}) {
   const { t } = useTranslation(["pages", "common"]);
   const isMobile = useIsMobile();
+  const overlayTitlebar = useOverlayTitlebar();
   // Base-relative; "" = the base folder. Persisted client-side so returning to
   // Files continues from the directory the user was browsing.
   const [dir, setDirState] = useState(() => rememberedDirectory(GLOBAL_FILES_LOCATION));
@@ -139,12 +149,20 @@ export function FilesPage() {
     if (entry.isDir) {
       setSelected(null);
       setDir(entry.path);
-    } else {
-      setSelected(entry);
+      return;
     }
+    // In a pane the caller opens the file beside the tree; as a route there is
+    // nowhere to put it but here, so the page takes itself over.
+    if (onOpenFile) onOpenFile(entry);
+    else setSelected(entry);
   };
 
   const crumbs = dir ? dir.split("/") : [];
+  // In a pane the file opens BESIDE this one, so there is nothing to preview
+  // here: the tree takes the whole pane, the way a file tree does in VS Code or
+  // in Orca's sidebar. Keeping the preview column gave every Files pane a dead
+  // half reading "Select a file to preview it here" that could never fill.
+  const isTree = Boolean(onOpenFile);
 
   // Phone-width: the fixed 288px list + preview can't share the screen, so the
   // page becomes single-pane — the list fills the width, opening a file swaps
@@ -153,11 +171,18 @@ export function FilesPage() {
     <div className="flex h-full min-h-0">
       <div
         className={cn(
-          "flex flex-col border-r border-border",
-          isMobile ? cn("w-full", selected && "hidden") : "w-72 shrink-0",
+          "flex flex-col",
+          isTree
+            ? "w-full"
+            : cn("border-r border-border", isMobile ? cn("w-full", selected && "hidden") : "w-72 shrink-0"),
         )}
       >
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-3 py-2.5 text-[13px]">
+        {/* PANE_HEADER's 32px, so its line meets the preview header's; the
+            window drags from it since the page has no titlebar strip above. */}
+        <div
+          data-tauri-drag-region={overlayTitlebar || undefined}
+          className={cn(PANE_HEADER, "gap-0.5 overflow-x-auto whitespace-nowrap px-3 text-[13px]")}
+        >
           <button
             className={cn("rounded px-1 hover:bg-surface-2", dir ? "text-link" : "font-medium text-text")}
             onClick={() => setDir("")}
@@ -180,6 +205,18 @@ export function FilesPage() {
               </span>
             );
           })}
+          {onClose && (
+            <>
+              <div className="flex-1" />
+              <button
+                onClick={onClose}
+                aria-label={t("files.pane.closeAria")}
+                className="rounded p-1 text-muted hover:bg-border hover:text-error"
+              >
+                <X size={13} strokeWidth={1.5} />
+              </button>
+            </>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -213,15 +250,17 @@ export function FilesPage() {
         </div>
       </div>
 
-      <div className={cn("min-h-0 flex-1", isMobile && !selected && "hidden")}>
-        {selected ? (
-          <FilePreview key={selected.path} entry={selected} root="base" onClose={() => setSelected(null)} />
-        ) : (
-          <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted">
-            {t("files.selectFilePrompt")}
-          </div>
-        )}
-      </div>
+      {!isTree && (
+        <div className={cn("min-h-0 flex-1", isMobile && !selected && "hidden")}>
+          {selected ? (
+            <FilePreview key={selected.path} entry={selected} root="base" onClose={() => setSelected(null)} />
+          ) : (
+            <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted">
+              {t("files.selectFilePrompt")}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -327,17 +366,22 @@ export function SessionFilesPane({
   const crumbs = dir ? dir.split("/") : [];
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 shrink-0 select-none items-center gap-2 border-b border-border px-4">
+      <div className={PANE_HEADER}>
         <PaneTitlebarInset />
-        <Folder size={14} strokeWidth={1.5} className="shrink-0 text-text" />
-        <span className="truncate text-sm font-medium text-text" title={sessionDir ?? workspace ?? undefined}>
+        <Folder size={13} strokeWidth={1.5} className="shrink-0 text-muted" />
+        <span
+          className="min-w-0 truncate text-[13px] font-medium text-text"
+          title={sessionDir ?? workspace ?? undefined}
+        >
           {baseName(sessionDir ?? workspace)}
         </span>
-        <span className="text-xs text-muted">{t("files.pane.subtitle")}</span>
+        <span className="shrink-0 truncate text-[11px] text-muted">
+          {t("files.pane.subtitle")}
+        </span>
         <div className="flex-1" />
         {controls}
-        <button className="text-text hover:opacity-60" aria-label={t("files.pane.closeAria")} onClick={onClose}>
-          <X size={14} strokeWidth={1.5} />
+        <button className={PANE_ICON_BUTTON} aria-label={t("files.pane.closeAria")} onClick={onClose}>
+          <X size={13} strokeWidth={1.5} />
         </button>
       </div>
       {crumbs.length > 0 && (

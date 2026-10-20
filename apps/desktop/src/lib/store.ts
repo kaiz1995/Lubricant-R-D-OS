@@ -2,9 +2,11 @@ import { create } from "zustand";
 import { detectInitialLocale, LOCALE_KEY } from "@/i18n/config";
 import { isMacUA, isTauri, trafficLightsPresent } from "./tauri";
 
-export type Theme = "light" | "warm" | "dark";
+export type Theme = "light" | "warm" | "dark" | "system";
+/** The palette actually on screen: "system" resolves to light or dark. */
+export type ResolvedTheme = Exclude<Theme, "system">;
 
-export const THEMES: readonly Theme[] = ["light", "warm", "dark"];
+export const THEMES: readonly Theme[] = ["light", "warm", "dark", "system"];
 
 const THEME_KEY = "ai4s.theme.v2";
 /** Two-theme era key: its "light" was the warm paper palette, now called "warm". */
@@ -29,7 +31,7 @@ export const INSPECTOR_DEFAULT = 560;
 function initialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   const saved = window.localStorage.getItem(THEME_KEY);
-  if (saved === "light" || saved === "warm" || saved === "dark") return saved;
+  if (saved === "light" || saved === "warm" || saved === "dark" || saved === "system") return saved;
   const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
   if (legacy === "dark") return "dark";
   if (legacy === "light") return "warm";
@@ -62,8 +64,27 @@ function initialZoom(): number {
   return clampZoom(saved);
 }
 
+/** Conversation text size in px (DeepSeek Harness's "Font size": only the
+ *  conversation content scales). 15 is the conversation's own body size. */
+export const CONTENT_FONT_DEFAULT = 15;
+export const CONTENT_FONT_MIN = 12;
+export const CONTENT_FONT_MAX = 20;
+const CONTENT_FONT_KEY = "ai4s.contentFontSize";
+
+function initialContentFontSize(): number {
+  if (typeof window === "undefined") return CONTENT_FONT_DEFAULT;
+  const saved = Number(window.localStorage.getItem(CONTENT_FONT_KEY));
+  if (!Number.isInteger(saved) || saved < CONTENT_FONT_MIN || saved > CONTENT_FONT_MAX) return CONTENT_FONT_DEFAULT;
+  return saved;
+}
+
 interface UiState {
+  /** The chosen theme — may be "system". */
   theme: Theme;
+  /** What is on screen; ThemeProvider keeps it in step with the OS for "system". */
+  resolvedTheme: ResolvedTheme;
+  /** Conversation text size in px; see CONTENT_FONT_DEFAULT. */
+  contentFontSize: number;
   /** Active UI locale (BCP-47). Persisted; mirrors the `theme` pattern. */
   locale: string;
   inspectorOpen: boolean;
@@ -85,6 +106,8 @@ interface UiState {
    *  provenance Reproduce action) — consumed on the next composer render. */
   composerDraft: string | null;
   setTheme: (theme: Theme) => void;
+  setResolvedTheme: (theme: ResolvedTheme) => void;
+  setContentFontSize: (px: number) => void;
   toggleTheme: () => void;
   setLocale: (locale: string) => void;
   setInspectorOpen: (open: boolean) => void;
@@ -103,6 +126,8 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set, get) => ({
   theme: initialTheme(),
+  resolvedTheme: "light",
+  contentFontSize: initialContentFontSize(),
   locale: detectInitialLocale(),
   inspectorOpen: true,
   sidebarCollapsed:
@@ -115,7 +140,19 @@ export const useUiStore = create<UiState>((set, get) => ({
     if (typeof window !== "undefined") window.localStorage.setItem(THEME_KEY, theme);
     set({ theme });
   },
-  toggleTheme: () => get().setTheme(THEMES[(THEMES.indexOf(get().theme) + 1) % THEMES.length]),
+  setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
+  setContentFontSize: (px) => {
+    const next = Math.min(CONTENT_FONT_MAX, Math.max(CONTENT_FONT_MIN, Math.round(px)));
+    if (typeof window !== "undefined") window.localStorage.setItem(CONTENT_FONT_KEY, String(next));
+    set({ contentFontSize: next });
+  },
+  // The toggle steps through the palettes themselves; "system" is a setting,
+  // not a step (from it, the toggle starts at the first palette).
+  toggleTheme: () => {
+    const cycle = THEMES.filter((th): th is ResolvedTheme => th !== "system");
+    const at = cycle.indexOf(get().theme as ResolvedTheme);
+    get().setTheme(cycle[(at + 1) % cycle.length]);
+  },
   setLocale: (locale) => {
     if (typeof window !== "undefined") window.localStorage.setItem(LOCALE_KEY, locale);
     set({ locale });

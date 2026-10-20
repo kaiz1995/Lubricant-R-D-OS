@@ -45,8 +45,8 @@ export const FigureBlock = memo(function FigureBlock({
   };
 
   return (
-    <figure className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+    <figure>
+      <div className="flex items-center gap-2 pb-2">
         <span className="text-sm font-medium text-text">{block.title}</span>
         <button
           className="ml-auto text-muted hover:text-text"
@@ -56,7 +56,7 @@ export const FigureBlock = memo(function FigureBlock({
           <Download size={15} />
         </button>
       </div>
-      <div className="relative bg-white p-4">
+      <div className="relative overflow-hidden rounded-card bg-white p-4">
         {block.caption && (
           <div className="mb-2 text-center text-xs text-muted">{block.caption}</div>
         )}

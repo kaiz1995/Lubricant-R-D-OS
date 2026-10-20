@@ -335,6 +335,7 @@ pub fn preview_url(
             let p = serve(&token, move |scope| match scope {
                 "w" => workspace_dir(&handle).ok(),
                 "b" => crate::runtime::base_workspace_dir(&handle).ok(),
+                "h" => crate::artifact_file::scope_root(&handle, Some("home")).ok(),
                 _ => None,
             })
             .map_err(|e| e.to_string())?;
@@ -345,6 +346,7 @@ pub fn preview_url(
     let scope = match root.as_deref().unwrap_or("workspace") {
         "workspace" => "w",
         "base" => "b",
+        "home" => "h",
         other => return Err(format!("unknown root scope: {other}")),
     };
     let rel = relativize(&crate::artifact_file::scope_root(&app, root.as_deref())?, &path)?;

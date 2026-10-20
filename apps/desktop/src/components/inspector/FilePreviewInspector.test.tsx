@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FilePreviewInspector as FilePreviewInspectorT } from "@ai4s/shared";
 import { readArtifact } from "@/lib/artifactFile";
 import { useRuntimeStore } from "@/lib/runtime";
@@ -21,8 +21,30 @@ vi.mock("@/lib/artifactFile", async (importOriginal) => {
       size: 3,
     })),
     probeLargeFile: (...args: unknown[]) => probeLargeFile(...args),
+    writeWorkspaceFile: (...args: Parameters<typeof writeWorkspaceFile>) =>
+      writeWorkspaceFile(...args),
   };
 });
+
+// Monaco needs a real layout engine; jsdom has none. These tests are about the
+// INSPECTOR — dirty state, autosave, discard — so the editor is a textarea with
+// the same contract. See `test/monacoStub`.
+vi.mock("@/components/code-editor/monacoSetup", () => import("@/test/monacoStub"));
+
+// Editing is desktop-only, so the editing tests need the app to believe it is
+// running under Tauri.
+const writeWorkspaceFile = vi.fn(async (_path: string, _content: string, _root?: unknown) => {});
+const recordProvenance = vi.fn(
+  async (_input: { path: string; tool: string; content?: string }, ..._rest: unknown[]) => {},
+);
+vi.mock("@/lib/tauri", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tauri")>()),
+  isTauri: true,
+}));
+vi.mock("@/lib/provenance", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/provenance")>()),
+  recordProvenance: (...args: Parameters<typeof recordProvenance>) => recordProvenance(...args),
+}));
 
 const md: FilePreviewInspectorT = {
   variant: "file",
@@ -260,5 +282,224 @@ describe("PreviewError", () => {
     render(<PreviewError error="Preview is available in the desktop app." filename="x.bin" onOpenExternally={() => {}} />);
     expect(screen.getByText(/available in the desktop app/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Open externally/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("FilePreviewInspector — editing a file (#33)", () => {
+  // These tests assert on what was NOT written, so each starts from no calls.
+  beforeEach(() => vi.clearAllMocks());
+
+  const py: FilePreviewInspectorT = {
+    variant: "file",
+    path: "analysis/fit.py",
+    filename: "fit.py",
+    artifact: "report",
+    content: "import numpy as np\n",
+  };
+
+  /** Open the file and switch it into edit mode. The read-only view is
+   *  highlighted markup, so its text is spread across spans — the Edit button
+   *  appearing is the reliable signal that the file has loaded. */
+  async function edit(data = py) {
+    const view = render(<FilePreviewInspector data={data} onClose={() => {}} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit this file" }));
+    // `findBy`, not `getBy`: the editor arrives with its own chunk, which is
+    // loaded on demand rather than in the app's first bundle.
+    return { view, editor: await screen.findByRole("textbox", { name: "Editing fit.py" }) };
+  }
+
+  it("shows the source read-only until the user asks to edit", async () => {
+    const { container } = render(<FilePreviewInspector data={py} onClose={() => {}} />);
+    await screen.findByRole("button", { name: "Edit this file" });
+    expect(container.textContent).toContain("import numpy");
+    // Nothing to type into: a file is read until it is opened for editing.
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("does not offer Save until something actually changed", async () => {
+    await edit();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("writes the edited text to disk and records it in the file's history", async () => {
+    const { editor } = await edit();
+    await userEvent.click(editor);
+    await userEvent.keyboard("x = 1");
+
+    const save = screen.getByRole("button", { name: "Save" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await userEvent.click(save);
+
+    await waitFor(() => expect(writeWorkspaceFile).toHaveBeenCalled());
+    const [path, content] = writeWorkspaceFile.mock.calls[0]!;
+    expect(path).toBe("analysis/fit.py");
+    expect(content).toContain("x = 1");
+
+    // The whole reason to edit in here rather than in an external editor: the
+    // hand edit joins the same history an agent's write lands in.
+    await waitFor(() => expect(recordProvenance).toHaveBeenCalled());
+    const [input] = recordProvenance.mock.calls[0]!;
+    expect(input.path).toBe("analysis/fit.py");
+    expect(input.tool).toBe("manual-edit");
+    expect(input.content).toContain("x = 1");
+  });
+
+  it("discards an edit without writing anything", async () => {
+    const { view, editor } = await edit();
+    await userEvent.click(editor);
+    await userEvent.keyboard("oops");
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(writeWorkspaceFile).not.toHaveBeenCalled();
+    // Back to the file as it is on disk, not to the abandoned draft.
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(view.container.textContent).toContain("import numpy");
+    expect(view.container.textContent).not.toContain("oops");
+  });
+});
+
+describe("FilePreviewInspector — an editor pane", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const py: FilePreviewInspectorT = {
+    variant: "file",
+    path: "analysis/fit.py",
+    filename: "fit.py",
+    artifact: "report",
+    content: "import numpy as np\n",
+  };
+
+  it("opens editing, with no pencil to find first", async () => {
+    render(<FilePreviewInspector data={py} onClose={() => {}} startEditing />);
+
+    // Orca's editor tabs ARE editors; a preview with a hidden pencil is not
+    // what "open the file" means.
+    expect(await screen.findByRole("textbox", { name: "Editing fit.py" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit this file" })).not.toBeInTheDocument();
+  });
+
+  it("opens a markdown note on its text, with Orca's formatting toolbar", async () => {
+    render(<FilePreviewInspector data={md} onClose={() => {}} startEditing />);
+
+    // An editor pane lands on the source, not on a rendered page with the
+    // editor hidden behind a toggle.
+    expect(await screen.findByRole("textbox", { name: "Editing report.md" })).toBeInTheDocument();
+    const toolbar = screen.getByRole("toolbar", { name: "Formatting" });
+    for (const button of ["Heading 1", "Bold", "Bulleted list", "Quote", "Link"]) {
+      expect(within(toolbar).getByRole("button", { name: button })).toBeInTheDocument();
+    }
+  });
+
+  it("does not label a note the user opened as a 'report'", async () => {
+    render(<FilePreviewInspector data={md} onClose={() => {}} startEditing />);
+    await screen.findByRole("textbox", { name: "Editing report.md" });
+
+    // The artifact badge belongs next to something a conversation produced.
+    expect(screen.queryByText("Report")).not.toBeInTheDocument();
+  });
+
+  it("formats the text through the toolbar", async () => {
+    render(<FilePreviewInspector data={md} onClose={() => {}} startEditing />);
+    const editor = await screen.findByRole("textbox", { name: "Editing report.md" });
+
+    await userEvent.click(editor);
+    // On the heading line: the marker applies to the line the caret is on, and
+    // a click lands the caret at the end of the text.
+    (editor as HTMLTextAreaElement).setSelectionRange(0, 0);
+    await userEvent.click(screen.getByRole("button", { name: "Quote" }));
+
+    // The heading BECOMES a quote rather than being quoted as a heading —
+    // one marker per line, the way Orca's toolbar behaves.
+    await waitFor(() =>
+      expect((editor as HTMLTextAreaElement).value).toContain("> Findings"),
+    );
+  });
+
+  it("saves on its own, and says which state it is in", async () => {
+    const editor = await (async () => {
+      render(<FilePreviewInspector data={py} onClose={() => {}} startEditing />);
+      return screen.findByRole("textbox", { name: "Editing fit.py" });
+    })();
+
+    await userEvent.click(editor);
+    await userEvent.keyboard("x");
+
+    // Autosave, as Orca does — no Save button to hunt for.
+    await waitFor(() => expect(writeWorkspaceFile).toHaveBeenCalled(), { timeout: 3000 });
+    // A light, not a word: "Saving…/Saved" sat against the buttons and read as
+    // part of them. The state is the dot's label now.
+    expect(await screen.findByRole("status", { name: "Saved" })).toBeInTheDocument();
+  });
+});
+
+describe("FilePreviewInspector — the editor fills its pane", () => {
+  const py: FilePreviewInspectorT = {
+    variant: "file",
+    path: "analysis/fit.py",
+    filename: "fit.py",
+    artifact: "report",
+    content: "import numpy as np\n",
+  };
+
+  it("gives the editor a full-height box, not a padded one", async () => {
+    render(<FilePreviewInspector data={py} onClose={() => {}} startEditing />);
+    const editor = await screen.findByRole("textbox", { name: "Editing fit.py" });
+
+    // Monaco lays itself out against a DEFINITE height. In the padded,
+    // auto-height box the read-only view uses it collapsed to a ~30px strip
+    // showing nothing but its own scrollbar.
+    const box = editor.closest(".flex-1");
+    expect(box?.className).toContain("min-h-0");
+    expect(editor.closest(".p-3")).toBeNull();
+  });
+
+  it("lets the read-only view fill the pane, edge to edge", async () => {
+    render(<FilePreviewInspector data={py} onClose={() => {}} />);
+
+    // A file being READ is the pane's surface: full height, no padded card
+    // floating over grey. (Highlighting splits the source across spans, so the
+    // assertion is on the block, not on a text node.)
+    await waitFor(() => {
+      const surface = document.querySelector(".min-h-full");
+      expect(surface?.textContent).toContain("import numpy");
+      expect(document.querySelector(".p-3")).toBeNull();
+    });
+  });
+});
+
+describe("FilePreviewInspector — editing any file the app can read as text", () => {
+  const csv: FilePreviewInspectorT = {
+    variant: "file",
+    path: "demo/dose_response_data.csv",
+    filename: "dose_response_data.csv",
+    artifact: "table",
+    content: "dose_M,rep1\n0,5.09\n",
+  };
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("the pencil opens the text, even for a file that renders as a table", async () => {
+    render(<FilePreviewInspector data={csv} onClose={() => {}} />);
+    await screen.findByText("dose_M");
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit this file" }));
+
+    // The pencil used to do nothing visible here: the table view had no idea an
+    // edit had begun and kept drawing the table. Editing means you see the
+    // TEXT, whatever the file usually renders as.
+    expect(
+      await screen.findByRole("textbox", { name: "Editing dose_response_data.csv" }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes back to the table when the edit is put away", async () => {
+    render(<FilePreviewInspector data={csv} onClose={() => {}} />);
+    await screen.findByText("dose_M");
+    await userEvent.click(screen.getByRole("button", { name: "Edit this file" }));
+    await screen.findByRole("textbox", { name: "Editing dose_response_data.csv" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(await screen.findByText("dose_M")).toBeInTheDocument();
   });
 });

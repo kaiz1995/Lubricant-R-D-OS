@@ -35,6 +35,7 @@ Formerly Lubricant Science. Une alternative desktop open source à Claude Scienc
 
 ## Actualités
 
+- **2026-10-04** — 🖱️ **Computer Use, terminaux et éditeurs.** L'agent pilote désormais des applications de bureau comme ImageJ, Origin ou les logiciels d'instruments ; les panneaux accueillent terminaux, fichiers et un éditeur de code, où Claude Code / Codex reprennent après un redémarrage ; plus la recherche (⌘F), le saut vers n'importe quelle session ou projet (⌘J) et Linux ARM64 pour DGX Spark. *(v0.6.0)*
 - **2026-08-18** — 🖥️ **Fonctionne sans écran.** `osd server` lance tout l'atelier — workspace, runtime de l'agent et la *même* UI web — sur une machine sans affichage, et `osd session send … --wait` le pilote depuis un script ou depuis un autre agent. Une archive, pas d'installateur. `osd` est inclus dans l'installeur du bureau et se place sur votre PATH au premier démarrage ; sur un serveur, l'archive suffit. Modèles, clés et approbations se configurent depuis le terminal (`osd model`, `osd auth`, `osd approval`).
 - **2026-08-13** — 🔌 **Parle l'Agent Client Protocol, dans les deux sens.** Pilotez Codex, Gemini CLI, Claude Code ou tout autre agent ACP depuis cette application — avec ses propres modèles, son historique et vos connecteurs MCP — ou pilotez Lubricant Science depuis Zed, JetBrains ou Neovim. *(v0.4.0)*
 - **2026-08-01** — 🗂️ **Projets, mémoire et historique complet.** Regroupez les sessions dans des projets nommés (un dépôt existant est importé *sur place*, sans copie), donnez à l'agent une mémoire persistante globale et par projet, et retrouvez chaque conversation passée dans un historique cherchable avec archivage, restauration et export. *(v0.3.1)*
@@ -217,6 +218,51 @@ Rien d'autre dans votre shell n'est touché.
 
 `--wait` revient quand le tour est terminé, pas quand il a été accepté, et échoue explicitement s'il n'a rien produit. `--json` affiche la réponse de l'API elle-même, pour les scripts. Les approbations restent en vigueur — l'agent demande avant d'exécuter des commandes, et `osd permission ls` / `osd permission allow <id>` sert à répondre sans fenêtre.
 
+### Concurrence et configuration par projet
+
+Le travail en parallèle n'exige ni un second serveur ni un second workspace : un
+seul `osd server` exécute déjà plusieurs sessions à la fois. La passerelle
+fonctionne avec un fil par connexion et rien sur le chemin d'une session ne
+retient de verrou global — ce qui sépare le travail d'une session de celui d'une
+autre, c'est le dossier auquel chacune est épinglée. `osd session new --project
+NAME` lance une session dans un dossier de projet du workspace (créé avec
+`osd project new NAME`), et `osd session new --directory DIR` l'épingle à
+n'importe quel autre dossier.
+
+Le MCP par projet suit le dossier : un serveur MCP déclaré dans
+`<dossier>/.opencode/opencode.json` ne s'applique qu'aux sessions qui travaillent
+dans ce dossier, et toutes les sessions partagent le même sidecar. Une règle de
+cache rend l'ordre important : la configuration opencode d'un dossier est lue une
+seule fois — la première fois que le sidecar utilise ce dossier — puis mise en
+cache. Écrivez cette configuration avant de diriger la moindre session vers ce
+dossier : `osd session new --project NAME` (ou `--directory DIR`) la lit et la
+met déjà en cache, avant qu'un seul tour n'ait été exécuté — « avant le premier
+tour » est donc déjà trop tard. La modifier ensuite ne prend effet qu'après un
+redémarrage du serveur, et jusqu'alors la session s'exécute, signale un succès
+et a utilisé la configuration précédente.
+
+Rien de tout cela n'exige une seconde installation de l'atelier.
+
+### Répertoires d'état isolés (--state-dir)
+
+`osd server --state-dir DIR` — ou `OSD_STATE_DIR=DIR` — range tout ce qu'une
+instance écrit (base de sessions, configuration du sidecar, enregistrement du
+workspace, journaux) sous DIR au lieu du répertoire de données de la
+plateforme. Rien d'autre ne change : le workspace par défaut reste votre vrai
+dossier Documents, et l'app de bureau n'est pas affectée, car elle ne passe
+jamais par la dérogation headless.
+
+Ce n'est PAS un moyen d'obtenir plus de concurrence — un seul serveur exécute
+déjà plusieurs sessions à la fois (ci-dessus). C'est pour des installations
+vraiment séparées sur une même machine : une shard sans surveillance à côté de
+l'app de bureau, un cluster de benchmarks.
+
+Les identifiants restent par instance et ne sont jamais copiés : un DIR neuf
+n'en a aucun, donc le premier serveur démarré là affiche une note et la
+commande d'une ligne qui en ajoute un — `OSD_STATE_DIR=DIR osd auth set
+<provider> --key …` — ou vous exportez la variable du fournisseur lui-même
+(`ANTHROPIC_API_KEY=…`) avant de lancer, et le sidecar l'hérite.
+
 ### Quel modèle, et qui approuve
 
 `osd model` affiche le modèle par défaut, `osd model ls` liste ce que le runtime
@@ -241,7 +287,10 @@ osd approval set full   # ne jamais demander : commandes, suppressions, installa
 
 `full` est un choix délibéré, pas un défaut : l'agent reste confiné au workspace,
 mais plus rien ne s'arrête pour vous. `osd approval set approve` remet toutes les
-règles.
+règles. `osd approval set full` réécrit la configuration du runtime sur cette
+machine et doit donc être exécuté sur la machine elle-même — en SSH, pas via
+`--gateway` : la passerelle refuse délibérément les écritures de configuration,
+et le dit plutôt que de ne rien faire en silence.
 
 ### En tant que service
 
@@ -335,8 +384,8 @@ Si vous utilisez Lubricant Science Desktop dans vos recherches, merci de le cite
   author  = {{The Lubricant Science Desktop Contributors}},
   title   = {Lubricant Science Desktop: a local-first, model-agnostic AI research workbench},
   year    = {2026},
-  version = {0.5.2},
-  doi     = {10.5281/zenodo.22004919},
+  version = {0.6.0},
+  doi     = {10.5281/zenodo.23138229},
   url     = {https://github.com/ai4s-research/open-science},
   license = {MIT}
 }

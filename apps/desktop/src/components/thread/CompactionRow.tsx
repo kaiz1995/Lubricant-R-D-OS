@@ -49,7 +49,7 @@ export function CompactionRow({ block }: { block: CompactionBlock }) {
         <span className="h-px flex-1 bg-warn opacity-40" />
       </button>
       {open && (
-        <div className="mx-auto mt-2 max-w-prose rounded-card border border-border bg-surface-2 px-3 py-2 text-xs leading-relaxed text-muted">
+        <div className="mx-auto mt-2 max-w-prose rounded-card bg-surface-2 px-3 py-2 text-xs leading-relaxed text-muted">
           <p>{t(block.auto ? "compaction.autoBody" : "compaction.manualBody")}</p>
           {block.overflow && <p className="mt-1">{t("compaction.overflowBody")}</p>}
           {block.at != null && (

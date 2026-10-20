@@ -10,5 +10,14 @@
       "error": "压缩上下文失败。",
       "done": "上下文已压缩，下一条回复将使用压缩后的对话。"
     }
+  },
+  "linkMenu": {
+    "openFile": "打开文件",
+    "openDefault": "用默认应用打开",
+    "openLink": "打开链接",
+    "copyLink": "复制链接",
+    "copyPath": "复制路径",
+    "copied": "已复制",
+    "click": "点击"
   }
 }

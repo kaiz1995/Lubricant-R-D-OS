@@ -35,6 +35,11 @@ reqwest.workspace = true
 # interactive sign-in to a 2FA cluster (#73) needs a real pty on every platform.
 portable-pty = "0.9"
 
+# Already in the tree via portable-pty — used directly to read a terminal's
+# shell cwd and foreground process (src/terminal_probe.rs).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 # Already in the tree via tao — used to re-pin the traffic lights (src/macos.rs).
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3", default-features = false, features = [

@@ -33,7 +33,15 @@
       "stopCellTitle": "停止 — このノートブックのカーネルを再起動します（変数はリセットされます）",
       "stopLabel": "停止",
       "runLabel": "実行",
-      "addCellLabel": "セルを追加"
+      "addCellLabel": "セルを追加",
+      "askAgent": "このセルについてエージェントに聞く",
+      "askAgentAria": "セル {{n}} についてエージェントに聞く",
+      "askAgentIntro": "`{{file}}` のセル [{{n}}] について:",
+      "askAgentOutput": "出力:",
+      "askAgentSent": "入力欄に追加しました",
+      "countTitle": "実行番号 — 実行中は [*]、実行後は [n]",
+      "interrupted": "中断しました — カーネルを再起動したため、変数はリセットされました。",
+      "desktopOnlyKernel": "ローカルカーネルはデスクトップアプリでのみ使えます。"
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "スキル & エージェント",
-    "description": {
-      "prefix": "OpenCode ランタイムからライブで読み込まれます — 同梱のスキルパック、ワークスペース内の ",
-      "suffix": " にあるものすべて、そして ~/.claude/skills または ~/.agents/skills にあるご自身のスキル。"
-    },
+    "subtitle": "エージェントが使えるすべての機能。OpenCode からライブで読み込みます。",
     "install": {
       "sectionTitle": "スキルをインストール",
       "placeholder": "SKILL.md を貼り付けるか、エージェントに作らせる URL / 説明を貼り付けてください",
@@ -79,7 +84,7 @@
       "note": "OpenCode はここにインストールされているものを使ってコードを実行します（例: シェルツール経由の Python）。uv はアプリに同梱されており、Jupyter は「設定 → コネクタ」でアプリが管理できます。Python と R はバンドルされていません。分析を有効にするには、それらまたは Science Pack をインストールしてください。"
     },
     "agentsSection": {
-      "sectionTitle": "エージェント ({{count}})",
+      "heading": "エージェント",
       "empty": "エージェントが報告されていません。",
       "agentMode": {
         "primary": "プライマリ",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "スキル ({{count}})",
+      "heading": "スキル",
       "empty": "まだスキルが読み込まれていません。",
       "source": {
         "builtin": "組み込み",
@@ -96,7 +101,9 @@
         "user": "ユーザー"
       }
     },
-    "disconnected": "読み込まれたスキルとエージェントを一覧表示するには、ランタイムに接続してください。"
+    "disconnected": "読み込まれたスキルとエージェントを一覧表示するには、ランタイムに接続してください。",
+    "search": "スキルとエージェントを検索",
+    "noMatch": "「{{query}}」に一致するものはありません。"
   },
   "notFound": {
     "title": "404 — 見つかりません",

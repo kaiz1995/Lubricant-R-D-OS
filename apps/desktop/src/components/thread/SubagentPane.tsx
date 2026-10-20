@@ -4,7 +4,7 @@ import { Bot, CheckCircle2, ChevronRight, CircleDashed, X, XCircle } from "lucid
 import type { ToolCallStatus } from "@ai4s/shared";
 import { cn } from "@/lib/cn";
 import { subagentActivity, useRuntimeStore } from "@/lib/runtime";
-import { PaneTitlebarInset } from "@/components/inspector/RightPane";
+import { PaneTitlebarInset, PANE_HEADER, PANE_ICON_BUTTON } from "@/components/inspector/RightPane";
 import { BlockList } from "./BlockList";
 import { RunningDot } from "./RunningDot";
 
@@ -72,9 +72,9 @@ export function SubagentPane({
 
   return (
     <div className="flex h-full flex-col border-l border-border bg-surface">
-      <div className="flex h-12 shrink-0 select-none items-center gap-2 border-b border-border px-4">
+      <div className={PANE_HEADER}>
         <PaneTitlebarInset />
-        <Bot size={14} strokeWidth={1.5} className="shrink-0 text-text" />
+        <Bot size={13} strokeWidth={1.5} className="shrink-0 text-muted" />
         <span className="text-sm font-medium text-text">{t("subagents.title")}</span>
         <span className="text-xs text-muted">
           {t("subagents.count", { count: rows.length })}
@@ -82,11 +82,11 @@ export function SubagentPane({
         <div className="flex-1" />
         {controls}
         <button
-          className="text-text hover:opacity-60"
+          className={PANE_ICON_BUTTON}
           aria-label={t("subagents.closeAria")}
           onClick={onClose}
         >
-          <X size={14} strokeWidth={1.5} />
+          <X size={13} strokeWidth={1.5} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
@@ -142,7 +142,7 @@ function SubagentRow({
   }, [focusNonce]);
   const childId = row.childSessionId;
   return (
-    <li ref={ref} className="rounded-card border border-border bg-surface-2">
+    <li ref={ref} className="rounded-card bg-surface-2">
       {/* The WHOLE row toggles, not just the title: aiming at the words was a
           target most people miss, and clicking the icon or the elapsed time
           looked like the row simply did not respond. */}

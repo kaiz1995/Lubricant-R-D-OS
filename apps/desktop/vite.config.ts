@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
@@ -31,5 +31,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // `--expose-gc` so a test can prove a retained string was actually released
+    // rather than asserting the shape of the code that releases it. Only the
+    // computer-use serve channel needs it today; it costs nothing elsewhere.
+    execArgv: ["--expose-gc"],
   },
 });

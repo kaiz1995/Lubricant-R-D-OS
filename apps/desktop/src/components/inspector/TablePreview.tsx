@@ -18,7 +18,7 @@ export function TablePreview({ table }: { table: TableData }) {
           gestures to the pane as well (lib/wheelChain). */}
       <div
         {...{ [HSCROLL_ATTR]: "" }}
-        className="overflow-x-auto overflow-y-hidden rounded-input border border-border bg-surface"
+        className="overflow-x-auto overflow-y-hidden"
       >
         <table className="w-full border-collapse text-sm">
           <thead>

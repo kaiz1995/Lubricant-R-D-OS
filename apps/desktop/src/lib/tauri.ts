@@ -80,6 +80,13 @@ export interface ProbedModel {
   context?: number | null;
 }
 
+export interface ProbeResult {
+  /** The base URL that served the list — the entered one with `/v1`
+   *  appended when only that worked (relay gateways like RunAPI). */
+  baseUrl: string;
+  models: ProbedModel[];
+}
+
 /**
  * Ask a custom endpoint which models it serves, with context windows where
  * the server reports them (desktop only — the probe runs in Rust because
@@ -90,10 +97,10 @@ export async function probeEndpointModels(
   baseUrl: string,
   apiKey: string | undefined,
   kind: "openai" | "anthropic",
-): Promise<ProbedModel[]> {
-  if (!isTauri) return [];
+): Promise<ProbeResult> {
+  if (!isTauri) return { baseUrl, models: [] };
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<ProbedModel[]>("probe_endpoint_models", { baseUrl, apiKey, kind });
+  return invoke<ProbeResult>("probe_endpoint_models", { baseUrl, apiKey, kind });
 }
 
 /**
@@ -111,10 +118,19 @@ export async function zenServedModelIds(): Promise<string[]> {
  * Pick local files via the native dialog and copy them into the agent
  * workspace (desktop only). Returns the workspace file names; [] on cancel.
  */
-export async function addFilesToWorkspace(): Promise<string[]> {
+/** One attached file, and whether attaching it COPIED the file into the
+ *  workspace. Only a copy may be deleted when its chip is removed — a file that
+ *  was already in the workspace was referenced in place, and deleting it would
+ *  destroy the user's own data. See `attach_paths` in `osd-core`. */
+export interface AttachedFile {
+  name: string;
+  copied: boolean;
+}
+
+export async function addFilesToWorkspace(): Promise<AttachedFile[]> {
   if (!isTauri) return [];
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string[]>("add_files_to_workspace");
+  return invoke<AttachedFile[]>("add_files_to_workspace");
 }
 
 /**
@@ -137,10 +153,19 @@ export async function addBinaryToWorkspace(filename: string, base64: string): Pr
 
 /** Copy explicit local file paths into the workspace (deduplicated). Used by
  *  drag-and-drop. Returns the names written. */
-export async function addPathsToWorkspace(paths: string[]): Promise<string[]> {
+export async function addPathsToWorkspace(paths: string[]): Promise<AttachedFile[]> {
   if (!isTauri) return [];
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string[]>("add_paths_to_workspace", { paths });
+  return invoke<AttachedFile[]>("add_paths_to_workspace", { paths });
+}
+
+/** Delete a file the composer copied in, when its chip is removed before the
+ *  message is sent. Root-level names only — the backend refuses anything else,
+ *  because only a copy lands there. */
+export async function discardWorkspaceFile(name: string): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("discard_workspace_file", { name });
 }
 
 /**
@@ -280,6 +305,9 @@ export interface ProxySetting {
   url: string;
   /** The proxy the sidecar would use right now; null ⇒ direct. */
   effective: string | null;
+  /** The running sidecar was started with a different proxy than `effective`
+   *  (the system proxy changed since); re-applying the setting restarts it. */
+  restartNeeded: boolean;
 }
 
 /** The persisted proxy setting (desktop only; null in browser). */
@@ -355,6 +383,45 @@ export async function getCliShimStatus(): Promise<CliShimStatus | null> {
   if (!isTauri) return null;
   const { invoke } = await import("@tauri-apps/api/core");
   return await invoke<CliShimStatus>("cli_shim_status");
+}
+
+/** A browser the user installed themselves that the agent can reach from the
+ *  shell — as opposed to the one this app bundles and owns. */
+export type UserBrowser = {
+  appPath: string;
+  /** The command the agent would run; null when the app is there but its CLI is not. */
+  command: string | null;
+};
+
+export async function detectUserBrowser(): Promise<UserBrowser | null> {
+  if (!isTauri) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return await invoke<UserBrowser | null>("detect_user_browser");
+}
+
+/** What computer use can do on this machine, and — on macOS — whether the two
+ *  permissions its helper needs have been granted. */
+export type ComputerUseStatus = {
+  available: boolean;
+  platform: string;
+  helperAppPath: string | null;
+  accessibility: "granted" | "not-granted" | "unsupported";
+  screenshots: "granted" | "not-granted" | "unsupported";
+  reason: string | null;
+};
+
+export async function getComputerUseStatus(): Promise<ComputerUseStatus | null> {
+  if (!isTauri) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return await invoke<ComputerUseStatus>("computer_use_status");
+}
+
+/** Open the helper's own setup window. The permission is granted to the helper,
+ *  by the user, in System Settings — nothing here can grant it for them. */
+export async function openComputerUsePermissions(permission?: "accessibility" | "screenshots") {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_computer_use_permissions", { permission: permission ?? null });
 }
 
 /** Redo the install — for an app that moved, or a launch that failed. */

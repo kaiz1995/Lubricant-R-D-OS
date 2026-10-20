@@ -33,7 +33,15 @@
       "stopCellTitle": "Detener — reinicia el kernel de este cuaderno (las variables se restablecen)",
       "stopLabel": "Detener",
       "runLabel": "Ejecutar",
-      "addCellLabel": "Añadir celda"
+      "addCellLabel": "Añadir celda",
+      "askAgent": "Preguntar al agente sobre esta celda",
+      "askAgentAria": "Preguntar al agente sobre la celda {{n}}",
+      "askAgentIntro": "Sobre la celda [{{n}}] de `{{file}}`:",
+      "askAgentOutput": "Imprimió:",
+      "askAgentSent": "Celda añadida al cuadro de texto",
+      "countTitle": "Número de ejecución: [*] mientras se ejecuta, [n] una vez ejecutada",
+      "interrupted": "Interrumpido: el kernel se reinició; las variables se restablecieron.",
+      "desktopOnlyKernel": "El kernel local requiere la app de escritorio."
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "Habilidades y agentes",
-    "description": {
-      "prefix": "Cargado en vivo desde el entorno de ejecución de OpenCode — los paquetes de habilidades incluidos, todo lo que haya bajo ",
-      "suffix": " en tu espacio de trabajo y tus propias habilidades en ~/.claude/skills o ~/.agents/skills."
-    },
+    "subtitle": "Todo lo que el agente puede usar, cargado en vivo desde OpenCode.",
     "install": {
       "sectionTitle": "Instalar una habilidad",
       "placeholder": "Pega un SKILL.md, o una URL / descripción para que el agente lo cree",
@@ -79,7 +84,7 @@
       "note": "OpenCode ejecuta código con lo que esté instalado aquí (p. ej., Python mediante su herramienta de shell). uv viene incluido en la app y Jupyter puede gestionarlo la app en Ajustes → Conectores. Python y R no vienen incluidos: instálalos o instala un Science Pack para habilitar el análisis."
     },
     "agentsSection": {
-      "sectionTitle": "Agentes ({{count}})",
+      "heading": "Agentes",
       "empty": "No se ha reportado ningún agente.",
       "agentMode": {
         "primary": "principal",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "Habilidades ({{count}})",
+      "heading": "Habilidades",
       "empty": "Aún no se ha cargado ninguna habilidad.",
       "source": {
         "builtin": "incluida",
@@ -96,7 +101,9 @@
         "user": "usuario"
       }
     },
-    "disconnected": "Conecta el entorno de ejecución para listar las habilidades y agentes que ha cargado."
+    "disconnected": "Conecta el entorno de ejecución para listar las habilidades y agentes que ha cargado.",
+    "search": "Buscar skills y agentes",
+    "noMatch": "Nada coincide con «{{query}}»."
   },
   "notFound": {
     "title": "404 — No encontrado",

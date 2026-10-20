@@ -28,7 +28,14 @@
       "newSession": "새 세션"
     },
     "rename": "화면 이름 변경",
-    "tabMenu": "화면 작업"
+    "tabMenu": "화면 작업",
+    "runAgent": "에이전트 실행",
+    "newNotebook": "새 Notebook",
+    "newMarkdown": "새 Markdown",
+    "splitRightShort": "오른쪽으로 분할",
+    "splitDownShort": "아래로 분할",
+    "defaultProject": "기본",
+    "projectMenu": "프로젝트 전환"
   },
   "composer": {
     "placeholder": {
@@ -43,7 +50,14 @@
       "mcp": "mcp"
     },
     "file": {
-      "removeAria": "{{name}} 제거"
+      "removeAria": "{{name}} 제거",
+      "previewAria": "{{name}} 미리보기",
+      "preview": {
+        "empty": "빈 파일",
+        "none": "미리보기 미지원",
+        "unreadable": "작업 공간에서 이 파일을 읽을 수 없습니다",
+        "lines_other": "{{count}}줄"
+      }
     },
     "attach": {
       "addAria": "파일 추가",
@@ -94,7 +108,8 @@
     },
     "error": {
       "paste": "붙여넣기를 저장할 수 없습니다: {{message}}",
-      "addFiles": "파일을 추가할 수 없습니다: {{message}}"
+      "addFiles": "파일을 추가할 수 없습니다: {{message}}",
+      "imageNotSent": "{{names}}을(를) 읽지 못해 이미지 없이 전송했습니다."
     },
     "model": {
       "aria": "모델 전환",
@@ -132,7 +147,10 @@
     },
     "compact": {
       "aria": "컨텍스트 압축",
-      "title": "이전 턴을 요약하여 다음 답변이 제한된 컨텍스트에서 실행되도록 합니다"
+      "title": "이전 턴을 요약하여 다음 답변이 제한된 컨텍스트에서 실행되도록 합니다",
+      "confirmTitle": "컨텍스트를 압축할까요?",
+      "confirmBody": "이전 대화는 요약으로 대체되어 다음 응답이 제한된 컨텍스트에서 실행됩니다. 전체 원본 대화는 로컬에 그대로 저장됩니다.",
+      "confirmAction": "압축"
     }
   },
   "localCommand": {
@@ -144,6 +162,7 @@
     "newSession": "새 세션",
     "heading": "무엇을 살펴볼까요?",
     "subheading": "아래에 분석 내용을 설명하거나, 다음 중 하나로 시작해 보세요.",
+    "subheadingNoCards": "아래에 분석 내용을 설명해 주세요.",
     "demo": {
       "title": "데모 분석을 처음부터 끝까지 실행",
       "description": "데이터셋을 시뮬레이션하고, 모델을 적합시키고, 그림과 추적 가능한 리포트를 생성합니다."
@@ -180,7 +199,10 @@
     "subagentFallback": "서브 에이전트",
     "header": {
       "expandSidebarAria": "사이드바 펼치기",
-      "expandSidebarTitle": "사이드바 펼치기 ({{shortcut}})"
+      "expandSidebarTitle": "사이드바 펼치기 ({{shortcut}})",
+      "rename": "세션 이름 변경…",
+      "untitled": "이름 없는 세션",
+      "paneMenu": "세션 작업"
     },
     "filesToggle": {
       "default": "파일",
@@ -258,6 +280,20 @@
         "default_other": "단계 {{count}}개 실행"
       },
       "failedCount": "{{count}}개 실패"
+    },
+    "process": {
+      "thinking": "분석 완료",
+      "read": "파일 읽음",
+      "write": "파일 작성",
+      "search": "코드 검색",
+      "edit": "파일 수정",
+      "commands": "명령 실행",
+      "webFetch": "웹 페이지 방문",
+      "tools": "도구 호출",
+      "joinTwo": "{{first}} 및 {{second}}",
+      "comma": ", ",
+      "sharedPrefix": "",
+      "more": "{{title}} 등"
     }
   },
   "artifact": {
@@ -271,7 +307,11 @@
       "data": "데이터"
     },
     "via": "· {{tool}} 사용",
-    "open": "열기"
+    "open": "열기",
+    "maximize": "최대화",
+    "close": "닫기",
+    "collapse": "접기",
+    "expand": "펼치기"
   },
   "figure": {
     "downloadAria": "그림 다운로드",
@@ -317,9 +357,15 @@
     "alwaysAllow": "항상 허용",
     "allowOnce": "한 번만 허용"
   },
+  "turn": {
+    "worked": "작업 완료",
+    "workedFor": "소요 시간 {{duration}}"
+  },
   "reasoning": {
     "thinking": "생각 중…",
-    "thought": "생각 완료"
+    "thought": "생각 완료",
+    "collapse": "사고 접기",
+    "expand": "전체 사고 보기"
   },
   "stepSummary": {
     "steps": "{{count}}단계"
@@ -385,6 +431,7 @@
       "action": "되돌리기"
     }
   },
+  "historyRetry": "재시도",
   "compaction": {
     "label": "컨텍스트 압축됨",
     "autoBody": "모델의 컨텍스트 창을 넘지 않도록 런타임이 앞선 대화를 요약했고, 대화는 여기서 이어졌습니다.",
@@ -431,7 +478,8 @@
     "title": "새 창의 세션이 생성될 위치",
     "continueIn": "{{name}} 계속 사용",
     "newFolder": "새 폴더",
-    "chooseOther": "다른 폴더 선택…"
+    "chooseOther": "다른 폴더 선택…",
+    "terminal": "이 폴더에서 터미널"
   },
   "stall": {
     "silentTitle": "턴이 멈춘 것 같습니다",
@@ -440,5 +488,84 @@
     "repeatLine": "이 턴이 동일한 호출을 {{count}}번 동일한 결과로 실행했습니다. 아직 작업 중인가요, 아니면 반복 중인가요?",
     "keepWaiting": "계속 기다리기",
     "stopTurn": "턴 중지"
+  },
+  "terminal": {
+    "title": "터미널",
+    "exited": "[프로세스 종료됨]",
+    "desktopOnly": "터미널은 데스크톱 앱에서만 사용할 수 있습니다.",
+    "new": "터미널",
+    "menu": {
+      "label": "터미널 메뉴",
+      "copy": "복사",
+      "paste": "붙여넣기",
+      "selectAll": "전체 선택",
+      "clear": "화면 지우기",
+      "revealCwd": "작업 폴더 열기",
+      "resumeAgent": "지난 {{agent}} 세션 이어서 하기"
+    },
+    "rename": "터미널 이름 변경…",
+    "confirmClose": {
+      "title": "이 터미널을 닫을까요?",
+      "body": "셸과 실행 중인 프로그램이 모두 중지됩니다. 스크롤백은 남지 않습니다.",
+      "action": "터미널 닫기"
+    },
+    "search": {
+      "placeholder": "찾기",
+      "matchCase": "대소문자 구분",
+      "regex": "정규식",
+      "previous": "이전 결과",
+      "next": "다음 결과",
+      "close": "찾기 닫기",
+      "none": "결과 없음",
+      "find": "찾기…"
+    }
+  },
+  "splitInto": {
+    "session": "세션"
+  },
+  "find": {
+    "placeholder": "대화에서 찾기",
+    "matchCase": "대소문자 구분",
+    "regex": "정규식",
+    "previous": "이전 결과",
+    "next": "다음 결과",
+    "close": "찾기 닫기",
+    "none": "결과 없음",
+    "find": "찾기…"
+  },
+  "turnNav": {
+    "label": "턴 탐색",
+    "jump": "{{turn}}번째 턴으로 이동",
+    "turn": "{{turn}}번째 턴"
+  },
+  "trajectory": {
+    "title": "궤적",
+    "toggle": "궤적 — 이 대화의 모든 단계",
+    "duration": "시간",
+    "useActual": "실제 시간 사용",
+    "useEqual": "같은 너비로 표시",
+    "turns": "턴",
+    "expandTurns": "턴 펼치기",
+    "collapseTurns": "턴 접기",
+    "calls": "호출",
+    "expandCalls": "호출 펼치기",
+    "collapseCalls": "호출 접기",
+    "search": "검색",
+    "user": "사용자",
+    "assistant": "어시스턴트",
+    "tool": "도구",
+    "message": "메시지",
+    "system": "시스템",
+    "compacted": "압축됨",
+    "input": "입력",
+    "model": "모델",
+    "tools": "도구",
+    "turn": "{{n}}번째 턴",
+    "noOutput": "출력 없음",
+    "empty": "아직 단계가 없습니다.",
+    "noMatch": "일치하는 단계가 없습니다.",
+    "steps_one": "{{count}}단계",
+    "steps_other": "{{count}}단계",
+    "close": "궤적 닫기"
   }
 }

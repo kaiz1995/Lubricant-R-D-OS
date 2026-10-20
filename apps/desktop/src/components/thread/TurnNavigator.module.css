@@ -1,0 +1,191 @@
+/* Turn rail, ported from DeepSeek Harness ui-chat TurnNavigator.module.css
+   (MIT, (c) 2026 DeepSeek). DSH positions marks with a virtualizer; here they
+   sit in normal flow at the same fixed 10px pitch, so .marks carries the
+   rail's 1px end padding and .mark is relative. Everything else is DSH's. */
+
+/* Overlay over the scrolling transcript, clear of the floating composer
+   (the owner sets `bottom`). Full-bleed so the preview can open leftwards. */
+.slot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 7;
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.frame {
+  --turn-preview-height: 100px;
+
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 28px;
+  max-height: min(max(0px, calc(100% - 64px)), 420px);
+  display: flex;
+  flex-direction: column;
+  contain: layout;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+
+.scroller {
+  position: relative;
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.fadeTop {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 100%);
+}
+
+.fadeBottom {
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+}
+
+.fadeTop.fadeBottom {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 24px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+}
+
+.marks {
+  position: relative;
+  padding: 1px 0;
+}
+
+.mark {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mark::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dsw-alias-border-l4);
+  content: '';
+  transform: translateY(-50%) scaleX(0.6);
+  transform-origin: right center;
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+
+.markPreview::before {
+  transform: translateY(-50%) scaleX(0.9);
+  background: var(--dsw-alias-label-tertiary);
+}
+
+.markActive::before {
+  transform: translateY(-50%) scaleX(1);
+  background: var(--dsw-alias-label-primary);
+}
+
+.mark:focus-visible::before {
+  transform: translateY(-50%) scaleX(1);
+  background: var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.mark:focus-visible {
+  outline: none;
+}
+
+.mark:focus-visible::after {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 20px;
+  border-radius: inherit;
+  outline: 1px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: -1px;
+  content: '';
+}
+
+.preview {
+  position: absolute;
+  top: clamp(
+    0px,
+    calc(var(--turn-preview-center) - var(--turn-preview-height) / 2),
+    calc(100% - var(--turn-preview-height))
+  );
+  right: calc(100% + 10px);
+  box-sizing: border-box;
+  width: min(300px, calc(100cqw - 120px));
+  max-height: var(--turn-preview-height);
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--dsw-radius-lg);
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 0 0 0.5px var(--dsw-alias-border-l2);
+  pointer-events: none;
+  animation: dsh-turn-preview-enter 120ms ease-out;
+  transition: top 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.previewPrompt,
+.previewResponse {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.previewPrompt {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  -webkit-line-clamp: 1;
+}
+
+.previewResponse {
+  margin-top: 4px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+  -webkit-line-clamp: 3;
+}
+
+@keyframes dsh-turn-preview-enter {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* DSH hides the rail below 900px; panes here are often split, so the rail
+   stays down to 600px, where its ticks still sit in the column's padding. */
+@container (max-width: 600px) {
+  .frame {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .scroller,
+  .mark::before,
+  .preview {
+    transition: none;
+    animation: none;
+    scroll-behavior: auto;
+  }
+}

@@ -9,6 +9,7 @@
     "compute": "コンピューティング",
     "privacy": "プライバシー",
     "browser": "ブラウザ",
+    "computer": "コンピュータ操作",
     "remote": "リモートアクセス",
     "memory": "メモリ",
     "desktopOnly": "このセクションはデスクトップアプリで利用できます。"
@@ -19,7 +20,8 @@
     "theme": {
       "light": "ライト",
       "warm": "ウォーム",
-      "dark": "ダーク"
+      "dark": "ダーク",
+      "system": "システム"
     },
     "zoom": {
       "label": "ズーム",
@@ -27,6 +29,13 @@
       "in": "拡大",
       "out": "縮小",
       "reset": "リセット"
+    },
+    "fontSize": {
+      "title": "文字サイズ",
+      "description": "会話内容にのみ適用されます",
+      "unit": "px",
+      "increase": "文字を大きく",
+      "decrease": "文字を小さく"
     }
   },
   "language": {
@@ -47,9 +56,12 @@
     "proxySystem": "システムに従う",
     "proxyCustom": "カスタム…",
     "proxyNone": "直接接続(プロキシなし)",
-    "proxyPlaceholder": "http://127.0.0.1:7890 / socks5://host:port",
+    "proxyPlaceholder": "http://127.0.0.1:7890",
     "proxyDirectHint": "エージェントランタイムの通信はすべて直接接続されます。",
     "proxyEffective": "{{url}} 経由で接続",
+    "proxySocksUnsupported": "{{url}} は SOCKS プロキシのため、エージェントランタイムでは使えません（すべての接続が失敗します）。プロキシの HTTP ポートを指定してください（Clash なら mixed ポート、例: http://127.0.0.1:7890）。",
+    "proxyRestartNeeded": "ランタイム起動後にシステムプロキシが変更されましたが、ランタイムは古い経路のままです。適用するとランタイムが再起動し、実行中のタスクは停止します。",
+    "proxyApply": "適用",
     "proxyNoneDetected": "システムプロキシが見つかりません — 直接接続されます。",
     "mirrorTitle": "パッケージミラー",
     "mirrorPypi": "PyPI インデックス",
@@ -99,7 +111,7 @@
   },
   "model": {
     "title": "モデル",
-    "hint": "以下のプロバイダーが、ここで選択できるモデルを提供します",
+    "hint": "新しい会話が既定で使うモデル。選べる範囲は下の Providers が決めます。",
     "connectPrompt": "モデルを設定するには、ランタイムに接続してください。",
     "notSet": "未設定 — デフォルトモデルを選択",
     "providersDivider": "プロバイダー",
@@ -117,13 +129,14 @@
     "catalogUnavailable": "モデルカタログは現在利用できません。",
     "catalogLoading": "モデルカタログを読み込み中…",
     "noModels": "利用可能なモデルがありません。",
-    "manageProviders": "プロバイダーを管理",
     "emptyFavorites": "お気に入りのモデルがここに表示されます。",
     "emptyRecent": "選択に成功したモデルがここに表示されます。",
     "noResults": "「{{query}}」に一致するモデルはありません。",
     "clearSearch": "検索をクリア",
     "addFavorite": "{{model}} をお気に入りに追加",
-    "removeFavorite": "{{model}} をお気に入りから削除"
+    "removeFavorite": "{{model}} をお気に入りから削除",
+    "change": "変更",
+    "noProvidersHint": "下の Providers で接続してください。"
   },
   "providers": {
     "title": "プロバイダー",
@@ -148,18 +161,25 @@
     "pasteCode": "ブラウザからコードを貼り付け",
     "customEndpoint": "カスタムエンドポイント",
     "customEndpointHint": "セルフホスト・ローカル Ollama・OpenAI/Anthropic 互換",
-    "customNamePlaceholder": "名前 — 例: Ollama、My DeepSeek gateway",
+    "customNamePlaceholder": "例: Ollama、自分の DeepSeek ゲートウェイ",
     "openaiCompatible": "OpenAI 互換",
     "anthropicCompatible": "Anthropic 互換",
-    "customUrlPlaceholder": "ベース URL — Ollama: http://127.0.0.1:11434/v1",
-    "customKeyPlaceholder": "API キー — 任意、Ollama では不要です",
-    "customModelsPlaceholder": "モデル ID（カンマ区切り）",
-    "customContextPlaceholder": "コンテキストウィンドウ — 任意、既定 128k",
+    "customUrlPlaceholder": "http://127.0.0.1:11434/v1",
+    "customKeyPlaceholder": "任意 — Ollama には不要",
+    "customModelsPlaceholder": "モデル ID をカンマ区切りで",
+    "customContextPlaceholder": "任意 — 既定は 128k",
     "fetchModels": "モデルを取得",
     "fetchingModels": "取得中…",
     "noModelsFound": "エンドポイントからモデルが返されませんでした。",
     "addEndpoint": "エンドポイントを追加",
-    "importLogin": "すでに OpenCode CLI を使っていますか？ そのログインをインポート"
+    "importLogin": "すでに OpenCode CLI を使っていますか？ そのログインをインポート",
+    "addTitle": "プロバイダーを追加",
+    "fieldName": "名前",
+    "fieldApiStyle": "API 形式",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API キー",
+    "fieldModels": "モデル",
+    "fieldContext": "コンテキスト長"
   },
   "mcp": {
     "title": "MCP サーバー",
@@ -277,6 +297,7 @@
     "providerRemoved": "{{providerID}} を削除しました",
     "couldNotAddEndpoint": "エンドポイントを追加できませんでした",
     "couldNotFetchModels": "エンドポイントからモデルを取得できませんでした",
+    "baseUrlCorrected": "Base URL を {{url}} に修正しました",
     "endpointFieldsRequired": "名前、ベース URL、少なくとも 1 つのモデル ID が必要です。",
     "endpointAdded": "{{name}} を追加しました — 上部でそのモデルを選択できるようになりました。",
     "couldNotAddMcp": "MCP サーバーを追加できませんでした",
@@ -442,13 +463,22 @@
     "title": "エージェントごとのモデルと推論の強度",
     "hint": "メインのエージェントが強力なモデルで推論する一方、レビューや探索のエージェントは高速なモデルで動かし、それぞれの考える強度も指定できます。",
     "noModels": "モデルを選ぶにはプロバイダーを接続してください。",
-    "followDefault": "既定のモデル",
-    "followDefaultNamed": "既定 ({{model}})",
+    "followDefault": "デフォルトに従う",
     "modelFor": "{{agent}} のモデル",
     "defaultEffort": "既定の強度",
     "effortFor": "{{agent}} の推論の強度",
     "retiredOption": "{{model}} — 提供終了",
-    "primaryHint": "build と plan は送信したメッセージを実行します。ここで設定したモデルが適用されますが、会話内でモデルを選ぶとその会話でのみ優先されます。"
+    "primaryHint": "build と plan は送信したメッセージを実行します。ここで設定したモデルが適用されますが、会話内でモデルを選ぶとその会話でのみ優先されます。",
+    "group": {
+      "conversation": "あなたが話しかけるエージェント",
+      "utility": "ワークベンチが内部で使うもの"
+    },
+    "utilityHint": "ランタイムが自前で行う短い機械的な作業——ここは速いモデルが純粋に有利です。",
+    "about": {
+      "title": "最初のメッセージからセッション名を付けます。",
+      "summary": "会話の短い要約を書きます。",
+      "compaction": "長い会話をコンテキスト長に収まるよう書き直します。"
+    }
   },
   "ssh": {
     "title": "{{host}} にサインイン",
@@ -484,5 +514,31 @@
     "silenceUnit": "分",
     "title": "停止ガード",
     "webNote": "ブラウザでは、警告は会話内にのみ表示され、システム通知は送信されません。"
+  },
+  "computer": {
+    "title": "コンピュータ操作",
+    "hint": "OS のアクセシビリティ API を通じて、エージェントがこのコンピュータ上のアプリを読み取り、操作できるようにします。ピクセル位置を推測するのではなく名前のある UI 要素を対象に操作し、各操作が実際に検証できたかどうかを報告します。各会話で最初に使うときに承認を求めます。",
+    "checking": "確認中…",
+    "state": "利用可否",
+    "ready": "準備完了。依頼すれば、エージェントがこのコンピュータのアプリを操作できます。",
+    "unavailable": "このマシンでは利用できません。",
+    "setup": "設定を開く",
+    "recheck": "再確認",
+    "grant": "許可する…",
+    "granted": "許可済み",
+    "opened": "権限設定のウィンドウを開きました。",
+    "error": "コンピュータ操作",
+    "accessibility": "アクセシビリティ",
+    "accessibilityHint": "必須。ヘルパーがアプリの画面を読み取り、操作できるようにします。許可はワークベンチ全体ではなく、独立したヘルパー Open Science Computer Use に与えられます。",
+    "screenshots": "画面収録",
+    "screenshotsHint": "任意で、許可はヘルパーではなく Open Science 本体に与えます — macOS は画面収録を、要求を始めたアプリに帰属させるためです。グラフやキャンバスなど、テキストとして読めないウィンドウを見る必要があるときだけ必要です。"
+  },
+  "userBrowser": {
+    "title": "あなたが入れたブラウザ",
+    "hint": "この Mac に、Open Science のエージェントがシェルから操作できるブラウザが見つかりました。設定する項目はありません — 到達できるという事実をお知らせするための欄です。",
+    "name": "ego lite",
+    "reachable": "インストール済みで利用可能。会話ごとに最初の使用前へ確認を求めます。",
+    "notReachable": "インストールされていますが、このマシンにコマンドラインツールがないためエージェントからは届きません。ego lite 自身のセットアップを実行してください。",
+    "tradeoff": "上のブラウザコネクタとは別物です。あちらは本アプリが管理する独立したブラウザを隔離プロファイルで動かします。こちらは普段づかいのブラウザで、実際のログイン状態を持っています — 便利な理由であり、先に確認を求める理由でもあります。macOS のみ。"
   }
 }

@@ -1,0 +1,43 @@
+# Open Science terminal integration (see terminal_env.rs), passed as
+# `bash --rcfile`: run the user's .bashrc, then restore what they exported by
+# hand before the app last closed, and keep recording it at every prompt.
+# Written for bash 3.2, the one macOS ships: no associative arrays.
+[[ -f ~/.bashrc ]] && builtin source ~/.bashrc
+
+# The environment as the startup files leave it. Only what differs from this
+# is recorded: the startup files run again on every launch anyway.
+__osd_env_names=$(compgen -e)
+for __osd_k in $__osd_env_names; do
+  printf -v "__OSD_B_$__osd_k" '%s' "${!__osd_k}"
+done
+unset __osd_k
+[[ -n $OSD_TERM_ENV_FILE && -r $OSD_TERM_ENV_FILE ]] && builtin source "$OSD_TERM_ENV_FILE"
+__osd_env_last=
+
+__osd_env_save() {
+  local status_=$? k b q now out=
+  [[ -n $OSD_TERM_ENV_FILE ]] || return $status_
+  now=$'\n'$(compgen -e)$'\n'
+  for k in $now; do
+    case $k in PWD|OLDPWD|SHLVL|_|OSD_TERM_ENV_FILE) continue ;; esac
+    b=__OSD_B_$k
+    if [[ -z ${!b+x} || ${!b} != "${!k}" ]]; then
+      printf -v q '%q' "${!k}"
+      out+="export $k=$q"$'\n'
+    fi
+  done
+  for k in $__osd_env_names; do
+    case $now in *$'\n'$k$'\n'*) ;; *) out+="unset $k"$'\n' ;; esac
+  done
+  if [[ $out != "$__osd_env_last" ]]; then
+    if [[ -n $out ]]; then
+      printf '%s' "$out" >| "$OSD_TERM_ENV_FILE.tmp" 2>/dev/null &&
+        command mv -f "$OSD_TERM_ENV_FILE.tmp" "$OSD_TERM_ENV_FILE" 2>/dev/null
+    else
+      command rm -f "$OSD_TERM_ENV_FILE" 2>/dev/null
+    fi
+    __osd_env_last=$out
+  fi
+  return $status_
+}
+PROMPT_COMMAND="__osd_env_save${PROMPT_COMMAND:+; $PROMPT_COMMAND}"

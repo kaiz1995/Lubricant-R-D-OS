@@ -1,14 +1,26 @@
 import { memo, useEffect, useState } from "react";
-import { ChevronRight, PanelRight } from "lucide-react";
+import { PanelRight } from "lucide-react";
+import {
+  IconApiOutlineRegular,
+  IconBrowseOutlineRegular,
+  IconChevronDownOutlineRegular,
+  IconChevronRightOutlineRegular,
+  IconChevronUpOutlineRegular,
+  IconEditOutlineRegular,
+  IconSearchOutlineRegular,
+  IconSparkleRegular,
+  IconThinkOutlineRegular,
+} from "@/components/icons/dsh";
+import css from "./ToolGroup.module.css";
 import { useTranslation } from "react-i18next";
 import type { ThreadBlock, ToolCallBlock } from "@ai4s/shared";
 import i18n from "@/i18n";
 import { cn } from "@/lib/cn";
 import { DiffView } from "@/components/code-viewer/DiffView";
 import { STATUS } from "./ToolCallRow";
-import { ReasoningRow } from "./ReasoningRow";
 import { SubagentActivity } from "./SubagentActivity";
 import { RunningDot } from "./RunningDot";
+import { ICON_SLOT } from "./rowLayout";
 
 // Codex-style tool activity: consecutive quiet tool steps fold into one
 // summary line ("Ran 3 commands, created a file"); expanding shows the list;
@@ -20,14 +32,24 @@ export type BlockListItem =
   | { kind: "group"; start: number; blocks: ThreadBlock[] }
   | { kind: "block"; index: number; block: ThreadBlock };
 
-/** Fold a run of tool calls AND the reasoning between them into ONE activity
- *  group — thinking and doing are the same working stream, so interleaving them
- *  keeps consecutive tools merged instead of letting a "thinking" block split
- *  the run into fragments. Failures stay IN the group (routine trial-and-error;
- *  the summary counts them). A step that needs the USER (waiting-approval) or a
- *  non-groupable block (text, artifact, …) breaks the run. A run with no actual
- *  tool call — e.g. the reasoning that precedes the final answer — is not an
- *  activity group and renders on its own. Pure — exported for tests. */
+/** Fold a run of consecutive tool calls into ONE activity group.
+ *
+ *  Reasoning is NOT folded in, and that is the whole shape of the thing. What
+ *  the model says while it works is the narration a reader follows; the commands
+ *  are the receipts. Folding both produced a summary line that opened into
+ *  twenty cramped monospace rows, with the narration buried among them as
+ *  one-line stubs. Leaving thought outside gives the alternation Codex has —
+ *  paragraph, one muted line of "what I did", paragraph — where the prose is the
+ *  backbone and the activity is an aside.
+ *
+ *  It costs what the old rule bought: a thought between two commands now splits
+ *  them into two groups. That is the point, not a regression — each group is the
+ *  work done since the last thing the model said, which is also why the summary
+ *  lines get short enough to read.
+ *
+ *  Failures stay IN the group (routine trial-and-error; the summary counts
+ *  them). A step that needs the USER (waiting-approval) or any non-groupable
+ *  block breaks the run. Pure — exported for tests. */
 export function groupToolBlocks(blocks: ThreadBlock[]): BlockListItem[] {
   const items: BlockListItem[] = [];
   let group: { start: number; blocks: ThreadBlock[] } | null = null;
@@ -35,16 +57,10 @@ export function groupToolBlocks(blocks: ThreadBlock[]): BlockListItem[] {
     const g = group;
     group = null;
     if (!g) return;
-    if (g.blocks.some((b) => b.kind === "tool-call")) {
-      items.push({ kind: "group", start: g.start, blocks: g.blocks });
-    } else {
-      // Reasoning-only run: no tools to summarize — render each on its own.
-      g.blocks.forEach((b, k) => items.push({ kind: "block", index: g.start + k, block: b }));
-    }
+    items.push({ kind: "group", start: g.start, blocks: g.blocks });
   };
   blocks.forEach((b, i) => {
-    const groupable =
-      (b.kind === "tool-call" && b.status !== "waiting-approval") || b.kind === "reasoning";
+    const groupable = b.kind === "tool-call" && b.status !== "waiting-approval";
     if (groupable) {
       group ??= { start: i, blocks: [] };
       group.blocks.push(b);
@@ -57,40 +73,103 @@ export function groupToolBlocks(blocks: ThreadBlock[]): BlockListItem[] {
   return items;
 }
 
-/** "Ran 3 commands, created a file" — one phrase per verb, in first-seen order.
- *  Counts tool calls only; interleaved reasoning doesn't add to the summary. */
-export function summarizeGroup(blocks: ThreadBlock[]): string {
-  const counts = new Map<string, number>();
-  for (const b of blocks) {
-    if (b.kind !== "tool-call") continue;
-    const verb = b.verb ?? "";
-    counts.set(verb, (counts.get(verb) ?? 0) + 1);
-  }
-  const phrase = (verb: string, n: number): string => {
-    switch (verb) {
-      case "Ran":
-        return i18n.t("session:tool.group.phrase.ran", { count: n });
-      case "Created":
-        return i18n.t("session:tool.group.phrase.created", { count: n });
-      case "Edited":
-        return i18n.t("session:tool.group.phrase.edited", { count: n });
-      case "Read":
-        return i18n.t("session:tool.group.phrase.read", { count: n });
-      case "Searched":
-        return i18n.t("session:tool.group.phrase.searched", { count: n });
-      case "Listed":
-        return i18n.t("session:tool.group.phrase.listed");
-      case "Fetched":
-        return i18n.t("session:tool.group.phrase.fetched", { count: n });
-      default:
-        return i18n.t("session:tool.group.phrase.default", { count: n });
-    }
-  };
-  const text = [...counts.entries()].map(([verb, n]) => phrase(verb, n)).join(", ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+/**
+ * Drop the file cards a turn produced along the way.
+ *
+ * They were first moved to the end of their turn, which is where seeing them
+ * stacked showed what they actually are: noise. The answer already ends with a
+ * chip per file it produced (`analyze.py  report.md  data.csv …`), so the cards
+ * repeated that list at five times the height — and repeated themselves too,
+ * since a file written and then edited is two cards for one file.
+ *
+ * Dropping them also un-splits the activity: a card between two tool steps used
+ * to break the run in two, so one stretch of work folded as two groups.
+ *
+ * What is NOT dropped: artifacts the agent PRESENTED (`presentation`).
+ * `present_artifact` is the agent deciding this file is the point of the
+ * sentence it sits beside, which is the opposite of scratch work.
+ *
+ * Where the files went: the answer's own chips, and the Files panel, which
+ * lists everything the session wrote whether the answer mentions it or not.
+ *
+ * Pure — exported for tests.
+ */
+export function dropProcessArtifacts(blocks: ThreadBlock[]): ThreadBlock[] {
+  const process = (b: ThreadBlock): boolean => b.kind === "artifact" && !b.presentation;
+  return blocks.some(process) ? blocks.filter((b) => !process(b)) : blocks;
 }
 
-function fmtDuration(ms: number): string {
+/**
+ * DSH's activity categories (ui-chat step-process), keyed from a tool call's
+ * verb. The same category decides the row's icon and its words, so the two
+ * can never disagree.
+ */
+type Activity = "read" | "write" | "search" | "edit" | "commands" | "webFetch" | "tools";
+
+const VERB_ACTIVITY: Record<string, Activity> = {
+  Ran: "commands",
+  Read: "read",
+  Listed: "read",
+  Edited: "edit",
+  Created: "write",
+  Searched: "search",
+  Fetched: "webFetch",
+};
+
+/** DSH PROCESS_ICONS, at DSH's sizes. */
+const ACTIVITY_ICON: Record<Activity | "thinking", React.ReactNode> = {
+  thinking: <IconThinkOutlineRegular />,
+  read: <IconBrowseOutlineRegular size={14} />,
+  write: <IconEditOutlineRegular size={14} />,
+  search: <IconSearchOutlineRegular size={14} />,
+  edit: <IconEditOutlineRegular size={14} />,
+  commands: <IconApiOutlineRegular />,
+  webFetch: <IconBrowseOutlineRegular size={14} />,
+  tools: <IconSparkleRegular size={14} />,
+};
+
+/** Categories of a run, most frequent first (ties keep first-seen order). */
+function rankedActivities(blocks: ThreadBlock[]): Activity[] {
+  const counts = new Map<Activity, number>();
+  for (const b of blocks) {
+    if (b.kind !== "tool-call") continue;
+    const kind = VERB_ACTIVITY[b.verb ?? ""] ?? "tools";
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([kind]) => kind);
+}
+
+/**
+ * A settled run's title, composed like DSH's `processTitle`: its top three
+ * categories without counts — "Read files and ran commands", three joined by
+ * commas, and ", etc." past three. Two labels sharing the locale's prefix
+ * (zh 「已」) drop it from the second.
+ */
+export function summarizeGroup(blocks: ThreadBlock[]): string {
+  const kinds = rankedActivities(blocks);
+  const labels = kinds.slice(0, 3).map((k) => i18n.t(`session:tool.process.${k}`));
+  const [first, second] = labels;
+  if (first === undefined) return i18n.t("session:tool.process.thinking");
+  if (second === undefined) return first;
+  const continuation = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
+  if (labels.length === 2) {
+    const prefix = i18n.t("session:tool.process.sharedPrefix");
+    const shared = prefix !== "" && first.startsWith(prefix) && second.startsWith(prefix);
+    return i18n.t("session:tool.process.joinTwo", {
+      first,
+      second: continuation(shared ? second.slice(prefix.length) : second),
+    });
+  }
+  const title = [first, ...labels.slice(1).map(continuation)].join(i18n.t("session:tool.process.comma"));
+  return kinds.length > 3 ? i18n.t("session:tool.process.more", { title }) : title;
+}
+
+/** The icon of a run's most frequent category — the same one its title leads with. */
+export function groupIcon(blocks: ThreadBlock[]): React.ReactNode {
+  return ACTIVITY_ICON[rankedActivities(blocks)[0] ?? "thinking"];
+}
+
+export function fmtDuration(ms: number): string {
   const s = Math.max(0, Math.round(ms / 1000));
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
@@ -149,6 +228,7 @@ function Collapse({ open, children }: { open: boolean; children: React.ReactNode
 
 const PANE =
   "whitespace-pre-wrap break-all px-3 py-2 font-mono text-xs leading-5";
+
 
 /** The statuses whose row leads with WHY, not what. */
 const FAILED = new Set(["failed", "warning"]);
@@ -265,11 +345,19 @@ const ToolRow = memo(function ToolRow({
             : undefined
         }
         className={cn(
-          "group flex items-center gap-2 rounded-input px-2 py-1 text-[12.5px]",
-          activate && "cursor-pointer hover:bg-surface-2",
+          // Unpadded for the same reason as the group summary above: a lone
+          // tool step renders as a bare row directly among the message blocks,
+          // so its leading edge has to be theirs. Inside an expanded group the
+          // wrapper's `pl-4` still provides the nesting indent.
+          "group flex items-center gap-2 py-1 text-[12.5px]",
+          activate && "cursor-pointer hover:text-text",
         )}
       >
-        <span className={cn("shrink-0", s.className)} aria-label={t(`tool.status.${block.status}`)} role="img">
+        <span
+          className={cn(ICON_SLOT, s.className)}
+          aria-label={t(`tool.status.${block.status}`)}
+          role="img"
+        >
           {s.icon}
         </span>
         {block.verb && <span className="shrink-0 text-muted">{t(`tool.verb.${block.verb}`)}</span>}
@@ -280,7 +368,7 @@ const ToolRow = memo(function ToolRow({
           {block.title}
         </span>
         {detail && (
-          <ChevronRight
+          <IconChevronRightOutlineRegular
             size={12}
             className={cn(
               "shrink-0 text-muted transition-transform duration-200",
@@ -330,15 +418,9 @@ const ToolRow = memo(function ToolRow({
 
 export function ToolGroup({
   blocks,
-  start = 0,
-  liveReasoningIndex,
   onOpenSubagent,
 }: {
   blocks: ThreadBlock[];
-  /** Thread index of this group's first block — maps a row to its global index. */
-  start?: number;
-  /** Global index of the reasoning block currently streaming (if any). */
-  liveReasoningIndex?: number;
   /** Open the subagents panel on a running task's subagent. */
   onOpenSubagent?: (childSessionId: string) => void;
 }) {
@@ -348,32 +430,26 @@ export function ToolGroup({
   // period — within a turn the next command follows in seconds, and an
   // open→shut→open flap between steps would be pure jank. A click overrides.
   const tools = blocks.filter((b): b is ToolCallBlock => b.kind === "tool-call");
-  // A thought streaming inside this group keeps it open too, so live thinking
-  // is never hidden by an early fold when no tool happens to be running.
-  const streamingHere =
-    liveReasoningIndex != null &&
-    liveReasoningIndex >= start &&
-    liveReasoningIndex < start + blocks.length;
-  const active =
-    streamingHere || tools.some((b) => b.status === "running" || b.status === "pending");
+  const active = tools.some((b) => b.status === "running" || b.status === "pending");
   const failed = tools.filter((b) => b.status === "failed" || b.status === "warning").length;
-  const [autoOpen, setAutoOpen] = useState(active);
-  useEffect(() => {
-    if (active) {
-      setAutoOpen(true);
-      return;
-    }
-    const timer = window.setTimeout(() => setAutoOpen(false), 2000);
-    return () => window.clearTimeout(timer);
-  }, [active]);
+  // What the ONE folded line says while the run is live: the command actually
+  // running, not a count of the ones that finished. Folding the list is what was
+  // asked for; going silent with it was not, and "ran 4 commands" beside a
+  // spinner tells a reader nothing about the twenty minutes they are waiting.
+  const running = tools.find((b) => b.status === "running") ?? tools.find((b) => b.status === "pending");
+  // Folded by default, running or not. A run of commands is one line while it
+  // happens and one line afterwards, which is what "multiple consecutive
+  // commands fold together" asks for; the running dot on that line carries the
+  // live signal that an open list used to.
+  //
+  // It costs the live output tail of a running command. The dot, the summary and
+  // the turn's own elapsed time all still move, so the window is not silent —
+  // but a long build no longer shows its last lines here, and opening the group
+  // is how to see them.
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? autoOpen;
+  const open = userOpen ?? false;
   const rows = blocks.map((b, i) =>
-    b.kind === "reasoning" ? (
-      <ReasoningRow key={i} block={b} streaming={start + i === liveReasoningIndex} inline />
-    ) : b.kind === "tool-call" ? (
-      <ToolRow key={i} block={b} onOpenSubagent={onOpenSubagent} />
-    ) : null,
+    b.kind === "tool-call" ? <ToolRow key={i} block={b} onOpenSubagent={onOpenSubagent} /> : null,
   );
   // A lone tool step (no interleaved thinking) keeps the bare-row look.
   if (blocks.length === 1 && blocks[0].kind === "tool-call") return <div>{rows}</div>;
@@ -382,23 +458,34 @@ export function ToolGroup({
       <button
         type="button"
         onClick={() => setUserOpen(!open)}
-        className="group flex w-full items-center gap-2 rounded-input px-2 py-1 text-left text-[12.5px] text-muted hover:bg-surface-2 hover:text-text"
+        aria-expanded={open}
+        className={css.title}
       >
-        {active ? (
-          <RunningDot className="text-accent" />
+        {/* DSH: the activity icon, swapped for the chevron on hover/open. */}
+        <span className={css.leading} aria-hidden="true">
+          <span className={css.activityIcon}>
+            {active ? <RunningDot className="text-accent" /> : groupIcon(blocks)}
+          </span>
+          <span className={css.chevron}>
+            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
+          </span>
+        </span>
+        {active && running ? (
+          <>
+            <span className={cn(css.label, "font-mono text-text")} title={running.command ?? running.title}>
+              {running.title}
+            </span>
+            {running.startedAt !== undefined && <Elapsed start={running.startedAt} />}
+          </>
         ) : (
-          <ChevronRight
-            size={13}
-            className={cn("shrink-0 transition-transform duration-200", open && "rotate-90")}
-          />
+          <span className={css.label}>{summarizeGroup(blocks)}</span>
         )}
-        <span className="min-w-0 truncate">{summarizeGroup(blocks)}</span>
         {failed > 0 && (
           <span className="shrink-0 text-error">· {t("tool.group.failedCount", { count: failed })}</span>
         )}
       </button>
       <Collapse open={open}>
-        <div className="pl-4">{rows}</div>
+        <div className={cn(css.body, "pl-[22px]")}>{rows}</div>
       </Collapse>
     </div>
   );

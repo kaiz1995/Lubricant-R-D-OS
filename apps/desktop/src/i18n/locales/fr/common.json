@@ -10,5 +10,14 @@
       "error": "Impossible de compresser le contexte.",
       "done": "Contexte compressé. La prochaine réponse utilisera la conversation compressée."
     }
+  },
+  "linkMenu": {
+    "openFile": "Ouvrir le fichier",
+    "openDefault": "Ouvrir avec l’app par défaut",
+    "openLink": "Ouvrir le lien",
+    "copyLink": "Copier le lien",
+    "copyPath": "Copier le chemin",
+    "copied": "Copié",
+    "click": "Clic"
   }
 }

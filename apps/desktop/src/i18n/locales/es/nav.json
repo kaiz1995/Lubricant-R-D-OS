@@ -5,7 +5,11 @@
     "expand": "Expandir barra lateral",
     "expandTitle": "Expandir barra lateral ({{shortcut}})",
     "settings": "Configuración",
-    "home": "Inicio"
+    "searchAria": "Buscar sesiones",
+    "searchPlaceholder": "Buscar nombres de sesión",
+    "searchClear": "Borrar búsqueda",
+    "searchResultsAria": "Resultados de búsqueda",
+    "searchNoMatches": "No hay sesiones que coincidan"
   },
   "items": {
     "new": "Nuevo",
@@ -77,6 +81,8 @@
     "showArchived": "Mostrar archivadas",
     "archivedBadge": "archivada",
     "archive": "Archivar",
+    "archiveTitle": "¿Archivar esta sesión?",
+    "archiveBody": "«{{title}}» sale de la barra lateral. No se borra nada: la encontrarás en Todas las sesiones → Mostrar archivadas, donde Restaurar la devuelve.",
     "restore": "Restaurar",
     "loadMore": "Cargar más",
     "loading": "Cargando…",
@@ -100,14 +106,72 @@
     "hideAction": "Ocultar"
   },
   "status": {
-    "runtime": "Entorno de ejecución",
-    "model": "Modelo",
-    "modelNotSet": "sin configurar",
-    "values": {
-      "ready": "listo",
-      "connecting": "conectando",
-      "error": "error",
-      "offline": "sin conexión"
+    "usage": {
+      "title": "Uso",
+      "refresh": "Actualizar",
+      "tokens": "tokens",
+      "today": "hoy",
+      "days7": "7 d",
+      "workbench": "OSD",
+      "cliNote": "Se ejecuta en tu propio terminal; aquí solo se registra el consumo.",
+      "allAgents": "todos los agentes",
+      "detailed": "Detallado",
+      "compact": "Compacto",
+      "detailedHint": "Todas las ventanas, con barras y porcentajes",
+      "compactHint": "Solo la ventana más cerca de su límite",
+      "detailAria": "Detalle de uso",
+      "resetsIn": "Se restablece en {{duration}}",
+      "asOf": "hace {{age}}"
+    },
+    "awake": {
+      "title": "Mantener activo",
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "mode": {
+        "on": "Sí",
+        "auto": "Auto",
+        "off": "No"
+      },
+      "hint": {
+        "on": "Mantener el equipo despierto siempre",
+        "auto": "Mantenerlo despierto mientras un agente trabaja",
+        "off": "Permitir la suspensión normal"
+      }
+    },
+    "resources": {
+      "title": "Recursos",
+      "memory": "Memoria",
+      "processes": "Procesos",
+      "note": "Esta app y todo lo que ha iniciado.",
+      "cpu": "{{n}} % CPU",
+      "terminal": "Terminal",
+      "app": "La propia app",
+      "kernel": "Kernel"
+    },
+    "ports": {
+      "title": "Puertos",
+      "empty": "Nada de esta app está escuchando.",
+      "public": "público",
+      "openTitle": "Abrir {{url}}"
+    },
+    "hosts": {
+      "title": "Hosts",
+      "empty": "No hay máquinas en tu ~/.ssh/config.",
+      "count": "{{count}} host",
+      "count_other": "{{count}} hosts",
+      "status": {
+        "connected": "conectado",
+        "connecting": "conectando",
+        "prompt": "esperándote",
+        "failed": "falló",
+        "disconnected": "sin conectar"
+      },
+      "connect": "Conectar",
+      "hint": "clic para abrir un terminal",
+      "openShell": "Abrir un terminal en {{host}}",
+      "unreachable": "no se pudo conectar",
+      "cores": "{{n}} núcleos",
+      "disk": "{{free}} libres de {{total}}"
     }
   },
   "commandPalette": {
@@ -128,5 +192,22 @@
     "sessionLabel": "Acciones de la sesión",
     "projectLabel": "Acciones del proyecto",
     "exampleLabel": "Acciones del ejemplo"
+  },
+  "jump": {
+    "ariaLabel": "Ir a",
+    "placeholder": "Ir a un proyecto, pantalla, sesión o terminal…",
+    "noResults": "Sin coincidencias",
+    "sections": {
+      "actions": "Acciones",
+      "projects": "Proyectos",
+      "screens": "Pantallas",
+      "panes": "Paneles abiertos",
+      "sessions": "Sesiones"
+    },
+    "actions": {
+      "newSession": "Nueva sesión en {{project}}",
+      "newTerminal": "Nueva terminal en {{project}}",
+      "newScreen": "Nueva pantalla en {{project}}"
+    }
   }
 }

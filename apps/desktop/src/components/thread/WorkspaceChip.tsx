@@ -19,7 +19,14 @@ export function baseName(path: string | null): string {
  * it). Once the session exists its folder is a fact, not a choice — the
  * header's Files toggle names it, so the chip disappears.
  */
-export function WorkspaceChip({ draftKey = DRAFT_KEY }: { draftKey?: string }) {
+export function WorkspaceChip({
+  draftKey = DRAFT_KEY,
+  compact = false,
+}: {
+  draftKey?: string;
+  /** Icon only — the composer's toolbar has no room for the folder's name. */
+  compact?: boolean;
+}) {
   const { t } = useTranslation(["session", "common"]);
   const currentId = useRuntimeStore((s) => s.currentId);
   // Where THIS draft's session will be created, if the user aimed it. Not the
@@ -49,7 +56,9 @@ export function WorkspaceChip({ draftKey = DRAFT_KEY }: { draftKey?: string }) {
 
   return (
     <button
-      className="flex items-center gap-1 rounded-input px-1.5 py-1 text-xs text-muted hover:bg-surface-2 hover:text-text disabled:opacity-60"
+      // Natural width, never squeezed: the action row drops labels (this
+      // name included) when its items do not fit, rather than truncating.
+      className="flex shrink-0 items-center gap-1 rounded-input px-1.5 py-1 text-xs text-muted hover:bg-surface-2 hover:text-text disabled:opacity-60"
       onClick={() => void choose()}
       disabled={busy || sending}
       title={
@@ -63,7 +72,7 @@ export function WorkspaceChip({ draftKey = DRAFT_KEY }: { draftKey?: string }) {
       {busy ? (
         <span>{t("workspaceChip.switching")}</span>
       ) : (
-        aimed && <span className="max-w-[200px] truncate">{baseName(aimed)}</span>
+        aimed && !compact && <span className="max-w-[200px] truncate">{baseName(aimed)}</span>
       )}
     </button>
   );

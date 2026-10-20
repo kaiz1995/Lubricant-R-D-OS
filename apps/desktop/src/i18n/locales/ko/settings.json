@@ -9,6 +9,7 @@
     "compute": "컴퓨팅",
     "privacy": "개인정보",
     "browser": "브라우저",
+    "computer": "컴퓨터 제어",
     "remote": "원격 접속",
     "memory": "메모리",
     "desktopOnly": "이 섹션은 데스크톱 앱에서 사용할 수 있습니다."
@@ -19,7 +20,8 @@
     "theme": {
       "light": "라이트",
       "warm": "웜",
-      "dark": "다크"
+      "dark": "다크",
+      "system": "시스템"
     },
     "zoom": {
       "label": "확대/축소",
@@ -27,6 +29,13 @@
       "in": "확대",
       "out": "축소",
       "reset": "초기화"
+    },
+    "fontSize": {
+      "title": "글자 크기",
+      "description": "대화 내용에만 적용됩니다",
+      "unit": "px",
+      "increase": "글자 크게",
+      "decrease": "글자 작게"
     }
   },
   "language": {
@@ -47,9 +56,12 @@
     "proxySystem": "시스템 따르기",
     "proxyCustom": "사용자 지정…",
     "proxyNone": "직접 연결(프록시 없음)",
-    "proxyPlaceholder": "http://127.0.0.1:7890 / socks5://host:port",
+    "proxyPlaceholder": "http://127.0.0.1:7890",
     "proxyDirectHint": "에이전트 런타임의 모든 연결은 직접 연결됩니다.",
     "proxyEffective": "{{url}} 경유로 연결",
+    "proxySocksUnsupported": "{{url}}은(는) SOCKS 프록시라 에이전트 런타임에서 사용할 수 없습니다 — 모든 연결이 실패합니다. 프록시의 HTTP 포트를 사용하세요(Clash는 mixed 포트, 예: http://127.0.0.1:7890).",
+    "proxyRestartNeeded": "런타임이 시작된 뒤 시스템 프록시가 바뀌었지만 런타임은 아직 이전 경로를 씁니다. 적용하면 런타임이 다시 시작되고 실행 중인 작업은 중단됩니다.",
+    "proxyApply": "적용",
     "proxyNoneDetected": "시스템 프록시가 감지되지 않음 — 직접 연결됩니다.",
     "mirrorTitle": "패키지 미러",
     "mirrorPypi": "PyPI 인덱스",
@@ -99,7 +111,7 @@
   },
   "model": {
     "title": "모델",
-    "hint": "아래 제공자가 여기서 선택할 수 있는 모델을 제공합니다",
+    "hint": "새 대화가 기본으로 사용하는 모델. 선택 범위는 아래 Providers가 정합니다.",
     "connectPrompt": "모델을 구성하려면 런타임을 연결하세요.",
     "notSet": "설정 안 됨 — 기본 모델을 선택하세요",
     "providersDivider": "제공자",
@@ -117,13 +129,14 @@
     "catalogUnavailable": "모델 카탈로그를 현재 사용할 수 없습니다.",
     "catalogLoading": "모델 카탈로그를 불러오는 중…",
     "noModels": "사용 가능한 모델이 없습니다.",
-    "manageProviders": "공급자 관리",
     "emptyFavorites": "즐겨찾기 모델이 여기에 표시됩니다.",
     "emptyRecent": "성공적으로 선택한 모델이 여기에 표시됩니다.",
     "noResults": "“{{query}}”와 일치하는 모델이 없습니다.",
     "clearSearch": "검색 지우기",
     "addFavorite": "{{model}}을 즐겨찾기에 추가",
-    "removeFavorite": "{{model}}을 즐겨찾기에서 제거"
+    "removeFavorite": "{{model}}을 즐겨찾기에서 제거",
+    "change": "변경",
+    "noProvidersHint": "아래에서 제공자를 연결하세요."
   },
   "providers": {
     "title": "공급자",
@@ -148,18 +161,25 @@
     "pasteCode": "브라우저에서 코드를 붙여넣으세요",
     "customEndpoint": "사용자 지정 엔드포인트",
     "customEndpointHint": "자체 호스팅 · 로컬 Ollama · OpenAI/Anthropic 호환",
-    "customNamePlaceholder": "이름 — 예: Ollama, My DeepSeek gateway",
+    "customNamePlaceholder": "예: Ollama, 내 DeepSeek 게이트웨이",
     "openaiCompatible": "OpenAI 호환",
     "anthropicCompatible": "Anthropic 호환",
-    "customUrlPlaceholder": "기본 URL — Ollama: http://127.0.0.1:11434/v1",
-    "customKeyPlaceholder": "API 키 — 선택 사항, Ollama는 필요 없음",
-    "customModelsPlaceholder": "모델 ID, 쉼표로 구분",
-    "customContextPlaceholder": "컨텍스트 창 — 선택 사항, 기본 128k",
+    "customUrlPlaceholder": "http://127.0.0.1:11434/v1",
+    "customKeyPlaceholder": "선택 사항 — Ollama는 필요 없음",
+    "customModelsPlaceholder": "모델 id, 쉼표로 구분",
+    "customContextPlaceholder": "선택 사항 — 기본 128k",
     "fetchModels": "모델 가져오기",
     "fetchingModels": "가져오는 중…",
     "noModelsFound": "엔드포인트에서 모델을 반환하지 않았습니다.",
     "addEndpoint": "엔드포인트 추가",
-    "importLogin": "이미 OpenCode CLI를 사용 중이신가요? 로그인 정보 가져오기"
+    "importLogin": "이미 OpenCode CLI를 사용 중이신가요? 로그인 정보 가져오기",
+    "addTitle": "제공자 추가",
+    "fieldName": "이름",
+    "fieldApiStyle": "API 방식",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API 키",
+    "fieldModels": "모델",
+    "fieldContext": "컨텍스트 창"
   },
   "mcp": {
     "title": "MCP 서버",
@@ -277,6 +297,7 @@
     "providerRemoved": "{{providerID}} 제거됨",
     "couldNotAddEndpoint": "엔드포인트를 추가할 수 없습니다",
     "couldNotFetchModels": "엔드포인트에서 모델을 가져올 수 없습니다",
+    "baseUrlCorrected": "Base URL을 {{url}}(으)로 수정했습니다",
     "endpointFieldsRequired": "이름, 기본 URL, 그리고 최소 하나의 모델 ID가 필요합니다.",
     "endpointAdded": "{{name}}이(가) 추가되었습니다 — 이제 위에서 해당 모델을 선택할 수 있습니다.",
     "couldNotAddMcp": "MCP 서버를 추가할 수 없습니다",
@@ -442,13 +463,22 @@
     "title": "에이전트별 모델과 추론 강도",
     "hint": "메인 에이전트가 강력한 모델로 추론하는 동안 검토·탐색 에이전트는 빠른 모델로 실행하고, 각자 얼마나 깊이 생각할지도 고정하세요.",
     "noModels": "모델을 고르려면 공급자를 연결하세요.",
-    "followDefault": "기본 모델",
-    "followDefaultNamed": "기본값 ({{model}})",
+    "followDefault": "기본값 따르기",
     "modelFor": "{{agent}}의 모델",
     "defaultEffort": "기본 강도",
     "effortFor": "{{agent}}의 추론 강도",
     "retiredOption": "{{model}} — 제공 중단",
-    "primaryHint": "build와 plan은 보낸 메시지를 실행합니다. 여기서 설정한 모델이 적용되며, 대화 안에서 모델을 고르면 그 대화에서만 우선합니다."
+    "primaryHint": "build와 plan은 보낸 메시지를 실행합니다. 여기서 설정한 모델이 적용되며, 대화 안에서 모델을 고르면 그 대화에서만 우선합니다.",
+    "group": {
+      "conversation": "직접 대화하는 에이전트",
+      "utility": "워크벤치가 내부적으로 쓰는 것"
+    },
+    "utilityHint": "런타임이 스스로 처리하는 짧고 기계적인 작업 — 여기서는 빠른 모델이 무조건 이득입니다.",
+    "about": {
+      "title": "첫 메시지로 세션 이름을 짓습니다.",
+      "summary": "대화의 짧은 요약을 씁니다.",
+      "compaction": "긴 대화를 컨텍스트 창에 맞게 다시 씁니다."
+    }
   },
   "ssh": {
     "title": "{{host}}에 로그인",
@@ -484,5 +514,31 @@
     "silenceUnit": "분",
     "title": "멈춤 감시",
     "webNote": "브라우저에서는 경고가 대화에만 표시되며 시스템 알림은 없습니다."
+  },
+  "computer": {
+    "title": "컴퓨터 제어",
+    "hint": "운영체제의 손쉬운 사용 API를 통해 에이전트가 이 컴퓨터의 앱을 읽고 조작할 수 있게 합니다. 픽셀 위치를 추측하는 대신 이름이 있는 인터페이스 요소를 대상으로 동작하며, 각 동작이 실제로 검증되었는지 함께 알려줍니다. 대화마다 처음 사용할 때 승인을 요청합니다.",
+    "checking": "확인 중…",
+    "state": "사용 가능 여부",
+    "ready": "준비됨. 요청하면 에이전트가 이 컴퓨터의 앱을 사용할 수 있습니다.",
+    "unavailable": "이 기기에서는 사용할 수 없습니다.",
+    "setup": "설정 열기",
+    "recheck": "다시 확인",
+    "grant": "권한 부여…",
+    "granted": "허용됨",
+    "opened": "권한 설정 창을 열었습니다.",
+    "error": "컴퓨터 제어",
+    "accessibility": "손쉬운 사용",
+    "accessibilityHint": "필수입니다. 도우미가 앱 화면을 읽고 조작할 수 있게 합니다. 권한은 작업대 전체가 아니라 별도의 도우미인 Open Science Computer Use에 부여됩니다.",
+    "screenshots": "화면 기록",
+    "screenshotsHint": "선택 사항이며, 도우미가 아니라 Open Science 자체에 부여합니다 — macOS는 화면 기록을 요청을 시작한 앱에 귀속시킵니다. 그래프나 캔버스처럼 텍스트로 읽을 수 없는 창을 봐야 할 때만 필요합니다."
+  },
+  "userBrowser": {
+    "title": "직접 설치한 브라우저",
+    "hint": "이 Mac에서 Open Science의 에이전트가 셸로 조작할 수 있는 브라우저를 찾았습니다. 설정할 것은 없습니다 — 닿을 수 있다는 사실을 알리기 위한 항목입니다.",
+    "name": "ego lite",
+    "reachable": "설치되어 있고 사용할 수 있습니다. 대화마다 처음 사용하기 전에 승인을 요청합니다.",
+    "notReachable": "설치되어 있지만 이 기기에 명령줄 도구가 없어 에이전트가 닿을 수 없습니다. ego lite 자체 설정을 실행해 추가하세요.",
+    "tradeoff": "위의 브라우저 커넥터와는 다릅니다. 그쪽은 이 앱이 소유한 별도 브라우저를 격리된 프로필로 구동합니다. 이쪽은 평소 쓰는 브라우저이고 실제 로그인 상태를 가지고 있습니다 — 그래서 유용하고, 그래서 먼저 묻습니다. macOS 전용."
   }
 }

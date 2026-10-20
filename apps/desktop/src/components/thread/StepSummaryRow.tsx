@@ -1,33 +1,43 @@
 import { memo, useState } from "react";
-import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { StepSummaryBlock } from "@ai4s/shared";
-import { cn } from "@/lib/cn";
+import {
+  IconChevronDownOutlineRegular,
+  IconChevronUpOutlineRegular,
+  IconSparkleRegular,
+} from "@/components/icons/dsh";
+import css from "./ToolGroup.module.css";
 
+/** A run of steps summarised in one line — drawn as DeepSeek Harness's
+ *  process row (see ToolGroup.module.css): icon slot that gives way to the
+ *  chevron, secondary text, the step count trailing. */
 export const StepSummaryRow = memo(function StepSummaryRow({ block }: { block: StepSummaryBlock }) {
   const { t } = useTranslation(["session", "common"]);
   const [open, setOpen] = useState(false);
   const hasDetails = (block.details?.length ?? 0) > 0;
   return (
-    <div className="rounded-input border border-border bg-surface-2/60">
+    <div>
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted"
+        type="button"
+        className={css.title}
         onClick={() => hasDetails && setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <ChevronRight
-          size={15}
-          className={cn("shrink-0 transition-transform", open && "rotate-90")}
-        />
-        <span className="flex-1 truncate">{block.summary}</span>
-        <span className="shrink-0 text-xs">{t("stepSummary.steps", { count: block.steps })}</span>
+        <span className={css.leading} aria-hidden="true">
+          <span className={css.activityIcon}>
+            <IconSparkleRegular size={14} />
+          </span>
+          <span className={css.chevron}>
+            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
+          </span>
+        </span>
+        <span className={css.label}>{block.summary}</span>
+        <span className="ml-auto shrink-0 text-xs text-muted">{t("stepSummary.steps", { count: block.steps })}</span>
       </button>
       {open && hasDetails && (
-        <ul className="space-y-1 px-9 pb-3 text-sm text-muted">
+        <ul className="space-y-1 pl-[22px] text-sm text-muted">
           {block.details!.map((d, i) => (
-            <li key={i} className="list-disc">
-              {d}
-            </li>
+            <li key={i}>{d}</li>
           ))}
         </ul>
       )}

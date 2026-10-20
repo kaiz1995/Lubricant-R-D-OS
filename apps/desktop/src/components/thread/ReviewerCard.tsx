@@ -20,7 +20,7 @@ export const ReviewerCard = memo(function ReviewerCard({ block }: { block: Revie
     .map((f, i) => [f, i] as const)
     .filter(([, i]) => !dismissed.has(i));
   return (
-    <div className="rounded-card border border-border bg-surface shadow-card">
+    <div className="rounded-card bg-surface-2">
       <button
         className="flex w-full items-center gap-2 px-4 py-3 text-left"
         onClick={() => setOpen((o) => !o)}

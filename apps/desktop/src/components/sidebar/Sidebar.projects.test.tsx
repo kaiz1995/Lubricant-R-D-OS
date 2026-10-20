@@ -1,5 +1,7 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { selectActiveProjectId, useLayoutStore } from "@/lib/layout";
 import { useRuntimeStore } from "@/lib/runtime";
 import { renderAt } from "@/test/render";
 
@@ -87,17 +89,33 @@ describe("Sidebar projects", () => {
     expect(screen.queryByText("No sessions yet.")).not.toBeInTheDocument();
   });
 
-  it("marks the active project when the runtime spells the path differently (#76)", async () => {
-    useRuntimeStore.setState({
-      projects: [{ ...PROJECT, path: "D:\\base\\BCI-Trends" }],
-      // What `set_workspace` returned before #76: the verbatim form.
-      workspace: "\\\\?\\D:\\base\\BCI-Trends",
-    });
-    renderAt("/files");
-    await screen.findByText("BCI Trends");
+  it("tints the project whose Screens are showing", async () => {
+    useRuntimeStore.setState({ projects: [PROJECT, { ...PROJECT, id: "p2", name: "Other", path: "/base/other" }] });
+    useLayoutStore.getState().setActiveProject("p1");
+    renderAt("/live");
+    // The sidebar's rows — the Screen bar names the active project too.
+    const rail = within(await screen.findByRole("complementary"));
+    await rail.findByText("BCI Trends");
     // Being the active project tints the row's folder icon with the accent.
-    const row = screen.getByText("BCI Trends").closest("div");
-    expect(row?.querySelector(".text-accent")).not.toBeNull();
+    expect(rail.getByText("BCI Trends").closest("button")?.querySelector("[data-active]")).not.toBeNull();
+    expect(rail.getByText("Other").closest("button")?.querySelector("[data-active]")).toBeNull();
+  });
+
+  it("clicking a project shows its Screens; clicking the shown one folds it", async () => {
+    const user = userEvent.setup();
+    useRuntimeStore.setState({ projects: [PROJECT, { ...PROJECT, id: "p2", name: "Other", path: "/base/other" }] });
+    useLayoutStore.getState().setActiveProject("p1");
+    renderAt("/live");
+    const rail = within(await screen.findByRole("complementary"));
+    const other = await rail.findByRole("button", { name: "Other" });
+
+    await user.click(other);
+    expect(selectActiveProjectId(useLayoutStore.getState())).toBe("p2");
+    expect(other).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(other);
+    expect(selectActiveProjectId(useLayoutStore.getState())).toBe("p2");
+    expect(other).toHaveAttribute("aria-expanded", "false");
   });
 
   it("offers a new-project entry when no projects exist yet", async () => {

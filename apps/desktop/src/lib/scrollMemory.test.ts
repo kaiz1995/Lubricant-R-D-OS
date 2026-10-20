@@ -119,6 +119,30 @@ describe("useChatScroll", () => {
     expect(hook.result.current.atLatest).toBe(true);
   });
 
+  it("offers the jump only when more than a screen of conversation is below", () => {
+    const el = document.createElement("div");
+    Object.defineProperties(el, {
+      scrollHeight: { value: 1_000, configurable: true },
+      clientHeight: { value: 200, configurable: true },
+    });
+    const hook = renderHook(() => {
+      const ref = useRef<HTMLElement | null>(el);
+      return useChatScroll(ref, "chat:ses_1");
+    });
+    const at = (top: number) =>
+      act(() => {
+        el.scrollTop = top;
+        hook.result.current.onScroll({ currentTarget: el } as unknown as UIEvent<HTMLElement>);
+      });
+
+    // 150px below: past the follow tolerance, but well within a screen.
+    at(650);
+    expect(hook.result.current.atLatest).toBe(true);
+    // 250px below: more than the 200px screen.
+    at(550);
+    expect(hook.result.current.atLatest).toBe(false);
+  });
+
   it("uses a tolerance when deciding whether the reader is at the latest messages", () => {
     const el = document.createElement("div");
     Object.defineProperties(el, {

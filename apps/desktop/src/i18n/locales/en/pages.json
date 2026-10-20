@@ -33,7 +33,15 @@
       "stopCellTitle": "Stop — restarts this notebook's kernel (variables reset)",
       "stopLabel": "Stop",
       "runLabel": "Run",
-      "addCellLabel": "Add cell"
+      "addCellLabel": "Add cell",
+      "askAgent": "Ask the agent about this cell",
+      "askAgentAria": "Ask the agent about cell {{n}}",
+      "askAgentIntro": "About cell [{{n}}] of `{{file}}`:",
+      "askAgentOutput": "It printed:",
+      "askAgentSent": "Cell added to the composer",
+      "countTitle": "Execution count — [*] while running, [n] once it has run",
+      "interrupted": "Interrupted — the kernel was restarted; variables were reset.",
+      "desktopOnlyKernel": "The local kernel needs the desktop app."
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "Skills & Agents",
-    "description": {
-      "prefix": "Loaded live from the OpenCode runtime — the bundled skill packs, everything under ",
-      "suffix": " in your workspace, and your own skills in ~/.claude/skills or ~/.agents/skills."
-    },
+    "subtitle": "Everything the agent can use, loaded live from OpenCode.",
     "install": {
       "sectionTitle": "Install a skill",
       "placeholder": "Paste a SKILL.md, or a URL / description for the agent to turn into one",
@@ -79,7 +84,7 @@
       "note": "OpenCode runs code with whatever is installed here (e.g. Python via its shell tool). uv ships with the app, and Jupyter can be app-managed in Settings → Connectors. Python and R are not bundled — install them or a Science Pack to enable analysis."
     },
     "agentsSection": {
-      "sectionTitle": "Agents ({{count}})",
+      "heading": "Agents",
       "empty": "No agents reported.",
       "agentMode": {
         "primary": "primary",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "Skills ({{count}})",
+      "heading": "Skills",
       "empty": "No skills loaded yet.",
       "source": {
         "builtin": "built-in",
@@ -96,7 +101,9 @@
         "user": "user"
       }
     },
-    "disconnected": "Connect the runtime to list the skills and agents it has loaded."
+    "disconnected": "Connect the runtime to list the skills and agents it has loaded.",
+    "search": "Search skills and agents",
+    "noMatch": "Nothing matches “{{query}}”."
   },
   "notFound": {
     "title": "404 — Not found",

@@ -28,7 +28,14 @@
       "newSession": "Nueva sesión"
     },
     "rename": "Cambiar nombre de la pantalla",
-    "tabMenu": "Acciones de la pantalla"
+    "tabMenu": "Acciones de la pantalla",
+    "runAgent": "Ejecutar un agente",
+    "newNotebook": "Nuevo notebook",
+    "newMarkdown": "Nuevo Markdown",
+    "splitRightShort": "Dividir a la derecha",
+    "splitDownShort": "Dividir abajo",
+    "defaultProject": "Predeterminado",
+    "projectMenu": "Cambiar de proyecto"
   },
   "composer": {
     "placeholder": {
@@ -43,7 +50,14 @@
       "mcp": "mcp"
     },
     "file": {
-      "removeAria": "Quitar {{name}}"
+      "removeAria": "Quitar {{name}}",
+      "previewAria": "Vista previa de {{name}}",
+      "preview": {
+        "empty": "Archivo vacío",
+        "none": "Sin vista previa",
+        "unreadable": "No se puede leer este archivo del espacio de trabajo",
+        "lines_other": "{{count}} líneas"
+      }
     },
     "attach": {
       "addAria": "Añadir archivos",
@@ -94,7 +108,8 @@
     },
     "error": {
       "paste": "No se pudo guardar el contenido pegado: {{message}}",
-      "addFiles": "No se pudieron añadir los archivos: {{message}}"
+      "addFiles": "No se pudieron añadir los archivos: {{message}}",
+      "imageNotSent": "No se pudo leer {{names}}: el mensaje se envió sin la imagen."
     },
     "model": {
       "aria": "Cambiar de modelo",
@@ -132,7 +147,10 @@
     },
     "compact": {
       "aria": "Comprimir contexto",
-      "title": "Resume los turnos anteriores; la siguiente respuesta usará el contexto comprimido"
+      "title": "Resume los turnos anteriores; la siguiente respuesta usará el contexto comprimido",
+      "confirmTitle": "¿Compactar el contexto?",
+      "confirmBody": "Los turnos anteriores se sustituyen por un resumen para que la siguiente respuesta funcione con un contexto acotado. La conversación original completa sigue guardada localmente.",
+      "confirmAction": "Compactar"
     }
   },
   "localCommand": {
@@ -144,6 +162,7 @@
     "newSession": "Nueva sesión",
     "heading": "¿Qué deberíamos investigar?",
     "subheading": "Describe tu análisis a continuación, o empieza con una de estas opciones.",
+    "subheadingNoCards": "Describe tu análisis a continuación.",
     "demo": {
       "title": "Ejecutar un análisis de demostración de principio a fin",
       "description": "Simula un conjunto de datos, ajusta un modelo y produce una figura y un informe trazable."
@@ -180,7 +199,10 @@
     "subagentFallback": "un subagente",
     "header": {
       "expandSidebarAria": "Expandir barra lateral",
-      "expandSidebarTitle": "Expandir barra lateral ({{shortcut}})"
+      "expandSidebarTitle": "Expandir barra lateral ({{shortcut}})",
+      "rename": "Renombrar sesión…",
+      "untitled": "Sesión sin título",
+      "paneMenu": "Acciones de la sesión"
     },
     "filesToggle": {
       "default": "Archivos",
@@ -265,6 +287,20 @@
         "default_other": "ejecutó {{count}} pasos"
       },
       "failedCount": "{{count}} fallidos"
+    },
+    "process": {
+      "thinking": "Análisis completado",
+      "read": "Archivos leídos",
+      "write": "Archivos escritos",
+      "search": "Código buscado",
+      "edit": "Archivos editados",
+      "commands": "Comandos ejecutados",
+      "webFetch": "Páginas web visitadas",
+      "tools": "Herramientas llamadas",
+      "joinTwo": "{{first}} y {{second}}",
+      "comma": ", ",
+      "sharedPrefix": "",
+      "more": "{{title}}, etc."
     }
   },
   "artifact": {
@@ -278,7 +314,11 @@
       "data": "datos"
     },
     "via": "· mediante {{tool}}",
-    "open": "Abrir"
+    "open": "Abrir",
+    "maximize": "Maximizar",
+    "close": "Cerrar",
+    "collapse": "Contraer",
+    "expand": "Expandir"
   },
   "figure": {
     "downloadAria": "Descargar figura",
@@ -325,9 +365,15 @@
     "alwaysAllow": "Permitir siempre",
     "allowOnce": "Permitir una vez"
   },
+  "turn": {
+    "worked": "Trabajo hecho",
+    "workedFor": "Duración {{duration}}"
+  },
   "reasoning": {
     "thinking": "Pensando…",
-    "thought": "Pensado"
+    "thought": "Pensado",
+    "collapse": "Contraer el razonamiento",
+    "expand": "Ver el razonamiento completo"
   },
   "stepSummary": {
     "steps": "{{count}} pasos"
@@ -395,6 +441,7 @@
       "action": "Volver"
     }
   },
+  "historyRetry": "Reintentar",
   "compaction": {
     "label": "Contexto compactado",
     "autoBody": "El entorno resumió los turnos anteriores para no salirse de la ventana de contexto del modelo, y la conversación siguió aquí.",
@@ -442,7 +489,8 @@
     "title": "La sesión del nuevo panel se creará en",
     "continueIn": "Continuar en {{name}}",
     "newFolder": "Carpeta nueva",
-    "chooseOther": "Elegir otra carpeta…"
+    "chooseOther": "Elegir otra carpeta…",
+    "terminal": "Terminal en esta carpeta"
   },
   "stall": {
     "silentTitle": "Es posible que el turno esté bloqueado",
@@ -451,5 +499,84 @@
     "repeatLine": "Este turno ha ejecutado la misma llamada {{count}} veces con resultados idénticos. ¿Sigue trabajando o está en un bucle?",
     "keepWaiting": "Seguir esperando",
     "stopTurn": "Detener turno"
+  },
+  "terminal": {
+    "title": "Terminal",
+    "exited": "[proceso terminado]",
+    "desktopOnly": "El terminal requiere la app de escritorio.",
+    "new": "Terminal",
+    "menu": {
+      "label": "Menú del terminal",
+      "copy": "Copiar",
+      "paste": "Pegar",
+      "selectAll": "Seleccionar todo",
+      "clear": "Limpiar pantalla",
+      "revealCwd": "Mostrar la carpeta de trabajo",
+      "resumeAgent": "Reanudar la última sesión de {{agent}}"
+    },
+    "rename": "Renombrar terminal…",
+    "confirmClose": {
+      "title": "¿Cerrar este terminal?",
+      "body": "Se detendrán el shell y todo lo que siga ejecutándose en él. El historial no se conserva.",
+      "action": "Cerrar terminal"
+    },
+    "search": {
+      "placeholder": "Buscar",
+      "matchCase": "Coincidir mayúsculas",
+      "regex": "Expresión regular",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "close": "Cerrar búsqueda",
+      "none": "sin resultados",
+      "find": "Buscar…"
+    }
+  },
+  "splitInto": {
+    "session": "Sesión"
+  },
+  "find": {
+    "placeholder": "Buscar en la conversación",
+    "matchCase": "Coincidir mayúsculas",
+    "regex": "Expresión regular",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "close": "Cerrar búsqueda",
+    "none": "sin resultados",
+    "find": "Buscar…"
+  },
+  "turnNav": {
+    "label": "Navegación por turnos",
+    "jump": "Ir al turno {{turn}}",
+    "turn": "Turno {{turn}}"
+  },
+  "trajectory": {
+    "title": "Trayectoria",
+    "toggle": "Trayectoria — cada paso de esta conversación",
+    "duration": "Duración",
+    "useActual": "Duración real",
+    "useEqual": "Ancho igual",
+    "turns": "Turnos",
+    "expandTurns": "Expandir turnos",
+    "collapseTurns": "Contraer turnos",
+    "calls": "Llamadas",
+    "expandCalls": "Expandir llamadas",
+    "collapseCalls": "Contraer llamadas",
+    "search": "Buscar",
+    "user": "USUARIO",
+    "assistant": "ASISTENTE",
+    "tool": "HERRAMIENTA",
+    "message": "MENSAJE",
+    "system": "SISTEMA",
+    "compacted": "COMPACTADO",
+    "input": "Entrada",
+    "model": "Modelo",
+    "tools": "Herramientas",
+    "turn": "Turno {{n}}",
+    "noOutput": "sin salida",
+    "empty": "Aún no hay pasos.",
+    "noMatch": "Ningún paso coincide.",
+    "steps_one": "{{count}} paso",
+    "steps_other": "{{count}} pasos",
+    "close": "Cerrar trayectoria"
   }
 }

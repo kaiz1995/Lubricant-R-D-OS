@@ -57,6 +57,19 @@ fn reveal_impl(full: &Path) -> Result<(), String> {
     opener::reveal(full).map_err(|e| format!("reveal failed: {e}"))
 }
 
+/// A path the user can click in a conversation or a terminal — absolute, `~/…`,
+/// or relative to `cwd` — resolved to an existing file or folder under home
+/// (the "home" scope), or None: no link is drawn for what cannot be opened.
+#[tauri::command(async)]
+pub fn locate_local_path(
+    app: AppHandle,
+    path: String,
+    cwd: Option<String>,
+) -> Result<Option<osd_core::artifact_file::LocalPath>, String> {
+    let home = scope_root(&app, Some("home"))?;
+    Ok(osd_core::artifact_file::locate_local(&home, &path, cwd.as_deref()))
+}
+
 /// The workspace path an agent message named, resolved to a real file (searching
 /// by basename when the literal path does not exist), or None.
 #[tauri::command(async)]
@@ -126,7 +139,9 @@ pub fn write_workspace_file(
 /// workspace so the agent can read them. Returns workspace-relative names; empty
 /// on cancel. See `attach_paths` for the in-place-vs-copy rule.
 #[tauri::command]
-pub async fn add_files_to_workspace(app: AppHandle) -> Result<Vec<String>, String> {
+pub async fn add_files_to_workspace(
+    app: AppHandle,
+) -> Result<Vec<osd_core::artifact_file::Attached>, String> {
     use tauri_plugin_dialog::DialogExt;
     let Some(picked) = app.dialog().file().blocking_pick_files() else {
         return Ok(Vec::new()); // user cancelled
@@ -149,7 +164,10 @@ pub fn add_text_to_workspace(
 }
 
 #[tauri::command(async)]
-pub fn add_paths_to_workspace(app: AppHandle, paths: Vec<String>) -> Result<Vec<String>, String> {
+pub fn add_paths_to_workspace(
+    app: AppHandle,
+    paths: Vec<String>,
+) -> Result<Vec<osd_core::artifact_file::Attached>, String> {
     osd_core::artifact_file::add_paths_to_workspace(&env_of(&app), paths)
 }
 
@@ -160,6 +178,14 @@ pub fn add_binary_to_workspace(
     base64: String,
 ) -> Result<String, String> {
     osd_core::artifact_file::add_binary_to_workspace(&env_of(&app), filename, base64)
+}
+
+/// Delete a file the composer copied into the workspace, when its chip is
+/// removed before the message is sent. See the core function for why only a
+/// root-level name is accepted.
+#[tauri::command]
+pub fn discard_workspace_file(app: AppHandle, name: String) -> Result<(), String> {
+    osd_core::artifact_file::discard_workspace_file(&env_of(&app), name)
 }
 
 /// Open an http(s) URL in the user's default browser. The webview itself must

@@ -1,14 +1,18 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { PanelLeft, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "@ai4s/shared";
 import { cn } from "@/lib/cn";
-import { useOverlayTitlebar, useUiStore } from "@/lib/store";
+import { CONTENT_FONT_DEFAULT, useOverlayTitlebar, useUiStore } from "@/lib/store";
 import { overlayTitlebarStyle } from "@/lib/titlebar";
 import { BlockList } from "./BlockList";
+import { TurnNavigator } from "./TurnNavigator";
 
 export function ThreadView({ session }: { session: Session }) {
   const { t } = useTranslation(["session", "common"]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentFontSize = useUiStore((s) => s.contentFontSize);
   const isExample = session.group === "Examples";
 
   // The header doubles as the titlebar (see AppShell.pageOwnsTitlebar), so it
@@ -47,14 +51,21 @@ export function ThreadView({ session }: { session: Session }) {
           </span>
         )}
       </div>
-      <div className="flex-1 overflow-y-auto">
-        {/* Document content: keeps the WebView's own menu (see lib/nativeMenu). */}
-        <div className="mx-auto flex max-w-[760px] flex-col gap-4 px-8 py-6" data-native-menu>
-          <BlockList blocks={session.blocks} />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          {/* Document content: keeps the WebView's own menu (see lib/nativeMenu). */}
+          <div
+            className="mx-auto flex max-w-[760px] flex-col gap-4 px-8 py-6"
+            style={contentFontSize !== CONTENT_FONT_DEFAULT ? { zoom: contentFontSize / CONTENT_FONT_DEFAULT } : undefined}
+            data-native-menu
+          >
+            <BlockList blocks={session.blocks} />
+          </div>
         </div>
+        <TurnNavigator blocks={session.blocks} scrollRef={scrollRef} bottomInset={0} />
       </div>
       <div className="px-8 pb-5 pt-2">
-        <div className="mx-auto flex max-w-[760px] items-center gap-3 rounded-card border border-border bg-surface-2/60 px-4 py-3 text-sm text-muted">
+        <div className="mx-auto flex max-w-[760px] items-center gap-3 rounded-card bg-surface-2 px-4 py-3 text-sm text-muted">
           <Sparkles size={16} className="text-accent" />
           <span>{t("thread.sampleNotice")}</span>
           <Link

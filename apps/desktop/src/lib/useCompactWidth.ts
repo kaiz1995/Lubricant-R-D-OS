@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 /**
  * True while the observed element is narrower than `minPx` — the cue for a
@@ -48,5 +48,94 @@ export function useCompactWidth(
     ro.observe(el);
     return () => ro.disconnect();
   }, [ref, minPx, laidOut]);
+  return compact;
+}
+
+/** Width a one-line flex row's children need side by side, unshrunk: each
+ *  child's own box plus the row's gaps and padding. Children must be
+ *  `shrink-0`, or a squeezed child reports its squeezed width. */
+function naturalWidth(row: HTMLElement): number {
+  const style = getComputedStyle(row);
+  const kids = Array.from(row.children).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement && el.getClientRects().length > 0,
+  );
+  const gap = parseFloat(style.columnGap) || 0;
+  const pad = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+  return kids.reduce((sum, el) => sum + el.offsetWidth, 0) + gap * Math.max(0, kids.length - 1) + pad;
+}
+
+/**
+ * True while a toolbar row's items, labels and all, do not fit it — the cue to
+ * drop the labels and keep the icons.
+ *
+ * A fixed breakpoint (useCompactWidth) cannot decide this for a row whose
+ * contents vary: a fresh draft carries a folder chip, a long model name is
+ * twice a short one, and at 440px a pane with both overflowed — the model chip
+ * squeezed until its "· effort ⌄" spilled over the send button. So the row is
+ * measured: labelled, its items' natural width against the room it has; once
+ * compact, what the labels cost (learned when they were dropped) is added back
+ * to decide whether they fit again. Both run before paint, so a wrong guess is
+ * corrected in the same frame, and learning the cost from the same content
+ * means it cannot flip back and forth.
+ *
+ * `laidOut`: as for useCompactWidth — re-attach when a hidden Screen returns.
+ */
+export function useLabelsOverflow(ref: RefObject<HTMLElement | null>, laidOut = true): boolean {
+  const [compact, setCompact] = useState(false);
+  const compactRef = useRef(false);
+  /** Natural width with labels, last time they were shown. */
+  const labelled = useRef(0);
+  /** What the labels add over the compact row; learned on the first compact measure. */
+  const labelCost = useRef<number | null>(null);
+
+  const measure = () => {
+    const row = ref.current;
+    if (!row) return;
+    const room = row.clientWidth;
+    // Zero is no measurement: a hidden Screen, or a test without layout.
+    if (room <= 0) return;
+    const natural = naturalWidth(row);
+    if (!compactRef.current) {
+      labelled.current = natural;
+      if (natural > room) {
+        compactRef.current = true;
+        labelCost.current = null;
+        setCompact(true);
+      }
+      return;
+    }
+    labelCost.current ??= labelled.current - natural;
+    if (natural + labelCost.current <= room) {
+      compactRef.current = false;
+      setCompact(false);
+    }
+  };
+
+  // Mount: measure once synchronously (pre-paint, same guarantee the old
+  // every-render effect gave the first frame). After that, re-measure only
+  // when something that can change the need actually changes — the row's own
+  // size (ResizeObserver) or its labels (MutationObserver: a model pick swaps
+  // label text; a class flip can change the font). The old every-render
+  // measure ran on EVERY streamed token of any session on the page (#157).
+  useLayoutEffect(() => {
+    const row = ref.current;
+    if (!row) return;
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `measure` reads refs only
+  }, [ref, laidOut]);
+
+  useLayoutEffect(() => {
+    const row = ref.current;
+    if (!row || typeof MutationObserver === "undefined") return;
+    const mo = new MutationObserver(measure);
+    mo.observe(row, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class"] });
+    return () => mo.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `measure` reads refs only
+  }, [ref, laidOut]);
+
   return compact;
 }

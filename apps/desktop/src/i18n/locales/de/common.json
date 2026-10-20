@@ -10,5 +10,14 @@
       "error": "Kontext konnte nicht komprimiert werden.",
       "done": "Kontext komprimiert. Die nächste Antwort nutzt das komprimierte Gespräch."
     }
+  },
+  "linkMenu": {
+    "openFile": "Datei öffnen",
+    "openDefault": "Mit Standard-App öffnen",
+    "openLink": "Link öffnen",
+    "copyLink": "Link kopieren",
+    "copyPath": "Pfad kopieren",
+    "copied": "Kopiert",
+    "click": "Klick"
   }
 }

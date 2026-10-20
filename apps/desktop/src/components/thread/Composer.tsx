@@ -20,6 +20,8 @@ import {
   addBinaryToWorkspace,
   addFilesToWorkspace,
   addPathsToWorkspace,
+  discardWorkspaceFile,
+  type AttachedFile,
   addTextToWorkspace,
   isTauri,
   logDebug,
@@ -39,15 +41,14 @@ import { ModelPicker } from "@/components/thread/ModelPicker";
 import { AcpConfigPicker } from "@/components/thread/AcpConfigPicker";
 import type { AcpConfigOption } from "@ai4s/sdk/acp";
 import { WorkspaceChip } from "@/components/thread/WorkspaceChip";
+import { AttachmentChip } from "@/components/thread/AttachmentChip";
 import { useUiStore } from "@/lib/store";
 import { parkDraft, unparkDraft } from "@/lib/composerStash";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
-import { useCompactWidth } from "@/lib/useCompactWidth";
+import { useLabelsOverflow } from "@/lib/useCompactWidth";
 import { isGatewayWeb } from "@/lib/webMode";
-
-/** Composer width below which the toolbar shows icons without their labels. */
-const TOOLBAR_LABEL_MIN_PX = 440;
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 /** A paste longer than this becomes a workspace file chip instead of raw text. */
 const PASTE_AS_FILE_CHARS = 2000;
@@ -214,7 +215,7 @@ export function Composer({
   acceptsHandoff?: boolean;
   /** This composer's pane has layout boxes. A pane in a Screen hidden without
    *  layout cannot be measured until it comes back — and one that kept its
-   *  layout must not be re-measured at all (see useCompactWidth). */
+   *  layout must not be re-measured at all (see useLabelsOverflow). */
   visible?: boolean;
 }) {
   const { t } = useTranslation(["session", "common"]);
@@ -248,6 +249,9 @@ export function Composer({
   const [restored] = useState(() => (draftKey ? unparkDraft(draftKey) : null));
   const [value, setValue] = useState(restored?.text ?? "");
   const [files, setFiles] = useState<string[]>(restored?.files ?? []);
+  /** Of `files`, the ones this composer COPIED in — the only ones removing a
+   *  chip may delete. See `addWorkspaceFile`. */
+  const owned = useRef<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   /** Highlighted palette row; clamped to the current matches. */
@@ -260,6 +264,9 @@ export function Composer({
   const [hist, setHist] = useState<{ index: number; draft: string } | null>(null);
   /** The approval-mode menu is open. */
   const [approvalOpen, setApprovalOpen] = useState(false);
+  // Compaction is one click next to Send, and it changes what the agent can see
+  // for the rest of the conversation. Cheap to ask, expensive to undo by hand.
+  const [confirmCompact, setConfirmCompact] = useState(false);
   const approvalRef = useRef<HTMLDivElement>(null);
   /** The agent-mode menu is open. */
   const [agentOpen, setAgentOpen] = useState(false);
@@ -285,11 +292,11 @@ export function Composer({
     return () => document.removeEventListener("mousedown", onDown);
   }, [agentOpen]);
   // A narrow pane cannot fit "Approve for me · Build · GPT-5.6 sol · High" as
-  // words — the row wrapped and ate the composer's height. Below this width the
-  // toolbar keeps the icons and drops the labels; every one of those buttons
-  // already carries an aria-label and a title, so nothing becomes unreachable.
-  const rootRef = useRef<HTMLDivElement>(null);
-  const compactToolbar = useCompactWidth(rootRef, TOOLBAR_LABEL_MIN_PX, visible);
+  // words. When the action row's items do not fit it, the toolbar keeps the
+  // icons and drops the labels; every one of those buttons already carries an
+  // aria-label and a title, so nothing becomes unreachable.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const compactToolbar = useLabelsOverflow(toolbarRef, visible);
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   // Caret position, tracked so an "@"/"#" being typed can be recognized in
@@ -496,6 +503,11 @@ export function Composer({
     if (text) recordHistory(text);
     setValue("");
     setFiles([]);
+    // The sent files belong to the conversation now, so this composer no longer
+    // owns any of them. Leaving the set behind would arm a real deletion: send
+    // `pasted.png`, later drag that same file back in from the Files pane —
+    // which attaches it IN PLACE — and removing that chip would delete it.
+    owned.current.clear();
   };
 
   /** Quote each referenced conversation down to its ask and its conclusion.
@@ -614,23 +626,33 @@ export function Composer({
     }
   };
 
-  // Very long pastes become a workspace file chip instead of flooding the box;
-  // a pasted image (screenshot) becomes an image file chip. Both land in the
-  // draft's own folder (materialized first) so the session can see them.
+  // Anything pasted that is a FILE becomes a workspace chip; only characters
+  // stay characters. A screenshot, a .md copied in Finder and a CSV all arrive
+  // as clipboard file items and all belong in the draft's folder (materialized
+  // first) — copying a Markdown file used to dump its path into the box as
+  // text, because only `image/*` was looked for. A very long text paste becomes
+  // a file too, rather than flooding the box.
   const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!isTauri || !onSend) return;
-    // A clipboard image — works the same across macOS/Windows/Linux webviews,
-    // which all expose the bitmap as an `image/*` clipboard item.
-    const imageItem = Array.from(e.clipboardData.items ?? []).find((it) =>
-      it.type.startsWith("image/"),
-    );
-    const blob = imageItem?.getAsFile();
-    if (blob) {
+    const blobs = Array.from(e.clipboardData.items ?? [])
+      .filter((it) => it.kind === "file")
+      .map((it) => it.getAsFile())
+      .filter((b): b is File => b !== null);
+    if (blobs.length > 0) {
       e.preventDefault();
-      void addWorkspaceFile(async () => {
-        const base64 = await blobToBase64(blob);
-        return addBinaryToWorkspace(`pasted.${imageExt(blob.type)}`, base64);
-      });
+      void addWorkspaceFile(async () =>
+        Promise.all(
+          blobs.map(async (blob) => ({
+            // A bitmap has no name of its own, so it gets one; a file copied
+            // in a file manager keeps the name the person knows it by.
+            name: await addBinaryToWorkspace(
+              blob.name || `pasted.${imageExt(blob.type)}`,
+              await blobToBase64(blob),
+            ),
+            copied: true,
+          })),
+        ),
+      );
       return;
     }
     const text = e.clipboardData.getData("text/plain");
@@ -638,17 +660,28 @@ export function Composer({
       return; // normal paste
     }
     e.preventDefault();
-    void addWorkspaceFile(() => addTextToWorkspace("pasted.txt", text));
+    void addWorkspaceFile(async () => [
+      { name: await addTextToWorkspace("pasted.txt", text), copied: true },
+    ]);
   };
 
   // Shared: materialize the draft's folder, run the write, and chip the result
   // (one file or several — paste yields one, a multi-file drop yields many).
-  const addWorkspaceFile = async (write: () => Promise<string | string[]>) => {
+  //
+  // `copied` is remembered separately from the chip list so removing a chip can
+  // delete the workspace copy it made, and can NEVER delete a file that was
+  // only referenced in place. It is a set beside `files` rather than a field on
+  // it because `files` is also the send's `attachments` argument and the parked
+  // draft's shape; a restored draft therefore forgets what it owned, and its
+  // chips fall back to dropping the reference — the old behaviour, not a wrong
+  // deletion.
+  const addWorkspaceFile = async (write: () => Promise<AttachedFile[]>) => {
     try {
       await useRuntimeStore.getState().ensureDraftWorkspace();
-      const res = await write();
-      const names = Array.isArray(res) ? res : [res];
-      if (names.length > 0) setFiles((f) => [...f, ...names]);
+      const added = await write();
+      if (added.length === 0) return;
+      for (const a of added) if (a.copied) owned.current.add(a.name);
+      setFiles((f) => [...f, ...added.map((a) => a.name)]);
     } catch (err) {
       toast.error(
         t("composer.error.paste", {
@@ -656,6 +689,16 @@ export function Composer({
         }),
       );
     }
+  };
+
+  /** Remove a chip, and delete the file if this composer is what put it there. */
+  const removeFile = (name: string) => {
+    setFiles((f) => f.filter((n) => n !== name));
+    if (!owned.current.delete(name)) return;
+    void discardWorkspaceFile(name).catch(() => {
+      // The chip is gone either way: a file that cannot be deleted is litter in
+      // the workspace folder, not a reason to put the attachment back.
+    });
   };
 
   // Latest drop handler, kept in a ref so the native subscription below can run
@@ -712,8 +755,9 @@ export function Composer({
     try {
       // Same as paste: give the draft its folder before copying files in.
       await useRuntimeStore.getState().ensureDraftWorkspace();
-      const names = await addFilesToWorkspace();
-      if (names.length > 0) setFiles((f) => [...f, ...names]);
+      const added = await addFilesToWorkspace();
+      for (const a of added) if (a.copied) owned.current.add(a.name);
+      if (added.length > 0) setFiles((f) => [...f, ...added.map((a) => a.name)]);
     } catch (err) {
       toast.error(
         t("composer.error.addFiles", {
@@ -736,7 +780,6 @@ export function Composer({
 
   return (
     <div
-      ref={rootRef}
       className={cn(
         "relative rounded-card border bg-surface px-2 py-2 shadow-card",
         // Plan mode gets the blue link tone — distinct from shell (warn) and
@@ -846,20 +889,7 @@ export function Composer({
       {files.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-1 pb-2">
           {files.map((name) => (
-            <span
-              key={name}
-              className="flex items-center gap-1.5 rounded-input bg-surface-2 py-1 pl-2 pr-1 font-mono text-xs text-text ring-1 ring-border"
-            >
-              <Paperclip size={11} className="shrink-0 text-muted" />
-              <span className="max-w-[220px] truncate">{name}</span>
-              <button
-                className="rounded p-0.5 text-muted hover:bg-border hover:text-text"
-                aria-label={t("composer.file.removeAria", { name })}
-                onClick={() => setFiles((f) => f.filter((n) => n !== name))}
-              >
-                <X size={11} />
-              </button>
-            </span>
+            <AttachmentChip key={name} name={name} onRemove={() => removeFile(name)} />
           ))}
         </div>
       )}
@@ -911,9 +941,14 @@ export function Composer({
         aria-label={t("composer.placeholder.default")}
       />
       {/* Codex-style action row: mode controls bottom-left, send bottom-right.
-          `flex-wrap` so a narrow (tiled) pane wraps the controls to a second
-          line instead of overflowing outside the box. */}
-      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          ONE line, always. A wrapping row looks broken — the send button ends
+          up on its own line under the other controls, with a gap between them
+          — and flexbox wraps on an item's natural width rather than shrinking
+          it first, so the long model name alone was enough to trigger it.
+          Every item keeps its natural width (none shrinks — a squeezed chip
+          spilled its "· effort ⌄" over the send button); when they do not
+          all fit, the buttons drop their labels (useLabelsOverflow). */}
+      <div ref={toolbarRef} className="flex min-w-0 items-center gap-1.5 pt-1">
         {command ? (
           <span
             className="flex h-7 shrink-0 items-center gap-1 rounded-input bg-accent/15 pl-2 pr-1 font-mono text-xs text-accent"
@@ -951,7 +986,7 @@ export function Composer({
         )}
         {/* Folder picker for a fresh draft — renders nothing once the session
             exists (its folder then shows in the header's Files toggle). */}
-        {showWorkspaceChip && <WorkspaceChip draftKey={draftKey} />}
+        {showWorkspaceChip && <WorkspaceChip draftKey={draftKey} compact={compactToolbar} />}
         {agentMode && onAgentModeChange && (
           <div className="relative shrink-0" ref={agentRef}>
             {agentOpen && (
@@ -1063,13 +1098,13 @@ export function Composer({
         )}
         {/* Model picker + send kept together, pushed right (and wrapping as a
             unit) so the send button is always reachable on a narrow pane. */}
-        <div className="ml-auto flex min-w-0 items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {onCompactContext && (
             <button
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-input text-muted hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={t("composer.compact.aria")}
               title={t("composer.compact.title")}
-              onClick={onCompactContext}
+              onClick={() => setConfirmCompact(true)}
               disabled={compacting || working || disabled}
             >
               {compacting ? (
@@ -1078,6 +1113,28 @@ export function Composer({
                 <Shrink size={13} />
               )}
             </button>
+          )}
+          {confirmCompact && onCompactContext && (
+            <ConfirmDialog
+              title={t("composer.compact.confirmTitle")}
+              body={t("composer.compact.confirmBody")}
+              confirmLabel={t("composer.compact.confirmAction")}
+              // Not destructive: the full original conversation stays on disk
+              // (see the "Context compacted" row's own copy). A red button here
+              // would teach the reader to ignore red.
+              // eslint-disable-next-line i18next/no-literal-string -- tone enum, not UI copy
+              tone="default"
+              // The question is about THIS pane's conversation, so it is asked
+              // over that pane. Covering the whole window left the reader
+              // guessing which split had asked.
+              // eslint-disable-next-line i18next/no-literal-string -- scope enum, not UI copy
+              scope="pane"
+              onConfirm={() => {
+                setConfirmCompact(false);
+                onCompactContext();
+              }}
+              onCancel={() => setConfirmCompact(false)}
+            />
           )}
           {showModelPicker && <ModelPicker sessionId={modelSessionId} compact={compactToolbar} />}
           {configOptions && onConfigOption && (

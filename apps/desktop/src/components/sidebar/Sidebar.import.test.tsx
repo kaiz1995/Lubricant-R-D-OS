@@ -69,14 +69,15 @@ beforeEach(() => {
 });
 afterEach(() => useRuntimeStore.setState({ projects: [], sessions: [], workspace: null }));
 
-/** The imported project's own Screen: a fresh group, active, named after it,
+/** The imported project's own Screen: a fresh group, active, unnamed (the
+ *  project switcher already says whose it is; the tab follows what it shows),
  *  with its single draft pane aimed at the project folder. */
 async function expectOwnScreen(project: ProjectInfo) {
   await waitFor(() => expect(useLayoutStore.getState().groups.length).toBe(2));
   const layout = useLayoutStore.getState();
   const group = layout.groups.find((g) => g.id === layout.activeGroupId)!;
   expect(group.id).not.toBe("g0");
-  expect(group.name).toBe(project.name);
+  expect(group.name).toBe("");
   const panes = leaves(group.tree!);
   expect(panes.map((l) => l.sessionId)).toEqual([null]);
   // The pane the user was reading stays put in its own Screen.

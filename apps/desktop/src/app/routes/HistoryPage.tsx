@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useOpenSession } from "@/lib/useOpenSession";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   Archive,
@@ -17,11 +17,8 @@ import {
 import type { SessionMeta } from "@ai4s/sdk";
 import { cn } from "@/lib/cn";
 import { getClient, useRuntimeStore } from "@/lib/runtime";
-import { useLayoutStore } from "@/lib/layout";
 import { timeAgo, timeBucket, type TimeBucket } from "@/lib/relativeTime";
 import { exportIndex, sessionToMarkdown } from "@/lib/exportSession";
-import { useIsMobile } from "@/lib/useIsMobile";
-import { isGatewayWeb } from "@/lib/webMode";
 import { isTauri, pickFolder, writeExportFile } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { pathKey, samePath } from "@/lib/workspacePath";
@@ -54,8 +51,6 @@ const BUCKETS: TimeBucket[] = ["today", "yesterday", "week", "month", "older"];
  */
 export function HistoryPage() {
   const { t, i18n } = useTranslation(["nav", "common"]);
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const projects = useRuntimeStore((s) => s.projects);
   const webReadOnly = useRuntimeStore((s) => s.webReadOnly);
   const status = useRuntimeStore((s) => s.status);
@@ -139,10 +134,7 @@ export function HistoryPage() {
     (b) => [b, byBucket.get(b)!] as const,
   );
 
-  const open = (id: string) => {
-    if (!isMobile && !isGatewayWeb) useLayoutStore.getState().openSessionEphemeral(id);
-    navigate(`/live/${id}`);
-  };
+  const open = useOpenSession();
 
   const patchRow = (id: string, change: Partial<SessionMeta> | null) =>
     setRows((prev) =>

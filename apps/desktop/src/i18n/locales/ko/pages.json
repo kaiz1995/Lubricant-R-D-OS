@@ -33,7 +33,15 @@
       "stopCellTitle": "정지 — 이 노트북의 커널을 재시작합니다(변수가 초기화됨)",
       "stopLabel": "정지",
       "runLabel": "실행",
-      "addCellLabel": "셀 추가"
+      "addCellLabel": "셀 추가",
+      "askAgent": "이 셀에 대해 에이전트에게 묻기",
+      "askAgentAria": "셀 {{n}}에 대해 에이전트에게 묻기",
+      "askAgentIntro": "`{{file}}`의 셀 [{{n}}]에 대해:",
+      "askAgentOutput": "출력:",
+      "askAgentSent": "입력창에 추가됨",
+      "countTitle": "실행 번호 — 실행 중에는 [*], 실행 후에는 [n]",
+      "interrupted": "중단됨 — 커널을 다시 시작해 변수가 초기화되었습니다.",
+      "desktopOnlyKernel": "로컬 커널은 데스크톱 앱에서만 사용할 수 있습니다."
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "스킬 & 에이전트",
-    "description": {
-      "prefix": "OpenCode 런타임에서 실시간으로 로드됩니다 — 내장 스킬 팩, 워크스페이스의 ",
-      "suffix": " 아래에 있는 모든 항목, 그리고 ~/.claude/skills 또는 ~/.agents/skills에 있는 사용자 스킬."
-    },
+    "subtitle": "에이전트가 사용할 수 있는 모든 기능을 OpenCode에서 실시간으로 불러옵니다.",
     "install": {
       "sectionTitle": "스킬 설치",
       "placeholder": "SKILL.md를 붙여넣거나, 에이전트가 스킬로 만들 URL / 설명을 붙여넣으세요",
@@ -79,7 +84,7 @@
       "note": "OpenCode는 여기에 설치된 것을 사용해 코드를 실행합니다 (예: 셸 도구를 통한 Python). uv는 앱에 포함되어 있고, Jupyter는 설정 → 커넥터에서 앱이 관리할 수 있습니다. Python과 R은 기본 포함되지 않으므로, 분석을 사용하려면 이를 설치하거나 Science Pack을 설치하세요."
     },
     "agentsSection": {
-      "sectionTitle": "에이전트 ({{count}})",
+      "heading": "에이전트",
       "empty": "보고된 에이전트가 없습니다.",
       "agentMode": {
         "primary": "기본",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "스킬 ({{count}})",
+      "heading": "스킬",
       "empty": "아직 로드된 스킬이 없습니다.",
       "source": {
         "builtin": "기본 제공",
@@ -96,7 +101,9 @@
         "user": "사용자"
       }
     },
-    "disconnected": "런타임을 연결하면 로드된 스킬과 에이전트 목록을 볼 수 있습니다."
+    "disconnected": "런타임을 연결하면 로드된 스킬과 에이전트 목록을 볼 수 있습니다.",
+    "search": "스킬과 에이전트 검색",
+    "noMatch": "“{{query}}”와 일치하는 항목이 없습니다."
   },
   "notFound": {
     "title": "404 — 찾을 수 없음",

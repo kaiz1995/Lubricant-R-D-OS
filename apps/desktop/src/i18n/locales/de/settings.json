@@ -9,6 +9,7 @@
     "compute": "Rechenleistung",
     "privacy": "Datenschutz",
     "browser": "Browser",
+    "computer": "Computersteuerung",
     "remote": "Fernzugriff",
     "memory": "Gedächtnis",
     "desktopOnly": "Dieser Bereich ist in der Desktop-App verfügbar."
@@ -19,7 +20,8 @@
     "theme": {
       "light": "Hell",
       "warm": "Warm",
-      "dark": "Dunkel"
+      "dark": "Dunkel",
+      "system": "System"
     },
     "zoom": {
       "label": "Zoom",
@@ -27,6 +29,13 @@
       "in": "Vergrößern",
       "out": "Verkleinern",
       "reset": "Zurücksetzen"
+    },
+    "fontSize": {
+      "title": "Schriftgröße",
+      "description": "Wirkt nur auf den Gesprächsinhalt",
+      "unit": "px",
+      "increase": "Schrift vergrößern",
+      "decrease": "Schrift verkleinern"
     }
   },
   "language": {
@@ -47,9 +56,12 @@
     "proxySystem": "System folgen",
     "proxyCustom": "Benutzerdefiniert…",
     "proxyNone": "Direkt (kein Proxy)",
-    "proxyPlaceholder": "http://127.0.0.1:7890 / socks5://host:port",
+    "proxyPlaceholder": "http://127.0.0.1:7890",
     "proxyDirectHint": "Alle Verbindungen der Agent-Laufzeit erfolgen direkt.",
     "proxyEffective": "Weiterleitung über {{url}}",
+    "proxySocksUnsupported": "{{url}} ist ein SOCKS-Proxy, den die Agent-Laufzeit nicht nutzen kann – jede Verbindung würde fehlschlagen. Verwende stattdessen den HTTP-Port deines Proxys (Clash: der Mixed-Port, z. B. http://127.0.0.1:7890).",
+    "proxyRestartNeeded": "Der System-Proxy hat sich seit dem Start der Laufzeit geändert; sie nutzt noch den alten Weg. Übernehmen startet die Laufzeit neu – laufende Aufgaben werden beendet.",
+    "proxyApply": "Übernehmen",
     "proxyNoneDetected": "Kein System-Proxy erkannt — Verbindungen erfolgen direkt.",
     "mirrorTitle": "Paket-Spiegel",
     "mirrorPypi": "PyPI-Index",
@@ -99,7 +111,7 @@
   },
   "model": {
     "title": "Modell",
-    "hint": "Die unten aufgeführten Anbieter stellen die hier wählbaren Modelle bereit",
+    "hint": "Das Modell, mit dem jedes neue Gespräch startet. Die Auswahl liefern die Provider unten.",
     "connectPrompt": "Verbinden Sie die Runtime, um Modelle zu konfigurieren.",
     "notSet": "Nicht festgelegt — Standardmodell wählen",
     "providersDivider": "Anbieter",
@@ -117,13 +129,14 @@
     "catalogUnavailable": "Der Modellkatalog ist derzeit nicht verfügbar.",
     "catalogLoading": "Modellkatalog wird geladen…",
     "noModels": "Keine Modelle verfügbar.",
-    "manageProviders": "Anbieter verwalten",
     "emptyFavorites": "Favorisierte Modelle erscheinen hier.",
     "emptyRecent": "Erfolgreich ausgewählte Modelle erscheinen hier.",
     "noResults": "Keine Modelle entsprechen „{{query}}“.",
     "clearSearch": "Suche löschen",
     "addFavorite": "{{model}} zu Favoriten hinzufügen",
-    "removeFavorite": "{{model}} aus Favoriten entfernen"
+    "removeFavorite": "{{model}} aus Favoriten entfernen",
+    "change": "Ändern",
+    "noProvidersHint": "Verbinden Sie unten einen Provider."
   },
   "providers": {
     "title": "Anbieter",
@@ -149,18 +162,25 @@
     "pasteCode": "Den Code aus dem Browser einfügen",
     "customEndpoint": "Benutzerdefinierter Endpunkt",
     "customEndpointHint": "selbst gehostet · lokales Ollama · OpenAI-/Anthropic-kompatibel",
-    "customNamePlaceholder": "Name — z. B. Ollama, Mein DeepSeek-Gateway",
+    "customNamePlaceholder": "z. B. Ollama, mein DeepSeek-Gateway",
     "openaiCompatible": "OpenAI-kompatibel",
     "anthropicCompatible": "Anthropic-kompatibel",
-    "customUrlPlaceholder": "Basis-URL — Ollama: http://127.0.0.1:11434/v1",
-    "customKeyPlaceholder": "API-Schlüssel — optional, für Ollama nicht erforderlich",
-    "customModelsPlaceholder": "Modell-IDs, durch Kommas getrennt",
-    "customContextPlaceholder": "Kontextfenster — optional, Standard 128k",
+    "customUrlPlaceholder": "http://127.0.0.1:11434/v1",
+    "customKeyPlaceholder": "Optional — Ollama braucht keinen",
+    "customModelsPlaceholder": "Modell-IDs, kommagetrennt",
+    "customContextPlaceholder": "Optional — Standard 128k",
     "fetchModels": "Modelle abrufen",
     "fetchingModels": "Wird abgerufen…",
     "noModelsFound": "Der Endpunkt hat keine Modelle gemeldet.",
     "addEndpoint": "Endpunkt hinzufügen",
-    "importLogin": "Nutzen Sie bereits die OpenCode-CLI? Deren Anmeldung importieren"
+    "importLogin": "Nutzen Sie bereits die OpenCode-CLI? Deren Anmeldung importieren",
+    "addTitle": "Provider hinzufügen",
+    "fieldName": "Name",
+    "fieldApiStyle": "API-Stil",
+    "fieldBaseUrl": "Basis-URL",
+    "fieldApiKey": "API-Schlüssel",
+    "fieldModels": "Modelle",
+    "fieldContext": "Kontextfenster"
   },
   "mcp": {
     "title": "MCP-Server",
@@ -278,6 +298,7 @@
     "providerRemoved": "{{providerID}} entfernt",
     "couldNotAddEndpoint": "Der Endpunkt konnte nicht hinzugefügt werden",
     "couldNotFetchModels": "Modelle konnten nicht vom Endpunkt abgerufen werden",
+    "baseUrlCorrected": "Basis-URL korrigiert auf {{url}}",
     "endpointFieldsRequired": "Name, Basis-URL und mindestens eine Modell-ID sind erforderlich.",
     "endpointAdded": "{{name}} hinzugefügt — dessen Modelle sind oben jetzt auswählbar.",
     "couldNotAddMcp": "Der MCP-Server konnte nicht hinzugefügt werden",
@@ -444,13 +465,22 @@
     "title": "Modell und Denkaufwand je Agent",
     "hint": "Lassen Sie Prüf- oder Rechercheagenten auf einem schnellen Modell laufen, während der Hauptagent auf einem starken denkt, und legen Sie je Agent fest, wie intensiv er denkt.",
     "noModels": "Verbinden Sie einen Anbieter, um Modelle zu wählen.",
-    "followDefault": "Standardmodell",
-    "followDefaultNamed": "Standard ({{model}})",
+    "followDefault": "Standard folgen",
     "modelFor": "Modell für {{agent}}",
     "defaultEffort": "Standardaufwand",
     "effortFor": "Denkaufwand für {{agent}}",
     "retiredOption": "{{model}} — nicht mehr verfügbar",
-    "primaryHint": "build und plan führen die Nachrichten aus, die du sendest. Ein hier gesetztes Modell gilt, sofern du nicht innerhalb einer Unterhaltung eines wählst — das gewinnt nur dort."
+    "primaryHint": "build und plan führen die Nachrichten aus, die du sendest. Ein hier gesetztes Modell gilt, sofern du nicht innerhalb einer Unterhaltung eines wählst — das gewinnt nur dort.",
+    "group": {
+      "conversation": "Agenten, mit denen Sie sprechen",
+      "utility": "Von der Workbench selbst genutzt"
+    },
+    "utilityHint": "Kurze mechanische Arbeit, die die Laufzeit selbst erledigt — ein schnelles Modell ist hier reiner Gewinn.",
+    "about": {
+      "title": "Benennt eine Sitzung nach ihrer ersten Nachricht.",
+      "summary": "Schreibt die kurze Zusammenfassung eines Gesprächs.",
+      "compaction": "Schreibt ein langes Gespräch so um, dass es ins Kontextfenster passt."
+    }
   },
   "ssh": {
     "title": "Bei {{host}} anmelden",
@@ -486,5 +516,31 @@
     "silenceUnit": "Min.",
     "title": "Stall-Schutz",
     "webNote": "Im Browser erscheint die Warnung nur im Gespräch — keine Systembenachrichtigung."
+  },
+  "computer": {
+    "title": "Computersteuerung",
+    "hint": "Lässt den Agenten Apps auf diesem Computer über die Bedienungshilfen-API des Systems lesen und steuern. Er arbeitet mit benannten Oberflächenelementen statt mit geratenen Pixelpositionen und meldet, ob sich jede Aktion tatsächlich überprüfen ließ. In jeder Unterhaltung wird die erste Nutzung zur Freigabe vorgelegt.",
+    "checking": "Wird geprüft…",
+    "state": "Verfügbarkeit",
+    "ready": "Bereit. Der Agent kann auf Wunsch Apps auf diesem Computer bedienen.",
+    "unavailable": "Auf diesem Rechner nicht verfügbar.",
+    "setup": "Einrichtung öffnen",
+    "recheck": "Erneut prüfen",
+    "grant": "Erteilen…",
+    "granted": "Erteilt",
+    "opened": "Fenster für die Berechtigungen geöffnet.",
+    "error": "Computersteuerung",
+    "accessibility": "Bedienungshilfen",
+    "accessibilityHint": "Erforderlich. Erlaubt dem Helfer, die Oberfläche einer App zu lesen und zu bedienen. Die Berechtigung erhält Open Science Computer Use — ein eigenständiger Helfer — und nicht die gesamte Workbench.",
+    "screenshots": "Bildschirmaufnahme",
+    "screenshotsHint": "Optional, und sie wird Open Science selbst erteilt, nicht dem Helfer — macOS rechnet die Bildschirmaufnahme der App zu, welche die Anfrage gestartet hat. Nur nötig, wenn der Agent ein Fenster ansehen muss, das er nicht als Text lesen kann, etwa ein Diagramm oder eine Zeichenfläche."
+  },
+  "userBrowser": {
+    "title": "Ein Browser, den du installiert hast",
+    "hint": "Open Science hat auf diesem Mac einen Browser gefunden, den sein Agent von der Shell aus steuern kann. Hier gibt es nichts einzustellen — es steht hier, damit du weißt, dass er erreichbar ist.",
+    "name": "ego lite",
+    "reachable": "Installiert und erreichbar. Der Agent fragt vor der ersten Nutzung in jeder Unterhaltung.",
+    "notReachable": "Installiert, aber sein Kommandozeilenwerkzeug fehlt auf diesem Rechner, also kommt der Agent nicht heran. Führe die Einrichtung von ego lite aus, um es nachzurüsten.",
+    "tradeoff": "Das ist nicht der Browser-Connector oben. Jener steuert einen eigenen Browser, den diese App besitzt, mit einem isolierten Profil. Dieser ist dein Alltagsbrowser und trägt deine echten angemeldeten Sitzungen — was ihn nützlich macht und weshalb er vorher fragt. Nur macOS."
   }
 }

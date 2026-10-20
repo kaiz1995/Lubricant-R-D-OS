@@ -28,7 +28,14 @@
       "newSession": "New session"
     },
     "rename": "Rename screen",
-    "tabMenu": "Screen actions"
+    "tabMenu": "Screen actions",
+    "runAgent": "Run an agent",
+    "newNotebook": "New Notebook",
+    "newMarkdown": "New Markdown",
+    "splitRightShort": "Split right",
+    "splitDownShort": "Split down",
+    "defaultProject": "Default",
+    "projectMenu": "Switch project"
   },
   "composer": {
     "placeholder": {
@@ -43,7 +50,14 @@
       "mcp": "mcp"
     },
     "file": {
-      "removeAria": "Remove {{name}}"
+      "removeAria": "Remove {{name}}",
+      "previewAria": "Preview {{name}}",
+      "preview": {
+        "empty": "Empty file",
+        "none": "No inline preview",
+        "unreadable": "Can't read this file from the workspace",
+        "lines_other": "{{count}} lines"
+      }
     },
     "attach": {
       "addAria": "Add files",
@@ -94,7 +108,8 @@
     },
     "error": {
       "paste": "Could not save paste: {{message}}",
-      "addFiles": "Could not add files: {{message}}"
+      "addFiles": "Could not add files: {{message}}",
+      "imageNotSent": "Couldn't read {{names}} — the message was sent without the image."
     },
     "model": {
       "aria": "Switch model",
@@ -132,7 +147,10 @@
     },
     "compact": {
       "aria": "Compress context",
-      "title": "Summarize the earlier turns so the next reply runs on a bounded context"
+      "title": "Summarize the earlier turns so the next reply runs on a bounded context",
+      "confirmTitle": "Compact the context?",
+      "confirmBody": "The earlier turns are replaced with a summary so the next reply runs on a bounded context. The full original conversation is still stored locally.",
+      "confirmAction": "Compact"
     }
   },
   "localCommand": {
@@ -144,6 +162,7 @@
     "newSession": "New session",
     "heading": "What should we look into?",
     "subheading": "Describe your analysis below — or start from one of these.",
+    "subheadingNoCards": "Describe your analysis below.",
     "demo": {
       "title": "Run a demo analysis, end to end",
       "description": "Simulate a dataset, fit a model, and produce a figure and a traceable report."
@@ -180,7 +199,10 @@
     "subagentFallback": "a subagent",
     "header": {
       "expandSidebarAria": "Expand sidebar",
-      "expandSidebarTitle": "Expand sidebar ({{shortcut}})"
+      "expandSidebarTitle": "Expand sidebar ({{shortcut}})",
+      "rename": "Rename session…",
+      "untitled": "Untitled session",
+      "paneMenu": "Session actions"
     },
     "filesToggle": {
       "default": "Files",
@@ -265,6 +287,20 @@
         "default_other": "ran {{count}} steps"
       },
       "failedCount": "{{count}} failed"
+    },
+    "process": {
+      "thinking": "Analysis completed",
+      "read": "Read files",
+      "write": "Wrote files",
+      "search": "Searched code",
+      "edit": "Edited files",
+      "commands": "Ran commands",
+      "webFetch": "Visited web pages",
+      "tools": "Called tools",
+      "joinTwo": "{{first}} and {{second}}",
+      "comma": ", ",
+      "sharedPrefix": "",
+      "more": "{{title}}, etc."
     }
   },
   "artifact": {
@@ -278,7 +314,11 @@
       "data": "data"
     },
     "via": "· via {{tool}}",
-    "open": "Open"
+    "open": "Open",
+    "maximize": "Maximize",
+    "close": "Close",
+    "collapse": "Collapse",
+    "expand": "Expand"
   },
   "figure": {
     "downloadAria": "Download figure",
@@ -325,9 +365,15 @@
     "alwaysAllow": "Always allow",
     "allowOnce": "Allow once"
   },
+  "turn": {
+    "worked": "Worked",
+    "workedFor": "Took {{duration}}"
+  },
   "reasoning": {
     "thinking": "Thinking…",
-    "thought": "Thought"
+    "thought": "Thought",
+    "collapse": "Collapse the thought",
+    "expand": "Show the whole thought"
   },
   "stepSummary": {
     "steps": "{{count}} steps"
@@ -395,6 +441,7 @@
       "action": "Roll back"
     }
   },
+  "historyRetry": "Retry",
   "compaction": {
     "label": "Context compacted",
     "autoBody": "The runtime summarized the earlier turns to stay inside this model's context window, and the conversation continued here.",
@@ -442,7 +489,8 @@
     "title": "The new pane's session will be created in",
     "continueIn": "Continue in {{name}}",
     "newFolder": "New folder",
-    "chooseOther": "Choose another folder…"
+    "chooseOther": "Choose another folder…",
+    "terminal": "Terminal in this folder"
   },
   "stall": {
     "silentTitle": "Turn may be stuck",
@@ -451,5 +499,84 @@
     "repeatLine": "This turn has run the same call {{count}} times with identical results. Still working, or looping?",
     "keepWaiting": "Keep waiting",
     "stopTurn": "Stop turn"
+  },
+  "terminal": {
+    "title": "Terminal",
+    "exited": "[process exited]",
+    "desktopOnly": "A terminal needs the desktop app.",
+    "new": "Terminal",
+    "menu": {
+      "label": "Terminal menu",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "clear": "Clear",
+      "revealCwd": "Reveal working folder",
+      "resumeAgent": "Resume last {{agent}} session"
+    },
+    "rename": "Rename terminal…",
+    "confirmClose": {
+      "title": "Close this terminal?",
+      "body": "The shell and anything still running in it will stop. Scrollback is not kept.",
+      "action": "Close terminal"
+    },
+    "search": {
+      "placeholder": "Find",
+      "matchCase": "Match case",
+      "regex": "Regular expression",
+      "previous": "Previous match",
+      "next": "Next match",
+      "close": "Close find",
+      "none": "no results",
+      "find": "Find…"
+    }
+  },
+  "splitInto": {
+    "session": "Session"
+  },
+  "find": {
+    "placeholder": "Find in conversation",
+    "matchCase": "Match case",
+    "regex": "Regular expression",
+    "previous": "Previous match",
+    "next": "Next match",
+    "close": "Close find",
+    "none": "no results",
+    "find": "Find…"
+  },
+  "turnNav": {
+    "label": "Turn navigation",
+    "jump": "Jump to turn {{turn}}",
+    "turn": "Turn {{turn}}"
+  },
+  "trajectory": {
+    "title": "Trajectory",
+    "toggle": "Trajectory — every step of this conversation",
+    "duration": "Duration",
+    "useActual": "Use actual duration",
+    "useEqual": "Use equal-width operations",
+    "turns": "Turns",
+    "expandTurns": "Expand turns",
+    "collapseTurns": "Collapse turns",
+    "calls": "Calls",
+    "expandCalls": "Expand calls",
+    "collapseCalls": "Collapse calls",
+    "search": "Search",
+    "user": "USER",
+    "assistant": "ASSISTANT",
+    "tool": "TOOL",
+    "message": "MESSAGE",
+    "system": "SYSTEM",
+    "compacted": "COMPACTED",
+    "input": "Input",
+    "model": "Model",
+    "tools": "Tools",
+    "turn": "Turn {{n}}",
+    "noOutput": "no output",
+    "empty": "No steps yet.",
+    "noMatch": "No steps match.",
+    "steps_one": "{{count}} step",
+    "steps_other": "{{count}} steps",
+    "close": "Close trajectory"
   }
 }

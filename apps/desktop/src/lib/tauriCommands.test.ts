@@ -19,7 +19,12 @@ const desktop = join(here, "..", "..");
 /** Command names the frontend calls, from every `invoke<…>("name")`. */
 function invokedNames(): Set<string> {
   const names = new Set<string>();
-  for (const file of ["src/lib/tauri.ts", "src/lib/kernel.ts", "src/lib/acpTransport.ts"]) {
+  for (const file of [
+    "src/lib/tauri.ts",
+    "src/lib/kernel.ts",
+    "src/lib/acpTransport.ts",
+    "src/lib/terminalSessions.ts",
+  ]) {
     let text: string;
     try {
       text = readFileSync(join(desktop, file), "utf8");

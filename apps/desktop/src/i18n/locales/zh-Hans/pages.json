@@ -33,7 +33,15 @@
       "stopCellTitle": "停止 — 重启此笔记本的内核（变量将被重置）",
       "stopLabel": "停止",
       "runLabel": "运行",
-      "addCellLabel": "添加单元格"
+      "addCellLabel": "添加单元格",
+      "askAgent": "就这个 cell 问 Agent",
+      "askAgentAria": "就第 {{n}} 个 cell 问 Agent",
+      "askAgentIntro": "关于 `{{file}}` 的第 [{{n}}] 个 cell：",
+      "askAgentOutput": "它的输出是：",
+      "askAgentSent": "已放入输入框",
+      "countTitle": "执行序号 —— 运行中为 [*]，运行过为 [n]",
+      "interrupted": "已中断 —— 内核已重启，变量已清空。",
+      "desktopOnlyKernel": "本地内核只能在桌面应用中使用。"
     }
   },
   "files": {
@@ -54,10 +62,7 @@
   },
   "skills": {
     "title": "技能与代理",
-    "description": {
-      "prefix": "从 OpenCode 运行时实时加载——内置技能包、工作区中位于 ",
-      "suffix": " 下的所有内容，以及您自己放在 ~/.claude/skills 或 ~/.agents/skills 的技能。"
-    },
+    "subtitle": "代理可以调用的全部能力，从 OpenCode 实时加载。",
     "install": {
       "sectionTitle": "安装技能",
       "placeholder": "粘贴 SKILL.md，或粘贴一个 URL / 描述，交给代理生成",
@@ -79,7 +84,7 @@
       "note": "OpenCode 使用此处已安装的组件运行代码（例如通过其 shell 工具调用 Python）。uv 随应用内置，Jupyter 可在「设置 → 连接器」中由应用托管。Python 和 R 并未内置——请自行安装它们或安装 Science Pack 以启用分析功能。"
     },
     "agentsSection": {
-      "sectionTitle": "代理（{{count}}）",
+      "heading": "代理",
       "empty": "未报告任何代理。",
       "agentMode": {
         "primary": "主要",
@@ -88,7 +93,7 @@
       }
     },
     "skillsListSection": {
-      "sectionTitle": "技能（{{count}}）",
+      "heading": "技能",
       "empty": "尚未加载任何技能。",
       "source": {
         "builtin": "内置",
@@ -96,7 +101,9 @@
         "user": "用户"
       }
     },
-    "disconnected": "连接运行时以列出其已加载的技能和代理。"
+    "disconnected": "连接运行时以列出其已加载的技能和代理。",
+    "search": "搜索技能和代理",
+    "noMatch": "没有匹配“{{query}}”的结果。"
   },
   "notFound": {
     "title": "404 — 未找到",

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { ProviderInfo } from "@ai4s/sdk";
 import { useRuntimeStore } from "@/lib/runtime";
 import { ModelPicker } from "./ModelPicker";
@@ -29,7 +29,7 @@ const chip = () => screen.getByRole("button", { name: /switch model/i });
 
 describe("ModelPicker", () => {
   const initial = useRuntimeStore.getState();
-  let setDefaultModel: ReturnType<typeof vi.fn>;
+  let setDefaultModel: Mock<(model: string) => Promise<void>>;
 
   beforeEach(() => {
     window.localStorage.clear();

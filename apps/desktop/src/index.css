@@ -193,8 +193,52 @@ body {
    collapse button read thick and slightly fuzzy at these sizes. One rule instead
    of a prop on every call site, so an icon added later matches by default.
    (A CSS stroke-width beats the presentation attribute lucide sets inline.) */
-.sidebar-surface svg {
-  stroke-width: 1.5;
+
+/* DeepSeek Harness token layer. Components ported from DSH (MIT) keep their
+   CSS verbatim and read these names; each resolves to this app's own theme, so
+   warm / light / dark all carry through. DSH's translucent inks (hover fill,
+   border steps) keep their alpha and mix it from the theme's text colour. */
+:root {
+  --ds-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-font-family-code: "JetBrains Mono", ui-monospace, monospace;
+  --dsw-radius-xs: 4px;
+  --dsw-radius-sm: 8px;
+  --dsw-radius-md: 12px;
+  --dsw-radius-lg: 16px;
+  --dsw-radius-xl: 20px;
+  --dsw-focus-ring-width: 2px;
+  --dsw-focus-ring-color: var(--accent);
+  --dsw-alias-label-primary: var(--text);
+  --dsw-alias-label-secondary: color-mix(in srgb, var(--text) 62%, var(--muted));
+  --dsw-alias-label-tertiary: var(--muted);
+  --dsw-alias-label-caption: color-mix(in srgb, var(--muted) 60%, var(--surface));
+  --dsw-alias-label-primary-inverted: var(--surface);
+  --dsw-alias-interactive-bg-hover: color-mix(in srgb, var(--text) 6%, transparent);
+  --dsw-alias-border-l1: color-mix(in srgb, var(--text) 4%, transparent);
+  --dsw-alias-border-l2: color-mix(in srgb, var(--text) 10%, transparent);
+  --dsw-alias-border-l3: color-mix(in srgb, var(--text) 12%, transparent);
+  --dsw-alias-border-l4: color-mix(in srgb, var(--text) 16%, transparent);
+  --dsw-alias-state-business-primary: var(--accent);
+  --dsw-alias-state-error-primary: var(--error);
+  --dsw-alias-state-success-primary: var(--ok);
+  --dsw-alias-state-warn-primary: var(--warn);
+  --dsw-alias-state-idle-primary: var(--muted);
+  --dsw-alias-bg-base: var(--bg);
+  --dsw-alias-bg-layer-1: var(--surface);
+  --dsw-alias-bg-layer-2: var(--surface);
+  --dsw-alias-button-elevated-fill: var(--surface);
+  --dsw-alias-button-floating-hover: color-mix(in srgb, var(--text) 4%, var(--surface));
+  --dsw-specific-sidebar-fill: var(--surface);
+  --dsw-alias-bg-module-platform: var(--surface-2);
+  --dsw-alias-label-dimmed: color-mix(in srgb, var(--muted) 45%, var(--surface));
+  --dsw-alias-state-business-tertiary: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --dsw-alias-state-success-tertiary: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  --dsw-alias-state-warn-label: color-mix(in srgb, var(--warn) 80%, var(--text));
+  --dsw-alias-state-warn-tertiary: color-mix(in srgb, var(--warn) 16%, var(--surface));
+  --dsw-alias-state-error-secondary: color-mix(in srgb, var(--error) 70%, var(--surface));
+  /* DSH's violet brand step, used for the assistant tag and model lane. */
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #7c5cff;
+  --dsw-static-blue-500: #3b82f6;
 }
 
 /* Sidebar background. With window vibrancy (macOS desktop app, data-vibrancy
@@ -489,7 +533,18 @@ textarea,
      visible by computed style, several still drawn. Visibility invalidates
      differently and cannot be animated on the compositor, so the row goes when
      it is told to. No transition, for the same reason. */
+  /* Out of the flow, not merely invisible. A hidden row still reserves its
+     height, and with one under every message that dead strip — plus the gap the
+     block list already puts between blocks — was most of the whitespace between
+     a paragraph and the activity line under it. Floated into that gap it costs
+     nothing when hidden and overlaps nothing when shown (the row is ~18px, the
+     gap 16px). Touch devices keep it in the flow: with no hover to reveal it,
+     the row is permanent and must not sit on top of the next block. */
   [data-hover-row] {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
     opacity: 0;
     visibility: hidden;
   }
@@ -507,4 +562,32 @@ textarea,
     opacity: 1;
     visibility: visible;
   }
+}
+
+/* Find-in-page highlights (lib/findInPage).
+   One overlay, appended to the searched element and holding a rectangle per
+   match — the way an editor draws its own decorations. The conversation's DOM
+   belongs to React and is never touched. Every match is tinted with the
+   accent, the current one more strongly and outlined, so a search reads the
+   same wherever it is used. */
+[data-osd-find-overlay] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* No size of its own: it must not add a pixel of scrollable area. */
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.osd-find-hit {
+  position: absolute;
+  border-radius: 2px;
+  /* Drawn over the words, translucent, the way a marker pen reads: the text
+     underneath has to stay readable at every theme. */
+  background-color: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.osd-find-hit-current {
+  background-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  outline: 1px solid var(--accent);
 }
